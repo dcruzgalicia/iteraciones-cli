@@ -1,9 +1,7 @@
 {
   "name": "html-la-forma-vieja-small-sale-clase-dead",
-  "helper": "toHtml5",
   "markdown": "::: {.small}\nTitular\n:::\n",
   "contains": ["<div class=\"small\">"],
   "notContains": [],
-  "normalizeNewlines": false,
-  "extraSemantic": false
+  "normalizeNewlines": false
 }

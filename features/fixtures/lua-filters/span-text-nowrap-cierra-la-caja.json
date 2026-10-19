@@ -1,6 +1,5 @@
 {
   "name": "span-text-nowrap-cierra-la-caja",
-  "helper": "toLatex",
   "markdown": "texto [Ana Ruiz]{.text-nowrap} aqui\n",
   "contains": ["\\mbox{Ana Ruiz}"],
   "notContains": [],

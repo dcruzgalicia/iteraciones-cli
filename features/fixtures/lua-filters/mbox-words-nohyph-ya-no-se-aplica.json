@@ -1,6 +1,5 @@
 {
   "name": "mbox-words-nohyph-ya-no-se-aplica",
-  "helper": "toLatex",
   "markdown": "::: {nohyph=\"Kant Heidegger\"}\n\nFilosofia de Kant y de Heidegger, comparados.\n\n:::\n",
   "contains": ["Filosofia de Kant y de Heidegger, comparados."],
   "notContains": ["\\mbox{"],

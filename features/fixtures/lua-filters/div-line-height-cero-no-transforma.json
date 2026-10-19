@@ -1,6 +1,5 @@
 {
   "name": "div-line-height-cero-no-transforma",
-  "helper": "toLatex",
   "markdown": "::: {line-height=0}\ntexto normal\n:::  \n",
   "contains": ["texto normal"],
   "notContains": ["\\begin{spacing}"],

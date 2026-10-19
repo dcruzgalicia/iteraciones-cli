@@ -1,9 +1,7 @@
 {
   "name": "html-la-forma-vieja-mbox-sale-clase-dead",
-  "helper": "toHtml5",
   "markdown": "texto [Ana Ruiz]{.mbox} aqui\n",
   "contains": ["<span class=\"mbox\">"],
   "notContains": [],
-  "normalizeNewlines": false,
-  "extraSemantic": false
+  "normalizeNewlines": false
 }

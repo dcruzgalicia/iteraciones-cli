@@ -1,6 +1,5 @@
 {
   "name": "html-line-height-sale-como-dato-y-no-hace-nada",
-  "helper": "toHtml5",
   "markdown": "::: {line-height=1.5}\ntexto\n:::  \n",
   "contains": ["data-line-height=\"1.5\""],
   "notContains": ["<div class="],

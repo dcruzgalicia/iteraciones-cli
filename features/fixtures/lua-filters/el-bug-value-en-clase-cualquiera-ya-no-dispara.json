@@ -1,6 +1,5 @@
 {
   "name": "el-bug-value-en-clase-cualquiera-ya-no-dispara",
-  "helper": "toLatex",
   "markdown": "texto [palabra]{.loquesea value=30} aqui\n",
   "contains": ["{palabra}"],
   "notContains": ["\\textls"],

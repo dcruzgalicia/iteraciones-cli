@@ -1,6 +1,5 @@
 {
   "name": "sin-campos-de-titulo-internas-nada-cambia",
-  "helper": "toLatexTitleback",
   "markdown": "---\ntitle: Prueba\n---\n\nCuerpo.\n",
   "contains": [],
   "notContains": ["\\extratitle", "\\uppertitleback"],

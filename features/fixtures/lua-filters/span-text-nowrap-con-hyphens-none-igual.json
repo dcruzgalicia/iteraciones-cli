@@ -1,6 +1,5 @@
 {
   "name": "span-text-nowrap-con-hyphens-none-igual",
-  "helper": "toLatex",
   "markdown": "texto [Ana Ruiz]{.text-nowrap .hyphens-none} aqui\n",
   "contains": ["\\mbox{Ana Ruiz}"],
   "notContains": [],

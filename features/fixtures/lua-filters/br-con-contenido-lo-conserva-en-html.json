@@ -1,6 +1,5 @@
 {
   "name": "br-con-contenido-lo-conserva-en-html",
-  "helper": "toHtml5",
   "markdown": "texto\n\n::: {br=2}\nESTE TEXTO\n:::\n\ntexto\n",
   "contains": ["<br/>\n<br/>", "<p>ESTE TEXTO</p>"],
   "notContains": [],

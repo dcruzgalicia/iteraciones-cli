@@ -1,6 +1,5 @@
 {
   "name": "br-negativo-no-salta-en-latex",
-  "helper": "toLatex",
   "markdown": "texto\n\n::: {br=-2}\n:::\n\ntexto\n",
   "contains": [],
   "notContains": ["\\vspace"],

@@ -1,6 +1,5 @@
 {
   "name": "titleback-line-height-multiplica-el-interlineado",
-  "helper": "toLatexTitleback",
   "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {line-height=1.5}\n  contraportada\n  :::\n---\n\nCuerpo.\n",
   "contains": ["\\begin{spacing}{1.5}", "contraportada"],
   "notContains": [],

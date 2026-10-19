@@ -1,9 +1,7 @@
 {
   "name": "html-la-forma-vieja-flushright-sale-clase-dead",
-  "helper": "toHtml5",
   "markdown": "::: {.flushright}\nDerecha\n:::  \n",
   "contains": ["<div class=\"flushright\">"],
   "notContains": [],
-  "normalizeNewlines": false,
-  "extraSemantic": false
+  "normalizeNewlines": false
 }

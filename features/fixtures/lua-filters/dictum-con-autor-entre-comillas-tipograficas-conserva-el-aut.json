@@ -1,6 +1,5 @@
 {
   "name": "dictum-con-autor-entre-comillas-tipograficas-conserva-el-aut",
-  "helper": "toLatex",
   "markdown": "::: {.dictum}\nCita\n\n::: {.author}\n\"Nombre\"\n::: \n:::\n",
   "from": "markdown+smart",
   "contains": ["\\dictum[Nombre]{", "Cita}"],

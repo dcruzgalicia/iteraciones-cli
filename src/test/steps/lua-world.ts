@@ -5,14 +5,11 @@ const FIXTURES = join(import.meta.dir, '../../../features/fixtures/lua-filters')
 
 export interface LuaCase {
   name: string;
-  helper: 'toLatex' | 'toHtml5' | 'toLatexFlags' | 'toLatexTitleback';
   markdown: string;
   from?: string;
   contains: string[];
   notContains: string[];
   normalizeNewlines: boolean;
-
-  extraSemantic?: boolean;
 
   filters?: string[];
 

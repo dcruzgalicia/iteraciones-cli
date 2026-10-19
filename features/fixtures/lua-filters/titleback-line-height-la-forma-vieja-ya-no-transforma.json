@@ -1,6 +1,5 @@
 {
   "name": "titleback-line-height-la-forma-vieja-ya-no-transforma",
-  "helper": "toLatexTitleback",
   "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {spacing=1.5}\n  contraportada\n  :::\n---\n\nCuerpo.\n",
   "contains": ["contraportada"],
   "notContains": ["\\begin{spacing}"],

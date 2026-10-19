@@ -1,6 +1,5 @@
 {
   "name": "div-line-height-multiplica-el-interlineado",
-  "helper": "toLatex",
   "markdown": "::: {line-height=1.5}\ntexto espaciado\n:::  \n",
   "contains": ["\\begin{spacing}{1.5}", "texto espaciado"],
   "notContains": ["{spacing=1.5}\ntexto"],

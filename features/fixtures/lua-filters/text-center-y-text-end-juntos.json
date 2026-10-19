@@ -1,6 +1,5 @@
 {
   "name": "text-center-y-text-end-juntos",
-  "helper": "toLatex",
   "markdown": "::: {.text-center}\nA\n:::\n\n::: {.text-end}\nB\n:::  \n",
   "contains": ["\\begin{center}", "\\begin{flushright}"],
   "notContains": [],

@@ -1,6 +1,5 @@
 {
   "name": "br-1.5-se-trunca-a-uno-en-html",
-  "helper": "toHtml5",
   "markdown": "texto\n\n::: {br=1.5}\n:::\n\ntexto\n",
   "contains": ["<br/>"],
   "notContains": ["<br/>\n<br/>"],

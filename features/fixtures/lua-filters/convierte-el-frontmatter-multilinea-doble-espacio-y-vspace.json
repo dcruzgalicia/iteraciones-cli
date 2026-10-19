@@ -1,6 +1,5 @@
 {
   "name": "convierte-el-frontmatter-multilinea-doble-espacio-y-vspace",
-  "helper": "toLatexTitleback",
   "markdown": "---\ntitle: Prueba\nuppertitleback: |\n  primera linea  \n  segunda linea\n\n  ::: {br=1}\n  :::\n\n  tercera línea\n---\n\nCuerpo.\n",
   "contains": ["\\uppertitleback{primera linea\\\\\nsegunda linea", "\\vspace{\\baselineskip}", "tercera línea}"],
   "notContains": [],

@@ -1,9 +1,7 @@
 {
   "name": "br-dentro-de-una-lista-no-sale-literal-en-html",
-  "helper": "toHtml5",
   "markdown": "- ::: {br=1}\n  :::\n- texto",
   "contains": ["<br/>"],
   "notContains": [">::"],
-  "normalizeNewlines": false,
-  "extraSemantic": true
+  "normalizeNewlines": false
 }

@@ -1,6 +1,5 @@
 {
   "name": "mbox-words-runt-conserva-el-punto-final-dentro-del-mbox",
-  "helper": "toLatex",
   "markdown": "::: {runt=1}\n\nFrase corta que acaba aqui.\n\n:::\n",
   "contains": ["\\mbox{aqui.}"],
   "notContains": ["\\mbox{Frase corta que acaba}"],

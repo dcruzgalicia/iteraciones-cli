@@ -1,6 +1,5 @@
 {
   "name": "los-ocho-pasos-de-la-escala-salen-todos-en-tex",
-  "helper": "toLatex",
   "markdown": "::: {.text-xs}\na\n:::\n\n::: {.text-sm}\nb\n:::\n\n::: {.text-base}\nc\n:::\n\n::: {.text-lg}\nd\n:::\n\n::: {.text-xl}\ne\n:::\n\n::: {.text-2xl}\nf\n:::\n\n::: {.text-4xl}\ng\n:::\n\n::: {.text-6xl}\nh\n:::\n",
   "contains": ["{\\footnotesize a}", "{\\small b}", "{\\normalsize c}", "{\\large d}", "{\\Large e}", "{\\LARGE f}", "{\\huge g}", "{\\Huge h}"],
   "notContains": [],

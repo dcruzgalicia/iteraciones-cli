@@ -1,9 +1,7 @@
 {
   "name": "verse-solo-separte-la-linea-con-dos-espacios",
-  "helper": "toHtml5",
   "markdown": "::: {.verse}\nprimera con dos espacios  \nsegunda con dos espacios  \nprimera sin espacios\nsegunda sin espacios\n:::  \n",
   "contains": ["primera con dos espacios<br />", "segunda con dos espacios<br />", "primera sin espacios segunda sin espacios"],
   "notContains": ["primera sin espacios<br />", "segunda sin espacios<br />"],
-  "normalizeNewlines": false,
-  "extraSemantic": false
+  "normalizeNewlines": false
 }
