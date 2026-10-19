@@ -127,11 +127,10 @@ async function buildCacheKeys(
   outputDir: string,
   binFp: string,
   disabled: string[],
-  cache?: PdfxCacheHandle,
+  cache: PdfxCacheHandle,
 ): Promise<{ pendientes: string[]; claves: string[]; preValidated: number }> {
   const cacheKeyFor = async (file: string): Promise<string> =>
     `${file}\0${await hashFileContent(join(outputDir, file)).catch(() => 'ilegible')}\0${binFp}\0${disabled.join(',')}`;
-  if (!cache) return { pendientes: [...pdfs], claves: pdfs.map(() => ''), preValidated: 0 };
 
   const claves = await Promise.all(pdfs.map(cacheKeyFor));
   const pendientes: string[] = [];
@@ -148,7 +147,7 @@ function processResult(
   result: PdfCheckResult | undefined,
   claves: string[],
   i: number,
-  cache?: PdfxCacheHandle,
+  cache: PdfxCacheHandle,
 ): { failed: boolean; falloLines: string[] } {
   const where = (iss: PdfCheckIssue): string => (iss.page !== null && iss.page !== undefined ? ` — página ${iss.page + 1}` : '');
   if (result === undefined) {
@@ -160,9 +159,8 @@ function processResult(
     for (const w of result.warnings) lines.push(`  advertencia — [${w.code}] ${w.message}${where(w)}`);
     return { failed: true, falloLines: lines };
   }
-  if (cache && result.warnings.length === 0 && claves[i] !== undefined && claves[i] !== '') {
-    cache.out[claves[i] ?? ''] = '1';
-  }
+  const key = claves[i];
+  if (result.warnings.length === 0 && key !== undefined) cache.out[key] = '1';
   for (const w of result.warnings) {
     logWarning(`${file}: advertencia PDF/X-1a — [${w.code}] ${w.message}${where(w)}`, 'pdfx');
   }
@@ -170,15 +168,16 @@ function processResult(
 }
 
 function finalizeCache(cache: PdfxCacheHandle, claves: string[]): void {
-  const vigentes = new Set(claves.filter((k) => k !== ''));
+  const vigentes = new Set(claves);
   for (const key of Object.keys(cache.prev)) {
     const prev = cache.prev[key];
     if (prev !== undefined && vigentes.has(key) && cache.out[key] === undefined) cache.out[key] = prev;
   }
 }
 
-function isCached(claves: string[], i: number, cache?: PdfxCacheHandle): boolean {
-  return cache !== undefined && claves[i] !== '' && cache.prev[claves[i] ?? ''] === '1';
+function isCached(claves: string[], i: number, cache: PdfxCacheHandle): boolean {
+  const key = claves[i];
+  return key !== undefined && cache.prev[key] === '1';
 }
 
 function mapResultsToFiles(
@@ -213,7 +212,7 @@ export async function runPdfxOutputValidation(
   siteConfig: SiteConfig,
   options: { allowBuild?: boolean } = {},
   effectiveDisabledPreamble?: string[],
-  cache?: PdfxCacheHandle,
+  cache: PdfxCacheHandle = { prev: {}, out: {} },
 
   scope?: string[],
 ): Promise<PdfxOutputValidationResult> {
@@ -244,7 +243,7 @@ export async function runPdfxOutputValidation(
     if (wasFailed) failed++;
     fallos.push(...falloLines);
   }
-  if (cache) finalizeCache(cache, claves);
+  finalizeCache(cache, claves);
   if (failed > 0) {
     throw new BuildError(`${failed} de ${validated} PDFs no certifican PDF/X-1a.\n${fallos.map((l) => `  ${l}`).join('\n')}`);
   }
