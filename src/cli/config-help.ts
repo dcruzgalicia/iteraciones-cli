@@ -1,7 +1,7 @@
 import { DEFAULT_HTML_BLOCKS, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
-import { ACCENT_PALETTES } from '../lib/accent-palettes.js';
+import { ACCENT_COLORS } from '../lib/accent-palettes.js';
 
-const colores = Object.keys(ACCENT_PALETTES).join(' | ');
+const colores = ACCENT_COLORS.join(' | ');
 
 export function configHelp(): string {
   const d = DEFAULT_SITE_CONFIG;

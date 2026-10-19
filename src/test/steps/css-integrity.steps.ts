@@ -6,7 +6,7 @@ import { compileTailwindCss, computeCssHash, resolveTailwindBin } from '../../bu
 import { type HtmlDocType, loadCard } from '../../builder/html-composer.js';
 import type { SiteConfig } from '../../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
-import { ACCENT_PALETTES, type AccentColor } from '../../lib/accent-palettes.js';
+import { ACCENT_COLORS, type AccentColor } from '../../lib/accent-palettes.js';
 
 const RESOURCES = join(import.meta.dir, '../../lib/resources');
 const TYPES = ['file', 'collection', 'creator'] as const;
@@ -120,9 +120,14 @@ Then('el CSS incluye las clases del HTML y el acento configurado', () => {
 });
 
 Then('el CSS lleva el acento {string}', (accent: string) => {
-  const tono = ACCENT_PALETTES[accent as AccentColor]?.[500];
-  if (tono === undefined) throw new Error(`la paleta ${accent} no existe o no tiene el tono 500`);
-  if (!world.css.includes(tono)) throw new Error(`el CSS no lleva el tono 500 de ${accent} (${tono})`);
+  if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new Error(`la paleta ${accent} no existe`);
+  const referencia = `--color-accent-500:var(--color-${accent}-500)`;
+  if (!world.css.includes(referencia)) {
+    throw new Error(`el CSS no lleva el tono 500 de ${accent} (${referencia})`);
+  }
+  if (!world.css.includes(`--color-${accent}-500:`)) {
+    throw new Error(`el CSS no lleva la paleta base de ${accent} que el acento referencia`);
+  }
 });
 
 Then('el CSS purga lo que el HTML ya no usa y no inventa lo que no menciona', () => {
