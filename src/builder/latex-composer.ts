@@ -1,5 +1,6 @@
 import { copyFile, mkdir } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { stringify } from 'yaml';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
@@ -221,12 +222,11 @@ function applyInterventionOverrides(
 
 function yamlScalar(value: string): string {
   if (!value.includes('\n')) {
-    const escaped = value.replace(/'/g, "''");
-    return `'${escaped}'`;
+    return stringify({ v: value }, { defaultStringType: 'QUOTE_SINGLE', defaultKeyType: 'PLAIN' }).replace(/^v: /, '').trimEnd();
   }
-  const lines = value.split('\n');
-  const body = lines.map((l) => `  ${l}`).join('\n');
-  return `|\n${body}`;
+  return stringify({ v: `${value.replace(/\n+$/, '')}\n` }, { defaultStringType: 'BLOCK_LITERAL', defaultKeyType: 'PLAIN' })
+    .replace(/^v: /, '')
+    .trimEnd();
 }
 
 function prependFrontmatterYaml(content: string, overrides: Record<string, string>): string {

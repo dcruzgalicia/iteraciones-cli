@@ -6,6 +6,9 @@
   "bin": {
     "iteraciones": "src/bin.ts"
   },
+  "engines": {
+    "bun": ">=1.4"
+  },
   "scripts": {
     "test": "bun run gherkin",
     "typecheck": "tsc --noEmit",

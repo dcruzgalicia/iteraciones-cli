@@ -1,6 +1,3 @@
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { logWarning } from './logger.js';
 
 const BIN = 'minify';
@@ -32,20 +29,16 @@ export async function minifyHtml(html: string): Promise<string> {
     logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
     return html;
   }
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-minify-'));
-  try {
-    const input = join(dir, 'in.html');
-    const output = join(dir, 'out.html');
-    await Bun.write(input, html);
-    const proc = Bun.spawn([BIN, '--html-keep-quotes', '-o', output, input], { stdout: 'ignore', stderr: 'pipe' });
-    const stderr = await new Response(proc.stderr).text();
-    const code = await proc.exited;
-    if (code !== 0) {
-      logWarning(`minify falló; el HTML sale sin minificar. stderr: ${stderr.trim()}`, 'html');
-      return html;
-    }
-    return await Bun.file(output).text();
-  } finally {
-    await rm(dir, { recursive: true, force: true });
+  const proc = Bun.spawn([BIN, '--type', 'html', '--html-keep-quotes'], {
+    stdin: new Blob([html]),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const [salida, error] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+  const code = await proc.exited;
+  if (code !== 0) {
+    logWarning(`minify falló; el HTML sale sin minificar. stderr: ${error.trim()}`, 'html');
+    return html;
   }
+  return salida;
 }

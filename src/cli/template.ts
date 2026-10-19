@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { writeIfChanged } from '../builder/pipeline-io.js';
 import { composeTemplate, loadLogoInline, TEMPLATE_KINDS, type TemplateKind, templatePathFor } from '../builder/pipeline-setup.js';
 import { resolveDisabledPreambleForBuild } from '../builder/preamble-loader.js';
@@ -6,7 +6,6 @@ import { resolveBibOptions } from '../builder/state-bib.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logSuccess } from '../lib/logger.js';
-import { resolvePath } from '../lib/paths.js';
 
 const KINDS = TEMPLATE_KINDS as readonly string[];
 
@@ -27,7 +26,7 @@ export async function runTemplate(cwd: string, kind: string, options: { output?:
     const output =
       options.output === undefined || options.output === ''
         ? templatePathFor(kind as TemplateKind, join(cwd, '.iteraciones', 'templates'))
-        : resolvePath(cwd, options.output);
+        : resolve(cwd, options.output);
     await writeIfChanged(output, content);
     logSuccess(`${kind} → ${output}`, 'template');
   } catch (err) {

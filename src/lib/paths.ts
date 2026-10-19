@@ -1,15 +1,11 @@
-import { isAbsolute, join, normalize, relative, sep } from 'node:path';
-
-export function resolvePath(cwd: string, path: string): string {
-  return isAbsolute(path) ? normalize(path) : join(cwd, normalize(path));
-}
+import { isAbsolute, relative, sep } from 'node:path';
 
 export function posix(path: string): string {
   return path.split(sep).join('/');
 }
 
 export function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return RegExp.escape(text);
 }
 
 export function isInside(root: string, abs: string): boolean {

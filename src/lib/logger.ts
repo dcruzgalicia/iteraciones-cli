@@ -1,12 +1,4 @@
-const ANSI = {
-  green: '\x1b[32m',
-  red: '\x1b[31m',
-  yellow: '\x1b[33m',
-  dim: '\x1b[2m',
-  reset: '\x1b[0m',
-} as const;
-
-type AnsiColor = keyof typeof ANSI;
+import { styleText } from 'node:util';
 
 export const GLYPHS = {
   success: '✔',
@@ -16,13 +8,9 @@ export const GLYPHS = {
   skipped: '–',
 } as const;
 
-const isTty = (stream: NodeJS.WriteStream): boolean => stream.isTTY === true;
-
-const noColorRequested = (): boolean => process.env.NO_COLOR !== undefined;
-
-function colorize(text: string, color: AnsiColor, stream: NodeJS.WriteStream): string {
-  const colored = isTty(stream) && !noColorRequested();
-  return colored ? `${ANSI[color]}${text}${ANSI.reset}` : text;
+function colorize(text: string, color: 'green' | 'red' | 'yellow' | 'dim', stream: NodeJS.WriteStream): string {
+  if (process.env.NO_COLOR !== undefined) return text;
+  return styleText(color, text, { validateStream: true, stream });
 }
 
 function formatContext(context: string | undefined, stream: NodeJS.WriteStream): string {

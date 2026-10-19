@@ -1,9 +1,8 @@
-import { exists, mkdir, open, rm } from 'node:fs/promises';
-import { isAbsolute, join, relative } from 'node:path';
+import { exists, mkdir, rm } from 'node:fs/promises';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logError, logInfo, logSuccess, logWarning } from '../lib/logger.js';
-import { resolvePath } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import type { VisualDiffResult } from '../lib/visual-diff.js';
 import {
@@ -118,16 +117,13 @@ function labelPath(cwd: string, path: string): string {
 }
 
 async function assertEsPdf(path: string): Promise<void> {
-  if (!(await exists(path))) throw new BuildError(`no existe el PDF "${path}"`);
-  const archivo = await open(path, 'r');
-  try {
-    const cabecera = Buffer.alloc(1024);
-    await archivo.read(cabecera, 0, 1024, 0);
-    if (!cabecera.includes('%PDF-')) {
-      throw new BuildError(`"${path}" no es un PDF: su contenido no empieza por %PDF-`);
-    }
-  } finally {
-    await archivo.close();
+  const cabecera = await Bun.file(path)
+    .slice(0, 1024)
+    .text()
+    .catch(() => null);
+  if (cabecera === null) throw new BuildError(`no existe el PDF "${path}"`);
+  if (!cabecera.includes('%PDF-')) {
+    throw new BuildError(`"${path}" no es un PDF: su contenido no empieza por %PDF-`);
   }
 }
 
@@ -159,11 +155,11 @@ async function resolveRun(cwd: string, paths: string[], mode: SnapshotsMode, opt
   assertSiteMapOnly(save, siteMapOnly, paths);
   assertPathCount(save, paths, cwd);
 
-  const outputDir = resolvePath(cwd, options.output ?? DIST_FILES_DIR);
+  const outputDir = resolve(cwd, options.output ?? DIST_FILES_DIR);
   const [pdf, reference] = paths;
   const batch = pdf === undefined;
-  const explicitReference = reference === undefined ? undefined : resolvePath(cwd, reference);
-  const targets = siteMapOnly ? [] : batch ? await listPdfFiles(outputDir) : [resolvePath(cwd, pdf)];
+  const explicitReference = reference === undefined ? undefined : resolve(cwd, reference);
+  const targets = siteMapOnly ? [] : batch ? await listPdfFiles(outputDir) : [resolve(cwd, pdf)];
   if (batch && targets.length === 0 && !siteMapOnly && (await listHtmlRoutes(outputDir)).length === 0) {
     throw new BuildError(`no hay PDFs en ${labelPath(cwd, outputDir)}`);
   }
