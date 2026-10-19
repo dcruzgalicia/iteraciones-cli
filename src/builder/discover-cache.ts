@@ -70,6 +70,7 @@ export interface DiscoverOptions {
   prevState: import('./state-serialize.js').BuildState | null;
   outputDir?: string;
   meta?: DiscoverMeta;
+  tolerateInvalidFrontmatter?: boolean;
 }
 
 function stateHasChanged(

@@ -504,7 +504,6 @@ function resolveCollectionContent(
   fallback: string,
   pageNumber?: string,
 ): string {
-  if (collectionEntries.length === 0) return fallback;
   if (format === 'latex') return buildCollectionSectionsLatex(collectionEntries, pageNumber);
   if (format === 'html') {
     const printable = printableEntries(collectionEntries);
@@ -595,10 +594,7 @@ async function collectCreatorNamesFromFiles(files: string[], cwd: string): Promi
 }
 
 function extractCreatorNames(raw: unknown, target: Set<string>): void {
-  const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [];
-  for (const c of list) {
-    if (typeof c === 'string' && c.trim()) target.add(c.trim());
-  }
+  for (const name of parseAuthors(raw)) target.add(name);
 }
 
 async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collectionPath: string): Promise<CreatorDoc> {

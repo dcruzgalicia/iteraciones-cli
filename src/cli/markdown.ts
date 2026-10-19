@@ -1,7 +1,6 @@
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
-import { applyCreatorTitle } from '../builder/discover-frontmatter.js';
 import { assembleExportDocument } from '../builder/export.js';
 
 import { rewriteFmImagePaths } from '../builder/image-processor.js';
@@ -13,7 +12,7 @@ import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
+import { readFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { buildImagesContext, readSourceDocument } from './merge.js';
 
@@ -22,18 +21,6 @@ function outputRootFor(output: string, dir: string): string {
   const root = dir === '.' ? outDir : outDir.slice(0, outDir.length - dir.length - 1);
   if (join(root, dir) !== outDir) throw new BuildError(`-o debe vivir en el mismo nivel que el origen ("${dir}")`);
   return root;
-}
-
-function sourceFm(text: string, label: string): Record<string, unknown> {
-  const { yaml } = splitFrontmatter(text);
-  if (yaml === undefined) return {};
-  const { value, error } = parseYamlWithPosition(yaml);
-  if (error) throw new BuildError(`frontmatter inválido en "${label}": ${error}`);
-  const parsed = value;
-  const fm = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
-
-  applyCreatorTitle(fm);
-  return fm;
 }
 
 async function collectionFiles(cwd: string, relativePath: string, fm: Record<string, unknown>, input: string): Promise<string[]> {
@@ -55,7 +42,7 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     }
     const { inputPath, relativePath, text: content } = await readSourceDocument(cwd, input);
 
-    const fm = sourceFm(content, input);
+    const fm = readFrontmatter(content, input);
     const output = resolve(cwd, options.output);
     const siteConfig = await loadSiteConfig(cwd);
     const dir = dirname(relativePath);

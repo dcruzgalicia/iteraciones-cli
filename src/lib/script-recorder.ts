@@ -1,5 +1,6 @@
 import { chmod, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join } from 'node:path';
+import { relativeLabel } from './paths.js';
 
 const SCRIPT_DIR = ['.iteraciones', 'script'] as const;
 
@@ -57,11 +58,6 @@ const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/;
 
 function quote(value: string): string {
   return SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
-}
-
-function displayPath(root: string, path: string): string {
-  const rel = relative(root, path);
-  return rel !== '' && !rel.startsWith('..') ? rel : path;
 }
 
 function flagValue(args: string[], flag: string): string | undefined {
@@ -258,7 +254,7 @@ function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
   dirs.delete('.');
   if (dirs.size === 0) return [];
 
-  const paths = [...dirs].sort().map((dir) => displayPath(cap.root, dir));
+  const paths = [...dirs].sort().map((dir) => relativeLabel(cap.root, dir));
   return ['# === Preparación (directorios) ===', `mkdir -p ${paths.map(quote).join(' ')}`, ''];
 }
 
@@ -285,9 +281,9 @@ function renderCommand(step: Step, cap: Capture): string {
       .join(' ');
     cmd = `${prefix} ${cmd}`;
   }
-  if (step.cwd !== undefined) cmd = `(cd ${quote(displayPath(cap.root, step.cwd))} && ${cmd})`;
+  if (step.cwd !== undefined) cmd = `(cd ${quote(relativeLabel(cap.root, step.cwd))} && ${cmd})`;
   const stdin = step.inputFrom?.target ?? step.inputPath;
-  if (stdin !== undefined) cmd += ` < ${quote(displayPath(cap.root, stdin))}`;
-  if (step.target !== undefined) cmd += ` > ${quote(displayPath(cap.root, step.target))}`;
+  if (stdin !== undefined) cmd += ` < ${quote(relativeLabel(cap.root, stdin))}`;
+  if (step.target !== undefined) cmd += ` > ${quote(relativeLabel(cap.root, step.target))}`;
   return cmd;
 }

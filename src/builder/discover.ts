@@ -113,7 +113,7 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
   const { entries: deletedEntries, removed: deletedFiles } = takeDeletedEntries(discoveryIndex, currentSet);
   for (const key of deletedFiles) changedPaths.add(key);
 
-  throwIfInvalidFrontmatter(frontmatterIssues);
+  if (!options.tolerateInvalidFrontmatter) throwIfInvalidFrontmatter(frontmatterIssues);
 
   const slugComputer = makeSlugComputer((message) => logWarning(message, 'discover'));
 
@@ -123,33 +123,16 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
 }
 
 export async function loadSlugIndex(cwd: string): Promise<Map<string, DiscoveryEntry>> {
-  const relativePaths = await listMarkdownDocuments(cwd);
-  const index = new Map<string, DiscoveryEntry>();
-  const issues: FrontmatterIssue[] = [];
-
+  let index = new Map<string, DiscoveryEntry>();
   await runWithWarningSink(
     () => {},
     async () => {
-      const prevState = await loadStateFile(cwd);
-      await mapWithConcurrency(relativePaths, FILE_IO_CONCURRENCY, async (relativePath) => {
-        const { mtime, size } = await statDocument(cwd, relativePath);
-        await parseDocument({
-          cwd,
-          relativePath,
-          filePath: join(cwd, relativePath),
-          mtime,
-          size,
-          cachedSlug: prevState?.entries.get(relativePath)?.slug,
-          decisionText: null,
-          decisionHash: undefined,
-          index,
-          issues,
-        });
+      const { discoveryIndex, slugComputer } = await discover(cwd, {
+        prevState: await loadStateFile(cwd),
+        tolerateInvalidFrontmatter: true,
       });
-      resolveSlugs(
-        index,
-        makeSlugComputer(() => {}),
-      );
+      resolveDiscoverSlugs(discoveryIndex, slugComputer);
+      index = discoveryIndex;
     },
   );
   return index;

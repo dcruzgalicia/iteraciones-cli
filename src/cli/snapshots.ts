@@ -1,8 +1,9 @@
 import { exists, mkdir, rm } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logError, logInfo, logSuccess, logWarning } from '../lib/logger.js';
+import { relativeLabel } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import type { VisualDiffResult } from '../lib/visual-diff.js';
 import {
@@ -70,7 +71,7 @@ async function saveSiteMap(cwd: string, outputDir: string): Promise<void> {
   const file = siteMapPath(cwd);
   if (routes.length === 0) {
     await rm(file, { force: true });
-    logInfo(`no hay HTML en ${labelPath(cwd, outputDir)}: no se escribe ${SNAPSHOTS_DIR}/${SITE_MAP_FILE}`, 'snapshots');
+    logInfo(`no hay HTML en ${relativeLabel(cwd, outputDir)}: no se escribe ${SNAPSHOTS_DIR}/${SITE_MAP_FILE}`, 'snapshots');
     return;
   }
   await mkdir(join(cwd, SNAPSHOTS_DIR), { recursive: true });
@@ -85,7 +86,7 @@ async function checkSiteMap(cwd: string, outputDir: string): Promise<void> {
     if (routes.length === 0) return;
     process.exitCode = 1;
     logError(
-      `falta ${SNAPSHOTS_DIR}/${SITE_MAP_FILE} y hay ${plural(routes.length, 'ruta')} HTML en ${labelPath(cwd, outputDir)} · crea la línea base con: iteraciones snapshots save --site-map-only`,
+      `falta ${SNAPSHOTS_DIR}/${SITE_MAP_FILE} y hay ${plural(routes.length, 'ruta')} HTML en ${relativeLabel(cwd, outputDir)} · crea la línea base con: iteraciones snapshots save --site-map-only`,
       'snapshots',
     );
     return;
@@ -111,11 +112,6 @@ async function checkSiteMap(cwd: string, outputDir: string): Promise<void> {
   for (const ruta of eliminadas) logInfo(`- ${ruta}`, 'snapshots');
 }
 
-function labelPath(cwd: string, path: string): string {
-  const rel = relative(cwd, path);
-  return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? path : rel;
-}
-
 async function assertEsPdf(path: string): Promise<void> {
   const cabecera = await Bun.file(path)
     .slice(0, 1024)
@@ -138,7 +134,7 @@ function assertPathCount(save: boolean, paths: string[], cwd: string): void {
   }
   if (!save && paths.length === 1) {
     throw new BuildError(
-      `check necesita dos rutas: el PDF y contra qué compararlo · "${labelPath(cwd, paths[0] as string)}" a secas no dice contra qué snapshot va.\nPara un documento usa: iteraciones snapshots check (sin rutas, compara ${SNAPSHOTS_DIR} contra la salida)\nPara un par: iteraciones snapshots check <pdf> <referencia>`,
+      `check necesita dos rutas: el PDF y contra qué compararlo · "${relativeLabel(cwd, paths[0] as string)}" a secas no dice contra qué snapshot va.\nPara un documento usa: iteraciones snapshots check (sin rutas, compara ${SNAPSHOTS_DIR} contra la salida)\nPara un par: iteraciones snapshots check <pdf> <referencia>`,
     );
   }
 }
@@ -161,7 +157,7 @@ async function resolveRun(cwd: string, paths: string[], mode: SnapshotsMode, opt
   const explicitReference = reference === undefined ? undefined : resolve(cwd, reference);
   const targets = siteMapOnly ? [] : batch ? await listPdfFiles(outputDir) : [resolve(cwd, pdf)];
   if (batch && targets.length === 0 && !siteMapOnly && (await listHtmlRoutes(outputDir)).length === 0) {
-    throw new BuildError(`no hay PDFs en ${labelPath(cwd, outputDir)}`);
+    throw new BuildError(`no hay PDFs en ${relativeLabel(cwd, outputDir)}`);
   }
   for (const target of targets) await assertEsPdf(target);
   if (explicitReference !== undefined) await assertEsPdf(explicitReference);
@@ -187,12 +183,12 @@ async function saveSnapshots(cwd: string, run: SnapshotRun): Promise<void> {
     await savePageImages(paginas, store, stem);
     await rm(workDir, { recursive: true, force: true });
     guardados += paginas.length;
-    logSuccess(`${labelPath(cwd, pdf)} → ${SNAPSHOTS_DIR}/${stem} (${plural(paginas.length, 'página')})`, 'snapshots');
+    logSuccess(`${relativeLabel(cwd, pdf)} → ${SNAPSHOTS_DIR}/${stem} (${plural(paginas.length, 'página')})`, 'snapshots');
   }
 
   await clearDiffImages(join(cwd, DIFF_DIR));
   if (retirados.length > 0) {
-    logInfo(`${plural(retirados.length, 'snapshot retirado')} sin PDF en ${labelPath(cwd, outputDir)}: ${retirados.join(', ')}`, 'snapshots');
+    logInfo(`${plural(retirados.length, 'snapshot retirado')} sin PDF en ${relativeLabel(cwd, outputDir)}: ${retirados.join(', ')}`, 'snapshots');
   }
   logSuccess(`${plural(guardados, 'página')} en la línea base`, 'snapshots');
   if (batch) await saveSiteMap(cwd, outputDir);
@@ -211,7 +207,7 @@ async function seleccionaComparables(
 
   const agregados: string[] = [];
   for (const pdf of targets) {
-    if (!guardados.has(snapshotStemFor(pdf, outputDir))) agregados.push(labelPath(cwd, pdf));
+    if (!guardados.has(snapshotStemFor(pdf, outputDir))) agregados.push(relativeLabel(cwd, pdf));
   }
 
   const wanted = new Set(targets.map((pdf) => snapshotStemFor(pdf, outputDir)));
@@ -255,12 +251,12 @@ async function compareOne(
     diffDir,
     diffStem: stem,
   });
-  return { referenceLabel: explicitReference === undefined ? `${SNAPSHOTS_DIR}/${stem}` : labelPath(cwd, explicitReference), result };
+  return { referenceLabel: explicitReference === undefined ? `${SNAPSHOTS_DIR}/${stem}` : relativeLabel(cwd, explicitReference), result };
 }
 
 function failureSummary(cwd: string, compared: Compared[], failed: Compared[]): string {
   const lines: string[] = [];
-  const diffs = failed.flatMap(({ entry }) => entry.result.details.map((detail) => labelPath(cwd, detail.diffImage)));
+  const diffs = failed.flatMap(({ entry }) => entry.result.details.map((detail) => relativeLabel(cwd, detail.diffImage)));
   if (diffs.length > 0) {
     const images = diffs.length === 1 ? '1 imagen de diferencia' : `${diffs.length} imágenes de diferencia`;
     lines.push(compared.length > 1 ? `${failed.length} de ${compared.length} PDFs con regresión visual · ${images}:` : `${images}:`);
@@ -269,15 +265,15 @@ function failureSummary(cwd: string, compared: Compared[], failed: Compared[]): 
   for (const { pdf, entry } of failed) {
     const { referencePages, generatedPages } = entry.result;
     if (referencePages !== generatedPages) {
-      lines.push(`el número de páginas cambió en ${labelPath(cwd, pdf)}: referencia ${referencePages} · generado ${generatedPages}`);
+      lines.push(`el número de páginas cambió en ${relativeLabel(cwd, pdf)}: referencia ${referencePages} · generado ${generatedPages}`);
     }
   }
   return lines.join('\n');
 }
 
 function batchBlock(cwd: string, pdf: string, result: VisualDiffResult): string {
-  const [first = '', ...rest] = formatVisualSummary(result, (path) => labelPath(cwd, path));
-  return [`${labelPath(cwd, pdf)} · ${first}`, ...rest].join('\n');
+  const [first = '', ...rest] = formatVisualSummary(result, (path) => relativeLabel(cwd, path));
+  return [`${relativeLabel(cwd, pdf)} · ${first}`, ...rest].join('\n');
 }
 
 function reportAll(cwd: string, compared: Compared[]): void {
@@ -285,7 +281,7 @@ function reportAll(cwd: string, compared: Compared[]): void {
   if (single !== undefined) {
     const { referenceLabel, result } = single.entry;
     logInfo(
-      formatVisualReport({ result, referenceLabel, generatedLabel: labelPath(cwd, single.pdf) }, (path) => labelPath(cwd, path)),
+      formatVisualReport({ result, referenceLabel, generatedLabel: relativeLabel(cwd, single.pdf) }, (path) => relativeLabel(cwd, path)),
       'snapshots',
     );
     return;

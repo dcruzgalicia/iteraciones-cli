@@ -59,16 +59,27 @@ async function computeSchemaSourceHash(prevCache?: Record<string, FileCacheEntry
   return hashString(parts.join('\0'));
 }
 
+export async function hashGlobbedFiles(
+  dir: string,
+  glob: string,
+  prevCache: Record<string, FileCacheEntry> | undefined,
+  cacheOut: Record<string, FileCacheEntry>,
+): Promise<string[]> {
+  const parts: string[] = [];
+  const files = [...new Bun.Glob(glob).scanSync({ cwd: dir, onlyFiles: true })].sort();
+  for (const file of files) {
+    const hash = await hashFileCached(join(dir, file), file, prevCache, cacheOut);
+    if (hash === null) throw new Error(`fuente desaparecida a medio del build: ${join(dir, file)}`);
+    parts.push(file, hash);
+  }
+  return parts;
+}
+
 async function hashSpecFiles(specs: Array<[string, string]>, prevCache: FilterFileCache | undefined, cache: FilterFileCache): Promise<string[]> {
   const parts: string[] = [];
   for (const [dir, glob] of specs) {
     try {
-      const files = [...new Bun.Glob(glob).scanSync({ cwd: dir })].sort();
-      for (const file of files) {
-        const hash = await hashFileCached(join(dir, file), file, prevCache, cache);
-        if (hash === null) throw new Error(`fuente desaparecida a medio del build: ${join(dir, file)}`);
-        parts.push(file, hash);
-      }
+      parts.push(...(await hashGlobbedFiles(dir, glob, prevCache, cache)));
     } catch (err) {
       if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') throw err;
     }
