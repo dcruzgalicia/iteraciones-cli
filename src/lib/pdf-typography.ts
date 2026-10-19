@@ -180,19 +180,34 @@ export function tiradasCoincidentes(pages: string[][], lineas: number, clave: (l
       }
       let fin = inicio + 1;
       while (fin < lineasPagina.length && clave(lineasPagina[fin] as string) === actual) fin += 1;
-      const largo = fin - inicio;
-      if (largo >= lineas) {
+      for (let desde = inicio; desde + lineas <= fin; desde++) {
         encontradas.push({
           page: indicePagina + 1,
-          lineas: lineasPagina.slice(inicio, inicio + lineas).map((text, k) => ({ line: inicio + k + 1, text })),
-          total: largo,
-          continuacion: lineasPagina[inicio + lineas],
+          lineas: lineasPagina.slice(desde, desde + lineas).map((text, k) => ({ line: desde + k + 1, text })),
+          total: fin - desde,
+          continuacion: lineasPagina[desde + lineas],
         });
       }
       inicio = fin;
     }
   }
   return encontradas;
+}
+
+function colapsaVentanas<T extends TypographyIncidence>(incidencias: readonly T[]): T[] {
+  const vistas = new Set<string>();
+  const resultado: T[] = [];
+  for (const incidencia of incidencias) {
+    if (incidencia.type === 'single-word-line') {
+      resultado.push(incidencia);
+      continue;
+    }
+    const clave = `${incidencia.type}:${incidencia.page}:${incidencia.line + incidencia.total - 1}`;
+    if (vistas.has(clave)) continue;
+    vistas.add(clave);
+    resultado.push(incidencia);
+  }
+  return resultado;
 }
 
 function sinAcentos(texto: string): string {
@@ -398,22 +413,24 @@ export interface OpcionesAnalisis {
   reglas?: readonly string[];
   lineasMinimas?: number;
   letrasMinimas?: number;
+  excepciones?: readonly ExcepcionTipografia[];
+  archivo?: string;
 }
 
 export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
-  const { primeraPagina = 1, ultimaPagina, porcentajeCorta = 75, lineasMinimas = 3, letrasMinimas = 2 } = opciones;
+  const { primeraPagina = 1, ultimaPagina, porcentajeCorta = 75, lineasMinimas = 3, letrasMinimas = 2, excepciones = [] } = opciones;
   const pedidas = new Set(opciones.reglas ?? TODAS_LAS_REGLAS);
   const pages = splitPages(stdout);
   const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
-  const incidences = [
+  const halladas: TypographyIncidence[] = [
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
     ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
     ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas, ancho) : []),
     ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas, letrasMinimas, ancho) : []),
   ];
-
+  const vivas = excepciones.length === 0 ? halladas : filtraExcepciones(halladas, opciones.archivo ?? '', excepciones);
   const hasta = ultimaPagina ?? pages.length;
-  return incidences.filter((incidencia) => incidencia.page >= primeraPagina && incidencia.page <= hasta);
+  return colapsaVentanas(vivas).filter((incidencia) => incidencia.page >= primeraPagina && incidencia.page <= hasta);
 }
 
 export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {}): Promise<TypographyIncidence[]> {

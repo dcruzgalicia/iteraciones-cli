@@ -612,6 +612,55 @@ Característica: la corrección tipográfica del markdown
       Y la salida dice "single-word-line  Hola"
       Y el error dice "1 incidencia en 1 PDF"
 
+    Escenario: Ignorar la primera ventana de una tirada larga enseña la siguiente
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        uno dos.
+        tres cuatro,
+        cinco seis-
+        siete ocho.
+        \f
+        """
+      Y que el archivo "excepciones.txt" tiene este contenido
+        """
+        dist/files/libro.pdf
+          pág 1  líneas 1-2 de 4  consecutive-punctuation
+                 1  uno dos.
+                 2  tres cuatro,
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules consecutive-punctuation --min-lines 2 --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "1 incidencia"
+      Y la salida dice "pág 1  líneas 2-3 de 3  consecutive-punctuation"
+
+    Escenario: Encadenar excepciones va enseñando las siguientes ventanas
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Volvi a la casa de mis padres un martes
+        de enero. Y me quede pensando en las tardes
+        con las cosas que pasan en las casas
+        y las que se quedan en las palabras
+        \f
+        """
+      Y que el archivo "excepciones.txt" tiene este contenido
+        """
+        dist/files/libro.pdf
+          pág 1  líneas 1-2 de 4  repeated-last-letter
+                 1  Volvi a la casa de mis padres un martes
+                 2  de enero. Y me quede pensando en las tardes
+                 las 2 terminan por 's'
+
+          pág 1  líneas 2-3 de 3  repeated-last-letter
+                 2  de enero. Y me quede pensando en las tardes
+                 3  con las cosas que pasan en las casas
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules repeated-last-letter --min-lines 2 --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "1 incidencia"
+      Y la salida dice "pág 1  líneas 3-4  repeated-last-letter"
+
   Regla de negocio: --fix corrige los markdown de origen
 
     Escenario: Corrige la unión de dos líneas y lo reporta

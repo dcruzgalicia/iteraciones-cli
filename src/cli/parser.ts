@@ -345,7 +345,8 @@ El número de línea reinicia en cada página. Una línea vacía y el final de p
 consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.
 Y una tirada cuenta una vez: seis renglones seguidos que cumplen salen como un hallazgo, no como
 cuatro ventanas solapadas. Cuando la tirada es más larga que la ventana que se enseña, el informe
-dice cuántas había en total.
+dice cuántas había en total. Si la ventana que se enseña está en las excepciones, el informe enseña
+la siguiente de la tirada: ignorar un hallazgo no esconde los que le siguen.
 
 Ejemplos:
   iteraciones typography                                revisa los PDF de dist/files
