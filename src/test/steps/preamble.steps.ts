@@ -387,10 +387,6 @@ Then('el filtro trae {string} {int} vez', (comando: string, veces: number) => {
   }
 });
 
-function _filtro(nombre: string, contenido: string): PreambleFilter {
-  return { name: nombre, content: contenido };
-}
-
 Given('que el proyecto tiene los filtros:', (lista: string) => {
   const pares = lista
     .split(';;')

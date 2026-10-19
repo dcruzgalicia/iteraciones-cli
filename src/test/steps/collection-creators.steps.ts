@@ -8,7 +8,6 @@ import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 Given('que el proyecto tiene:', (documentos: string) => {
   const tablas = JSON.parse(documentos.replace(/\n/g, '\\n')) as Record<string, string>;
-  world.documentosProyecto = tablas;
   for (const [nombre, contenido] of Object.entries(tablas)) {
     escribirEnProyecto(nombre, contenido);
   }

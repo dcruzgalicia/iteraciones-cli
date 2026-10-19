@@ -78,10 +78,6 @@ When('escaneo el PDF {string}', async (nombre: string) => {
   await escaneaPdf(nombre, 75);
 });
 
-When('escaneo el PDF {string} sin el filtro de línea corta', async (nombre: string) => {
-  await escaneaPdf(nombre, 0);
-});
-
 When('escaneo el PDF {string} buscando {string}', async (nombre: string, reglas: string) => {
   const pedidas = reglas.split(',').map((r) => r.trim());
   await escaneaPdf(nombre, 0, pedidas);

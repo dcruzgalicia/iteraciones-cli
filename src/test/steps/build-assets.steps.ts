@@ -160,7 +160,6 @@ Then('la salida NO se detecta como del layout anterior', async () => {
 });
 
 Given('un documento borrado sin slug conocido y estos artefactos:', (artefactos: string) => {
-  world.rutaBorrada = 'index.md';
   world.slugBorrado = 'index';
   world.borrados = new Set(['index.md']);
   for (const linea of artefactos.split('\n')) {

@@ -229,11 +229,6 @@ Then('el primer objetivo es posterior', () => {
   if (primero?.posterior !== true) throw new Error(`el primer objetivo no es posterior: ${JSON.stringify(primero)}`);
 });
 
-Then('el primer objetivo no es posterior', () => {
-  const primero = objetivosDe(estado.incidencia)[0];
-  if (primero?.posterior !== false) throw new Error(`el primer objetivo es posterior: ${JSON.stringify(primero)}`);
-});
-
 Then('el objetivo que termina en {string} es {string}', (sufijo: string, aguja: string) => {
   const objetivo = buscaObjetivo(sufijo);
   if (objetivo.aguja !== aguja) {
@@ -251,11 +246,6 @@ Then('el objetivo posterior que termina en {string} es {string}', (sufijo: strin
 Then('el objetivo que termina en {string} es posterior', (sufijo: string) => {
   const objetivo = buscaObjetivo(sufijo);
   if (objetivo.posterior !== true) throw new Error(`el objetivo no es posterior: ${JSON.stringify(objetivo)}`);
-});
-
-Then('el objetivo que termina en {string} no es posterior', (sufijo: string) => {
-  const objetivo = buscaObjetivo(sufijo);
-  if (objetivo.posterior !== false) throw new Error(`el objetivo es posterior: ${JSON.stringify(objetivo)}`);
 });
 
 Then('el objetivo {string} no es el primero', (aguja: string) => {
