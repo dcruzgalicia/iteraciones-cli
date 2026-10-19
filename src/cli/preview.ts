@@ -11,8 +11,6 @@ const POLL_MS = 200;
 
 const LOCK_PATH = join('.iteraciones', 'preview.lock');
 
-export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
 export type Snapshot = Map<string, number>;
 
 export async function previewInputs(cwd: string): Promise<string[]> {
@@ -59,11 +57,7 @@ function pidVivo(pid: number): boolean {
   }
 }
 
-export interface PreviewLock {
-  release: () => Promise<void>;
-}
-
-export async function acquirePreviewLock(cwd: string, onNotice?: (msg: string) => void): Promise<PreviewLock> {
+export async function acquirePreviewLock(cwd: string, onNotice?: (msg: string) => void): Promise<() => Promise<void>> {
   const lockfile = join(cwd, LOCK_PATH);
   const previo = await Bun.file(lockfile)
     .text()
@@ -75,14 +69,12 @@ export async function acquirePreviewLock(cwd: string, onNotice?: (msg: string) =
     try {
       process.kill(pidAnterior, 'SIGTERM');
     } catch {}
-    for (let intento = 0; intento < 15 && pidVivo(pidAnterior); intento++) await sleep(200);
+    for (let intento = 0; intento < 15 && pidVivo(pidAnterior); intento++) await Bun.sleep(200);
   }
 
   await Bun.write(lockfile, String(process.pid));
-  return {
-    release: async () => {
-      await unlink(lockfile).catch(() => {});
-    },
+  return async () => {
+    await unlink(lockfile).catch(() => {});
   };
 }
 
@@ -106,7 +98,7 @@ export async function runPreview(cwd: string, options: PreviewOptions = {}): Pro
   process.on('SIGINT', parar);
   process.on('SIGTERM', parar);
 
-  const lock = await acquirePreviewLock(cwd, (msg) => logInfo(msg, 'preview'));
+  const release = await acquirePreviewLock(cwd, (msg) => logInfo(msg, 'preview'));
 
   const ciclo = async (): Promise<void> => {
     if (corriendo) {
@@ -130,7 +122,7 @@ export async function runPreview(cwd: string, options: PreviewOptions = {}): Pro
     await ciclo();
     logInfo('vigilando cambios; Ctrl+C para salir', 'preview');
     while (seguir) {
-      await sleep(pollMs);
+      await Bun.sleep(pollMs);
       const actual = await takeSnapshot(await previewInputs(cwd));
       const cambios = changedSince(snapshot, actual);
       snapshot = actual;
@@ -143,6 +135,6 @@ export async function runPreview(cwd: string, options: PreviewOptions = {}): Pro
   } finally {
     process.off('SIGINT', parar);
     process.off('SIGTERM', parar);
-    await lock.release();
+    await release();
   }
 }

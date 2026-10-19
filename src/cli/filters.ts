@@ -9,6 +9,7 @@ import {
 } from '../builder/preamble-loader.js';
 import { resolveBibOptions } from '../builder/state-bib.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
+import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
 
@@ -29,7 +30,6 @@ function shortDescription(description: string): string {
 }
 
 export interface RunFiltersOptions {
-  stream?: NodeJS.WriteStream;
   verbose?: boolean;
   columns?: number;
   json?: boolean;
@@ -116,8 +116,8 @@ async function emitPreambleBlock(
 }
 
 export async function listFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
-  const stream = options.stream ?? process.stdout;
-  const config = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
+  const stream = process.stdout;
+  const config: SiteConfig = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
   validateDisabledFilters(config.disabledFilters, join(cwd, 'iteraciones.config.yaml'));
 
   const bibFiles = await resolveBibOptions(cwd, config)

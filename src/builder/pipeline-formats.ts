@@ -203,7 +203,6 @@ async function emitHtmlPage(
       tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
       lang,
       theme: htmlConfig?.site?.theme,
-      accent: htmlConfig?.site?.color,
       css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
       authorMeta: doc.frontmatter.creator.join(', '),
       docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? doc.frontmatter.title : undefined,
@@ -764,7 +763,7 @@ async function emitCollectionFormats(
     );
   }
 
-  const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
+  const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl);
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
     const base = collectionCardsContent(collectionEntries, memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex), content);

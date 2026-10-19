@@ -14,8 +14,6 @@ async function readStdin(): Promise<string> {
   return new Response(Bun.stdin).text();
 }
 
-export type PostHtmlType = HtmlDocType;
-
 function postHtmlType(raw: string): HtmlDocType {
   return raw === 'collection' || raw === 'creator' ? raw : 'file';
 }

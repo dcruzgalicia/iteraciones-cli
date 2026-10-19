@@ -60,7 +60,6 @@ export interface HtmlPageVars {
   tagline?: string;
   lang: string;
   theme?: string;
-  accent?: string;
   css?: string;
   authorMeta?: string;
   docTitle?: string;
