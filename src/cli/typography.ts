@@ -5,14 +5,7 @@ import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
-import {
-  analyzePdf,
-  filtraExcepciones,
-  type OpcionesAnalisis,
-  parseaExcepciones,
-  TODAS_LAS_REGLAS,
-  type TypographyIncidence,
-} from '../lib/pdf-typography.js';
+import { analyzePdf, type OpcionesAnalisis, parseaExcepciones, TODAS_LAS_REGLAS, type TypographyIncidence } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency, type RunResult } from '../lib/run.js';
 import { listPdfFiles } from '../lib/visual-diff.js';
@@ -197,7 +190,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
 
     const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
       pdf,
-      incidences: filtraExcepciones(await analyzePdf(pdf, analisis), etiqueta(cwd, pdf), excepciones),
+      incidences: await analyzePdf(pdf, { ...analisis, excepciones, archivo: etiqueta(cwd, pdf) }),
     }));
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 
@@ -794,12 +787,9 @@ async function arreglaTypografia(
   let exactMiss = 0;
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>();
 
+  const excepciones = cargarExcepciones(cwd, options);
   for (const pdf of targets) {
-    const incidences = filtraExcepciones(
-      await analyzePdf(pdf, analisis),
-      etiqueta(cwd, pdf),
-      cargarExcepciones(cwd, options),
-    ) as TypographyIncidence[];
+    const incidences = await analyzePdf(pdf, { ...analisis, excepciones, archivo: etiqueta(cwd, pdf) });
     if (incidences.length === 0) continue;
 
     const estado = new Map<TypographyIncidence, MotivoIncidencia>();
