@@ -16,7 +16,6 @@ const CARDS = [
   'card-metadata.html',
   'card-formatos.html',
   'card-identity.html',
-  'card-identity-footer.html',
   'card-indice.html',
   'card-referencias-block.html',
   'card-referencias.html',

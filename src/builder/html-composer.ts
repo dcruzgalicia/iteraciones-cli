@@ -21,8 +21,15 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   formatos: 'card-formatos.html',
   indice: 'card-indice.html',
   referencias: 'card-referencias.html',
-  footer: 'card-identity-footer.html',
+  footer: 'card-identity.html',
 };
+
+const IDENTITY_APERTURA = '    <div id="card-identity" class="break-inside-avoid pb-6">\n\n';
+const FOOTER_APERTURA = '    <div id="card-identity-footer" class="break-inside-avoid">\n';
+
+function comoFooter(card: string): string {
+  return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA);
+}
 
 export function htmlResourceFiles(): string[] {
   return [...new Bun.Glob('**/*.html').scanSync({ cwd: HTML_RESOURCES_DIR, onlyFiles: true })].sort();
@@ -38,7 +45,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
   for (const key of order) {
     const card = await loadCard(type, HTML_CARDS[key]);
     if (key === 'header') header = card;
-    else if (key === 'footer') footer = card;
+    else if (key === 'footer') footer = comoFooter(card);
     else cards.push(card);
     if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
   }
