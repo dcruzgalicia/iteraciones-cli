@@ -1,4 +1,4 @@
-import { basename, dirname, join, relative } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { applyCreatorTitle } from '../builder/discover-frontmatter.js';
@@ -15,7 +15,6 @@ import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
-import { resolvePath } from '../lib/paths.js';
 import { buildImagesContext, readSourceDocument } from './merge.js';
 
 function outputRootFor(output: string, dir: string): string {
@@ -57,7 +56,7 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     const { inputPath, relativePath, text: content } = await readSourceDocument(cwd, input);
 
     const fm = sourceFm(content, input);
-    const output = resolvePath(cwd, options.output);
+    const output = resolve(cwd, options.output);
     const siteConfig = await loadSiteConfig(cwd);
     const dir = dirname(relativePath);
     const rootFiles = await collectionFiles(cwd, relativePath, fm, input);

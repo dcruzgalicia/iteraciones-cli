@@ -1,4 +1,4 @@
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import type { HtmlDocType } from '../builder/html-composer.js';
 import { loadReferencesCardTemplate, postProcessHtml } from '../builder/html-postprocess.js';
 import { composeLatexFinalOutput, type LatexPostManifest } from '../builder/latex-composer.js';
@@ -6,7 +6,6 @@ import { writeOutput } from '../builder/pipeline-io.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { minifyHtml } from '../lib/minify.js';
-import { resolvePath } from '../lib/paths.js';
 
 export const POST_KINDS = ['html', 'latex'] as const;
 
@@ -28,7 +27,7 @@ async function postLatex(raw: string, post: string | undefined, cwd: string, out
   }
   let manifest: LatexPostManifest;
   try {
-    manifest = JSON.parse(await Bun.file(resolvePath(cwd, post)).text()) as LatexPostManifest;
+    manifest = JSON.parse(await Bun.file(resolve(cwd, post)).text()) as LatexPostManifest;
   } catch {
     throw new BuildError(`no se pudo leer el manifiesto "${post}"`);
   }
@@ -41,7 +40,7 @@ export async function runPost(cwd: string, kind: string, options: { output: stri
     if (!(POST_KINDS as readonly string[]).includes(kind)) {
       throw new BuildError(`tipo de post-proceso desconocido "${kind}"; esperado: ${POST_KINDS.join(' | ')}`);
     }
-    const output = resolvePath(cwd, options.output);
+    const output = resolve(cwd, options.output);
     const raw = await readStdin();
     if (raw === '') throw new BuildError('entrada vacía por stdin');
 

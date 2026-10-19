@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { stringify } from 'yaml';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
@@ -39,30 +40,26 @@ const DEFAULT_INDEX = [
   '',
 ].join('\n');
 
-const quote = (value: string): string => JSON.stringify(value);
-
 function buildDefaultConfig(): string {
-  return [
-    `language: ${DEFAULT_SITE_CONFIG.language}`,
-    `toc: ${DEFAULT_SITE_CONFIG.toc}`,
-    'format:',
-    '  latex:',
-    `    generate: ${DEFAULT_LATEX_FORMAT.generate}`,
-    '  html:',
-    '    site:',
-    `      title: ${quote(DEFAULT_HTML_FORMAT.site?.title ?? 'iteraciones')}`,
-    `      description: ${quote(DEFAULT_HTML_FORMAT.site?.description ?? 'escribir, compartir, re-existir')}`,
-    `      theme: ${DEFAULT_HTML_FORMAT.site?.theme ?? 'dark'}`,
-    `      color: ${DEFAULT_HTML_FORMAT.site?.color ?? 'lime'}`,
-    `    generate: ${DEFAULT_HTML_FORMAT.generate}`,
-    '  pdf:',
-    `    generate: ${DEFAULT_PDF_FORMAT.generate}`,
-    '  epub:',
-    `    generate: ${DEFAULT_EPUB_FORMAT.generate}`,
-    '  markdown:',
-    `    generate: ${DEFAULT_MARKDOWN_FORMAT.generate}`,
-    '',
-  ].join('\n');
+  return stringify({
+    language: DEFAULT_SITE_CONFIG.language,
+    toc: DEFAULT_SITE_CONFIG.toc,
+    format: {
+      latex: { generate: DEFAULT_LATEX_FORMAT.generate },
+      html: {
+        site: {
+          title: DEFAULT_HTML_FORMAT.site.title,
+          description: DEFAULT_HTML_FORMAT.site.description,
+          theme: DEFAULT_HTML_FORMAT.site.theme,
+          color: DEFAULT_HTML_FORMAT.site.color,
+        },
+        generate: DEFAULT_HTML_FORMAT.generate,
+      },
+      pdf: { generate: DEFAULT_PDF_FORMAT.generate },
+      epub: { generate: DEFAULT_EPUB_FORMAT.generate },
+      markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate },
+    },
+  });
 }
 
 const DEFAULT_GITIGNORE = [

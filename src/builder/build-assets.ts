@@ -14,7 +14,6 @@ import { hashFileContent } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
-const TAILWIND_BIN_DIRECT = join(PKG_ROOT, 'node_modules', '@tailwindcss', 'cli', 'dist', 'index.mjs');
 
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
@@ -29,7 +28,6 @@ export async function resolveTailwindBin(): Promise<string> {
       if (await Bun.file(resolved).exists()) return resolved;
     }
   } catch {}
-  if (await Bun.file(TAILWIND_BIN_DIRECT).exists()) return TAILWIND_BIN_DIRECT;
   throw new BuildError(`no se encontró el binario de Tailwind CSS (@tailwindcss/cli). Verifica que el paquete esté instalado (bun install).`);
 }
 

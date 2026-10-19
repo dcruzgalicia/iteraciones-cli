@@ -1,5 +1,5 @@
 import { exists, mkdir, rm, stat, writeFile } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, normalize, relative } from 'node:path';
+import { basename, dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 import { stringify } from 'yaml';
 import { listMarkdownDocuments } from '../builder/discover-files.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
@@ -12,7 +12,7 @@ import { todayIso } from '../lib/date.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
-import { isDir, resolvePath } from '../lib/paths.js';
+import { isDir } from '../lib/paths.js';
 import { ProcessSpawnError } from '../lib/run.js';
 import type { CheckResult } from './doctor/system-checks.js';
 import { collectChecks, doctorEnvironment } from './doctor.js';
@@ -111,7 +111,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
     let output = options.outputDir;
     if (output !== undefined) {
       const projectRoot = normalize(cwd);
-      const resolved = resolvePath(projectRoot, output);
+      const resolved = resolve(projectRoot, output);
       if (resolved === projectRoot) {
         throw new BuildError(`--output "${output}" es la raíz del proyecto: la salida sobrescribiría los archivos fuente.`);
       }

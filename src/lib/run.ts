@@ -33,53 +33,39 @@ export class ProcessTimeoutError extends Error {
   }
 }
 
-const PS_ARGS = ['-ax', '-o', 'pid=,ppid='];
+const inFlightPids = new Set<number>();
 
-async function childPids(pid: number): Promise<number[]> {
-  try {
-    const proc = Bun.spawn(['ps', ...PS_ARGS], { stdout: 'pipe', stderr: 'ignore' });
-    const timer = setTimeout(() => proc.kill(), 2_000);
+function killGroups(signal: NodeJS.Signals): void {
+  for (const pid of inFlightPids) {
     try {
-      const stdout = await new Response(proc.stdout).text();
-      await proc.exited;
-      const found: number[] = [];
-      for (const line of stdout.split('\n')) {
-        const [child, parent] = line.trim().split(/\s+/);
-        if (Number.parseInt(parent ?? '', 10) === pid) {
-          const n = Number.parseInt(child ?? '', 10);
-          if (Number.isInteger(n) && n > 0) found.push(n);
-        }
-      }
-      return found;
-    } finally {
-      clearTimeout(timer);
-    }
-  } catch {
-    return [];
+      process.kill(-pid, signal);
+    } catch {}
   }
 }
 
-let warnedNoPs = false;
+/**
+ * Los hijos se lanzan en su propio grupo de procesos, así que el Ctrl-C de la
+ * terminal ya no les llega: hay que reenviarles la señal. Si ya hay otro
+ * manejador (el de preview), ese manda y el proceso sigue su curso.
+ */
+export function forwardSignalsToChildren(): void {
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    const handler = () => {
+      killGroups(signal);
+      if (process.listenerCount(signal) > 1) return;
+      process.off(signal, handler);
+      process.kill(process.pid, signal);
+    };
+    process.on(signal, handler);
+  }
+}
 
 export async function killProcessTree(rootPid: number): Promise<void> {
-  const order: number[] = [];
-  const seen = new Set<number>();
-  const queue = [rootPid];
-  while (queue.length > 0) {
-    const pid = queue.shift();
-    if (pid === undefined || seen.has(pid)) continue;
-    seen.add(pid);
-    order.push(pid);
-    const children = await childPids(pid);
-    if (children.length === 0 && !warnedNoPs && !(await Bun.which('ps'))) {
-      warnedNoPs = true;
-      logWarning('no hay forma de descubrir los procesos hijos: el timeout matará solo el proceso raíz', 'build');
-    }
-    queue.push(...children);
-  }
-  for (const pid of order.reverse()) {
+  try {
+    process.kill(-rootPid, 'SIGKILL');
+  } catch {
     try {
-      process.kill(pid, 'SIGKILL');
+      process.kill(rootPid, 'SIGKILL');
     } catch {}
   }
 }
@@ -94,6 +80,7 @@ export async function exec(command: string, args: string[], options: RunOptions 
       stderr: 'pipe',
       cwd: options.cwd,
       env: options.env ? { ...process.env, ...options.env } : undefined,
+      detached: true,
     });
   } catch {
     throw new ProcessSpawnError(`No se encontró el comando "${command}". Verifica que esté instalado y disponible en PATH.`);
@@ -108,8 +95,6 @@ export async function exec(command: string, args: string[], options: RunOptions 
     inFlightPids.delete(proc.pid);
   }
 }
-
-const inFlightPids = new Set<number>();
 
 export async function killInFlightProcesses(): Promise<void> {
   const pids = [...inFlightPids];

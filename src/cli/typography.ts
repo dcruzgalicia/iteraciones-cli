@@ -1,10 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { basename, dirname, isAbsolute, join, relative } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
-import { resolvePath } from '../lib/paths.js';
 import { analyzePdf, type OpcionesAnalisis, parseaExcepciones, TODAS_LAS_REGLAS, type TypographyIncidence } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency, type RunResult } from '../lib/run.js';
@@ -119,7 +118,7 @@ function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
 }
 
 function cargarExcepciones(cwd: string, options: TypographyOptions): ReturnType<typeof parseaExcepciones> {
-  const ruta = resolvePath(cwd, options.exceptions ?? '.typography-exceptions');
+  const ruta = resolve(cwd, options.exceptions ?? '.typography-exceptions');
   let contenido: string | undefined;
   try {
     contenido = readFileSync(ruta, 'utf8');
@@ -136,8 +135,8 @@ function cargarExcepciones(cwd: string, options: TypographyOptions): ReturnType<
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
     const analisis = opcionesDeAnalisis(options);
-    const outputDir = resolvePath(cwd, options.output ?? DIST_FILES_DIR);
-    const targets = args.length > 0 ? args.map((path) => resolvePath(cwd, path)) : await listPdfFiles(outputDir);
+    const outputDir = resolve(cwd, options.output ?? DIST_FILES_DIR);
+    const targets = args.length > 0 ? args.map((path) => resolve(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
     if (options.fix) {
