@@ -17,13 +17,11 @@ Given('un proyecto con bibliografía y un CSL propio', () => {
 When('calculo el hash de los filtros', async () => {
   const r = await computeFiltersHash(world.root, DEFAULT_SITE_CONFIG);
   world.hashFiltrosObjeto = r;
-  world.hashFiltros = r.hash;
 });
 
 When('calculo el hash de los filtros con pandoc {string}', async (version: string) => {
   const r = await computeFiltersHash(world.root, DEFAULT_SITE_CONFIG, undefined, undefined, version);
   world.hashFiltrosObjeto = r;
-  world.hashFiltros = r.hash;
 });
 
 Then('el hash de los filtros es el mismo de antes', () => {
@@ -55,14 +53,12 @@ When('calculo el hash de la bibliografía sin CSL', async () => {
   world.hashBibPrevio = (world.hashBibObjeto as { hash: string } | undefined)?.hash;
   const r = await computeBibHash(await resolveBibOptions(world.root, config as never));
   world.hashBibObjeto = r;
-  world.hashBib = r.hash;
 });
 
 When('calculo el hash de la bibliografía con CSL', async () => {
   world.hashBibPrevio = (world.hashBibObjeto as { hash: string } | undefined)?.hash;
   const r = await computeBibHash(await resolveBibOptions(world.root, { ...config, csl: 'custom.csl' } as never));
   world.hashBibObjeto = r;
-  world.hashBib = r.hash;
 });
 
 Given('anoto el hash de la bibliografía', () => {

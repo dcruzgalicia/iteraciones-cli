@@ -17,7 +17,6 @@ import {
   formatVisualReport,
   formatVisualSummary,
   listPdfFiles,
-  listSnapshotImages,
   pngSize,
   REMOVED_BLEND,
   REMOVED_TINT,
@@ -113,20 +112,6 @@ Then('los PDF son {string}', (esperados: string) => {
   const leidos = (world.pdfs as string[]).map((p) => p.replace(`${world.root}/`, '')).join(', ');
   if (leidos !== esperados) {
     throw new Error(`son ${JSON.stringify(leidos)} y deberían ser ${JSON.stringify(esperados)}`);
-  }
-});
-
-When('listo los snapshots guardados', async () => {
-  const porStem = await listSnapshotImages(join(world.root, 'snapshots'));
-  world.snapshotsGuardados = Object.fromEntries([...porStem].map(([stem, files]) => [stem, files.map((f) => basename(f))]));
-});
-
-Then('los snapshots guardados son {string}', (esperados: string) => {
-  const leido = Object.entries(world.snapshotsGuardados as Record<string, string[]>)
-    .map(([stem, files]) => `${stem}: ${files.join(', ')}`)
-    .join(' · ');
-  if (leido !== esperados) {
-    throw new Error(`son ${JSON.stringify(leido)} y deberían ser ${JSON.stringify(esperados)}`);
   }
 });
 
@@ -454,11 +439,4 @@ Then('el archivo {string} tiene estas líneas:', (relativa: string, tabla: strin
 
 Then('el archivo {string} NO existe en el proyecto', (relativa: string) => {
   if (existsSync(join(world.root, relativa))) throw new Error(`existe ${relativa} y no debía`);
-});
-
-Then('en snapshots quedan {string}', (esperados: string) => {
-  const leidos = readdirSync(join(world.root, 'snapshots')).sort().join(', ');
-  if (leidos !== esperados) {
-    throw new Error(`quedan ${JSON.stringify(leidos)} y deberían quedar ${JSON.stringify(esperados)}`);
-  }
 });

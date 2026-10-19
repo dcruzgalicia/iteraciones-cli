@@ -23,30 +23,6 @@ function binarioQueDice(json: string): void {
   chmodSync(ruta, 0o755);
 }
 
-function _binarioSelectivo(): void {
-  const dir = join(world.root, 'cache', 'iteraciones', 'bin');
-  mkdirSync(dir, { recursive: true });
-  const ruta = join(dir, 'iteraciones-pdfcheck');
-  writeFileSync(
-    ruta,
-    [
-      '#!/bin/sh',
-      'case "$1" in',
-      "  *roto*) cat <<'EOF'",
-      '{"valid": false, "level": "PDF/X-1a:2001", "errors": [{"code":"MissingTrimBox","message":"falta TrimBox","page":0,"object_id":null,"clause":"6.1.1"}], "warnings": []}',
-      'EOF',
-      '    ;;',
-      "  *) cat <<'EOF'",
-      '{"valid": true, "level": "PDF/X-1a:2001", "errors": [], "warnings": []}',
-      'EOF',
-      '    ;;',
-      'esac',
-    ].join('\n'),
-    'utf8',
-  );
-  chmodSync(ruta, 0o755);
-}
-
 function salida(): string {
   return join(world.root, 'dist', 'files');
 }

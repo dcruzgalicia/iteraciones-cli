@@ -27,7 +27,6 @@ Given('que el mapa de imágenes está vacío', () => {
 
 Given('que hay una imagen que no se procesó', () => {
   world.mapaImagenes = new Map([[`${DIR_DOC}/img.png`, PROCESADA]]);
-  world.imagenSinProcesar = `${DIR_DOC}/gif.png`;
 });
 
 Given('que sólo hay una imagen que no se procesó', () => {

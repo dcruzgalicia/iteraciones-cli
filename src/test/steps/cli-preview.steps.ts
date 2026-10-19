@@ -70,10 +70,6 @@ Given('que tengo el snapshot de las entradas de preview', async () => {
   world.snapshotPrevio = await takeSnapshot(world.entradasPreview ?? []);
 });
 
-Given('que el snapshot previo está vacío', () => {
-  world.snapshotPrevio = new Map();
-});
-
 When('tomo un snapshot nuevo de las entradas de preview', async () => {
   world.entradasPreview = await previewInputs(world.root);
   world.snapshotNuevo = await takeSnapshot(world.entradasPreview);
@@ -117,14 +113,10 @@ function capturarVivo(fn: () => Promise<void>): Promise<void> {
     world.stderr += String(chunk);
     return true;
   });
-  return fn()
-    .then(() => {
-      world.exitCode = Number(process.exitCode ?? 0);
-    })
-    .finally(() => {
-      out.mockRestore();
-      err.mockRestore();
-    });
+  return fn().finally(() => {
+    out.mockRestore();
+    err.mockRestore();
+  });
 }
 
 When('arranco preview', () => {
@@ -214,18 +206,5 @@ Then('el lockfile de preview lleva el pid del proceso', async () => {
   const contenido = (await Bun.file(join(world.root, LOCKFILE)).text()).trim();
   if (contenido !== String(process.pid)) {
     throw new Error(`el lockfile dice ${JSON.stringify(contenido)} y el pid del proceso es ${process.pid}`);
-  }
-});
-
-Then('preview termina con el código de salida {int}', (codigo: number) => {
-  if ((world.exitCode ?? 0) !== codigo) {
-    throw new Error(`esperaba el código de salida ${codigo} y hubo ${world.exitCode ?? 0}`);
-  }
-});
-
-Then('un preview anterior queda en el lockfile', () => {
-  const contenido = world.stdout;
-  if (!contenido.includes('terminando el preview anterior')) {
-    throw new Error(`preview no_avisa del preview anterior:\n${stdoutLimpio()}`);
   }
 });
