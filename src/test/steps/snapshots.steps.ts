@@ -1,5 +1,5 @@
 import { spyOn } from 'bun:test';
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -298,6 +298,22 @@ Given('la salida tiene estos archivos:', (tabla: string) => {
   }
 });
 
+Given('la salida tiene estas rutas HTML:', (tabla: string) => {
+  for (const linea of tabla.split('\n')) {
+    const limpia = linea.trim();
+    if (!limpia) continue;
+    escribirEnProyecto(join('dist', 'files', limpia), `<html><body>${limpia}</body></html>`);
+  }
+});
+
+When('quito la ruta HTML {string}', (nombre: string) => {
+  rmSync(join(world.root, 'dist', 'files', nombre));
+});
+
+When('guardo sólo el mapa del sitio', async () => {
+  await correr([], 'save', { siteMapOnly: true });
+});
+
 When('quito el PDF {string} de la salida', (nombre: string) => {
   rmSync(join(world.root, 'dist', 'files', nombre));
 });
@@ -420,6 +436,20 @@ Then('el diff deja el resto en el fantasma gris', async () => {
 
 Then('el archivo {string} existe en el proyecto', (relativa: string) => {
   if (!existsSync(join(world.root, relativa))) throw new Error(`falta ${relativa}`);
+});
+
+Then('el archivo {string} tiene estas líneas:', (relativa: string, tabla: string) => {
+  const leidas = readFileSync(join(world.root, relativa), 'utf8')
+    .split('\n')
+    .map((linea) => linea.trim())
+    .filter(Boolean);
+  const esperadas = tabla
+    .split('\n')
+    .map((linea) => linea.trim())
+    .filter(Boolean);
+  if (JSON.stringify(leidas) !== JSON.stringify(esperadas)) {
+    throw new Error(`${relativa} tiene ${JSON.stringify(leidas)} y debería tener ${JSON.stringify(esperadas)}`);
+  }
 });
 
 Then('el archivo {string} NO existe en el proyecto', (relativa: string) => {

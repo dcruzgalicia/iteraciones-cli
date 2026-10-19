@@ -261,8 +261,10 @@ Ejemplos:
 
   snapshots
     .command('check [pdf] [reference]')
-    .description('compara los snapshots de <raíz>/snapshots contra el último build, o dos PDFs entre sí, y sale con exit 1 si hay regresión visual')
-    .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
+    .description(
+      'compara los snapshots y el mapa de rutas de <raíz>/snapshots contra el último build, o dos PDFs entre sí; sale con exit 1 si hay regresión',
+    )
+    .option('--output <path>', 'directorio de salida donde están los PDFs y el HTML (por defecto: dist/files)')
 
     .allowExcessArguments(true)
     .addHelpText(
@@ -272,13 +274,15 @@ Requiere pdftoppm (poppler) y ImageMagick. Compara página por página sobre PNG
 fuzz ${FUZZ_PERCENT} % y umbral ${THRESHOLD_PERCENT} % de píxeles distintos: la comparación es visual y
 LaTeX rinde la misma página aunque el PDF cambie de bytes, así que un píxel de diferencia es un cambio.
 
-Sin rutas compara cada PDF de --output contra sus páginas en <raíz>/snapshots/, y avisa de lo que no
-encaja: un PDF sin snapshot es un agregado y un snapshot sin PDF es una eliminación; ninguno de los
-dos detiene, se revisan. Con dos rutas compara pdf contra referencia y no toca los snapshots. Una sola
-ruta es error: no dice contra qué comparar. Los diffs se escriben en <raíz>/diff/, que no se versiona.
+Sin rutas compara cada PDF de --output contra sus páginas en <raíz>/snapshots/, avisa de lo que no
+encaja (un PDF sin snapshot es un agregado y un snapshot sin PDF es una eliminación; ninguno de los
+dos detiene, se revisan) y compara el mapa de rutas HTML contra <raíz>/snapshots/site-map.txt: una
+ruta nueva o eliminada sí detiene. Con dos rutas compara pdf contra referencia y no toca los snapshots.
+Una sola ruta es error: no dice contra qué comparar. Los diffs se escriben en <raíz>/diff/, que no se
+versiona.
 
 Ejemplos:
-  iteraciones snapshots check                             compara snapshots/ contra el build
+  iteraciones snapshots check                             compara snapshots/ y el mapa de rutas contra el build
   iteraciones snapshots check nuevo.pdf viejo.pdf         compara dos PDFs, sin snapshots de por medio
 `,
     )
@@ -288,8 +292,9 @@ Ejemplos:
 
   snapshots
     .command('save [pdf]')
-    .description('guarda las páginas de cada PDF de la salida como línea base en snapshots/')
-    .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
+    .description('guarda las páginas de cada PDF y el mapa de rutas HTML de la salida como línea base en snapshots/')
+    .option('--output <path>', 'directorio de salida donde están los PDFs y el HTML (por defecto: dist/files)')
+    .option('--site-map-only', 'sólo guarda snapshots/site-map.txt, sin renderizar PDFs')
 
     .allowExcessArguments(true)
     .addHelpText(
@@ -297,15 +302,20 @@ Ejemplos:
       `
 Las páginas se renderizan a ${DPI} dpi sin difuminar y se guardan en <raíz>/snapshots/ con el camino
 aplanado (anexos/index.pdf → anexos--index--page-001.png), y van versionadas en git: son la línea base.
-Con una ruta sólo se guarda ese documento y los demás snapshots no se tocan. Sin ruta, la línea base
-completa avanza: los snapshots de documentos que ya no están en la salida se retiran, y con ellos los
-diffs de <raíz>/diff/, que tampoco se versionan.
+Sin ruta, además se guarda el mapa de rutas HTML de --output en <raíz>/snapshots/site-map.txt, ordenado
+y con una ruta relativa por línea. Con una ruta sólo se guarda ese documento y los demás snapshots (y el
+mapa) no se tocan. Sin ruta, la línea base completa avanza: los snapshots de documentos que ya no están
+en la salida se retiran, y con ellos los diffs de <raíz>/diff/, que tampoco se versionan.
+
+--site-map-only escribe únicamente el mapa de rutas HTML: útil para actualizar las rutas sin volver a
+renderizar los PDFs.
 
 No hay build incremental aquí: para saltarse un documento habría que guardar aparte qué había en el
 último save, y ese registro puede quedar desfasado sin avisar.
 
 Ejemplos:
-  iteraciones snapshots save                        guarda la línea base de todo dist/files
+  iteraciones snapshots save                        guarda PDFs y mapa de rutas de todo dist/files
+  iteraciones snapshots save --site-map-only        sólo actualiza snapshots/site-map.txt
   iteraciones snapshots save dist/files/index.pdf   guarda las páginas de un solo documento
 `,
     )
