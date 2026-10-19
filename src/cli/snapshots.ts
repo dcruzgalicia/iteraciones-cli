@@ -1,4 +1,4 @@
-import { exists, open, rm } from 'node:fs/promises';
+import { exists, mkdir, open, rm } from 'node:fs/promises';
 import { isAbsolute, join, relative } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
@@ -25,6 +25,7 @@ import {
 
 export interface SnapshotsOptions {
   output?: string;
+  siteMapOnly?: boolean;
 }
 
 export type SnapshotsMode = 'save' | 'check';
@@ -34,9 +35,82 @@ interface SnapshotRun {
   batch: boolean;
   targets: string[];
   explicitReference?: string;
+  siteMapOnly: boolean;
 }
 
 type Compared = { pdf: string; entry: { referenceLabel: string; result: VisualDiffResult } };
+
+const SITE_MAP_FILE = 'site-map.txt';
+
+function siteMapPath(cwd: string): string {
+  return join(cwd, SNAPSHOTS_DIR, SITE_MAP_FILE);
+}
+
+async function listHtmlRoutes(outputDir: string): Promise<string[]> {
+  if (
+    !(
+      await Bun.file(outputDir)
+        .stat()
+        .catch(() => null)
+    )?.isDirectory()
+  )
+    return [];
+  const routes: string[] = [];
+  for await (const rel of new Bun.Glob('**/*.html').scan({ cwd: outputDir, onlyFiles: true })) {
+    routes.push(rel.replaceAll('\\', '/'));
+  }
+  return routes.sort();
+}
+
+function siteMapText(routes: string[]): string {
+  return routes.map((route) => `${route}\n`).join('');
+}
+
+async function saveSiteMap(cwd: string, outputDir: string): Promise<void> {
+  const routes = await listHtmlRoutes(outputDir);
+  const file = siteMapPath(cwd);
+  if (routes.length === 0) {
+    await rm(file, { force: true });
+    logInfo(`no hay HTML en ${labelPath(cwd, outputDir)}: no se escribe ${SNAPSHOTS_DIR}/${SITE_MAP_FILE}`, 'snapshots');
+    return;
+  }
+  await mkdir(join(cwd, SNAPSHOTS_DIR), { recursive: true });
+  await Bun.write(file, siteMapText(routes));
+  logSuccess(`mapa del sitio → ${SNAPSHOTS_DIR}/${SITE_MAP_FILE} (${plural(routes.length, 'ruta')})`, 'snapshots');
+}
+
+async function checkSiteMap(cwd: string, outputDir: string): Promise<void> {
+  const routes = await listHtmlRoutes(outputDir);
+  const file = siteMapPath(cwd);
+  if (!(await exists(file))) {
+    if (routes.length === 0) return;
+    process.exitCode = 1;
+    logError(
+      `falta ${SNAPSHOTS_DIR}/${SITE_MAP_FILE} y hay ${plural(routes.length, 'ruta')} HTML en ${labelPath(cwd, outputDir)} · crea la línea base con: iteraciones snapshots save --site-map-only`,
+      'snapshots',
+    );
+    return;
+  }
+  const guardadas = (await Bun.file(file).text())
+    .split('\n')
+    .map((linea) => linea.trim())
+    .filter(Boolean);
+  const actuales = new Set(routes);
+  const anteriores = new Set(guardadas);
+  const agregadas = routes.filter((ruta) => !anteriores.has(ruta));
+  const eliminadas = guardadas.filter((ruta) => !actuales.has(ruta));
+  if (agregadas.length === 0 && eliminadas.length === 0) {
+    logSuccess(`mapa del sitio sin cambios (${plural(routes.length, 'ruta')})`, 'snapshots');
+    return;
+  }
+  process.exitCode = 1;
+  logError(
+    `mapa del sitio: ${plural(agregadas.length, 'ruta nueva', 'rutas nuevas')} · ${plural(eliminadas.length, 'ruta eliminada', 'rutas eliminadas')}`,
+    'snapshots',
+  );
+  for (const ruta of agregadas) logInfo(`+ ${ruta}`, 'snapshots');
+  for (const ruta of eliminadas) logInfo(`- ${ruta}`, 'snapshots');
+}
 
 function labelPath(cwd: string, path: string): string {
   const rel = relative(cwd, path);
@@ -57,8 +131,7 @@ async function assertEsPdf(path: string): Promise<void> {
   }
 }
 
-async function resolveRun(cwd: string, paths: string[], mode: SnapshotsMode, options: SnapshotsOptions): Promise<SnapshotRun> {
-  const save = mode === 'save';
+function assertPathCount(save: boolean, paths: string[], cwd: string): void {
   const max = save ? 1 : 2;
   if (paths.length > max) {
     throw new BuildError(
@@ -72,19 +145,35 @@ async function resolveRun(cwd: string, paths: string[], mode: SnapshotsMode, opt
       `check necesita dos rutas: el PDF y contra qué compararlo · "${labelPath(cwd, paths[0] as string)}" a secas no dice contra qué snapshot va.\nPara un documento usa: iteraciones snapshots check (sin rutas, compara ${SNAPSHOTS_DIR} contra la salida)\nPara un par: iteraciones snapshots check <pdf> <referencia>`,
     );
   }
+}
+
+function assertSiteMapOnly(save: boolean, siteMapOnly: boolean, paths: string[]): void {
+  if (!siteMapOnly) return;
+  if (!save) throw new BuildError('--site-map-only sólo aplica a snapshots save');
+  if (paths.length > 0) throw new BuildError('--site-map-only no admite rutas: escribe el mapa de toda la salida');
+}
+
+async function resolveRun(cwd: string, paths: string[], mode: SnapshotsMode, options: SnapshotsOptions): Promise<SnapshotRun> {
+  const save = mode === 'save';
+  const siteMapOnly = options.siteMapOnly === true;
+  assertSiteMapOnly(save, siteMapOnly, paths);
+  assertPathCount(save, paths, cwd);
 
   const outputDir = resolvePath(cwd, options.output ?? DIST_FILES_DIR);
   const [pdf, reference] = paths;
   const batch = pdf === undefined;
   const explicitReference = reference === undefined ? undefined : resolvePath(cwd, reference);
-  const targets = batch ? await listPdfFiles(outputDir) : [resolvePath(cwd, pdf)];
-  if (batch && targets.length === 0) throw new BuildError(`no hay PDFs en ${labelPath(cwd, outputDir)}`);
+  const targets = siteMapOnly ? [] : batch ? await listPdfFiles(outputDir) : [resolvePath(cwd, pdf)];
+  if (batch && targets.length === 0 && !siteMapOnly && (await listHtmlRoutes(outputDir)).length === 0) {
+    throw new BuildError(`no hay PDFs en ${labelPath(cwd, outputDir)}`);
+  }
   for (const target of targets) await assertEsPdf(target);
   if (explicitReference !== undefined) await assertEsPdf(explicitReference);
-  return { outputDir, batch, targets, explicitReference };
+  return { outputDir, batch, targets, explicitReference, siteMapOnly };
 }
 
-async function saveSnapshots(cwd: string, targets: string[], outputDir: string, batch: boolean): Promise<void> {
+async function saveSnapshots(cwd: string, run: SnapshotRun): Promise<void> {
+  const { targets, outputDir, batch } = run;
   const store = join(cwd, SNAPSHOTS_DIR);
   const wanted = new Set(targets.map((pdf) => snapshotStemFor(pdf, outputDir)));
 
@@ -110,6 +199,7 @@ async function saveSnapshots(cwd: string, targets: string[], outputDir: string, 
     logInfo(`${plural(retirados.length, 'snapshot retirado')} sin PDF en ${labelPath(cwd, outputDir)}: ${retirados.join(', ')}`, 'snapshots');
   }
   logSuccess(`${plural(guardados, 'página')} en la línea base`, 'snapshots');
+  if (batch) await saveSiteMap(cwd, outputDir);
 }
 
 async function seleccionaComparables(
@@ -228,6 +318,7 @@ function reportVerdict(cwd: string, compared: Compared[]): void {
 
 async function checkAll(cwd: string, run: SnapshotRun): Promise<void> {
   await clearDiffImages(join(cwd, DIFF_DIR));
+  if (run.batch) await checkSiteMap(cwd, run.outputDir);
   const comparables = await seleccionaComparables(cwd, run.targets, run.outputDir, run.batch, run.explicitReference);
 
   const compared: Compared[] = [];
@@ -244,8 +335,12 @@ async function checkAll(cwd: string, run: SnapshotRun): Promise<void> {
 export async function runSnapshots(cwd: string, paths: string[], mode: SnapshotsMode, options: SnapshotsOptions = {}): Promise<void> {
   try {
     const run = await resolveRun(cwd, paths, mode, options);
-    if (mode === 'save') await saveSnapshots(cwd, run.targets, run.outputDir, run.batch);
-    else await checkAll(cwd, run);
+    if (mode === 'save') {
+      if (run.siteMapOnly) await saveSiteMap(cwd, run.outputDir);
+      else await saveSnapshots(cwd, run);
+    } else {
+      await checkAll(cwd, run);
+    }
   } catch (err) {
     fail('snapshots', err);
   }

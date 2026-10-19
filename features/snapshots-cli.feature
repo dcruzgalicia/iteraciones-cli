@@ -316,3 +316,119 @@ Característica: los snapshots de la regresión visual
       Entonces el snapshots termina con código 1
       Y el snapshots dice por stderr "no es un PDF"
       Y el archivo "snapshots" NO existe en el proyecto
+
+  Regla de negocio: El mapa del sitio guarda todas las rutas HTML
+
+    Escenario: Guardar deja las rutas HTML ordenadas en snapshots/site-map.txt
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estas rutas HTML:
+      """
+      index.html
+      anexos/b.html
+      a.html
+      """
+      Cuando guardo los snapshots de ""
+      Entonces el snapshots termina con código 0
+      Y el snapshots dice por stdout "mapa del sitio → snapshots/site-map.txt (3 rutas)"
+      Y el archivo "snapshots/site-map.txt" tiene estas líneas:
+      """
+      a.html
+      anexos/b.html
+      index.html
+      """
+
+    Escenario: El mapa sin cambios pasa el check
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estas rutas HTML:
+      """
+      index.html
+      libro/cap1.html
+      """
+      Cuando guardo los snapshots de ""
+      Y comparo ""
+      Entonces el snapshots termina con código 0
+      Y el snapshots dice por stdout "mapa del sitio sin cambios (2 rutas)"
+
+    Escenario: Una ruta nueva y una eliminada detienen el check
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estas rutas HTML:
+      """
+      index.html
+      viejo.html
+      """
+      Cuando guardo los snapshots de ""
+      Y quito la ruta HTML "viejo.html"
+      Y la salida tiene estas rutas HTML:
+      """
+      nuevo.html
+      """
+      Y comparo ""
+      Entonces el snapshots termina con código 1
+      Y el snapshots dice por stderr "mapa del sitio: 1 ruta nueva · 1 ruta eliminada"
+      Y el snapshots dice por stdout "+ nuevo.html"
+      Y el snapshots dice por stdout "- viejo.html"
+
+    Escenario: Renombrar una ruta se ve como una ruta que se fue y otra que llegó
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estas rutas HTML:
+      """
+      viejo-titulo.html
+      """
+      Cuando guardo los snapshots de ""
+      Y quito la ruta HTML "viejo-titulo.html"
+      Y la salida tiene estas rutas HTML:
+      """
+      nuevo-titulo.html
+      """
+      Y comparo ""
+      Entonces el snapshots termina con código 1
+      Y el snapshots dice por stdout "+ nuevo-titulo.html"
+      Y el snapshots dice por stdout "- viejo-titulo.html"
+
+    Escenario: Sin mapa guardado y con HTML el check pide la línea base
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estas rutas HTML:
+      """
+      index.html
+      """
+      Cuando comparo ""
+      Entonces el snapshots termina con código 1
+      Y el snapshots dice por stderr "falta snapshots/site-map.txt"
+      Y el snapshots dice por stderr "iteraciones snapshots save --site-map-only"
+
+    Escenario: Sin HTML no hay mapa y el check no falla
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Cuando guardo los snapshots de ""
+      Entonces el snapshots termina con código 0
+      Y el archivo "snapshots/site-map.txt" NO existe en el proyecto
+      Y comparo ""
+      Y el snapshots termina con código 0
+      Y el snapshots dice por stdout "sin diferencias visuales en 1 páginas"
+
+    Escenario: --site-map-only actualiza el mapa sin renderizar PDFs
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Y la salida tiene estas rutas HTML:
+      """
+      index.html
+      """
+      Cuando guardo los snapshots de ""
+      Y quito la ruta HTML "index.html"
+      Y la salida tiene estas rutas HTML:
+      """
+      otra.html
+      """
+      Y guardo sólo el mapa del sitio
+      Entonces el snapshots termina con código 0
+      Y el archivo "snapshots/index--page-001.png" existe en el proyecto
+      Y el archivo "snapshots/site-map.txt" tiene estas líneas:
+      """
+      otra.html
+      """
