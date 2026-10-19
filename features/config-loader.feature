@@ -189,7 +189,8 @@ Característica: la configuración del proyecto
             - tarjeta-rara
       """
       Cuando cargo la configuración del proyecto
-      Entonces la carga falla con "no es un bloque conocido"
+      Entonces la carga falla con "valor no válido"
+      Y la carga falla con "header"
 
     Escenario: La sintaxis antigua de blocks es un error accionable
       Dado que el archivo de configuración es:
@@ -200,7 +201,7 @@ Característica: la configuración del proyecto
             formatos: 4
       """
       Cuando cargo la configuración del proyecto
-      Entonces la carga falla con "debe ser una lista de bloques"
+      Entonces la carga falla con "se esperaba array"
 
     Escenario: El booleano antiguo `latex: true` es un error de tipo
       Dado que el archivo de configuración es:

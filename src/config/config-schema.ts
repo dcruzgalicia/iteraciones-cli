@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
-import type { HtmlBlockKey } from './site-config.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_BLOCKS,
@@ -73,25 +72,7 @@ const ImageFieldsSchema = {
   startpaper: z.string().optional(),
 };
 
-const HtmlBlocksSchema = z
-  .unknown()
-  .superRefine((value, ctx) => {
-    if (value === undefined) return;
-    if (!Array.isArray(value)) {
-      ctx.addIssue({
-        code: 'custom',
-        message:
-          'debe ser una lista de bloques en orden (p. ej. [header, contenido, formatos, indice, referencias, footer]) — antes era un objeto con números',
-      });
-      return;
-    }
-    for (const item of value) {
-      if (typeof item !== 'string' || !DEFAULT_HTML_BLOCKS.includes(item as HtmlBlockKey)) {
-        ctx.addIssue({ code: 'custom', message: `"${String(item)}" no es un bloque conocido: usa solo ${DEFAULT_HTML_BLOCKS.join(', ')}` });
-      }
-    }
-  })
-  .transform((value): HtmlBlockKey[] | undefined => (Array.isArray(value) ? (value as HtmlBlockKey[]) : undefined));
+const HtmlBlocksSchema = z.array(z.enum(DEFAULT_HTML_BLOCKS)).optional();
 
 const HtmlSiteSchema = z
   .object({
