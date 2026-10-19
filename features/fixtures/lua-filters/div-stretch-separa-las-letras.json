@@ -1,6 +1,5 @@
 {
   "name": "div-stretch-separa-las-letras",
-  "helper": "toLatex",
   "markdown": "::: {stretch=30}\nseparado\n:::  \n",
   "contains": ["\\textls[30]{separado}"],
   "notContains": ["\\textls[-30]"],

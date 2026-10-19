@@ -1,6 +1,5 @@
 {
   "name": "html-la-forma-vieja-spacing-tampoco-hacia-nada",
-  "helper": "toHtml5",
   "markdown": "::: {spacing=1.5}\ntexto\n:::  \n",
   "contains": ["data-spacing=\"1.5\"", "texto"],
   "notContains": ["<div class=", "style="],

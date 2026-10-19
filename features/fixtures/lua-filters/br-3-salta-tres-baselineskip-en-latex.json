@@ -1,6 +1,5 @@
 {
   "name": "br-3-salta-tres-baselineskip-en-latex",
-  "helper": "toLatex",
   "markdown": "texto\n\n::: {br=3}\n:::\n\ntexto\n",
   "contains": ["\\vspace{\\baselineskip}\n\n\\vspace{\\baselineskip}\n\n\\vspace{\\baselineskip}"],
   "notContains": [],

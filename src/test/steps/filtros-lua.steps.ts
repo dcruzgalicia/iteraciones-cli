@@ -5,8 +5,6 @@ import { checkExpectations, loadCase, world } from './lua-world.js';
 
 const FILTERS = join(import.meta.dir, '../../lib/resources/filters');
 
-const SEMANTIC_FILTERS: string[] = [];
-
 const LATEX_FILTERS = [
   '01-br',
   '02-dictum',
@@ -31,7 +29,7 @@ When('lo convierto a LaTeX', async () => {
   if (testCase === null) throw new Error('no se cargo ningun caso: falta el Given');
 
   const latex = testCase.filters ? testCase.filters.map((name) => join(FILTERS, 'latex', `${name}.lua`)) : LATEX_FILTERS;
-  const extraArgs = [...SEMANTIC_FILTERS, ...latex].flatMap((f) => ['--lua-filter', f]);
+  const extraArgs = latex.flatMap((f) => ['--lua-filter', f]);
   world.output = await execPandoc({
     input: testCase.markdown,
     sourcePath: 'test.md',
@@ -45,8 +43,7 @@ When('lo convierto a HTML', async () => {
   const testCase = world.testCase;
   if (testCase === null) throw new Error('no se cargo ningun caso: falta el Given');
 
-  const extra = testCase.extraSemantic === true ? SEMANTIC_FILTERS : [];
-  const extraArgs = [...extra, ...HTML_FILTERS].flatMap((f) => ['--lua-filter', f]);
+  const extraArgs = HTML_FILTERS.flatMap((f) => ['--lua-filter', f]);
   world.output = await execPandoc({
     input: testCase.markdown,
     sourcePath: 'test.md',

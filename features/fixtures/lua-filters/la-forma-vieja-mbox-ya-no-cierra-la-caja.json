@@ -1,6 +1,5 @@
 {
   "name": "la-forma-vieja-mbox-ya-no-cierra-la-caja",
-  "helper": "toLatex",
   "markdown": "texto [Ana Ruiz]{.mbox} aqui\n",
   "contains": ["Ana Ruiz"],
   "notContains": ["\\mbox"],

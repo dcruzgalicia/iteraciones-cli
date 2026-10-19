@@ -1,6 +1,5 @@
 {
   "name": "br-no-numerico-no-salta-en-html",
-  "helper": "toHtml5",
   "markdown": "texto\n\n::: {br=abc}\n:::\n\ntexto\n",
   "contains": [],
   "notContains": ["<br/>"],

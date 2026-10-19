@@ -1,6 +1,5 @@
 {
   "name": "la-forma-antigua-textls-value-ya-no-transforma",
-  "helper": "toLatex",
   "markdown": "::: {.textls value=30}\nantes\n:::  \n",
   "contains": ["antes"],
   "notContains": ["\\textls"],

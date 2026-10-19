@@ -1,6 +1,5 @@
 {
   "name": "shrink-no-numerico-no-transforma",
-  "helper": "toLatex",
   "markdown": "::: {shrink=abc}\nroto\n:::  \n",
   "contains": ["roto"],
   "notContains": ["\\textls"],

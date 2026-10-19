@@ -1,10 +1,8 @@
 {
   "name": "verse-en-tex-solo-separte-la-linea-con-dos-espacios",
-  "helper": "toLatex",
   "markdown": "::: {.verse}\nprimera con dos espacios  \nsegunda con dos espacios  \nprimera sin espacios\nsegunda sin espacios\n:::  \n",
   "contains": ["primera con dos espacios\\\\", "segunda con dos espacios\\\\", "primera sin espacios segunda sin espacios"],
   "notContains": ["primera sin espacios\\\\"],
   "normalizeNewlines": false,
-  "extraSemantic": false,
   "filters": ["03-verse"]
 }

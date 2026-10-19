@@ -1,6 +1,5 @@
 {
   "name": "convierte-div-verse-sin-vspace-externo",
-  "helper": "toLatex",
   "markdown": "::: {.verse}\nPoema\n:::\n",
   "contains": ["\\begin{verse}", "\\end{verse}"],
   "notContains": ["\\vspace*{3pt}"],

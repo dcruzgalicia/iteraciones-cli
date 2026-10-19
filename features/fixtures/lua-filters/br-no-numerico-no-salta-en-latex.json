@@ -1,6 +1,5 @@
 {
   "name": "br-no-numerico-no-salta-en-latex",
-  "helper": "toLatex",
   "markdown": "texto\n\n::: {br=abc}\n:::\n\ntexto\n",
   "contains": [],
   "notContains": ["\\vspace"],

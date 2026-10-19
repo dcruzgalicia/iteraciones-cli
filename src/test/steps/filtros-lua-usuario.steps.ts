@@ -41,8 +41,6 @@ const PKG_LATEX_FILTERS = [
   '11-uppercase',
 ].map((name) => join(RESOURCES, 'latex', `${name}.lua`));
 
-const SEMANTIC_FILTERS: string[] = [];
-
 interface UserWorld {
   dir: string;
   filterPath: string;
@@ -83,7 +81,7 @@ Given('el filtro declarado en la configuración del proyecto', async () => {
 
 When('convierto el documento con el override y los helpers del paquete por env', async () => {
   const sinEl06 = PKG_LATEX_FILTERS.filter((f) => !f.endsWith('06-sentence-end.lua'));
-  const filters = [...SEMANTIC_FILTERS, world.mboxOverride, ...sinEl06];
+  const filters = [world.mboxOverride, ...sinEl06];
   world.latex = await execPandoc({
     input: 'Primera oración de ejemplo. Segunda oración aquí.',
     sourcePath: 'test.md',

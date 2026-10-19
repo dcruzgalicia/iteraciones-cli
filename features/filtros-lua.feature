@@ -79,8 +79,6 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | runt-con-runt-uno-tampoco-se-queda-solo-con-el-punto |
         | runt-no-cuenta-el-punto-final-dentro-de-un-enfasis |
         | runt-con-punto-pegado-al-ultimo-renglon-se-guarda |
-        | runt-no-cuenta-el-punto-final-separado |
-        | runt-no-cuenta-el-punto-final-dentro-de-un-enfasis |
         | mbox-words-runt-no-toca-un-parrafo-con-tantas-palabras-como-pide |
         | no-agrega-noindent-si-el-quote-no-es-seguido-por-un-parrafo |
         | no-corta-la-oracion-en-abreviaturas-de-meses-ni-en-p-ej |

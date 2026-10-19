@@ -1,6 +1,5 @@
 {
   "name": "titleback-line-height-no-numerico-no-transforma",
-  "helper": "toLatexTitleback",
   "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {line-height=abc}\n  contraportada\n  :::\n---\n\nCuerpo.\n",
   "contains": ["contraportada"],
   "notContains": ["\\begin{spacing}"],

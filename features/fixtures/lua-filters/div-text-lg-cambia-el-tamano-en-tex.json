@@ -1,6 +1,5 @@
 {
   "name": "div-text-lg-cambia-el-tamano-en-tex",
-  "helper": "toLatex",
   "markdown": "::: {.text-lg}\nTitular grande\n:::\n",
   "contains": ["{\\large Titular grande}"],
   "notContains": [],

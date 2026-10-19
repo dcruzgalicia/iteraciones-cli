@@ -1,6 +1,5 @@
 {
   "name": "div-line-height-la-forma-vieja-spacing-ya-no-transforma",
-  "helper": "toLatex",
   "markdown": "::: {spacing=1.5}\ntexto normal\n:::  \n",
   "contains": ["texto normal"],
   "notContains": ["\\begin{spacing}"],

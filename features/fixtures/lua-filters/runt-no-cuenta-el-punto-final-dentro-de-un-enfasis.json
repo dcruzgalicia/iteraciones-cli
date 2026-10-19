@@ -1,6 +1,5 @@
 {
   "name": "runt-no-cuenta-el-punto-final-dentro-de-un-enfasis",
-  "helper": "toLatex",
   "markdown": "::: {runt=1}\ntexto de prueba con *Ficción*.\n:::  \n",
   "contains": ["\\mbox{\\emph{\\mbox{Ficción}}}"],
   "notContains": ["\\mbox{.}"],

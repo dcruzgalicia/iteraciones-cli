@@ -1,9 +1,0 @@
-{
-  "name": "runt-conserva-el-punto-pegado-al-ultimo-renglon",
-  "helper": "toLatex",
-  "markdown": "::: {runt=1}\nFrase corta que acaba aqui.\n:::  \n",
-  "contains": ["\\mbox{aqui.}"],
-  "notContains": [],
-  "normalizeNewlines": false,
-  "filters": ["16-runt"]
-}

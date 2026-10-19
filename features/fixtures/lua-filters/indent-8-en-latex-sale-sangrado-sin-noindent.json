@@ -1,6 +1,5 @@
 {
   "name": "indent-8-en-latex-sale-sangrado-sin-noindent",
-  "helper": "toLatex",
   "markdown": "::: {br=1}\n:::\n\n::: {.indent-8}\ndos\n:::\n",
   "contains": ["\\vspace{\\baselineskip}", "dos"],
   "notContains": ["\\noindent"],
