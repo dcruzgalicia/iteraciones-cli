@@ -937,13 +937,16 @@ export async function resolveCollectionCreatorDocs(
   return result.sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
 
-async function buildAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string, filters: ExportContext['filters']): Promise<string> {
+async function buildAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string, filters: ExportContext['filters'], esFile: boolean): Promise<string> {
   if (creatorDocs.length === 0) return '';
   const subsubsectionStyle =
     '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\raggedright\\normalsize\\normalfont\\scshape}';
   const subsubsectionReset =
     '\\RedeclareSectionCommand[beforeskip=\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\normalsize\\normalfont\\bfseries}';
-  const md = [`\\part{Autoras y colaboradoras}\n\n${subsubsectionStyle}`];
+  // En un texto suelto la sección de autoras es una sección más; en una
+  // colección es una parte, porque el documento reúne muchas pieces.
+  const nivel = esFile ? 'section' : 'part';
+  const md = [`\\${nivel}{Autoras y colaboradoras}\n\n${subsubsectionStyle}`];
   for (const doc of creatorDocs) {
     md.push(`\\subsubsection{${doc.name}}`);
     if (doc.links.length > 0) {
@@ -1051,7 +1054,7 @@ async function emitCollectionFormats(
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
     const docsAutoras = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : creatorDocs;
-    const authorsBlock = await buildAuthorsLatex(docsAutoras, doc.filePath, exportCtx.filters);
+    const authorsBlock = await buildAuthorsLatex(docsAutoras, doc.filePath, exportCtx.filters, esFile);
     await emitLatexAndQueuePdf(
       doc,
       { ...outputs, content: prependLinksLatex(base, creatorLinks) },
