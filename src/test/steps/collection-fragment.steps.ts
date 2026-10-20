@@ -334,6 +334,19 @@ Then('el nav de la página {int} es flotante', (_pagina: number) => {
   }
 });
 
+Then('el título de la página {int} no lleva el número de página', (pagina: number) => {
+  const html = readFileSync(join(world.root, 'dist', 'files', `antologia-${pagina}.html`), 'utf8');
+  const titulo = html.match(/<h1[^>]*>([^<]*)<\/h1>/);
+  if (titulo === null) throw new Error('la página no tiene título');
+  const pestaña = html.match(/<title>([^<]*)<\/title>/);
+  if (pestaña === null) throw new Error('la página no tiene título de pestaña');
+  for (const texto of [titulo[1] ?? '', pestaña[1] ?? '']) {
+    if (/\(\d+\/\d+\)/.test(texto)) {
+      throw new Error(`el título lleva el número de página: ${texto}`);
+    }
+  }
+});
+
 Then('el nav de la página {int} se revela al final de la página', (_pagina: number) => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'antologia-2.html'), 'utf8');
   if (!html.includes('scroll-reveal-at-end')) {

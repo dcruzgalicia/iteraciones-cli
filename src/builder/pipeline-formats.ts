@@ -192,25 +192,24 @@ function htmlVars(args: {
   renderCtx: RenderContext;
   formats: HtmlPageVars['formats'];
   hasHomePage: boolean;
-  sufijo: string;
   creatorHrefs: Map<string, string>;
   extras: string;
   pagination: string;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, sufijo, creatorHrefs, extras, pagination } = args;
+  const { doc, outputs, renderCtx, formats, hasHomePage, creatorHrefs, extras, pagination } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
   const titulo = doc.frontmatter.title || slug;
   return {
-    title: `${titulo}${sufijo}`,
+    title: titulo,
     siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
     tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
     lang,
     theme: htmlConfig?.site?.theme,
     css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
     authorMeta: doc.frontmatter.creator.join(', '),
-    docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? `${doc.frontmatter.title}${sufijo}` : undefined,
+    docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? doc.frontmatter.title : undefined,
     subtitle: doc.frontmatter.subtitle,
     date: formatHumanDate(doc.frontmatter.date),
     homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
@@ -253,7 +252,6 @@ export async function emitHtmlPage(
   for (const [indice, contenido] of contenidos.entries()) {
     const slugPagina = indice === 0 ? outSlug : `${outSlug}-${indice + 1}`;
     const htmlPath = outBase(`${slugPagina}${primaryOutputExtension('html')}`);
-    const sufijo = indice === 0 ? '' : ` (${indice + 1}/${contenidos.length})`;
     const pagination = paginationNav(dir, outSlug, indice + 1, contenidos.length);
     const html = await htmlPageFromMarkdown(contenido, doc, {
       cwd,
@@ -262,7 +260,7 @@ export async function emitHtmlPage(
       templatePath: exportCtx.templates[htmlKindFor(htmlType)],
       refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
       docType: htmlType,
-      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, sufijo, creatorHrefs, extras, pagination }),
+      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, creatorHrefs, extras, pagination }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
       bibOptions: exportCtx.bibOptions,
