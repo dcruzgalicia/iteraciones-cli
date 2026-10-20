@@ -273,6 +273,7 @@ Ejemplos:
 Requiere pdftoppm (poppler) y ImageMagick. Compara página por página sobre PNGs de ${DPI} dpi, con
 fuzz ${FUZZ_PERCENT} % y umbral ${THRESHOLD_PERCENT} % de píxeles distintos: la comparación es visual y
 LaTeX rinde la misma página aunque el PDF cambie de bytes, así que un píxel de diferencia es un cambio.
+Las páginas del HTML se capturan con el navegador de Bun y se comparan igual.
 
 Sin rutas compara cada PDF de --output contra sus páginas en <raíz>/snapshots/, avisa de lo que no
 encaja (un PDF sin snapshot es un agregado y un snapshot sin PDF es una eliminación; ninguno de los
@@ -307,6 +308,11 @@ y con una ruta relativa por línea. Con una ruta sólo se guarda ese documento y
 mapa) no se tocan. Sin ruta, la línea base completa avanza: los snapshots de documentos que ya no están
 en la salida se retiran, y con ellos los diffs de <raíz>/diff/, que tampoco se versionan.
 
+Además se captura cada página HTML del sitio con el navegador de Bun (Bun.WebView): quedan como
+<ruta>--html--page-001.png y se comparan igual que las del PDF. La captura espera a que el texto esté
+pintado, porque a medio pintar dos capturas de la misma página salen distintas. Sin navegador (o sin
+línea base) se avisa y los snapshots del PDF siguen valiendo.
+
 --site-map-only escribe únicamente el mapa de rutas HTML: útil para actualizar las rutas sin volver a
 renderizar los PDFs.
 
@@ -314,7 +320,7 @@ No hay build incremental aquí: para saltarse un documento habría que guardar a
 último save, y ese registro puede quedar desfasado sin avisar.
 
 Ejemplos:
-  iteraciones snapshots save                        guarda PDFs y mapa de rutas de todo dist/files
+  iteraciones snapshots save                        guarda PDFs, capturas del HTML y mapa de rutas de todo dist/files
   iteraciones snapshots save --site-map-only        sólo actualiza snapshots/site-map.txt
   iteraciones snapshots save dist/files/index.pdf   guarda las páginas de un solo documento
 `,

@@ -128,6 +128,7 @@ interface PageDiff {
   page: number;
   diffPercent: number;
   diffImage: string;
+  note?: string;
 }
 
 export interface VisualDiffResult {
@@ -204,6 +205,7 @@ interface PngPair {
   generatedPng: string;
   diffImage: string;
   scratch: string;
+  note?: string;
 }
 
 async function magick(args: string[]): Promise<void> {
@@ -227,11 +229,38 @@ async function paintDiffImage(args: PngPair): Promise<void> {
   await magick([at('mitad.miff'), at('capa-verde.miff'), '-compose', 'Over', '-composite', args.diffImage]);
 }
 
-async function comparePngPair(args: PngPair): Promise<number> {
+async function cropTo(source: string, dest: string, width: number, height: number): Promise<void> {
+  await mkdir(dirname(dest), { recursive: true });
+  const result = await exec('magick', [source, '-crop', `${width}x${height}+0+0`, '+repage', dest]);
+  if (result.exitCode !== 0) {
+    throw new BuildError(`magick no pudo recortar la captura: ${result.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
+  }
+}
+
+/**
+ * Compara dos PNG. Si no tienen el mismo tamaño, se recorta el área común
+ * (para comparar la misma región) y se anota el cambio de tamaño: una página
+ * que creció es un cambio, aunque el área compartida sea idéntica.
+ */
+async function comparePngPair(args: PngPair): Promise<{ diffPercent: number; note?: string }> {
   const size = pngSize(await readFile(args.referencePng));
   if (size === null) throw new BuildError(`"${args.referencePng}" no es un PNG válido`);
+  const generatedSize = pngSize(await readFile(args.generatedPng));
+  if (generatedSize === null) throw new BuildError(`"${args.generatedPng}" no es un PNG válido`);
 
-  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', `${FUZZ_PERCENT}%`, args.referencePng, args.generatedPng, 'null:']);
+  let reference = args.referencePng;
+  let generated = args.generatedPng;
+  if (generatedSize.width !== size.width || generatedSize.height !== size.height) {
+    const width = Math.min(size.width, generatedSize.width);
+    const height = Math.min(size.height, generatedSize.height);
+    reference = join(args.scratch, 'referencia.png');
+    generated = join(args.scratch, 'generada.png');
+    await cropTo(args.referencePng, reference, width, height);
+    await cropTo(args.generatedPng, generated, width, height);
+    args.note = `cambió de tamaño: ${size.width}x${size.height} → ${generatedSize.width}x${generatedSize.height}`;
+  }
+
+  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', `${FUZZ_PERCENT}%`, reference, generated, 'null:']);
   if (compare.exitCode > 1) {
     throw new BuildError(`magick compare falló: ${compare.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
   }
@@ -240,14 +269,17 @@ async function comparePngPair(args: PngPair): Promise<number> {
   const differing = Number.parseFloat(metricLine);
   if (!Number.isFinite(differing)) throw new BuildError(`no se pudo leer la métrica de magick compare: "${metricLine}"`);
   const diffPercent = (100 * differing) / (size.width * size.height);
-  if (diffPercent > THRESHOLD_PERCENT) await paintDiffImage(args);
-  return diffPercent;
+  if (diffPercent > THRESHOLD_PERCENT) {
+    await paintDiffImage({ ...args, referencePng: reference, generatedPng: generated });
+  }
+  return { diffPercent, ...(args.note === undefined ? {} : { note: args.note }) };
 }
 
 interface CompareVisualInput {
   referencePngs?: string[];
   referencePdf?: string;
-  generated: string;
+  generated?: string;
+  generatedPngs?: string[];
   workDir: string;
   cachePath?: string;
 
@@ -279,14 +311,16 @@ async function comparePages(args: {
       if (referencePng === undefined || generatedPng === undefined) return;
       const page = index + 1;
       const diffImage = join(args.diffDir, diffImageName(args.diffStem, page));
-      const diffPercent = await comparePngPair({
+      const { diffPercent, note } = await comparePngPair({
         referencePng,
         generatedPng,
         diffImage,
         scratch: join(args.workDir, `diff-${page}`),
       });
       await forceUnlink(generatedPng);
-      if (diffPercent > THRESHOLD_PERCENT) details.push({ page, diffPercent, diffImage });
+      if (diffPercent > THRESHOLD_PERCENT || note !== undefined) {
+        details.push({ page, diffPercent, diffImage, ...(note === undefined ? {} : { note }) });
+      }
     },
   );
   return details;
@@ -298,13 +332,30 @@ async function hashFiles(paths: string[]): Promise<string> {
   return hashString(parts.join('\0'));
 }
 
+function generatedHashOf(input: CompareVisualInput): Promise<string> {
+  if (input.generatedPngs !== undefined) return hashFiles(input.generatedPngs);
+  return hashFileContent(input.generated as string);
+}
+
+function referenceHashOf(input: CompareVisualInput): Promise<string> {
+  if (input.referencePngs !== undefined) return hashFiles(input.referencePngs);
+  return hashFileContent(input.referencePdf as string);
+}
+
+async function pagesDel(input: CompareVisualInput, workDir: string): Promise<{ reference: string[]; generated: string[] }> {
+  const reference = input.referencePngs ?? (await renderPdfPages(input.referencePdf as string, join(workDir, 'ref')));
+  const generated = input.generatedPngs ?? (await renderPdfPages(input.generated as string, join(workDir, 'gen')));
+  return { reference, generated };
+}
+
 export async function compareVisual(input: CompareVisualInput): Promise<VisualDiffResult> {
   if (input.referencePngs === undefined && input.referencePdf === undefined) {
     throw new BuildError('compareVisual necesita la referencia como imágenes o como PDF');
   }
-  const referenceHash =
-    input.referencePngs === undefined ? await hashFileContent(input.referencePdf as string) : await hashFiles(input.referencePngs);
-  const key = cacheKey({ reference: referenceHash, generated: await hashFileContent(input.generated) });
+  if (input.generated === undefined && input.generatedPngs === undefined) {
+    throw new BuildError('compareVisual necesita lo generado como imágenes o como PDF');
+  }
+  const key = cacheKey({ reference: await referenceHashOf(input), generated: await generatedHashOf(input) });
   const cached = input.cachePath === undefined ? undefined : (await readCache(input.cachePath))[key];
   if (cached !== undefined) return { ...cached, details: [], fromCache: true };
 
@@ -314,8 +365,7 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
   await rm(input.workDir, { recursive: true, force: true });
   await mkdir(input.workDir, { recursive: true });
 
-  const referencePages = input.referencePngs ?? (await renderPdfPages(input.referencePdf as string, join(input.workDir, 'ref')));
-  const generatedPages = await renderPdfPages(input.generated, join(input.workDir, 'gen'));
+  const { reference: referencePages, generated: generatedPages } = await pagesDel(input, input.workDir);
   const compared = Math.min(referencePages.length, generatedPages.length);
   const details = await comparePages({ referencePages, generatedPages, compared, diffDir, diffStem, workDir: input.workDir });
 

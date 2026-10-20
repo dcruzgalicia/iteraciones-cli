@@ -1,7 +1,8 @@
-import { exists, mkdir, rm } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { exists, mkdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
+import { HtmlShotter } from '../lib/html-shot.js';
 import { fail, logError, logInfo, logSuccess, logWarning } from '../lib/logger.js';
 import { isDir, posix, relativeLabel } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
@@ -19,6 +20,7 @@ import {
   resolveVisualWorkspaces,
   SNAPSHOTS_DIR,
   savePageImages,
+  snapshotImageName,
   snapshotStemFor,
   visualSlug,
 } from '../lib/visual-diff.js';
@@ -40,7 +42,33 @@ interface SnapshotRun {
 
 type Compared = { pdf: string; entry: { referenceLabel: string; result: VisualDiffResult } };
 
+type ComparedHtml = { html: string; entry: { referenceLabel: string; result: VisualDiffResult } };
+
 const SITE_MAP_FILE = 'site-map.txt';
+
+/** El prefijo de las capturas del HTML: no chocan con las del PDF. */
+const HTML_SUFFIX = '--html';
+
+function htmlStemFor(htmlPath: string, outputDir: string): string {
+  return `${snapshotStemFor(htmlPath, outputDir)}${HTML_SUFFIX}`;
+}
+
+async function listHtmlFiles(outputDir: string): Promise<string[]> {
+  const base = join(outputDir, '.');
+  if (
+    !(
+      await Bun.file(base)
+        .stat()
+        .catch(() => null)
+    )?.isDirectory()
+  )
+    return [];
+  const archivos: string[] = [];
+  for await (const rel of new Bun.Glob('**/*.html').scan({ cwd: base, onlyFiles: true })) {
+    archivos.push(join(base, rel));
+  }
+  return archivos.sort();
+}
 
 function siteMapPath(cwd: string): string {
   return join(cwd, SNAPSHOTS_DIR, SITE_MAP_FILE);
@@ -162,6 +190,9 @@ async function saveSnapshots(cwd: string, run: SnapshotRun): Promise<void> {
   const store = join(cwd, SNAPSHOTS_DIR);
   const wanted = new Set(targets.map((pdf) => snapshotStemFor(pdf, outputDir)));
 
+  const htmlFiles = await listHtmlFiles(outputDir);
+  for (const html of htmlFiles) wanted.add(htmlStemFor(html, outputDir));
+
   const existentes = await listSnapshotImages(store);
   const retirados = batch ? [...existentes.keys()].filter((stem) => !wanted.has(stem)) : [];
   for (const stem of retirados) await clearSnapshotImages(store, stem);
@@ -179,12 +210,43 @@ async function saveSnapshots(cwd: string, run: SnapshotRun): Promise<void> {
     logSuccess(`${relativeLabel(cwd, pdf)} → ${SNAPSHOTS_DIR}/${stem} (${plural(paginas.length, 'página')})`, 'snapshots');
   }
 
+  const capturas = await saveHtmlSnapshots(cwd, outputDir, htmlFiles, store);
+  guardados += capturas;
+
   await clearDiffImages(join(cwd, DIFF_DIR));
   if (retirados.length > 0) {
     logInfo(`${plural(retirados.length, 'snapshot retirado')} sin PDF en ${relativeLabel(cwd, outputDir)}: ${retirados.join(', ')}`, 'snapshots');
   }
   logSuccess(`${plural(guardados, 'página')} en la línea base`, 'snapshots');
   if (batch) await saveSiteMap(cwd, outputDir);
+}
+
+/**
+ * Captura cada página del sitio y la guarda como línea base. Sin navegador no
+ * hay capturas: se avisa una vez y se sigue con los PDF.
+ */
+async function saveHtmlSnapshots(cwd: string, outputDir: string, htmlFiles: string[], store: string): Promise<number> {
+  if (htmlFiles.length === 0) return 0;
+  await mkdir(store, { recursive: true });
+  const shotter = new HtmlShotter();
+  let guardadas = 0;
+  try {
+    for (const html of htmlFiles) {
+      const stem = htmlStemFor(html, outputDir);
+      const captura = await shotter.capture(html);
+      if (captura === undefined) continue;
+      await clearSnapshotImages(store, stem);
+      await writeFile(join(store, snapshotImageName(stem, 1)), captura.png);
+      guardadas += 1;
+      logSuccess(`${relativeLabel(cwd, html)} → ${SNAPSHOTS_DIR}/${stem} (1 captura)`, 'snapshots');
+    }
+  } finally {
+    shotter.close();
+  }
+  if (guardadas === 0) {
+    logInfo('no hay capturas del HTML: los snapshots del PDF siguen valiendo', 'snapshots');
+  }
+  return guardadas;
 }
 
 async function seleccionaComparables(
@@ -204,7 +266,8 @@ async function seleccionaComparables(
   }
 
   const wanted = new Set(targets.map((pdf) => snapshotStemFor(pdf, outputDir)));
-  const borrados = batch ? [...guardados.keys()].filter((stem) => !wanted.has(stem)) : [];
+  // Las capturas del HTML tienen su propio prefijo: no son un PDF que se fue.
+  const borrados = batch ? [...guardados.keys()].filter((stem) => !wanted.has(stem) && !stem.endsWith(HTML_SUFFIX)) : [];
 
   if (agregados.length > 0) {
     logInfo(`${plural(agregados.length, 'PDF agregado', 'PDF agregados')} sin snapshot, sin comparación: ${agregados.join(', ')}`, 'snapshots');
@@ -301,6 +364,63 @@ function reportVerdict(cwd: string, compared: Compared[]): void {
   logSuccess(`sin diferencias visuales en ${compared.length} PDFs`, 'snapshots');
 }
 
+/**
+ * Compara cada página del sitio con su captura de la línea base. Sin
+ * navegador (o sin línea base) se avisa y se sigue: los PDF siguen mandando.
+ */
+async function checkHtmlSnapshots(cwd: string, outputDir: string): Promise<ComparedHtml[]> {
+  const htmlFiles = await listHtmlFiles(outputDir);
+  if (htmlFiles.length === 0) return [];
+  const store = join(cwd, SNAPSHOTS_DIR);
+  const guardados = await listSnapshotImages(store);
+  const shotter = new HtmlShotter();
+  const comparados: ComparedHtml[] = [];
+  const sinLineaBase: string[] = [];
+  try {
+    for (const html of htmlFiles) {
+      const stem = htmlStemFor(html, outputDir);
+      const referencia = guardados.get(stem);
+      if (referencia === undefined) {
+        sinLineaBase.push(relativeLabel(cwd, html));
+        continue;
+      }
+      const captura = await shotter.capture(html);
+      if (captura === undefined) continue;
+      const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(html));
+      await mkdir(dirname(workDir), { recursive: true });
+      // La captura va fuera del directorio de trabajo: compareVisual lo borra.
+      const generada = join(dirname(workDir), 'generada.png');
+      await writeFile(generada, captura.png);
+      const result = await compareVisual({
+        referencePngs: referencia,
+        generatedPngs: [generada],
+        workDir,
+        cachePath,
+        diffDir: join(cwd, DIFF_DIR),
+        diffStem: stem,
+      });
+      comparados.push({ html, entry: { referenceLabel: `${SNAPSHOTS_DIR}/${stem}`, result } });
+    }
+  } finally {
+    shotter.close();
+  }
+  if (sinLineaBase.length > 0) {
+    logInfo(`${plural(sinLineaBase.length, 'página HTML agregada')} sin captura, sin comparación: ${sinLineaBase.join(', ')}`, 'snapshots');
+  }
+  return comparados;
+}
+
+function htmlFailureSummary(cwd: string, failed: ComparedHtml[]): string {
+  const lines: string[] = [];
+  for (const { entry } of failed) {
+    for (const detail of entry.result.details) {
+      lines.push(`  ${relativeLabel(cwd, detail.diffImage)}`);
+      if (detail.note !== undefined) lines.push(`    ${detail.note}`);
+    }
+  }
+  return lines.join('\n');
+}
+
 async function checkAll(cwd: string, run: SnapshotRun): Promise<void> {
   await clearDiffImages(join(cwd, DIFF_DIR));
   if (run.batch) await checkSiteMap(cwd, run.outputDir);
@@ -309,6 +429,15 @@ async function checkAll(cwd: string, run: SnapshotRun): Promise<void> {
   const compared: Compared[] = [];
   for (const pdf of comparables) {
     compared.push({ pdf, entry: await compareOne(cwd, pdf, run.outputDir, run.explicitReference) });
+  }
+
+  const htmlComparados = await checkHtmlSnapshots(cwd, run.outputDir);
+  const htmlFallidos = htmlComparados.filter(({ entry }) => !entry.result.pass);
+  if (htmlFallidos.length > 0) {
+    process.exitCode = 1;
+    logError(`${plural(htmlFallidos.length, 'página HTML')} con regresión visual:\n${htmlFailureSummary(cwd, htmlFallidos)}`, 'snapshots');
+  } else if (htmlComparados.length > 0) {
+    logSuccess(`sin diferencias visuales en ${plural(htmlComparados.length, 'página HTML')}`, 'snapshots');
   }
 
   if (compared.length === 0) return;

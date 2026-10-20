@@ -291,6 +291,10 @@ Given('la salida tiene estas rutas HTML:', (tabla: string) => {
   }
 });
 
+When('cambio la ruta HTML {string} por {string}', (nombre: string, contenido: string) => {
+  escribirEnProyecto(join('dist', 'files', nombre), contenido);
+});
+
 When('quito la ruta HTML {string}', (nombre: string) => {
   rmSync(join(world.root, 'dist', 'files', nombre));
 });

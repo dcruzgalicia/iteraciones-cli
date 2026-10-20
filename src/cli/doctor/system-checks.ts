@@ -222,3 +222,19 @@ export function checkBiber(): CheckResult {
     warn: true,
   };
 }
+
+export async function checkHtmlBrowser(): Promise<CheckResult> {
+  const label = 'navegador para los snapshots del HTML';
+  try {
+    const view = new Bun.WebView({ width: 200, height: 200 });
+    view.close();
+    return { label, ok: true, detail: 'Bun.WebView', warn: true };
+  } catch (err) {
+    return {
+      label,
+      ok: false,
+      detail: `no se pudo abrir (${(err as Error).message}). En macOS usa el WebKit del sistema; en Linux y Windows, instala Chrome o Chromium.`,
+      warn: true,
+    };
+  }
+}
