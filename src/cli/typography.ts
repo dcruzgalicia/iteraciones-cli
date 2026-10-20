@@ -5,7 +5,7 @@ import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
 import { relativeLabel } from '../lib/paths.js';
-import { analyzePdf, type OpcionesAnalisis, parseaExcepciones, TODAS_LAS_REGLAS, type TypographyIncidence } from '../lib/pdf-typography.js';
+import { analyzePdf, type OpcionesAnalisis, parseaExcepciones, TYPOGRAPHY_RULES, type TypographyIncidence } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency, type RunResult } from '../lib/run.js';
 import { listPdfFiles } from '../lib/visual-diff.js';
@@ -56,11 +56,11 @@ export function interpretaReglas(spec: string): string[] {
     .map((r) => r.trim())
     .filter(Boolean);
   if (pedidas.length === 0) {
-    throw new BuildError(`--rules "${spec}" no trae ninguna regla: escoge entre ${TODAS_LAS_REGLAS.join(', ')}`);
+    throw new BuildError(`--rules "${spec}" no trae ninguna regla: escoge entre ${TYPOGRAPHY_RULES.join(', ')}`);
   }
-  const desconocidas = pedidas.filter((regla) => !TODAS_LAS_REGLAS.includes(regla as never));
+  const desconocidas = pedidas.filter((regla) => !TYPOGRAPHY_RULES.includes(regla as never));
   if (desconocidas.length > 0) {
-    throw new BuildError(`no existe la regla ${desconocidas.map((r) => `"${r}"`).join(', ')}. Las que hay son: ${TODAS_LAS_REGLAS.join(', ')}`);
+    throw new BuildError(`no existe la regla ${desconocidas.map((r) => `"${r}"`).join(', ')}. Las que hay son: ${TYPOGRAPHY_RULES.join(', ')}`);
   }
   return pedidas;
 }
@@ -107,7 +107,7 @@ function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
     primeraPagina: rango?.desde,
     ultimaPagina: rango?.hasta,
     porcentajeCorta: options.minLineWidth === undefined ? 75 : interpretaPorcentaje(options.minLineWidth, '--min-line-width'),
-    reglas: options.rules === undefined ? TODAS_LAS_REGLAS : interpretaReglas(options.rules),
+    reglas: options.rules === undefined ? TYPOGRAPHY_RULES : interpretaReglas(options.rules),
     lineasMinimas: options.minLines === undefined ? 3 : interpretaEntero(options.minLines, '--min-lines', 2),
     letrasMinimas: options.minLetters === undefined ? 2 : interpretaEntero(options.minLetters, '--min-letters', 1),
   };
