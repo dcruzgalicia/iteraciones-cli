@@ -160,6 +160,8 @@ function nuevoMundo() {
     entradas: [] as { file: string; posicion: number }[],
     paginas: [] as string[],
     navs: [] as string[],
+    tex: '',
+    pdf: '',
     enlacesCreador: new Map<string, string>() as ReadonlyMap<string, string>,
     nombresEnlazados: [] as string[],
     cuerpoColeccion: '',

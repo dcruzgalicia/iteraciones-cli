@@ -50,6 +50,8 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'titleImage',
   'publisherImage',
   'startpaper',
+  'frontCover',
+  'backCover',
   'courtesyPage',
   'type',
   'files',

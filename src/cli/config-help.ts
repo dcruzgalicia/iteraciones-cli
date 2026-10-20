@@ -44,6 +44,8 @@ Metadatos del documento (frontmatter) y de la portada:
   identifier, source, relation, coverage, rights, license, doi, isbn, abstract,
   subtitle, extratitle, frontispiece, titlehead, collectionCreatorPrefix,
   dedication, uppertitleback, lowertitleback, colophon,
-  titleImage, publisherImage, startpaper
+  titleImage, publisherImage, startpaper, frontCover, backCover
+    frontCover y backCover van antes del startpaper: con los tres, las páginas
+    1, 2 y 3 del PDF son las tres portadas.
 `;
 }

@@ -155,7 +155,7 @@ function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | 
   return toMm(value, unit);
 }
 
-export const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper'] as const;
+export const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper', 'frontCover', 'backCover'] as const;
 
 const MULTILINE_IMAGE_FIELDS = [
   'lowertitleback',
@@ -246,7 +246,7 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
       const escaped = RegExp.escape(candidate);
       result = result.replace(new RegExp(`\\]\\(${escaped}\\)`, 'g'), () => `](${processed})`);
       result = result.replace(
-        new RegExp(`^((?:titleImage|publisherImage|startpaper):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
+        new RegExp(`^((?:titleImage|publisherImage|startpaper|frontCover|backCover):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
         (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
       );
 
@@ -314,6 +314,8 @@ function recordProcessed(imageMap: Map<string, string>, processedFiles: string[]
   if (processed !== absPath) processedFiles.push(processed);
 }
 
+const FULL_PAGE_COVER_FIELDS = ['startpaper', 'frontCover', 'backCover'];
+
 async function collectFrontmatterImageTasks(
   fm: Record<string, unknown>,
   docDir: string,
@@ -322,7 +324,7 @@ async function collectFrontmatterImageTasks(
 ): Promise<{ absPath: string; w: number; h: number; cover: boolean }[]> {
   const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
   for (const field of COVER_IMAGE_FIELDS) {
-    const cover = field === 'startpaper';
+    const cover = FULL_PAGE_COVER_FIELDS.includes(field);
     const w = cover ? targets.startpaperW : targets.targetW;
     const h = cover ? targets.startpaperH : targets.targetH;
     for (const value of fmStringList(fm[field]) ?? []) {

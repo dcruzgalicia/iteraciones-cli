@@ -207,6 +207,12 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   lines.push('$if(publisherImage)$');
   lines.push('\\publishersimage{$publisherImage$}');
   lines.push('$endif$');
+  lines.push('$if(frontCover)$');
+  lines.push('\\setcover{$frontCover$}');
+  lines.push('$endif$');
+  lines.push('$if(backCover)$');
+  lines.push('\\setcover{$backCover$}');
+  lines.push('$endif$');
   lines.push('$if(startpaper)$');
   lines.push('\\setstartpaper{$startpaper$}');
   lines.push('$endif$');

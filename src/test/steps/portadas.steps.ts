@@ -1,0 +1,110 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { Before, Given, Then, When } from '@cucumber/cucumber';
+import { build } from '../../builder/orchestrator.js';
+import { capture, escribirEnProyecto, tempRoot, world } from './cli-world.steps.ts';
+
+const CONFIG = ['language: es-MX', 'format:', '  latex:', '    generate: true', '  pdf:', '    generate: true'].join('\n');
+
+const PORTADAS = [
+  { campo: 'frontCover', color: 'red' },
+  { campo: 'backCover', color: 'blue' },
+  { campo: 'startpaper', color: 'green' },
+] as const;
+
+const TONOS: Record<string, number> = { red: 54, blue: 18, green: 92 };
+
+Before(() => {
+  world.root = tempRoot('iteraciones-portadas-');
+});
+
+function corre(bin: string, args: string[]): { salida: string; error: string; codigo: number } {
+  const proc = Bun.spawnSync([bin, ...args]);
+  return {
+    salida: proc.stdout.toString(),
+    error: proc.stderr.toString(),
+    codigo: proc.exitCode,
+  };
+}
+
+Given('el proyecto tiene un libro', () => {
+  escribirEnProyecto('iteraciones.config.yaml', `${CONFIG}\n`);
+  escribirEnProyecto('libro.md', '---\ntitle: Un libro\n---\n\nCuerpo del libro.\n');
+});
+
+Given('el libro lleva la portada {string}', (campo: string) => {
+  const portada = PORTADAS.find((p) => p.campo === campo);
+  if (portada === undefined) throw new Error(`no conozco la portada ${campo}`);
+  const frontmatter = readFileSync(join(world.root, 'libro.md'), 'utf8').replace(
+    '---\ntitle: Un libro\n',
+    `---\ntitle: Un libro\n${portada.campo}: ./${portada.campo}.png\n`,
+  );
+  escribirEnProyecto('libro.md', frontmatter);
+  const proc = Bun.spawnSync(['magick', '-size', '40x60', `xc:${portada.color}`, join(world.root, `${portada.campo}.png`)]);
+  if (proc.exitCode !== 0) throw new Error('magick no pudo crear la portada de prueba');
+});
+
+When('compilo el proyecto del libro para leer su LaTeX', async () => {
+  await capture(() => build(world.root, {}));
+  world.tex = readFileSync(join(world.root, 'dist', 'files', 'un-libro.tex'), 'utf8');
+});
+
+Given('el proyecto compila el PDF', async () => {
+  await capture(() => build(world.root, {}));
+  world.pdf = join(world.root, 'dist', 'files', 'un-libro.pdf');
+});
+
+Then('el LaTeX del libro tiene {string}', (texto: string) => {
+  if (!world.tex.includes(texto)) {
+    throw new Error(`el .tex no tiene ${JSON.stringify(texto)}`);
+  }
+});
+
+Then('el LaTeX del libro llama a {string}', (macro: string) => {
+  // La llamada va sola en su línea; la definición y la llamada interna viven
+  // dentro de \setstartpaper.
+  const llamada = new RegExp(`^${macro.replace(/\\/g, '\\\\')}\\{`, 'm');
+  if (!llamada.test(world.tex)) {
+    throw new Error(`el .tex no llama a ${JSON.stringify(macro)}`);
+  }
+});
+
+Then('el LaTeX del libro no llama a {string}', (macro: string) => {
+  const llamada = new RegExp(`^${macro.replace(/\\/g, '\\\\')}\\{`, 'm');
+  if (llamada.test(world.tex)) {
+    throw new Error(`el .tex sí llama a ${JSON.stringify(macro)} y no debería`);
+  }
+});
+
+Then('el LaTeX del libro llama a las guardas antes del título:', (esperado: string) => {
+  const codigo = world.tex.slice(world.tex.indexOf('\\renewcommand{\\maketitle}'));
+  if (!codigo.includes(esperado.replace(/\n$/, ''))) {
+    throw new Error(`el maketitle no trae ${JSON.stringify(esperado)}`);
+  }
+});
+
+Then('el PDF del libro tiene {int} páginas', (paginas: number) => {
+  const info = corre('pdfinfo', [String(world.pdf)]);
+  const match = info.salida.match(/^Pages:\s+(\d+)/m);
+  if (match === null) throw new Error(`pdfinfo no dijo cuántas páginas tiene ${String(world.pdf)}: ${info.error}`);
+  const leidas = Number.parseInt(match[1] ?? '0', 10);
+  if (leidas !== paginas) {
+    throw new Error(`el PDF tiene ${leidas} páginas y son ${paginas}`);
+  }
+});
+
+Then('la página {int} del PDF es {string}', (pagina: number, portada: string) => {
+  const esperada = PORTADAS.find((p) => p.campo === portada);
+  if (esperada === undefined) throw new Error(`no conozco la portada ${portada}`);
+  const tmp = join(world.root, '.iteraciones', 'tmp');
+  const render = corre('pdftoppm', ['-f', String(pagina), '-l', String(pagina), '-r', '20', '-png', String(world.pdf), join(tmp, 'pagina')]);
+  if (render.codigo !== 0) throw new Error(`pdftoppm no pudo renderizar la página ${pagina}: ${render.error}`);
+  const archivo = readdirSync(tmp).find((f) => f.startsWith('pagina'));
+  if (archivo === undefined) throw new Error('pdftoppm no dejó ninguna imagen');
+  const color = corre('magick', [join(tmp, archivo), '-format', '%[pixel:p{2,2}]', 'info:']);
+  const gris = Number.parseInt((color.salida.match(/\d+/) ?? ['0'])[0] ?? '0', 10);
+  const referencia = TONOS[esperada.color] ?? 0;
+  if (Math.abs(gris - referencia) > 6) {
+    throw new Error(`la página ${pagina} es de gris ${gris} y la portada ${portada} es de gris ${referencia}`);
+  }
+});

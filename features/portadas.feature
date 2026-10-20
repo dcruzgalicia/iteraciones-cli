@@ -1,0 +1,52 @@
+# language: es
+Característica: las portadas del PDF
+
+  Como quien diseña un libro
+  Quiero una portada por delante y otra por detrás del startpaper
+  Para que el libro tenga las tres hojas de guarda
+
+  Regla de negocio: Las portadas ocupan las primeras páginas
+
+    Escenario: Con las tres, cada una ocupa su página
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "frontCover"
+      Y el libro lleva la portada "backCover"
+      Y el libro lleva la portada "startpaper"
+      Cuando compilo el proyecto del libro para leer su LaTeX
+      Entonces el LaTeX del libro llama a "\setcover"
+      Y el LaTeX del libro tiene "\setstartpaper{"
+      Y el LaTeX del libro llama a las guardas antes del título:
+      """
+      \ifcase\l@covercount
+      """
+
+    Escenario: El startpaper sigue siendo la guarda cuando no hay más
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "startpaper"
+      Cuando compilo el proyecto del libro para leer su LaTeX
+      Entonces el LaTeX del libro tiene "\setstartpaper{"
+      Y el LaTeX del libro no llama a "\setcover"
+
+  Regla de negocio: El PDF sale con las portadas en su página
+
+    Escenario: Las tres portadas son las tres primeras páginas
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "frontCover"
+      Y el libro lleva la portada "backCover"
+      Y el libro lleva la portada "startpaper"
+      Y el proyecto compila el PDF
+      Entonces el PDF del libro tiene 7 páginas
+      Y la página 1 del PDF es "frontCover"
+      Y la página 2 del PDF es "backCover"
+      Y la página 3 del PDF es "startpaper"
+
+    Escenario: Con un solo startpaper, la guarda sigue siendo la primera
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "startpaper"
+      Y el proyecto compila el PDF
+      Entonces el PDF del libro tiene 3 páginas
+      Y la página 1 del PDF es "startpaper"
