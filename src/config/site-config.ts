@@ -63,6 +63,10 @@ export type FormatKey = 'latex' | 'pdf' | 'html' | 'epub' | 'markdown';
 
 export type ActiveFormats = Record<FormatKey, boolean>;
 
+export function userWroteDisabledPreamble(presentKeys: ReadonlySet<string>): boolean {
+  return presentKeys.has('format.pdf.disabledPreambleFilters') === true || presentKeys.has('disabledPreambleFilters') === true;
+}
+
 export function resolveDisabledPreambleConfig(siteConfig: {
   disabledPreambleFilters?: string[];
   format?: { pdf?: { disabledPreambleFilters?: string[] } };

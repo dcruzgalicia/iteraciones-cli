@@ -1,21 +1,22 @@
-import { exists, mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { exists, mkdir, rm, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 import { stringify } from 'yaml';
 import { listMarkdownDocuments } from '../builder/discover-files.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { DIST_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
+import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadStateFile } from '../builder/state-serialize.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
-import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig } from '../config/site-config.js';
+import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig, userWroteDisabledPreamble } from '../config/site-config.js';
 import { todayIso } from '../lib/date.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
-import { logError, logInfo, logSuccess } from '../lib/logger.js';
+import { fail, logError, logInfo, logSuccess, writeJson } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { isDir } from '../lib/paths.js';
 import { ProcessSpawnError } from '../lib/run.js';
 import type { CheckResult } from './doctor/system-checks.js';
-import { collectChecks, doctorEnvironment } from './doctor.js';
+import { checksOk, collectChecks, doctorEnvironment } from './doctor.js';
 import { listFilters, type RunFiltersOptions } from './filters.js';
 import { initProject } from './init.js';
 import { ProgressTracker } from './progress.js';
@@ -33,13 +34,7 @@ async function assertProjectRoot(cwd: string): Promise<void> {
   }
 }
 
-async function runCliCommand(
-  cwd: string,
-  context: string,
-  fn: () => Promise<void>,
-  unknownMessage: string,
-  options: { createRoot?: boolean } = {},
-): Promise<void> {
+async function runCliCommand(cwd: string, context: string, fn: () => Promise<void>, options: { createRoot?: boolean } = {}): Promise<void> {
   try {
     if (options.createRoot) {
       const existed = await exists(cwd);
@@ -50,55 +45,45 @@ async function runCliCommand(
     }
     await fn();
   } catch (err) {
-    if (err instanceof Error) {
-      logError(err.message, context);
-    } else {
-      logError(unknownMessage, context);
-    }
-    process.exitCode = 1;
+    fail(context, err);
   }
 }
 
 export async function runClean(cwd: string, options: { json?: boolean } = {}): Promise<void> {
-  await runCliCommand(
-    cwd,
-    'clean',
-    async () => {
-      const state = await loadStateFile(cwd);
-      const outputDir = state?.outputDir ?? join(cwd, DIST_DIR);
-      const targets = [...new Set([outputDir, join(cwd, '.iteraciones')])];
-      const results = await Promise.all(
-        targets.map(async (dir) => {
-          try {
-            const existed = await exists(dir);
-            await rm(dir, { recursive: true, force: true });
-            return { removed: existed ? dir : null, error: null };
-          } catch (err) {
-            return { removed: null, error: `${dir}: ${err instanceof Error ? err.message : String(err)}` };
-          }
-        }),
-      );
-      const failures = results
-        .filter((r): r is { removed: null; error: string } => r.error !== null)
-        .map((r) => ({ dir: r.error.split(': ')[0], error: r.error.split(': ').slice(1).join(': ') }));
-      const removed = results.filter((r): r is { removed: string; error: null } => r.removed !== null).map((r) => r.removed);
+  await runCliCommand(cwd, 'clean', async () => {
+    const state = await loadStateFile(cwd);
+    const outputDir = state?.outputDir ?? join(cwd, DIST_DIR);
+    const targets = [...new Set([outputDir, join(cwd, '.iteraciones')])];
+    const results = await Promise.all(
+      targets.map(async (dir) => {
+        try {
+          const existed = await exists(dir);
+          await rm(dir, { recursive: true, force: true });
+          return { removed: existed ? dir : null, error: null };
+        } catch (err) {
+          return { removed: null, error: `${dir}: ${err instanceof Error ? err.message : String(err)}` };
+        }
+      }),
+    );
+    const failures = results
+      .filter((r): r is { removed: null; error: string } => r.error !== null)
+      .map((r) => ({ dir: r.error.split(': ')[0], error: r.error.split(': ').slice(1).join(': ') }));
+    const removed = results.filter((r): r is { removed: string; error: null } => r.removed !== null).map((r) => r.removed);
 
-      if (options.json) {
-        process.stdout.write(`${JSON.stringify({ ok: failures.length === 0, removed, failures })}\n`);
-        if (failures.length > 0) process.exitCode = 1;
-        return;
-      }
+    if (options.json) {
+      writeJson({ ok: failures.length === 0, removed, failures });
+      if (failures.length > 0) process.exitCode = 1;
+      return;
+    }
 
-      if (failures.length > 0) {
-        logError(`no se pudo eliminar: ${failures.map((f) => (f.dir ? `${f.dir}: ${f.error}` : f.error)).join('; ')}`, 'clean');
-        process.exitCode = 1;
-        return;
-      }
-      const relativeOut = relative(cwd, outputDir) || outputDir;
-      logSuccess(`eliminado ${relativeOut}/ y .iteraciones/`, 'clean');
-    },
-    'Error desconocido al limpiar.',
-  );
+    if (failures.length > 0) {
+      logError(`no se pudo eliminar: ${failures.map((f) => (f.dir ? `${f.dir}: ${f.error}` : f.error)).join('; ')}`, 'clean');
+      process.exitCode = 1;
+      return;
+    }
+    const relativeOut = relative(cwd, outputDir) || outputDir;
+    logSuccess(`eliminado ${relativeOut}/ y .iteraciones/`, 'clean');
+  });
 }
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
@@ -139,7 +124,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 export function reportBuildError(err: unknown, json = false, warnings: string[] = []): void {
   if (json) {
     const message = err instanceof Error ? err.message : String(err);
-    process.stdout.write(`${JSON.stringify({ error: message, ...(warnings.length > 0 ? { warnings } : {}) })}\n`);
+    writeJson({ error: message, ...(warnings.length > 0 ? { warnings } : {}) });
   }
   classifyAndReportError(err);
 }
@@ -182,8 +167,7 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   const distExists = await isDir(distDir);
   const activeFormats = computeActiveFormats(config.format);
   const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
-  const userWrotePreambleList = presentKeys.has('format.pdf.disabledPreambleFilters') === true || presentKeys.has('disabledPreambleFilters') === true;
-  const preambleDisabled = userWrotePreambleList ? resolveDisabledPreambleConfig(config) : [];
+  const preambleDisabled = userWroteDisabledPreamble(presentKeys) ? resolveDisabledPreambleConfig(config) : [];
   const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
   const theme = html?.site?.theme ?? '(por defecto)';
@@ -209,40 +193,35 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
 }
 
 export async function runInit(cwd: string): Promise<void> {
-  await runCliCommand(cwd, 'init', () => initProject(cwd), 'Error desconocido al inicializar.', { createRoot: true });
+  await runCliCommand(cwd, 'init', () => initProject(cwd), { createRoot: true });
 }
 
 export async function runValidate(cwd: string, options: { json?: boolean } = {}): Promise<void> {
-  await runCliCommand(cwd, 'validate', () => validateProject(cwd, options), 'Error desconocido al validar.');
+  await runCliCommand(cwd, 'validate', () => validateProject(cwd, options));
 }
 
 export async function runDoctor(cwd: string, options: { json?: boolean; info?: boolean } = {}): Promise<void> {
-  await runCliCommand(
-    cwd,
-    'doctor',
-    async () => {
-      if (options.json) {
-        const checks = await collectChecks(cwd);
-        const ok = checks.filter((c) => !c.warn).every((c) => c.ok);
-        const result: Record<string, unknown> = {
-          ok,
-          checks: checks.map((c: CheckResult) => ({ label: c.label, ok: c.ok, detail: c.detail ?? null, warn: c.warn ?? false })),
-        };
-        if (options.info) {
-          result.config = await buildProjectInfo(cwd);
-        }
-        process.stdout.write(`${JSON.stringify(result)}\n`);
-        if (!ok) process.exitCode = 1;
-        return;
-      }
+  await runCliCommand(cwd, 'doctor', async () => {
+    if (options.json) {
+      const checks = await collectChecks(cwd);
+      const ok = checksOk(checks);
+      const result: Record<string, unknown> = {
+        ok,
+        checks: checks.map((c: CheckResult) => ({ label: c.label, ok: c.ok, detail: c.detail ?? null, warn: c.warn ?? false })),
+      };
       if (options.info) {
-        const lines = await buildProjectInfo(cwd);
-        logInfo(`configuración del proyecto:\n${lines.join('\n')}`, 'doctor');
+        result.config = await buildProjectInfo(cwd);
       }
-      await doctorEnvironment(cwd);
-    },
-    'Error desconocido al ejecutar doctor.',
-  );
+      writeJson(result);
+      if (!ok) process.exitCode = 1;
+      return;
+    }
+    if (options.info) {
+      const lines = await buildProjectInfo(cwd);
+      logInfo(`configuración del proyecto:\n${lines.join('\n')}`, 'doctor');
+    }
+    await doctorEnvironment(cwd);
+  });
 }
 
 export async function runNew(cwd: string, path: string, options: { title?: string } = {}): Promise<void> {
@@ -284,20 +263,19 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
       '',
     ].join('\n');
 
-    await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
-    logSuccess(`creado ${normalizedPath}`, 'new');
-  } catch (err) {
-    if (err instanceof Error && 'code' in err && err.code === 'EEXIST') {
+    if (!(await writeExclusive(absPath, content))) {
       logInfo(`omitido ${path} (ya existe)`, 'new');
       return;
     }
+    logSuccess(`creado ${normalizedPath}`, 'new');
+  } catch (err) {
     logError(`al crear "${path}": ${err instanceof Error ? err.message : String(err)}`, 'new');
     process.exitCode = 1;
   }
 }
 
 export async function runFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
-  await runCliCommand(cwd, 'filters', () => listFilters(cwd, options), 'Error desconocido al listar los filtros.');
+  await runCliCommand(cwd, 'filters', () => listFilters(cwd, options));
 }
 
 function inferTitleFromPath(path: string): string {

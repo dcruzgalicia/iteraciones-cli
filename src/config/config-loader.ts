@@ -22,24 +22,18 @@ function collectPresentKeys(value: unknown, prefix: string, out: Set<string>): v
   }
 }
 
-export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSiteConfig> {
+async function readConfigText(cwd: string): Promise<{ configPath: string; raw: string } | null> {
   const configPath = join(cwd, CONFIG_FILE);
   const file = Bun.file(configPath);
-
-  if (!(await file.exists())) {
-    throw new ConfigError(
-      "falta el archivo de configuración del proyecto; ejecuta 'iteraciones init' para crearlo (un archivo vacío usa los valores por defecto)",
-      configPath,
-    );
-  }
-
-  let raw: string;
+  if (!(await file.exists())) return null;
   try {
-    raw = await file.text();
+    return { configPath, raw: await file.text() };
   } catch (err) {
     throw new ConfigError(`No se pudo leer ${CONFIG_FILE}: ${String(err)}`, configPath);
   }
+}
 
+function parseConfig(raw: string, configPath: string): LoadedSiteConfig {
   let parsed: unknown;
   const yamlResult = parseYamlWithPosition(raw);
   if (yamlResult.error) {
@@ -88,11 +82,23 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
   return { config: result.data, presentKeys };
 }
 
+export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSiteConfig> {
+  const read = await readConfigText(cwd);
+  if (read === null) {
+    throw new ConfigError(
+      "falta el archivo de configuración del proyecto; ejecuta 'iteraciones init' para crearlo (un archivo vacío usa los valores por defecto)",
+      join(cwd, CONFIG_FILE),
+    );
+  }
+  return parseConfig(read.raw, read.configPath);
+}
+
 export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   return (await loadSiteConfigWithPresence(cwd)).config;
 }
 
 export async function loadSiteConfigIfPresent(cwd: string): Promise<LoadedSiteConfig | null> {
-  if (!(await Bun.file(join(cwd, CONFIG_FILE)).exists())) return null;
-  return loadSiteConfigWithPresence(cwd);
+  const read = await readConfigText(cwd);
+  if (read === null) return null;
+  return parseConfig(read.raw, read.configPath);
 }

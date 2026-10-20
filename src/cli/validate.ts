@@ -18,7 +18,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { ConfigError, translateSystemError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
-import { logError, logInfo, logWarning } from '../lib/logger.js';
+import { logError, logInfo, logWarning, writeJson } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 
 type ValidationError = { file: string; message: string };
@@ -237,7 +237,7 @@ async function collectValidation(cwd: string): Promise<{ summary: ValidationSumm
 export async function validateProject(cwd: string, options: { json?: boolean } = {}): Promise<void> {
   const { summary, disabledFiltersCount, luaFiltersCount } = await collectValidation(cwd);
   if (options.json) {
-    process.stdout.write(`${JSON.stringify(summary)}\n`);
+    writeJson(summary);
     if (!summary.ok) process.exitCode = 1;
     return;
   }

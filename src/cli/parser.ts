@@ -15,7 +15,7 @@ import { runPrepare } from './prepare.js';
 import { runPreview } from './preview.js';
 import { runSnapshots, type SnapshotsOptions } from './snapshots.js';
 import { runTemplate } from './template.js';
-import { runTypography } from './typography.js';
+import { runTypography, type TypographyOptions } from './typography.js';
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -373,7 +373,7 @@ El informe da siempre la página del PDF, no el folio impreso, que puede venir e
 empezar en otro punto. El folio sí se usa, para no reportarlo como línea de una palabra.
 `,
     )
-    .action(async (paths: string[], opts: { output?: string; json?: boolean; exceptions?: string; fix?: boolean }) => {
+    .action(async (paths: string[], opts: TypographyOptions) => {
       await runTypography(projectRoot(), paths, opts);
     });
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ACCENT_COLORS, type AccentColor } from '../lib/accent-palettes.js';
+import { ACCENT_COLORS } from '../lib/accent-palettes.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_BLOCKS,
@@ -30,8 +30,6 @@ z.setErrorMap(((issue: z.ZodIssue) => {
   }
   return { message: issue.message };
 }) as unknown as z.ZodErrorMap);
-
-const KNOWN_ACCENT_COLORS = ACCENT_COLORS as readonly AccentColor[];
 
 const PAGE_NUMBER_OPTIONS = ['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right'] as const;
 
@@ -80,10 +78,7 @@ const HtmlSiteSchema = z
     description: z.string().default(DEFAULT_HTML_FORMAT.site.description),
     logo: z.string().default(DEFAULT_HTML_FORMAT.site.logo),
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
-    color: z
-      .enum(KNOWN_ACCENT_COLORS as [AccentColor, ...AccentColor[]])
-      .optional()
-      .default(DEFAULT_HTML_FORMAT.site.color),
+    color: z.enum(ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.site.color),
   })
   .strict();
 

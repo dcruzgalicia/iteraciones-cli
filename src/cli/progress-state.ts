@@ -1,7 +1,5 @@
 import type { FormatState, PipelinePhase } from '../builder/types.js';
 
-export type { FormatState, PipelinePhase };
-
 interface PhaseMeta {
   label: string;
 }
@@ -46,7 +44,6 @@ export class TrackerState {
   warnings: string[] = [];
   summaryLines: string[] = [];
   currentPhase: PipelinePhase | null = null;
-  currentPhaseCount = 0;
   formatsShown = false;
   private phases = new Map<PipelinePhase, PhaseTiming>();
 
@@ -126,7 +123,6 @@ export class TrackerState {
     const t = this.timing(phase);
     t.count = total;
     t.start = performance.now();
-    this.currentPhaseCount = 0;
     this.ensurePhaseRow(phase);
     const created = phase !== 'discovery' && phase !== 'render' ? this.createFormatsBlock() : false;
     const row = this.getRow(this.rowKeyFor(phase));
@@ -145,7 +141,6 @@ export class TrackerState {
   reportFile(phase: PipelinePhase): boolean {
     const t = this.timing(phase);
     t.live = (t.live ?? 0) + 1;
-    if (phase === this.currentPhase) this.currentPhaseCount++;
     const row = this.getRow(this.rowKeyFor(phase));
     return row?.status === 'active';
   }
@@ -155,7 +150,7 @@ export class TrackerState {
     const t = this.timing(phase);
     t.done = true;
     const elapsed = t.start !== undefined ? performance.now() - t.start : 0;
-    const count = actualCount ?? t.count ?? this.currentPhaseCount;
+    const count = actualCount ?? t.count ?? 0;
     t.count = count;
     const row = this.getRow(this.rowKeyFor(phase));
     if (row) {

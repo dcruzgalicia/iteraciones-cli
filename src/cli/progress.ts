@@ -1,10 +1,10 @@
 import { join } from 'node:path';
 import { EMPTY_PROJECT_WARNING_CODE } from '../builder/orchestrator.js';
-import type { BuildReporter, RenderFileReport } from '../builder/types.js';
+import type { BuildReporter, FormatState, PipelinePhase, RenderFileReport } from '../builder/types.js';
 import { GLYPHS } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { formatTime, TrackerRenderer } from './progress-render.js';
-import { type FormatState, type PipelinePhase, TrackerState } from './progress-state.js';
+import { TrackerState } from './progress-state.js';
 
 const LABEL_WIDTH = 30;
 
