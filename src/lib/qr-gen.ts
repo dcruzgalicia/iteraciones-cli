@@ -1,8 +1,8 @@
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { prepareZXingModule, writeBarcode } from 'zxing-wasm/writer';
 
-const WASM_PATH = new URL('../../node_modules/zxing-wasm/dist/writer/zxing_writer.wasm', import.meta.url);
+const WASM_PATH = fileURLToPath(import.meta.resolve('zxing-wasm/writer/zxing_writer.wasm'));
 
 async function main(): Promise<void> {
   const outDir = process.argv[2];
@@ -11,7 +11,7 @@ async function main(): Promise<void> {
   const url = (await Bun.stdin.text()).trim();
   if (!url) process.exit(1);
 
-  const hash = createHash('md5').update(url).digest('hex');
+  const hash = Bun.CryptoHasher.hash('md5', url, 'hex');
   const svgPath = `${outDir}/qr-${hash}.svg`;
   const pngPath = `${outDir}/qr-${hash}.png`;
   const jpgPath = `${outDir}/qr-${hash}.jpg`;
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
 
   prepareZXingModule({
     overrides: {
-      wasmBinary: readFileSync(WASM_PATH).buffer as ArrayBuffer,
+      wasmBinary: await Bun.file(WASM_PATH).arrayBuffer(),
     },
   });
 

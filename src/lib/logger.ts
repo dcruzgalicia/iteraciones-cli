@@ -49,14 +49,9 @@ export function logWarning(message: string, context?: string): void {
   }
 }
 
-export function logInfo(message: string, context?: string): void {
-  const prefix = formatContext(context, process.stdout);
-  process.stdout.write(`${colorize(GLYPHS.info, 'dim', process.stdout)} ${prefix}${message}\n`);
-}
-
-export function logNotice(message: string, context?: string): void {
-  const prefix = formatContext(context, process.stderr);
-  process.stderr.write(`${colorize(GLYPHS.info, 'dim', process.stderr)} ${prefix}${message}\n`);
+export function logInfo(message: string, context?: string, stream: NodeJS.WriteStream = process.stdout): void {
+  const prefix = formatContext(context, stream);
+  stream.write(`${colorize(GLYPHS.info, 'dim', stream)} ${prefix}${message}\n`);
 }
 
 export function logSuccess(message: string, context?: string): void {

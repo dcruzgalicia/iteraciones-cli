@@ -6,13 +6,9 @@ const HUMAN_DATE = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'lo
 
 export function formatHumanDate(iso?: string): string | undefined {
   if (!iso) return iso;
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
-  if (!match) return iso;
-  const [, , month, day] = match;
-  const date = new Date(`${iso.trim()}T00:00:00Z`);
-
-  if (Number.isNaN(date.getTime()) || date.getUTCMonth() + 1 !== Number(month) || date.getUTCDate() !== Number(day)) {
+  try {
+    return HUMAN_DATE.format(new Date(Temporal.PlainDate.from(iso.trim()).toString()));
+  } catch {
     return iso;
   }
-  return HUMAN_DATE.format(date);
 }

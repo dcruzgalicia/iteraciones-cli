@@ -17,18 +17,10 @@ async function probe(bin: string, args: string[]): Promise<string> {
   return version;
 }
 
-export function toolVersionMagick(): Promise<string> {
-  return probe('magick', ['-version']);
-}
+export const toolVersionMagick = (): Promise<string> => probe('magick', ['-version']);
 
-export function toolVersionPdfToPpm(): Promise<string> {
-  return probe('pdftoppm', ['-v']);
-}
+export const toolVersionPdfToPpm = (): Promise<string> => probe('pdftoppm', ['-v']);
 
-export function toolVersionLatexmk(): Promise<string> {
-  return probe('latexmk', ['-v']);
-}
+export const toolVersionLatexmk = (): Promise<string> => probe('latexmk', ['-v']);
 
-export function toolVersionMinify(): Promise<string> {
-  return probe('minify', ['--version']);
-}
+export const toolVersionMinify = (): Promise<string> => probe('minify', ['--version']);

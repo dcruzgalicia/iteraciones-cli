@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { ConfigError, formatUserError } from '../lib/errors.js';
+import { ConfigError } from '../lib/errors.js';
 import { parseYamlWithPosition } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { type SiteConfig, SiteConfigSchema } from './config-schema.js';
@@ -43,7 +43,7 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
   let parsed: unknown;
   const yamlResult = parseYamlWithPosition(raw);
   if (yamlResult.error) {
-    throw new ConfigError(`Error de sintaxis: ${formatUserError(yamlResult.error)}`, configPath);
+    throw new ConfigError(`Error de sintaxis: ${yamlResult.error}`, configPath);
   }
   parsed = yamlResult.value;
 

@@ -1,10 +1,10 @@
 import { copyFile, exists, mkdir, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, relative } from 'node:path';
-import slugifyLib from 'slugify';
+import { slugify } from '../builder/discover.js';
 import { hashFileContent, hashString } from '../builder/state-serialize.js';
 import { BuildError } from './errors.js';
-import { isInside } from './paths.js';
+import { isDir, isInside } from './paths.js';
 import { exec, mapWithConcurrency } from './run.js';
 
 export const DPI = 300;
@@ -39,11 +39,10 @@ export function sortPageFiles(files: string[]): string[] {
 
 export const SNAPSHOTS_DIR = 'snapshots';
 export const DIFF_DIR = 'diff';
-const DIFF_IMAGE = /--page-\d+--diff\.png$/;
 const SNAPSHOT_IMAGE = /--page-\d+\.png$/;
 
 export function visualSlug(pdfPath: string): string {
-  const slug = slugifyLib(basename(pdfPath, extname(pdfPath)), { lower: true, strict: true });
+  const slug = slugify(basename(pdfPath, extname(pdfPath)));
   return slug === '' ? 'documento' : slug;
 }
 
@@ -72,14 +71,7 @@ function stemOf(file: string): string {
 }
 
 async function globFiles(dir: string, pattern: string): Promise<string[]> {
-  if (
-    !(
-      await Bun.file(dir)
-        .stat()
-        .catch(() => null)
-    )?.isDirectory()
-  )
-    return [];
+  if (!(await isDir(dir))) return [];
   const found: string[] = [];
   for await (const rel of new Bun.Glob(pattern).scan({ cwd: dir, onlyFiles: true })) {
     found.push(join(dir, rel));
@@ -91,16 +83,19 @@ export async function listPdfFiles(dir: string): Promise<string[]> {
   return globFiles(dir, '**/*.pdf');
 }
 
-export async function clearDiffImages(dir: string, stem?: string): Promise<void> {
-  const files = stem === undefined ? await globFiles(dir, '**/*--page-*-diff.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
-  const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${RegExp.escape(stem)}--page-\\d+--diff\\.png$`);
+async function clearPageImages(dir: string, stem: string | undefined, sufijo: string): Promise<void> {
+  const files =
+    stem === undefined ? await globFiles(dir, `**/*--page-*${sufijo}.png`) : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
+  const pattern = stem === undefined ? new RegExp(`--page-\\d+${sufijo}\\.png$`) : new RegExp(`^${RegExp.escape(stem)}--page-\\d+${sufijo}\\.png$`);
   await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
 }
 
+export async function clearDiffImages(dir: string, stem?: string): Promise<void> {
+  await clearPageImages(dir, stem, '--diff');
+}
+
 export async function clearSnapshotImages(dir: string, stem?: string): Promise<void> {
-  const files = stem === undefined ? await globFiles(dir, '**/*--page-*.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
-  const pattern = stem === undefined ? SNAPSHOT_IMAGE : new RegExp(`^${RegExp.escape(stem)}--page-\\d+\\.png$`);
-  await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
+  await clearPageImages(dir, stem, '');
 }
 
 export async function listSnapshotImages(dir: string): Promise<Map<string, string[]>> {

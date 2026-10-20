@@ -60,9 +60,16 @@ function quote(value: string): string {
   return SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
 }
 
+function flagValueAny(args: string[], ...flags: string[]): string | undefined {
+  for (const flag of flags) {
+    const i = args.indexOf(flag);
+    if (i >= 0) return args[i + 1];
+  }
+  return undefined;
+}
+
 function flagValue(args: string[], flag: string): string | undefined {
-  const i = args.indexOf(flag);
-  return i >= 0 ? args[i + 1] : undefined;
+  return flagValueAny(args, flag);
 }
 
 function formatOf(to: string): { section: Section; ext: string } {
@@ -100,7 +107,6 @@ export function abortScriptCapture(): void {
 }
 
 interface ScriptExecOptions {
-  cwd?: string;
   env?: Record<string, string>;
   input?: string;
   scriptKey?: string;
@@ -124,7 +130,7 @@ function recordPandoc(args: string[], options: ScriptExecOptions, stdout: string
   const { section, ext } = formatOf(flagValue(args, '--to') ?? '');
   const output = flagValue(args, '--output');
   const argv = ['pandoc', ...args];
-  const common = { section, argv, env: options.env, cwd: options.cwd, input: options.input, inputTarget: options.inputTarget };
+  const common = { section, argv, env: options.env, input: options.input, inputTarget: options.inputTarget };
   if (output !== undefined) push({ ...common, sortKey: output });
   else push({ ...common, sortKey: options.scriptKey ?? options.input ?? '', raw: stdout, ext });
 }
@@ -245,8 +251,7 @@ function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
     const last = step.argv.at(-1);
     if (step.section === 'images' && last !== undefined) dirs.add(dirname(last));
 
-    const i = step.argv.findIndex((a) => a === '-o' || a === '--output');
-    const out = i >= 0 ? step.argv[i + 1] : undefined;
+    const out = flagValueAny(step.argv, '-o', '--output');
     if (out !== undefined) dirs.add(step.argv[1] === 'assets' || step.argv[1] === 'bundle' ? out : dirname(out));
   }
 

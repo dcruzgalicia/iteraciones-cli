@@ -22,18 +22,12 @@ const YAML_CAUSE_TRANSLATIONS: Array<{ match: string; es: string }> = [
     match: 'Nested mappings are not allowed in compact mappings',
     es: 'no se admiten mapeos anidados dentro de mapeos compactos',
   },
-  { match: 'bad indentation', es: 'indentación inválida' },
   {
     match: 'Flow sequence in block collection must be sufficiently indented and end with a ]',
     es: 'la secuencia de flujo debe estar bien indentada y terminar con ]',
   },
   { match: 'Unexpected flow-seq-end token in YAML stream', es: 'hay un ] de más en el YAML' },
   { match: 'Missing closing "quote', es: 'falta la comilla de cierre' },
-  {
-    match: 'Block collection cannot be used as implicit map key',
-    es: 'un bloque no puede usarse como clave del mapeo (falta un valor para la clave anterior)',
-  },
-  { match: 'unexpected end of stream', es: 'el YAML termina de forma inesperada' },
 ];
 
 function translateYamlCause(cause: string): string {
