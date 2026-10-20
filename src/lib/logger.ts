@@ -54,6 +54,10 @@ export function logInfo(message: string, context?: string, stream: NodeJS.WriteS
   stream.write(`${colorize(GLYPHS.info, 'dim', stream)} ${prefix}${message}\n`);
 }
 
+export function writeJson(value: unknown): void {
+  process.stdout.write(`${JSON.stringify(value)}\n`);
+}
+
 export function logSuccess(message: string, context?: string): void {
   const prefix = formatContext(context, process.stdout);
   process.stdout.write(`${colorize(GLYPHS.success, 'green', process.stdout)} ${prefix}${message}\n`);

@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { slugify } from '../builder/discover.js';
+import { listMarkdownDocuments } from '../builder/discover-files.js';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
-import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
-import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
+import { readFrontmatter, splitFrontmatter } from '../lib/frontmatter.js';
+import { fail, logError, logInfo, logSuccess, writeJson } from '../lib/logger.js';
 import { relativeLabel } from '../lib/paths.js';
 import { analyzePdf, type OpcionesAnalisis, parseaExcepciones, TYPOGRAPHY_RULES, type TypographyIncidence } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
@@ -102,6 +103,24 @@ function formatea(incidencia: TypographyIncidence): string {
   return `  pág ${incidencia.page}  ${rango}  ${incidencia.type}\n${cuerpo}`;
 }
 
+function reportIncidencias(
+  cwd: string,
+  entradas: { pdf: string; incidences: TypographyIncidence[]; motivo?: (incidencia: TypographyIncidence) => string | undefined }[],
+): void {
+  const lineas: string[] = [];
+  for (const { pdf, incidences, motivo } of entradas) {
+    if (incidences.length === 0) continue;
+    lineas.push(`${relativeLabel(cwd, pdf)} · ${plural(incidences.length, 'incidencia')}`);
+    for (const incidencia of incidences) {
+      const partes = formatea(incidencia).split('\n');
+      const porque = motivo?.(incidencia);
+      if (porque) partes[0] = `${partes[0]}  ${porque}`;
+      lineas.push(partes.join('\n'));
+    }
+  }
+  logInfo(lineas.join('\n'), 'typography');
+}
+
 function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
   const rango = options.pages === undefined ? undefined : interpretaPaginas(options.pages);
   return {
@@ -148,21 +167,17 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
         logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
         return;
       }
-      const lineas: string[] = [];
-      for (const pdf of targets) {
-        const resultado = porPdf.get(pdf);
-        if (!resultado || resultado.incidences.length === 0) continue;
-        lineas.push(`${relativeLabel(cwd, pdf)} · ${plural(resultado.incidences.length, 'incidencia')}`);
-        lineas.push(
-          ...resultado.incidences.map((incidencia) => {
-            const partes = formatea(incidencia).split('\n');
-            const motivo = resultado.estado.get(incidencia);
-            if (motivo) partes[0] = `${partes[0]}  ${motivo}`;
-            return partes.join('\n');
-          }),
-        );
-      }
-      logInfo(lineas.join('\n'), 'typography');
+      reportIncidencias(
+        cwd,
+        targets.map((pdf) => {
+          const resultado = porPdf.get(pdf);
+          return {
+            pdf,
+            incidences: resultado?.incidences ?? [],
+            motivo: resultado ? (incidencia) => resultado.estado.get(incidencia) : undefined,
+          };
+        }),
+      );
       const partes = [`${corregidos} corregidas de ${total}`];
       const sinCorregir = sinAplicar;
       if (sinCorregir > 0) {
@@ -191,12 +206,10 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 
     if (options.json) {
-      process.stdout.write(
-        `${JSON.stringify({
-          ok: total === 0,
-          files: files.map((file) => ({ pdf: relativeLabel(cwd, file.pdf), incidences: file.incidences })),
-        })}\n`,
-      );
+      writeJson({
+        ok: total === 0,
+        files: files.map((file) => ({ pdf: relativeLabel(cwd, file.pdf), incidences: file.incidences })),
+      });
       if (total > 0) process.exitCode = 1;
       return;
     }
@@ -205,13 +218,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
       logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
       return;
     }
-    const lineas: string[] = [];
-    for (const { pdf, incidences } of files) {
-      if (incidences.length === 0) continue;
-      lineas.push(`${relativeLabel(cwd, pdf)} · ${plural(incidences.length, 'incidencia')}`);
-      lineas.push(...incidences.map(formatea));
-    }
-    logInfo(lineas.join('\n'), 'typography');
+    reportIncidencias(cwd, files);
     process.exitCode = 1;
     logError(`${plural(total, 'incidencia')} en ${plural(files.length, 'PDF')}`, 'typography');
   } catch (err) {
@@ -253,11 +260,7 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
   const agregarFiles = async (ruta: string): Promise<void> => {
     const nombres = new Set<string>();
     try {
-      const { yaml } = splitFrontmatter(await Bun.file(ruta).text());
-      if (!yaml) return;
-      const { value } = parseYamlWithPosition(yaml);
-      const parsed = value as Record<string, unknown> | undefined;
-      if (!parsed) return;
+      const parsed = readFrontmatter(await Bun.file(ruta).text(), ruta);
       for (const campo of ['contributor', 'contributors', 'collectionCreator', 'creator']) {
         recolectaNombres(parsed[campo], nombres);
       }
@@ -273,9 +276,8 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
         }
         if (!archivo) continue;
         out.add(archivo);
-        const { yaml: yamlArchivo } = splitFrontmatter(await Bun.file(archivo).text());
-        const valorArchivo = yamlArchivo ? parseYamlWithPosition(yamlArchivo).value : undefined;
-        recolectaNombres((valorArchivo as Record<string, unknown> | undefined)?.creator, nombres);
+        const valorArchivo = readFrontmatter(await Bun.file(archivo).text(), archivo);
+        recolectaNombres(valorArchivo.creator, nombres);
       }
     } catch {}
     await agregaCreators(nombres);
@@ -284,13 +286,7 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
   if (await Bun.file(directo).exists()) await agregarFiles(directo);
 
   if (out.size === 0) {
-    const glob = new Bun.Glob('**/*.md');
-    for await (const rel of glob.scan({ cwd, onlyFiles: true })) {
-      const parts = rel.split('/');
-      if (parts.some((p) => p === 'node_modules' || p === '.iteraciones' || p === 'dist' || p.startsWith('.'))) continue;
-      const abs = join(cwd, rel);
-      if (await Bun.file(abs).exists()) out.add(abs);
-    }
+    for (const rel of await listMarkdownDocuments(cwd)) out.add(join(cwd, rel));
   }
   return [...out];
 }
@@ -314,7 +310,7 @@ const LIGADURAS_PDF: Record<string, string> = {
 const CARACTERES_PDF = /[\u0132\u0133\u2026\uFB00-\uFB06]|\.(?:[ \t]*\.){2,}/gu;
 
 function igualaCaracteresPdf(texto: string): { texto: string; mapa: number[] } {
-  if (!/[\u0132\u0133\u2026\uFB00-\uFB06]|\.(?:[ \t]*\.){2,}/u.test(texto)) return { texto, mapa: [] };
+  if (!new RegExp(CARACTERES_PDF.source, 'u').test(texto)) return { texto, mapa: [] };
   const partes: string[] = [];
   const mapa: number[] = [];
   const empuja = (trocito: string, desde: number, hasta: number): void => {

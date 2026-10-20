@@ -1,6 +1,6 @@
-import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { stringify } from 'yaml';
+import { writeExclusive } from '../builder/pipeline-io.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
@@ -87,10 +87,10 @@ export async function initProject(cwd: string): Promise<void> {
   ].join('\n');
 
   const [configCreated, indexCreated, bibCreated, gitignoreCreated] = await Promise.all([
-    createExclusive(join(cwd, 'iteraciones.config.yaml'), buildDefaultConfig()),
-    createExclusive(join(cwd, 'index.md'), DEFAULT_INDEX),
-    createExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
-    createExclusive(join(cwd, '.gitignore'), DEFAULT_GITIGNORE),
+    writeExclusive(join(cwd, 'iteraciones.config.yaml'), buildDefaultConfig()),
+    writeExclusive(join(cwd, 'index.md'), DEFAULT_INDEX),
+    writeExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
+    writeExclusive(join(cwd, '.gitignore'), DEFAULT_GITIGNORE),
   ]);
 
   const report = (created: boolean, file: string): void => {
@@ -102,14 +102,4 @@ export async function initProject(cwd: string): Promise<void> {
   report(bibCreated, 'bibliography.bib');
   report(gitignoreCreated, '.gitignore');
   logSuccess("proyecto inicializado. Ejecuta 'iteraciones build' para generar los documentos.", 'init');
-}
-
-async function createExclusive(filePath: string, content: string): Promise<boolean> {
-  try {
-    await writeFile(filePath, content, { encoding: 'utf8', flag: 'wx' });
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'EEXIST') return false;
-    throw err;
-  }
 }

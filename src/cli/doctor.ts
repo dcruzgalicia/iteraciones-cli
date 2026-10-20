@@ -1,7 +1,7 @@
 import { discoverBibFiles } from '../builder/state-bib.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
-import { DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig } from '../config/site-config.js';
+import { DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig, userWroteDisabledPreamble } from '../config/site-config.js';
 import { GLYPHS, logInfo } from '../lib/logger.js';
 import { checkMinify } from '../lib/minify.js';
 import {
@@ -18,10 +18,7 @@ import {
   checkWritePermissions,
 } from './doctor/system-checks.js';
 
-function resolveConfigResult(loadedOrError: {
-  loaded?: ReturnType<typeof loadSiteConfigIfPresent> extends Promise<infer R> ? R : never;
-  error?: string;
-}) {
+function resolveConfigResult(loadedOrError: { loaded?: Awaited<ReturnType<typeof loadSiteConfigIfPresent>>; error?: string }) {
   if ('error' in loadedOrError) return { siteConfig: null, ok: false, detail: loadedOrError.error } as const;
   if (loadedOrError.loaded) return { siteConfig: loadedOrError.loaded.config, ok: true, detail: undefined } as const;
   return { siteConfig: null, ok: false, detail: "no se encontró iteraciones.config.yaml; ejecuta 'iteraciones init' para crearlo" } as const;
@@ -31,11 +28,12 @@ function resolveEffectiveDisabled(
   loadedOrError: { loaded?: { presentKeys: ReadonlySet<string> } | null; error?: string },
   siteConfig: SiteConfig | null,
 ): string[] {
-  const userWroteDisabledList =
-    !('error' in loadedOrError) &&
-    (loadedOrError.loaded?.presentKeys.has('format.pdf.disabledPreambleFilters') === true ||
-      loadedOrError.loaded?.presentKeys.has('disabledPreambleFilters') === true);
+  const userWroteDisabledList = !('error' in loadedOrError) && userWroteDisabledPreamble(loadedOrError.loaded?.presentKeys ?? new Set());
   return userWroteDisabledList ? resolveDisabledPreambleConfig(siteConfig ?? {}) : (DEFAULT_PDF_FORMAT.disabledPreambleFilters ?? []);
+}
+
+export function checksOk(checks: CheckResult[]): boolean {
+  return checks.filter((c) => !c.warn).every((c) => c.ok);
 }
 
 export async function collectChecks(cwd: string): Promise<CheckResult[]> {
@@ -87,7 +85,7 @@ export async function doctorEnvironment(cwd: string): Promise<void> {
 
   renderChecks(checks);
 
-  const allOk = checks.filter((c) => !c.warn).every((c) => c.ok);
+  const allOk = checksOk(checks);
   logInfo(allOk ? 'Todo en orden.' : 'Hay problemas que corregir.', 'doctor');
   if (!allOk) process.exitCode = 1;
 }

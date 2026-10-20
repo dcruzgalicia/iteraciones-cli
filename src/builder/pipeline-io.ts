@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { parseFrontmatterRecord, splitFrontmatter } from '../lib/frontmatter.js';
@@ -15,6 +15,16 @@ export function relativeHref(dir: string, file: string): string {
 export async function writeOutput(path: string, content: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await Bun.write(path, content);
+}
+
+export async function writeExclusive(path: string, content: string): Promise<boolean> {
+  try {
+    await writeFile(path, content, { encoding: 'utf8', flag: 'wx' });
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EEXIST') return false;
+    throw err;
+  }
 }
 
 export async function writeIfChanged(path: string, content: string): Promise<void> {

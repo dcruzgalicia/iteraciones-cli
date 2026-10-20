@@ -11,7 +11,7 @@ import { resolveBibOptions } from '../builder/state-bib.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG, resolveDisabledPreambleConfig } from '../config/site-config.js';
-import { logInfo } from '../lib/logger.js';
+import { logInfo, writeJson } from '../lib/logger.js';
 
 function sortLuaInfos(infos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>>) {
   return infos.sort((a, b) => {
@@ -67,7 +67,7 @@ async function emitJsonOutput(
     description: info.description,
     active: !preambleDisabled.has(info.name),
   }));
-  process.stdout.write(`${JSON.stringify({ filters, preamble })}\n`);
+  writeJson({ filters, preamble });
 }
 
 function emitBlock(
