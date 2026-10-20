@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join, normalize, relative, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
+import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
@@ -9,11 +10,13 @@ import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { posix } from '../lib/paths.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
+import { htmlOwner, removeExtraHtmlPages } from './cleanup.js';
 import { extractFragment } from './collection-fragment.js';
 import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
+import type { HtmlPageVars } from './html-composer.js';
 import { imagePathsMap, relImageMapFor, rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
   buildTexDistribution,
@@ -172,6 +175,43 @@ async function emitLatexAndQueuePdf(
   }
 }
 
+function htmlVars(args: {
+  doc: BuildDocument;
+  outputs: DocumentOutputs;
+  renderCtx: RenderContext;
+  formats: HtmlPageVars['formats'];
+  hasHomePage: boolean;
+  sufijo: string;
+}): HtmlPageVars {
+  const { doc, outputs, renderCtx, formats, hasHomePage, sufijo } = args;
+  const { ctx, lang, formatCfg } = renderCtx;
+  const htmlConfig = formatCfg?.html;
+  const { dir, slug, fm } = outputs;
+  const titulo = doc.frontmatter.title || slug;
+  return {
+    title: `${titulo}${sufijo}`,
+    siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
+    tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
+    lang,
+    theme: htmlConfig?.site?.theme,
+    css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
+    authorMeta: doc.frontmatter.creator.join(', '),
+    docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? `${doc.frontmatter.title}${sufijo}` : undefined,
+    subtitle: doc.frontmatter.subtitle,
+    date: formatHumanDate(doc.frontmatter.date),
+    homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
+    formats: formats && formats.length > 0 ? formats : undefined,
+
+    titlehead: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
+    subject: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject'),
+    publishers: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publishers'),
+    collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
+    collectionCreator: parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')),
+    authors: doc.frontmatter.creator,
+    docChip: docChipLabel(doc.frontmatter.type),
+  };
+}
+
 async function emitHtmlPage(
   doc: BuildDocument,
   outputs: DocumentOutputs,
@@ -179,53 +219,37 @@ async function emitHtmlPage(
   exportCtx: ExportContext,
   discoveryIndex: Map<string, DiscoveryEntry>,
   imagePaths?: string,
+  paginas?: string[],
 ): Promise<void> {
-  const { ctx, plan, formatCfg, lang } = renderCtx;
-  const htmlConfig = formatCfg?.html;
-  const { dir, outBase, outSlug, slug, fm, content } = outputs;
+  const { ctx, plan } = renderCtx;
+  const { dir, outBase, outSlug, content } = outputs;
   const cwd = ctx.cwd;
 
   const formats = formatLinksFor(plan, dir, outSlug);
   const hasHomePage = discoveryIndex.has('index.md');
-  const htmlPath = outBase(`${outSlug}${primaryOutputExtension('html')}`);
 
   const htmlType = doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' ? doc.frontmatter.type : 'file';
-  const html = await htmlPageFromMarkdown(content, doc, {
-    cwd,
-    inputTarget: await collectionPandocInput(doc, cwd, outSlug, 'html'),
-    imagePaths,
-    templatePath: exportCtx.templates[htmlKindFor(htmlType)],
-    refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
-    docType: htmlType,
-    vars: {
-      title: doc.frontmatter.title || slug,
-      siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
-      tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
-      lang,
-      theme: htmlConfig?.site?.theme,
-      css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
-      authorMeta: doc.frontmatter.creator.join(', '),
-      docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? doc.frontmatter.title : undefined,
-      subtitle: doc.frontmatter.subtitle,
-      date: formatHumanDate(doc.frontmatter.date),
-      homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
-      formats: formats.length > 0 ? formats : undefined,
-
-      titlehead: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
-      subject: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject'),
-      publishers: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publishers'),
-      collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
-      collectionCreator: parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')),
-      authors: doc.frontmatter.creator,
-      docChip: docChipLabel(doc.frontmatter.type),
-    },
-    siteConfig: ctx.siteConfig,
-    fm,
-    bibOptions: exportCtx.bibOptions,
-    luaFilters: exportCtx.filters,
-    scriptOutputPath: htmlPath,
-  });
-  await writeOutput(htmlPath, html);
+  const contenidos = paginas ?? [content];
+  for (const [indice, contenido] of contenidos.entries()) {
+    const slugPagina = indice === 0 ? outSlug : `${outSlug}-${indice + 1}`;
+    const htmlPath = outBase(`${slugPagina}${primaryOutputExtension('html')}`);
+    const sufijo = indice === 0 ? '' : ` (${indice + 1}/${contenidos.length})`;
+    const html = await htmlPageFromMarkdown(contenido, doc, {
+      cwd,
+      inputTarget: await collectionPandocInput(doc, cwd, outSlug, 'html'),
+      imagePaths,
+      templatePath: exportCtx.templates[htmlKindFor(htmlType)],
+      refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
+      docType: htmlType,
+      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, sufijo }),
+      siteConfig: ctx.siteConfig,
+      fm: outputs.fm,
+      bibOptions: exportCtx.bibOptions,
+      luaFilters: exportCtx.filters,
+      scriptOutputPath: htmlPath,
+    });
+    await writeOutput(htmlPath, html);
+  }
 }
 
 const AUTORA_POR_DEFECTO = 'Anónima';
@@ -441,13 +465,31 @@ function printableEntries<T extends { type: string | undefined }>(entries: T[]):
   return entries.filter((e) => e.type !== 'intervention');
 }
 
+function collectionCards(entries: CollectionEntry[], memberHrefs: Map<string, string>, intro: string, desde: number, hasta: number): string {
+  const cards: string[] = [];
+  if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
+  for (const e of printableEntries(entries).slice(desde, hasta)) cards.push(collectionCard(e, memberHrefs.get(e.file)));
+  return cards.join('\n\n');
+}
+
 export function collectionCardsContent(entries: CollectionEntry[], memberHrefs: Map<string, string>, content: string): string {
   if (entries.length === 0) return content;
-  const cards: string[] = [];
+  return collectionCards(entries, memberHrefs, splitFrontmatter(content).body.trim(), 0, Number.POSITIVE_INFINITY);
+}
+
+/**
+ * Reparte las tarjetas de la colección en páginas. La primera lleva el cuerpo
+ * propio de la colección; el resto, sólo sus tarjetas.
+ */
+export function collectionCardsPages(entries: CollectionEntry[], memberHrefs: Map<string, string>, content: string, pageSize: number): string[] {
+  if (entries.length === 0) return [content];
+  const imprimibles = printableEntries(entries);
   const intro = splitFrontmatter(content).body.trim();
-  if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
-  for (const e of printableEntries(entries)) cards.push(collectionCard(e, memberHrefs.get(e.file)));
-  return cards.join('\n\n');
+  const paginas: string[] = [];
+  for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
+    paginas.push(collectionCards(entries, memberHrefs, desde === 0 ? intro : '', desde, desde + pageSize));
+  }
+  return paginas.length > 0 ? paginas : [content];
 }
 
 export function collectionScanContent(entries: CollectionEntry[], content: string): string {
@@ -455,6 +497,36 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
   const body = splitFrontmatter(content).body;
   const sections = collectionBaseContent(entries, 'latex', content);
   return body.trim() === '' ? sections : `${sections}\n\n${body}`;
+}
+
+const PAGINATION_NAV_CLASSES = '[column-span:all] my-10 flex flex-wrap items-center justify-between gap-4 text-lg';
+
+const PAGINATION_LINK_CLASSES =
+  'rounded-full border border-accent-500/40 bg-accent-500/10 px-4 py-2 text-accent-700 hover:bg-accent-500/20 dark:text-accent-300';
+
+function pageSlug(outSlug: string, pagina: number): string {
+  return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
+}
+
+export function paginationNav(dir: string, outSlug: string, pagina: number, total: number): string {
+  if (total <= 1) return '';
+  const enlace = (n: number, texto: string): string =>
+    `<a href="${relativeHref(dir, `${pageSlug(outSlug, n)}.html`)}" class="${PAGINATION_LINK_CLASSES}">${texto}</a>`;
+  const anterior = pagina > 1 ? enlace(pagina - 1, '← Anterior') : '<span></span>';
+  const siguiente = pagina < total ? enlace(pagina + 1, 'Siguiente →') : '<span></span>';
+  const estado = `<span class="text-sm font-mono text-accent-600 dark:text-accent-400">Página ${pagina} de ${total}</span>`;
+  return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}${estado}${siguiente}</nav>`;
+}
+
+function assertPaginasLibres(relativePath: string, dir: string, outSlug: string, total: number, discoveryIndex: Map<string, DiscoveryEntry>): void {
+  for (let n = 2; n <= total; n++) {
+    const nombre = pageSlug(outSlug, n);
+    const dueno = htmlOwner(discoveryIndex, dir, nombre);
+    if (dueno === undefined) continue;
+    throw new BuildError(
+      `"${relativePath}" se pagina en ${total} páginas y la página ${n} se llamaría "${nombre}.html", que es el archivo de "${dueno}". Dos documentos no pueden escribir el mismo archivo: fija otro "slug:" en el frontmatter de "${dueno}".`,
+    );
+  }
 }
 
 const MASONRY_WRAPPER = '<div class="break-inside-avoid pb-6">';
@@ -775,10 +847,17 @@ async function emitCollectionFormats(
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl);
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
-    const base = collectionCardsContent(collectionEntries, memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex), content);
+    const memberHrefs = memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex);
+    const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
+    const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize);
+    assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
+    const contenidos = paginas.map((base, indice) =>
+      prependLinksMarkdown(base + paginationNav(outputs.dir, outputs.outSlug, indice + 1, paginas.length), creatorLinks),
+    );
 
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
-    await emitHtmlPage(doc, { ...outputs, content: prependLinksMarkdown(base, creatorLinks) }, renderCtx, exportCtx, discoveryIndex, imagePaths);
+    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos);
+    await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
   }
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {

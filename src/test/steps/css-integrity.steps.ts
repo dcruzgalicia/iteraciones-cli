@@ -5,7 +5,7 @@ import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { compileTailwindCss, computeCssHash, resolveTailwindBin } from '../../builder/build-assets.js';
 import { type HtmlDocType, loadCard } from '../../builder/html-composer.js';
 import type { SiteConfig } from '../../config/config-schema.js';
-import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
+import { DEFAULT_HTML_FORMAT, DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
 import { ACCENT_COLORS, type AccentColor } from '../../lib/accent-palettes.js';
 
 const RESOURCES = join(import.meta.dir, '../../lib/resources');
@@ -34,7 +34,11 @@ function siteConfig(): SiteConfig {
     ...DEFAULT_SITE_CONFIG,
     format: {
       ...DEFAULT_SITE_CONFIG.format,
-      html: { site: { title: 'T', description: 'd', logo: '', theme: 'dark', color: 'lime' }, generate: true },
+      html: {
+        site: { title: 'T', description: 'd', logo: '', theme: 'dark', color: 'lime' },
+        generate: true,
+        pageSize: DEFAULT_HTML_FORMAT.pageSize,
+      },
     },
   };
 }

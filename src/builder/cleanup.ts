@@ -1,4 +1,4 @@
-import { readdir, rm, stat } from 'node:fs/promises';
+import { exists, readdir, rm, stat } from 'node:fs/promises';
 import { basename, dirname, join, normalize, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import type { FormatKey } from '../config/site-config.js';
@@ -67,6 +67,46 @@ interface CleanupEntry {
   slug: string | undefined;
 }
 
+/**
+ * El documento que escribe un HTML con este nombre en este directorio, si
+ * alguno. Lo usan las páginas paginadas de las colecciones, que se nombran
+ * `<slug>-N.html` y podrían pisar el archivo de otro documento.
+ */
+export function htmlOwner(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, nombre: string): string | undefined {
+  for (const [ruta, entry] of discoveryIndex) {
+    if (dirname(ruta) !== dir) continue;
+    if (htmlSlugFor(ruta, entry.slug) === nombre) return ruta;
+  }
+  return undefined;
+}
+
+/**
+ * Borra las páginas que sobraron de una colección que se encogió. No toca las
+ * que pertenezcan a otro documento.
+ */
+export async function removeExtraHtmlPages(
+  outputDir: string,
+  dir: string,
+  slug: string,
+  keep: number,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): Promise<number> {
+  const base = join(outputDir, dir);
+  const pattern = new RegExp(`^${RegExp.escape(slug)}-\\d+\\.html$`);
+  let removed = 0;
+  for (const file of await readdir(base).catch(() => [])) {
+    if (!pattern.test(file)) continue;
+    const n = Number.parseInt(file.slice(slug.length + 1, -'.html'.length), 10);
+    if (!Number.isFinite(n) || n <= keep) continue;
+    if (htmlOwner(discoveryIndex, dir, file.slice(0, -'.html'.length)) !== undefined) continue;
+    const path = join(base, file);
+    if (!(await exists(path))) continue;
+    await rm(path, { force: true });
+    removed++;
+  }
+  return removed;
+}
+
 async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>): Promise<number> {
   const cacheBase = join(ctx.cwd, '.iteraciones');
   let removed = 0;
@@ -75,6 +115,7 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>)
     const outSlug = htmlSlugFor(relativePath, slug);
     removed += await removeCachedArtifacts(cacheBase, dir, outSlug);
     removed += await removeOutputFiles(ctx.outputDir, dir, outSlug, ALL_OUTPUT_EXTENSIONS);
+    removed += await removeExtraHtmlPages(ctx.outputDir, dir, outSlug, 0, new Map());
   }
   await pruneEmptyDirs(ctx.outputDir);
   return removed;
@@ -86,27 +127,39 @@ async function removeHtmlAssets(outputDir: string): Promise<void> {
   }
 }
 
+async function removeMarkdownMembers(doc: BuildDocument, root: string): Promise<number> {
+  let removed = 0;
+  for (const f of doc.frontmatter.files ?? []) {
+    const dest = resolve(root, normalize(f));
+    if (!isInside(root, dest)) continue;
+    await rm(dest, { force: true });
+    removed++;
+  }
+  return removed;
+}
+
 export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDocument[], removedFormats: string[]): Promise<number> {
   if (removedFormats.length === 0) return 0;
 
   const extensions = removedFormats.flatMap((fmt) => FORMAT_OUTPUT_EXTENSIONS[fmt as FormatKey] ?? []);
+  const sinHtml = !removedFormats.includes('html');
+  const sinMarkdown = !removedFormats.includes('markdown');
   let removed = 0;
   const root = resolve(ctx.outputDir);
   for (const doc of allDocs) {
-    removed += await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), htmlSlugFor(doc.relativePath, doc.slug), extensions);
+    const dir = dirname(doc.relativePath);
+    const outSlug = htmlSlugFor(doc.relativePath, doc.slug);
+    removed += await removeOutputFiles(ctx.outputDir, dir, outSlug, extensions);
+    if (!sinHtml) {
+      removed += await removeExtraHtmlPages(ctx.outputDir, dir, outSlug, 0, new Map());
+    }
 
-    if (removedFormats.includes('markdown') && doc.frontmatter.type === 'collection') {
-      for (const f of doc.frontmatter.files ?? []) {
-        const dest = resolve(root, normalize(f));
-        if (isInside(root, dest)) {
-          await rm(dest, { force: true });
-          removed++;
-        }
-      }
+    if (!sinMarkdown && doc.frontmatter.type === 'collection') {
+      removed += await removeMarkdownMembers(doc, root);
     }
   }
 
-  if (removedFormats.includes('html')) await removeHtmlAssets(ctx.outputDir);
+  if (!sinHtml) await removeHtmlAssets(ctx.outputDir);
   return removed;
 }
 

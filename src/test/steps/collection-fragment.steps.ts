@@ -1,6 +1,7 @@
+import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { extractFragment } from '../../builder/collection-fragment.js';
-import { world } from './cli-world.steps.ts';
+import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 function palabras(cuantas: number): string {
   return Array.from({ length: cuantas }, (_, i) => `palabra${i + 1}`).join(' ');
@@ -89,7 +90,14 @@ Then('los puntos suspensivos van antes del cierre del bloque', () => {
 
 import type { CollectionEntry } from '../../builder/pipeline-formats.js';
 
-import { collectionBaseContent, collectionCardsContent, collectionScanContent, memberHtmlHrefs } from '../../builder/pipeline-formats.js';
+import {
+  collectionBaseContent,
+  collectionCardsContent,
+  collectionCardsPages,
+  collectionScanContent,
+  memberHtmlHrefs,
+  paginationNav,
+} from '../../builder/pipeline-formats.js';
 
 function miembro(over: Partial<CollectionEntry> = {}): CollectionEntry {
   return {
@@ -157,6 +165,13 @@ When('compongo el HTML base para el EPUB', () => {
   world.html = collectionBaseContent(coleccion(world.miembros), 'html', world.cuerpoColeccion);
 });
 
+When('compogo las páginas de la colección con {int} por página', (pageSize: number) => {
+  const entradas = coleccion(world.miembros);
+  const hrefs = memberHtmlHrefs(world.rutaColeccion, entradas, indiceDeSlugs());
+  world.paginas = collectionCardsPages(entradas, hrefs, world.cuerpoColeccion, pageSize);
+  world.navs = world.paginas.map((_, indice) => paginationNav(world.rutaColeccion, 'antologia', indice + 1, world.paginas.length));
+});
+
 When('escaneo las imágenes de la collection', () => {
   world.html = collectionScanContent(coleccion(world.miembros), world.cuerpoColeccion);
 });
@@ -219,5 +234,92 @@ Then('el miembro no tiene enlace', () => {
 Then('el HTML es {string}', (esperado: string) => {
   if (world.html !== esperado) {
     throw new Error(`el HTML es ${JSON.stringify(world.html)} y debería ser ${JSON.stringify(esperado)}`);
+  }
+});
+
+Then('hay {int} páginas', (cuantas: number) => {
+  const paginas = world.paginas as string[];
+  if (paginas.length !== cuantas) {
+    throw new Error(`hay ${paginas.length} páginas y son ${cuantas}`);
+  }
+});
+
+Then('la página {int} tiene {int} tarjetas', (pagina: number, cuantas: number) => {
+  const html = (world.paginas as string[])[pagina - 1] ?? '';
+  const leidas = (html.match(/tarjeta-fragmento/g) ?? []).length;
+  if (leidas !== cuantas) {
+    throw new Error(`la página ${pagina} tiene ${leidas} tarjetas y son ${cuantas}`);
+  }
+});
+
+Then('la página {int} dice {string}', (pagina: number, texto: string) => {
+  const html = (world.paginas as string[])[pagina - 1] ?? '';
+  if (!html.includes(texto)) {
+    throw new Error(`la página ${pagina} no dice ${JSON.stringify(texto)}`);
+  }
+});
+
+Then('la página {int} no dice {string}', (pagina: number, texto: string) => {
+  const html = (world.paginas as string[])[pagina - 1] ?? '';
+  if (html.includes(texto)) {
+    throw new Error(`la página ${pagina} sí dice ${JSON.stringify(texto)} y no debería`);
+  }
+});
+
+Then('el nav de la página {int} dice {string}', (pagina: number, texto: string) => {
+  const nav = (world.navs as string[])[pagina - 1] ?? '';
+  if (!nav.includes(texto)) {
+    throw new Error(`el nav de la página ${pagina} no dice ${JSON.stringify(texto)}: ${nav}`);
+  }
+});
+
+Then('el nav de la página {int} no enlaza a {string}', (pagina: number, texto: string) => {
+  const nav = (world.navs as string[])[pagina - 1] ?? '';
+  if (nav.includes(texto)) {
+    throw new Error(`el nav de la página ${pagina} sí enlaza a ${JSON.stringify(texto)} y no debería`);
+  }
+});
+
+Then('el nav de la página {int} enlaza a {string}', (pagina: number, texto: string) => {
+  const nav = (world.navs as string[])[pagina - 1] ?? '';
+  if (!nav.includes(texto)) {
+    throw new Error(`el nav de la página ${pagina} no enlaza a ${JSON.stringify(texto)}: ${nav}`);
+  }
+});
+
+Then('el nav de la página {int} está vacío', (pagina: number) => {
+  const nav = (world.navs as string[])[pagina - 1] ?? '';
+  if (nav !== '') {
+    throw new Error(`el nav de la página ${pagina} no está vacío: ${nav}`);
+  }
+});
+
+Given('una colección con {int} miembros', (cuantos: number) => {
+  const files: string[] = [];
+  for (let i = 1; i <= cuantos; i++) {
+    escribirEnProyecto(`doc-${i}.md`, `---\ntitle: Documento ${i}\n---\n\nContenido ${i}.\n`);
+    files.push(`  - ./doc-${i}.md`);
+  }
+  escribirEnProyecto('antologia.md', `---\ntitle: Antología\ntype: collection\nfiles:\n${files.join('\n')}\n---\n`);
+});
+
+Given('el proyecto pagina de {int} tarjetas', (porPagina: number) => {
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    `language: es-MX\nformat:\n  html:\n    site:\n      title: Test\n    generate: true\n    pageSize: ${porPagina}\n`,
+  );
+});
+
+Then('el archivo {string} dice {string}', async (relativa: string, texto: string) => {
+  const contenido = await Bun.file(join(world.root, relativa)).text();
+  if (!contenido.includes(texto)) {
+    throw new Error(`${relativa} no dice ${JSON.stringify(texto)}`);
+  }
+});
+
+Then('el archivo {string} no dice {string}', async (relativa: string, texto: string) => {
+  const contenido = await Bun.file(join(world.root, relativa)).text();
+  if (contenido.includes(texto)) {
+    throw new Error(`${relativa} sí dice ${JSON.stringify(texto)} y no debería`);
   }
 });

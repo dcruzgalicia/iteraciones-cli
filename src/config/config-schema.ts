@@ -87,6 +87,7 @@ const HtmlFormatSchema = z
     site: HtmlSiteSchema.optional(),
     generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
     blocks: HtmlBlocksSchema.optional(),
+    pageSize: z.number().int().min(1).optional().default(DEFAULT_HTML_FORMAT.pageSize),
   })
   .strict();
 

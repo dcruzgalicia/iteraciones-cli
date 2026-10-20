@@ -158,6 +158,8 @@ function nuevoMundo() {
     enLinea: [] as string[],
     miembros: [] as { file: string; title: string; creator: string[]; body: string }[],
     entradas: [] as { file: string; posicion: number }[],
+    paginas: [] as string[],
+    navs: [] as string[],
     cuerpoColeccion: '',
     rutaColeccion: 'coleccion.md',
     html: '',
