@@ -11,12 +11,13 @@ import {
   collectionBaseContent,
   collectionCardsContent,
   collectionScanContent,
+  creatorHrefs,
   memberHtmlHrefs,
   readCollectionEntries,
 } from '../builder/pipeline-formats.js';
 import { writeOutput } from '../builder/pipeline-io.js';
 import { loadPreambleFilters, resolveEffectiveDisabledPreamble } from '../builder/preamble-loader.js';
-import type { BuildDocument } from '../builder/types.js';
+import type { BuildDocument, DiscoveryEntry } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats, resolveDisabledPreambleConfig, toActiveFormats } from '../config/site-config.js';
@@ -116,6 +117,7 @@ async function composeFor(
   siteConfig: SiteConfig,
   ctx: MergeContext,
   memberHrefs: Map<string, string>,
+  creatorHrefs: Map<string, string>,
 ): Promise<string> {
   if (format === 'latex') {
     const pageNumber = (src.fm.pageNumber ?? siteConfig.format?.pdf?.pageNumber ?? siteConfig.pageNumber) as string | undefined;
@@ -126,7 +128,7 @@ async function composeFor(
     });
   }
 
-  if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text);
+  if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text, creatorHrefs);
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
 
   return format === 'markdown' ? rewriteImagePaths(base, ctx.relImageMap, ctx.docDir) : base;
@@ -161,8 +163,10 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
       outSlug,
     });
 
-    const memberHrefs = format === 'html' ? memberHtmlHrefs(src.relativePath, entries, await loadSlugIndex(cwd)) : new Map<string, string>();
-    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs));
+    const slugIndex = format === 'html' ? await loadSlugIndex(cwd) : new Map<string, DiscoveryEntry>();
+    const memberHrefs = format === 'html' ? memberHtmlHrefs(src.relativePath, entries, slugIndex) : new Map<string, string>();
+    const hrefsCreadores = format === 'html' ? creatorHrefs(slugIndex, dirname(src.relativePath)) : new Map<string, string>();
+    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs, hrefsCreadores));
     logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');
   } catch (err) {
     fail('merge', err);

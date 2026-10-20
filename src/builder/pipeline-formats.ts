@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises';
-import { basename, dirname, join, normalize, relative, resolve } from 'node:path';
+import { basename, dirname, join, normalize, relative, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
@@ -183,8 +183,9 @@ function htmlVars(args: {
   formats: HtmlPageVars['formats'];
   hasHomePage: boolean;
   sufijo: string;
+  creatorHrefs: Map<string, string>;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, sufijo } = args;
+  const { doc, outputs, renderCtx, formats, hasHomePage, sufijo, creatorHrefs } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
@@ -207,8 +208,8 @@ function htmlVars(args: {
     subject: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject'),
     publishers: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publishers'),
     collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
-    collectionCreator: parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')),
-    authors: doc.frontmatter.creator,
+    collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
+    authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: docChipLabel(doc.frontmatter.type),
   };
 }
@@ -221,6 +222,7 @@ async function emitHtmlPage(
   discoveryIndex: Map<string, DiscoveryEntry>,
   imagePaths?: string,
   paginas?: string[],
+  creatorHrefs: Map<string, string> = new Map(),
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -243,7 +245,7 @@ async function emitHtmlPage(
       templatePath: exportCtx.templates[htmlKindFor(htmlType)],
       refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
       docType: htmlType,
-      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, sufijo }),
+      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, sufijo, creatorHrefs }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
       bibOptions: exportCtx.bibOptions,
@@ -467,29 +469,88 @@ function printableEntries<T extends { type: string | undefined }>(entries: T[]):
   return entries.filter((e) => e.type !== 'intervention');
 }
 
-function collectionCards(entries: CollectionEntry[], memberHrefs: Map<string, string>, intro: string, desde: number, hasta: number): string {
+/**
+ * De cada nombre de autora, la página de su documento `type: creator` (si lo
+ * hay). El criterio es el mismo que usa la sección "Autoras y colaboradoras":
+ * el `name` (o el `title`) del creator tiene que coincidir con el nombre.
+ */
+export function creatorHrefs(discoveryIndex: Map<string, DiscoveryEntry>, fromDir: string): Map<string, string> {
+  const hrefs = new Map<string, string>();
+  for (const [ruta, entry] of discoveryIndex) {
+    if (entry.type !== 'creator') continue;
+    const nombre = entry.fm?.name ?? entry.fm?.title;
+    if (typeof nombre !== 'string' || nombre.trim() === '') continue;
+    const html = join(dirname(ruta), `${htmlSlugFor(ruta, entry.slug)}.html`)
+      .split(sep)
+      .join('/');
+    hrefs.set(nombre, relativeHref(fromDir, html));
+  }
+  return hrefs;
+}
+
+function escapeMarkdown(texto: string): string {
+  return texto.replace(/([[\]])/g, '\\$1');
+}
+
+/** El nombre tal como va en el metadato: con enlace si hay creator. */
+export function nombresEnlazados(nombres: string[], hrefs: Map<string, string>): string[] {
+  return nombres.map((nombre) => {
+    const href = hrefs.get(nombre);
+    if (href === undefined) return nombre;
+    return `[${escapeMarkdown(nombre)}](<${href}>)`;
+  });
+}
+
+/** El nombre tal como va dentro de una tarjeta: HTML. */
+function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>): string {
+  const href = hrefs.get(nombre);
+  if (href === undefined) return nombre;
+  return `<a href="${href}" class="text-accent-700 underline decoration-accent-500/60 underline-offset-4 hover:decoration-accent-500 dark:text-accent-300">${nombre}</a>`;
+}
+
+function collectionCards(
+  entries: CollectionEntry[],
+  memberHrefs: Map<string, string>,
+  intro: string,
+  desde: number,
+  hasta: number,
+  creatorHrefs: Map<string, string>,
+): string {
   const cards: string[] = [];
   if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
-  for (const e of printableEntries(entries).slice(desde, hasta)) cards.push(collectionCard(e, memberHrefs.get(e.file)));
+  for (const e of printableEntries(entries).slice(desde, hasta)) {
+    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs));
+  }
   return cards.join('\n\n');
 }
 
-export function collectionCardsContent(entries: CollectionEntry[], memberHrefs: Map<string, string>, content: string): string {
+export function collectionCardsContent(
+  entries: CollectionEntry[],
+  memberHrefs: Map<string, string>,
+  content: string,
+  creatorHrefs: Map<string, string> = new Map(),
+): string {
   if (entries.length === 0) return content;
-  return collectionCards(entries, memberHrefs, splitFrontmatter(content).body.trim(), 0, Number.POSITIVE_INFINITY);
+  return collectionCards(entries, memberHrefs, splitFrontmatter(content).body.trim(), 0, Number.POSITIVE_INFINITY, creatorHrefs);
 }
 
 /**
  * Reparte las tarjetas de la colección en páginas. La primera lleva el cuerpo
  * propio de la colección; el resto, sólo sus tarjetas.
  */
-export function collectionCardsPages(entries: CollectionEntry[], memberHrefs: Map<string, string>, content: string, pageSize: number): string[] {
+export function collectionCardsPages(
+  entries: CollectionEntry[],
+  memberHrefs: Map<string, string>,
+  content: string,
+  pageSize: number,
+  creatorHrefs: Map<string, string> = new Map(),
+): string[] {
   if (entries.length === 0) return [content];
   const imprimibles = printableEntries(entries);
   const intro = splitFrontmatter(content).body.trim();
   const paginas: string[] = [];
   for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
-    paginas.push(collectionCards(entries, memberHrefs, desde === 0 ? intro : '', desde, desde + pageSize));
+    paginas.push(collectionCards(entries, memberHrefs, desde === 0 ? intro : '', desde, desde + pageSize, creatorHrefs));
   }
   return paginas.length > 0 ? paginas : [content];
 }
@@ -551,8 +612,11 @@ const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Cre
 
 const LINK_STRETCH_CLASSES = 'after:absolute after:inset-0';
 
-function collectionCard(e: CollectionEntry, href: string | undefined): string {
-  const creator = e.creator.length > 0 ? e.creator.map((n) => `<span class="whitespace-nowrap">${n}</span>`).join(', ') : AUTORA_POR_DEFECTO;
+function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>): string {
+  const creator =
+    e.creator.length > 0
+      ? e.creator.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs)}</span>`).join(', ')
+      : AUTORA_POR_DEFECTO;
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body);
 
@@ -854,15 +918,16 @@ async function emitCollectionFormats(
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
     const memberHrefs = memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex);
+    const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
     const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
-    const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize);
+    const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize, hrefsCreadores);
     assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
     const contenidos = paginas.map((base, indice) =>
       prependLinksMarkdown(base + paginationNav(outputs.dir, outputs.outSlug, indice + 1, paginas.length), creatorLinks),
     );
 
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos);
+    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores);
     await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
   }
 
