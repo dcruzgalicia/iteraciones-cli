@@ -153,10 +153,10 @@ Then('no tiene selectores de clase sueltos', () => {
   }
 });
 
-Then('sus únicas utilidades son las seis que tienen caso atrás', () => {
+Then('sus únicas utilidades son las que tienen caso atrás', () => {
   const sinComentarios = world.css.replace(/\/\*[\s\S]*?\*\//g, '');
   const utilities = [...sinComentarios.matchAll(/@utility\s+([\w-]+)/g)].map((m) => m[1] ?? '').sort();
-  const expected = ['bg-paper-grid', 'dictum', 'logo-fill', 'scroll-reveal', 'smallcaps', 'verse'];
+  const expected = ['bg-paper-grid', 'dictum', 'logo-fill', 'nombres-enlazados', 'scroll-reveal', 'smallcaps', 'tarjeta-extras', 'verse'];
   if (JSON.stringify(utilities) !== JSON.stringify(expected)) {
     throw new Error(`esperaba ${JSON.stringify(expected)} y hay ${JSON.stringify(utilities)}`);
   }

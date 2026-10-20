@@ -18,7 +18,7 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
   Escenario: styles.css no define ninguna clase de CSS tradicional (#2487)
     Cuando leo el styles.css del proyecto
     Entonces no tiene selectores de clase sueltos
-    Y sus únicas utilidades son las seis que tienen caso atrás
+    Y sus únicas utilidades son las que tienen caso atrás
 
   Regla de negocio: Los bloques de LaTeX que también salen en el sitio (#2649)
 

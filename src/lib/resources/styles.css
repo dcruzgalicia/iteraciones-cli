@@ -86,7 +86,30 @@
 
 /* Los nombres que enlazan a la página de su creadora: en negro, con una
    línea debajo para que se note que son un enlace. */
-.nombres-enlazados a {
-  text-decoration: underline;
-  text-underline-offset: 0.25em;
+@utility nombres-enlazados {
+  a {
+    color: var(--color-stone-900);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    a {
+      color: var(--color-stone-100);
+    }
+  }
+}
+
+/* La viñeta del listado de "También está en": un color sólido, no el gris
+   que trae la tipografía por defecto. */
+@utility tarjeta-extras {
+  ul li::marker {
+    color: var(--color-stone-700);
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    ul li::marker {
+      color: var(--color-stone-300);
+    }
+  }
 }

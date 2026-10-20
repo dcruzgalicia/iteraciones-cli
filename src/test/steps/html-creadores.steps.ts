@@ -16,6 +16,10 @@ Given('una colección de {string}', (nombre: string) => {
   escribirEnProyecto('antologia.md', `---\ntitle: Antología\ntype: collection\ncollectionCreator: ${nombre}\nfiles:\n  - texto.md\n---\n\nIntro.\n`);
 });
 
+Given('otra colección con el mismo texto', () => {
+  escribirEnProyecto('otra.md', '---\ntitle: Otra\ntype: collection\nfiles:\n  - texto.md\n---\n');
+});
+
 Given('el proyecto produce html', () => {
   escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nformat:\n  html:\n    generate: true\n');
 });
