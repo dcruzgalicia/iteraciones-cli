@@ -88,6 +88,7 @@ export interface HtmlPageVars {
   collectionCreatorPrefix?: string;
 
   docChip?: string;
+  docChipHref?: string;
 
   authors?: string[];
   collectionCreator?: string[];

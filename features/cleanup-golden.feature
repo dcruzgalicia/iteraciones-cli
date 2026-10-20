@@ -28,8 +28,12 @@ Característica: lo que queda en la salida
         """
       Y la salida sólo contiene lo permitido:
         """
+        coleccion
+        creadora
         index
+        lista
         test-document
+        texto
         """
 
   Regla de negocio: Cambiar el slug manual limpia el anterior

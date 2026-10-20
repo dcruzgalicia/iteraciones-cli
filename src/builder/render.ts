@@ -39,6 +39,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     { key: 'collection-creator-names', value: vars.collectionCreator },
   ]);
   if (vars.docChip) args.push(`--variable=doc-chip:${vars.docChip}`);
+  if (vars.docChipHref) args.push(`--variable=doc-chip-href:${vars.docChipHref}`);
   return args;
 }
 
