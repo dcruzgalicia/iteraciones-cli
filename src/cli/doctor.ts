@@ -8,6 +8,7 @@ import {
   type CheckResult,
   checkBiber,
   checkBunVersion,
+  checkHtmlBrowser,
   checkLatexEngine,
   checkMagick,
   checkPandoc,
@@ -63,6 +64,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
         )
       : true;
   const biber = needsLatex && bibDiscovered ? checkBiber() : undefined;
+  const navegador = await checkHtmlBrowser();
 
   return [
     checkBunVersion(),
@@ -77,6 +79,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     ...(pdfToText ? [pdfToText] : []),
     ...(magick ? [magick] : []),
     ...(biber ? [biber] : []),
+    navegador,
   ];
 }
 
