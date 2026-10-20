@@ -57,6 +57,7 @@ type Entrada = Parameters<typeof collectionBaseContent>[0][number];
 function pareja(): Entrada[] {
   const documento: Entrada = {
     file: 'doc.md',
+    posicion: 1,
     creator: ['Autora A'],
     title: 'Documento',
     subtitle: undefined,

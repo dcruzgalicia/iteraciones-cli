@@ -71,6 +71,24 @@ When('intento leer los miembros de {string} de {string}', async (archivos: strin
   }
 });
 
+When('leo los miembros de {string}', async (archivos: string) => {
+  world.entradas = await readCollectionEntries(
+    archivos
+      .split(',')
+      .map((a) => a.trim())
+      .filter(Boolean),
+    'coleccion.md',
+    [world.root],
+  );
+});
+
+Then('las posiciones son {string}', (esperados: string) => {
+  const leidos = (world.entradas as { posicion: number }[]).map((e) => e.posicion).join(', ');
+  if (leidos !== esperados) {
+    throw new Error(`las posiciones son ${JSON.stringify(leidos)} y deberían ser ${JSON.stringify(esperados)}`);
+  }
+});
+
 When('valido el proyecto buscando archivos faltantes', async () => {
   const espia = spyOn(process.stderr, 'write');
   process.exitCode = 0;
