@@ -8,7 +8,6 @@ import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmBool, fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
-import { escapeRegExp } from '../lib/paths.js';
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
@@ -231,7 +230,7 @@ function coverPrefix(pngPath: string): string {
 export async function collectCover(pngPath: string): Promise<string | undefined> {
   const dir = dirname(pngPath);
   const stem = basename(pngPath, '.png');
-  const pattern = new RegExp(`^\\.cover-${escapeRegExp(stem)}-\\d+\\.png$`);
+  const pattern = new RegExp(`^\\.cover-${RegExp.escape(stem)}-\\d+\\.png$`);
   const entries = await readdir(dir);
   const produced = entries.find((f) => pattern.test(f));
   if (produced === undefined) return undefined;

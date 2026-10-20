@@ -1,10 +1,10 @@
 import { copyFile, exists, mkdir, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path';
+import { basename, dirname, extname, join, relative } from 'node:path';
 import slugifyLib from 'slugify';
 import { hashFileContent, hashString } from '../builder/state-serialize.js';
 import { BuildError } from './errors.js';
-import { escapeRegExp } from './paths.js';
+import { isInside } from './paths.js';
 import { exec, mapWithConcurrency } from './run.js';
 
 export const DPI = 300;
@@ -48,9 +48,7 @@ export function visualSlug(pdfPath: string): string {
 }
 
 export function snapshotStemFor(pdfPath: string, outputDir: string): string {
-  const rel = relative(outputDir, pdfPath);
-  const insideOutput = rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
-  return insideOutput ? aplanar(rel) : visualSlug(pdfPath);
+  return isInside(outputDir, pdfPath) ? aplanar(relative(outputDir, pdfPath)) : visualSlug(pdfPath);
 }
 
 function aplanar(rel: string): string {
@@ -95,13 +93,13 @@ export async function listPdfFiles(dir: string): Promise<string[]> {
 
 export async function clearDiffImages(dir: string, stem?: string): Promise<void> {
   const files = stem === undefined ? await globFiles(dir, '**/*--page-*-diff.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
-  const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${escapeRegExp(stem)}--page-\\d+--diff\\.png$`);
+  const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${RegExp.escape(stem)}--page-\\d+--diff\\.png$`);
   await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
 }
 
 export async function clearSnapshotImages(dir: string, stem?: string): Promise<void> {
   const files = stem === undefined ? await globFiles(dir, '**/*--page-*.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
-  const pattern = stem === undefined ? SNAPSHOT_IMAGE : new RegExp(`^${escapeRegExp(stem)}--page-\\d+\\.png$`);
+  const pattern = stem === undefined ? SNAPSHOT_IMAGE : new RegExp(`^${RegExp.escape(stem)}--page-\\d+\\.png$`);
   await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
 }
 
