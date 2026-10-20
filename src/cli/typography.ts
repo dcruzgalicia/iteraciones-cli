@@ -3,7 +3,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { slugify } from '../builder/discover.js';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
 import { relativeLabel } from '../lib/paths.js';
 import { analyzePdf, type OpcionesAnalisis, parseaExcepciones, TYPOGRAPHY_RULES, type TypographyIncidence } from '../lib/pdf-typography.js';
@@ -255,7 +255,8 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
     try {
       const { yaml } = splitFrontmatter(await Bun.file(ruta).text());
       if (!yaml) return;
-      const parsed = Bun.YAML.parse(yaml) as Record<string, unknown> | null;
+      const { value } = parseYamlWithPosition(yaml);
+      const parsed = value as Record<string, unknown> | undefined;
       if (!parsed) return;
       for (const campo of ['contributor', 'contributors', 'collectionCreator', 'creator']) {
         recolectaNombres(parsed[campo], nombres);
@@ -273,8 +274,8 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
         if (!archivo) continue;
         out.add(archivo);
         const { yaml: yamlArchivo } = splitFrontmatter(await Bun.file(archivo).text());
-        const parsedArchivo = yamlArchivo ? (Bun.YAML.parse(yamlArchivo) as Record<string, unknown> | null) : null;
-        recolectaNombres(parsedArchivo?.creator, nombres);
+        const valorArchivo = yamlArchivo ? parseYamlWithPosition(yamlArchivo).value : undefined;
+        recolectaNombres((valorArchivo as Record<string, unknown> | undefined)?.creator, nombres);
       }
     } catch {}
     await agregaCreators(nombres);

@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { BuildError, translateSystemError } from '../lib/errors.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import type { BuildMetadata } from './build-planner.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { primaryOutputExtension } from './output-layout.js';
@@ -68,7 +68,10 @@ export function formatLinksFor(
     }));
 }
 
-export function parseFileFrontmatter(content: string): {
+export function parseFileFrontmatter(
+  content: string,
+  label: string,
+): {
   title: string;
   creator: string[];
   subtitle: string | undefined;
@@ -78,19 +81,18 @@ export function parseFileFrontmatter(content: string): {
   body: string;
 } {
   const { yaml, body } = splitFrontmatter(content);
-  if (!yaml) return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, body };
-  try {
-    const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
-    return {
-      title: typeof parsed.title === 'string' ? parsed.title : '',
-      creator: parseAuthors(parsed.creator),
-      subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
-      type: typeof parsed.type === 'string' ? parsed.type : undefined,
-      lineLength: typeof parsed.lineLength === 'number' ? parsed.lineLength : undefined,
-      pages: typeof parsed.pages === 'number' ? parsed.pages : undefined,
-      body,
-    };
-  } catch {
-    return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, body };
-  }
+  const vacio = { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, body };
+  if (!yaml) return vacio;
+  const { value, error } = parseYamlWithPosition(yaml);
+  if (error) throw new BuildError(`frontmatter inválido en "${label}": ${error}`);
+  const parsed = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return {
+    title: typeof parsed.title === 'string' ? parsed.title : '',
+    creator: parseAuthors(parsed.creator),
+    subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
+    type: typeof parsed.type === 'string' ? parsed.type : undefined,
+    lineLength: typeof parsed.lineLength === 'number' ? parsed.lineLength : undefined,
+    pages: typeof parsed.pages === 'number' ? parsed.pages : undefined,
+    body,
+  };
 }

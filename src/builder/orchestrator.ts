@@ -5,7 +5,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError, ConfigError } from '../lib/errors.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { posix } from '../lib/paths.js';
@@ -218,7 +218,13 @@ async function countCreatorsByFile(files: string[], cwd: string): Promise<{ with
         without++;
         continue;
       }
-      const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
+      const { value, error } = parseYamlWithPosition(yaml);
+      if (error) {
+        logWarning(`no se pudo leer el frontmatter de "${file}" para contar creadores: ${error}`, 'merge');
+        without++;
+        continue;
+      }
+      const parsed = (value ?? {}) as Record<string, unknown>;
       if (parsed.type === 'intervention') continue;
       const creators = parseAuthors(parsed.creator);
       if (creators.length > 0) {
