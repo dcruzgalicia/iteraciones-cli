@@ -1,5 +1,5 @@
 import { basename, dirname, join, relative, resolve } from 'node:path';
-import { resolveCollectionFile } from '../builder/collection-files.js';
+import { resolveCollectionFiles } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { assembleExportDocument } from '../builder/export.js';
 
@@ -26,11 +26,7 @@ function outputRootFor(output: string, dir: string): string {
 async function collectionFiles(cwd: string, relativePath: string, fm: Record<string, unknown>, input: string): Promise<string[]> {
   if (fm.type !== 'collection') return [];
   const raw = Array.isArray(fm.files) ? fm.files.filter((f): f is string => typeof f === 'string') : [];
-  const files: string[] = [];
-  for (const file of raw) {
-    const resolved = await resolveCollectionFile(file, relativePath, cwd);
-    if (resolved.ok) files.push(resolved.rootRelative);
-  }
+  const files = await resolveCollectionFiles(raw, relativePath, cwd);
   if (files.length === 0) throw new BuildError(`"${input}": la collection no tiene archivos en files`);
   return files;
 }

@@ -12,3 +12,12 @@ export async function resolveCollectionFile(file: string, collectionRelPath: str
   }
   return { ok: false, tried: candidates };
 }
+
+export async function resolveCollectionFiles(files: string[], collectionRelPath: string, cwd: string): Promise<string[]> {
+  const resolved: string[] = [];
+  for (const file of files) {
+    const resolution = await resolveCollectionFile(file, collectionRelPath, cwd);
+    resolved.push(resolution.ok ? resolution.rootRelative : file);
+  }
+  return resolved;
+}

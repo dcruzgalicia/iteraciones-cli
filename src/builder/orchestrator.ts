@@ -15,7 +15,7 @@ import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, FORMAT_TO_WORK, type WorkSets } from './build-planner.js';
 import { writeBundle } from './bundle-dist.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, hasLegacyAssetLayout } from './cleanup.js';
-import { resolveCollectionFile } from './collection-files.js';
+import { resolveCollectionFiles } from './collection-files.js';
 import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { validateDisabledFilters } from './filter-resolver.js';
@@ -244,23 +244,14 @@ function addAnonymousFallback(aggregated: Set<string>, filesWithoutCreator: numb
   }
 }
 
-async function resolveCollectionFiles(
-  files: string[],
-  relativePath: string,
-  discoveryIndex: Map<string, DiscoveryEntry>,
-  cwd: string,
-): Promise<string[]> {
-  const resolved: string[] = [];
-  for (const file of files) {
-    const resolution = await resolveCollectionFile(file, relativePath, cwd);
-    if (resolution.ok && discoveryIndex.get(resolution.rootRelative)?.type === 'collection') {
+function assertNoNestedCollections(resolved: string[], relativePath: string, discoveryIndex: Map<string, DiscoveryEntry>): void {
+  for (const relPath of resolved) {
+    if (discoveryIndex.get(relPath)?.type === 'collection') {
       throw new BuildError(
-        `collection "${relativePath}": "${resolution.rootRelative}" está en su files[] y también es una collection; una collection no puede formar parte de otra. Quítalo de files[].`,
+        `collection "${relativePath}": "${relPath}" está en su files[] y también es una collection; una collection no puede formar parte de otra. Quítalo de files[].`,
       );
     }
-    resolved.push(resolution.ok ? resolution.rootRelative : file);
   }
-  return resolved;
 }
 
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Map<string, string[]>> {
@@ -269,7 +260,8 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
   for (const [relativePath, entry] of discoveryIndex) {
     if (entry.type !== 'collection' || !entry.files) continue;
 
-    const resolved = await resolveCollectionFiles(entry.files, relativePath, discoveryIndex, cwd);
+    const resolved = await resolveCollectionFiles(entry.files, relativePath, cwd);
+    assertNoNestedCollections(resolved, relativePath, discoveryIndex);
     entry.files = resolved;
     if (entry.fm) entry.fm.files = resolved;
     entry.aggregatedCreator = await aggregateCollectionCreators(entry, cwd);

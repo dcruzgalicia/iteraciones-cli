@@ -63,3 +63,16 @@ Característica: las rutas de los files[] de una colección
         ## Autora X
         Contenido fusionable.
         """
+
+    Escenario: Markdown resuelve igual que el build
+      Dado que la raíz del proyecto está vacía
+      Y una colección en un subdirectorio que apunta a la raíz
+      Cuando convierto la colección "sub/c.md" a markdown
+      Entonces el comando termina con el código de salida 0
+
+    Escenario: Markdown dice dónde buscó el miembro que falta
+      Dado que la raíz del proyecto está vacía
+      Y una colección que apunta a un archivo que no existe
+      Cuando convierto la colección "test/collection.md" a markdown
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "../02-prologo.md"
