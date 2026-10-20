@@ -34,6 +34,7 @@ export function primaryOutputExtension(format: FormatKey): string {
 }
 
 export function docProducesFormat(type: string | undefined, format: FormatKey): boolean {
-  if (type !== 'intervention') return true;
-  return format === 'latex' || format === 'pdf' || format === 'markdown';
+  if (type === 'intervention') return format === 'latex' || format === 'pdf' || format === 'markdown';
+  if (type === 'list') return format === 'html';
+  return true;
 }

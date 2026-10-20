@@ -16,7 +16,7 @@ import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import type { HtmlPageVars } from './html-composer.js';
+import type { HtmlDocType, HtmlPageVars } from './html-composer.js';
 import { imagePathsMap, relImageMapFor, rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
   buildTexDistribution,
@@ -52,6 +52,7 @@ function htmlMetadataField(
 function docChipLabel(type: string | undefined): string {
   if (type === 'collection') return 'Colección';
   if (type === 'creator') return 'Creadora';
+  if (type === 'list') return 'Lista';
   return 'Texto';
 }
 
@@ -225,10 +226,11 @@ async function emitHtmlPage(
   const { dir, outBase, outSlug, content } = outputs;
   const cwd = ctx.cwd;
 
-  const formats = formatLinksFor(plan, dir, outSlug);
+  const formats = formatLinksFor(plan, dir, outSlug, doc.frontmatter.type);
   const hasHomePage = discoveryIndex.has('index.md');
 
-  const htmlType = doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' ? doc.frontmatter.type : 'file';
+  const htmlType: HtmlDocType =
+    doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' || doc.frontmatter.type === 'list' ? doc.frontmatter.type : 'file';
   const contenidos = paginas ?? [content];
   for (const [indice, contenido] of contenidos.entries()) {
     const slugPagina = indice === 0 ? outSlug : `${outSlug}-${indice + 1}`;
@@ -828,7 +830,11 @@ async function emitCollectionFormats(
   const creatorLinks = doc.frontmatter.type === 'creator' ? getCreatorLinks(outputs.fm) : [];
   const isCollection = doc.frontmatter.type === 'collection';
 
-  if ((activeFormats.latex || activeFormats.pdf) && formatWorkSets.latexPaths.has(doc.relativePath)) {
+  if (
+    (activeFormats.latex || activeFormats.pdf) &&
+    formatWorkSets.latexPaths.has(doc.relativePath) &&
+    docProducesFormat(doc.frontmatter.type, 'latex')
+  ) {
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
     const creatorDocs = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : [];
@@ -905,6 +911,7 @@ async function emitCollectionMarkdown(
 ): Promise<void> {
   const { ctx, plan, formatCfg } = renderCtx;
   if (!plan.activeFormats.markdown || !formatWorkSets.mdPaths.has(doc.relativePath)) return;
+  if (!docProducesFormat(doc.frontmatter.type, 'markdown')) return;
 
   const { relImageMap, docDir, fmAssets } = assets;
   const outPath = outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`);
@@ -945,11 +952,12 @@ export async function processDocumentFormats(
   const dir = dirname(doc.relativePath);
 
   const isCollection = doc.frontmatter.type === 'collection';
+  const isList = doc.frontmatter.type === 'list';
   if (isCollection && entry?.aggregatedCreator) {
     doc.frontmatter.creator = entry.aggregatedCreator;
     entry.fm = { ...entry.fm, creator: entry.aggregatedCreator };
   }
-  const collectionEntries = isCollection ? await readCollectionFiles(doc, ctx.cwd) : [];
+  const collectionEntries = isCollection || isList ? await readCollectionFiles(doc, ctx.cwd) : [];
   if (isCollection && collectionEntries.length === 0) {
     logWarning(`"${doc.relativePath}": collection sin contenido en files; se omite del build`, 'build');
     return;

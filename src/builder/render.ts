@@ -4,7 +4,7 @@ import { minifyHtml } from '../lib/minify.js';
 import { type BibOptions, execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, loadFilterGroups, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
-import { buildFormatsArgs, buildFormatsFlag, type HtmlPageVars } from './html-composer.js';
+import { buildFormatsArgs, buildFormatsFlag, type HtmlDocType, type HtmlPageVars } from './html-composer.js';
 import { postProcessHtml } from './html-postprocess.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
@@ -21,7 +21,7 @@ interface HtmlPageOptions {
 
   refsCardTemplate: string;
 
-  docType?: 'file' | 'collection' | 'creator';
+  docType?: HtmlDocType;
   fm: Record<string, unknown>;
   bibOptions?: BibOptions;
   luaFilters?: LuaFilterGroup;

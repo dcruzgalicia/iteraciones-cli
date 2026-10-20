@@ -4,7 +4,7 @@ import { BuildError, translateSystemError } from '../lib/errors.js';
 import { parseFrontmatterRecord, splitFrontmatter } from '../lib/frontmatter.js';
 import type { BuildMetadata } from './build-planner.js';
 import { parseAuthors } from './discover-frontmatter.js';
-import { primaryOutputExtension } from './output-layout.js';
+import { docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import type { BuildDocument } from './types.js';
 
 export function relativeHref(dir: string, file: string): string {
@@ -45,7 +45,8 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
     throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
   }
   const { yaml, body } = splitFrontmatter(content);
-  if (!body.trim() && doc.frontmatter.type !== 'collection' && doc.frontmatter.type !== 'intervention') {
+  const sinCuerpo = doc.frontmatter.type !== 'collection' && doc.frontmatter.type !== 'intervention' && doc.frontmatter.type !== 'list';
+  if (!body.trim() && sinCuerpo) {
     throw new BuildError(
       yaml !== undefined
         ? `"${doc.filePath}" no tiene contenido después del frontmatter; agrega un body para proceder con el build`
@@ -68,9 +69,11 @@ export function formatLinksFor(
   plan: BuildMetadata,
   dir: string,
   outSlug: string,
+  type?: string,
 ): { href: string; key: FormatLinkKey; name: string; description: string }[] {
   return (Object.keys(FORMAT_LINK_META) as FormatLinkKey[])
     .filter((key) => plan.activeFormats[key])
+    .filter((key) => docProducesFormat(type, key))
     .map((key) => ({
       href: relativeHref(dir, `${outSlug}${primaryOutputExtension(key)}`),
       key,

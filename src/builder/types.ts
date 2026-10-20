@@ -8,7 +8,7 @@ export interface DiscoveryEntry {
   date?: string;
   slug?: string;
   manualSlug?: string;
-  type?: 'file' | 'collection' | 'creator' | 'intervention';
+  type?: 'file' | 'collection' | 'creator' | 'intervention' | 'list';
   files?: string[];
   creatorDocs?: string[];
   fm?: Record<string, unknown>;
@@ -22,7 +22,7 @@ interface Frontmatter {
   subtitle?: string;
   date: string;
   creator: string[];
-  type?: 'file' | 'collection' | 'creator' | 'intervention';
+  type?: 'file' | 'collection' | 'creator' | 'intervention' | 'list';
   files?: string[];
 }
 
