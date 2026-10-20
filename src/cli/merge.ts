@@ -1,5 +1,5 @@
 import { basename, dirname, join, relative, resolve } from 'node:path';
-import { resolveCollectionFile } from '../builder/collection-files.js';
+import { resolveCollectionFiles } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { relImageMapFor, rewriteImagePaths } from '../builder/image-processor.js';
 import { buildLatexPandocContent, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
@@ -70,11 +70,7 @@ async function readCollectionSource(cwd: string, input: string) {
   const fm = readFrontmatter(text, input);
   const rawFiles = assertCollectionFiles(fm, input);
 
-  const files: string[] = [];
-  for (const file of rawFiles) {
-    const resolved = await resolveCollectionFile(file, relativePath, cwd);
-    files.push(resolved.ok ? resolved.rootRelative : file);
-  }
+  const files = await resolveCollectionFiles(rawFiles, relativePath, cwd);
   fm.files = files;
 
   fm.creator = await aggregateCollectionCreators({ files }, cwd);

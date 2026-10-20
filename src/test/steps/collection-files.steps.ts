@@ -1,14 +1,15 @@
 import { spyOn } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { discover } from '../../builder/discover.js';
 import { postProcessCollections } from '../../builder/orchestrator.js';
 import { readCollectionEntries } from '../../builder/pipeline-formats.js';
 import { loadStateFile } from '../../builder/state-serialize.js';
+import { runMarkdown } from '../../cli/markdown.js';
 import { runMerge } from '../../cli/merge.js';
 import { validateProject } from '../../cli/validate.js';
-import { escribirEnProyecto, world } from './cli-world.steps.ts';
+import { capture, escribirEnProyecto, world } from './cli-world.steps.ts';
 
 const CONFIG = [
   'language: es-MX',
@@ -96,6 +97,14 @@ When('fusiono {string} en markdown', async (coleccion: string) => {
     process.exitCode = 0;
   }
   world.textoMerge = readFileSync(join(world.root, 'out.md'), 'utf8');
+});
+
+When('convierto la colección {string} a markdown', async (coleccion: string) => {
+  const dir = dirname(coleccion);
+  const output = dir === '.' ? 'out.md' : join('out', dir, 'out.md');
+  await capture(async () => {
+    await runMarkdown(world.root, coleccion, { output });
+  });
 });
 
 Then('los files de {string} son {string}', (coleccion: string, esperados: string) => {
