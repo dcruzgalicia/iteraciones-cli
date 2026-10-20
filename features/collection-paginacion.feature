@@ -81,6 +81,14 @@ Característica: La paginación de las colecciones
       Cuando hago un build del proyecto
       Entonces el nav de la página 2 se revela al final de la página
 
+    Escenario: El título de la página no lleva el número de página
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una colección con 5 miembros
+      Y el proyecto pagina de 2 tarjetas
+      Cuando hago un build del proyecto
+      Entonces el título de la página 2 no lleva el número de página
+      Y el archivo "dist/files/antologia-2.html" dice "Antología"
+
     Escenario: Con una sola página no hay nav
       Dado que la colección tiene 3 miembros
       Y que la colección tiene el cuerpo propio:
