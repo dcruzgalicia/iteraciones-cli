@@ -47,7 +47,7 @@ function assertCollectionFiles(fm: Record<string, unknown>, label: string): stri
   return files;
 }
 
-export interface SourceDocument {
+interface SourceDocument {
   inputPath: string;
   relativePath: string;
   text: string;
@@ -77,7 +77,7 @@ async function readCollectionSource(cwd: string, input: string) {
   return { inputPath, relativePath, text, fm, files };
 }
 
-export interface MergeContext {
+interface MergeContext {
   doc: BuildDocument;
   relImageMap: Map<string, string>;
   docDir: string;

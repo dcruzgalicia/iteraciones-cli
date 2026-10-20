@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Given, Then } from '@cucumber/cucumber';
 import { initTestProject } from '../helpers.js';
 import { escribirEnProyecto, tempRoot, world } from './cli-world.steps.ts';
@@ -124,9 +124,7 @@ Given('que escribo markdown de relleno con clases inventadas', () => {
     ['dist/files/basura.md', 'bg-fuchsia-700'],
     ['.iteraciones/changes/basura.md', 'bg-indigo-700'],
   ] as const) {
-    const ruta = join(world.root, relativa);
-    mkdirSync(dirname(ruta), { recursive: true });
-    writeFileSync(ruta, `${clase}\n`, 'utf8');
+    escribirEnProyecto(relativa, `${clase}\n`);
   }
 });
 

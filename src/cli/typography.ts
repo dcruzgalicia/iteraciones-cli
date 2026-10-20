@@ -24,14 +24,14 @@ export interface TypographyOptions {
   fix?: boolean;
 }
 
-export interface RangoPaginas {
+interface RangoPaginas {
   desde: number;
   hasta: number;
 }
 
 const RANGO_PAGINAS = /^(\d+)(?:\s*-\s*(\d+))?$/;
 
-export function interpretaPaginas(spec: string): RangoPaginas {
+function interpretaPaginas(spec: string): RangoPaginas {
   const limpio = spec.trim();
   const encontrado = RANGO_PAGINAS.exec(limpio);
   if (encontrado === null) {
@@ -52,7 +52,7 @@ export function interpretaPaginas(spec: string): RangoPaginas {
   return { desde, hasta };
 }
 
-export function interpretaReglas(spec: string): string[] {
+function interpretaReglas(spec: string): string[] {
   const pedidas = spec
     .split(',')
     .map((r) => r.trim())
@@ -67,7 +67,7 @@ export function interpretaReglas(spec: string): string[] {
   return pedidas;
 }
 
-export function interpretaEntero(valor: string, opcion: string, minimo: number): number {
+function interpretaEntero(valor: string, opcion: string, minimo: number): number {
   const numero = Number(valor);
   if (!Number.isInteger(numero) || numero < minimo) {
     throw new BuildError(`${opcion} "${valor}" no es un entero de ${minimo} en adelante`);
@@ -75,7 +75,7 @@ export function interpretaEntero(valor: string, opcion: string, minimo: number):
   return numero;
 }
 
-export function interpretaPorcentaje(valor: string, opcion: string): number {
+function interpretaPorcentaje(valor: string, opcion: string): number {
   const numero = Number(valor);
   if (!Number.isInteger(numero) || numero < 0 || numero > 100) {
     throw new BuildError(`${opcion} "${valor}" no es un porcentaje entero entre 0 y 100`);
@@ -735,7 +735,7 @@ function resuelveCandidatoFuentes(rutas: string[], contenidoNormalizado: Map<str
   return candidatos;
 }
 
-export type MotivoIncidencia =
+type MotivoIncidencia =
   | 'corregido'
   | 'no aplica'
   | 'múltiples coincidencias'

@@ -4,9 +4,9 @@ import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from '
 import { hashString, STATE_SCHEMA_VERSION } from './state-serialize.js';
 import type { DiscoveryEntry } from './types.js';
 
-export type CacheDecision = { process: false; touched?: boolean } | { process: true; text: string | null; hash?: string };
+type CacheDecision = { process: false; touched?: boolean } | { process: true; text: string | null; hash?: string };
 
-export interface DiscoverMeta {
+interface DiscoverMeta {
   filtersHash: string;
   filterFileCache: FilterFileCache;
   schemaFileCache?: Record<string, FileCacheEntry>;

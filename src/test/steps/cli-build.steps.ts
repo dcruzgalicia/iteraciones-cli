@@ -1,8 +1,8 @@
 import { spyOn } from 'bun:test';
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import { resolvePdfCheckBinary, validatePdfX1a } from '../../builder/pdfx-check.js';
 import { reportBuildError, runBuild, runValidate } from '../../cli/dispatcher.js';
@@ -201,9 +201,7 @@ Given('que la bibliografía declara el título {string}', (titulo: string) => {
 });
 
 Given('que el archivo {string} es un PNG de 1 por 1', (relativa: string) => {
-  const ruta = join(raiz(), relativa);
-  mkdirSync(dirname(ruta), { recursive: true });
-  writeFileSync(ruta, PNG_1X1);
+  escribirEnProyecto(relativa, PNG_1X1);
 });
 
 Given('que la raíz del proyecto declara la portada {string}', (imagen: string) => {

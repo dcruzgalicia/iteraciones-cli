@@ -16,14 +16,14 @@ export interface SingleWordLine extends Incidence {
   next?: string;
 }
 
-export interface ConsecutivePunctuation extends Incidence {
+interface ConsecutivePunctuation extends Incidence {
   type: 'consecutive-punctuation';
   lineas: LineaCoincidencia[];
   total: number;
   continuacion?: string;
 }
 
-export interface RepeatedLetter extends Incidence {
+interface RepeatedLetter extends Incidence {
   type: 'repeated-first-letter' | 'repeated-last-letter';
   letter: string;
   lineas: LineaCoincidencia[];
@@ -95,7 +95,7 @@ function foliosConfirmados(pages: string[][]): Set<string> {
   return confirmados;
 }
 
-export function singleWordLines(pages: string[][]): SingleWordLine[] {
+function singleWordLines(pages: string[][]): SingleWordLine[] {
   const folios = foliosConfirmados(pages);
   const hits: SingleWordLine[] = [];
   for (const [indicePagina, lineas] of pages.entries()) {
@@ -132,7 +132,7 @@ function modaDe(anchos: number[]): number | undefined {
   return masFrecuente;
 }
 
-export function anchoDeReferencia(pages: string[][]): number {
+function anchoDeReferencia(pages: string[][]): number {
   const anchos: number[] = [];
   for (const pagina of pages) {
     for (const linea of pagina) {
@@ -154,19 +154,19 @@ export function anchoDeReferencia(pages: string[][]): number {
   return Math.max(promedio, mediana, moda ?? 0);
 }
 
-export interface LineaCoincidencia {
+interface LineaCoincidencia {
   line: number;
   text: string;
 }
 
-export interface Coincidencia {
+interface Coincidencia {
   page: number;
   lineas: LineaCoincidencia[];
   total: number;
   continuacion?: string;
 }
 
-export function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: string) => string | undefined): Coincidencia[] {
+function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: string) => string | undefined): Coincidencia[] {
   const encontradas: Coincidencia[] = [];
   for (const [indicePagina, lineasPagina] of pages.entries()) {
     let inicio = 0;
@@ -226,7 +226,7 @@ function letraFinal(linea: string, cuantas: number): string | undefined {
   return fin.length === cuantas && /^[a-z]+$/.test(fin) ? fin : undefined;
 }
 
-export function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number, letras: number, anchoMinimo = 0): RepeatedLetter[] {
+function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number, letras: number, anchoMinimo = 0): RepeatedLetter[] {
   const de = (linea: string): string | undefined => (posicion === 'first' ? letraInicial(linea, letras) : letraFinal(linea, letras));
   const conAncho = (linea: string): string | undefined => (linea.trimEnd().length >= anchoMinimo ? de(linea) : undefined);
   const tipo = posicion === 'first' ? 'repeated-first-letter' : 'repeated-last-letter';
@@ -247,7 +247,7 @@ export function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last'
   return hallados;
 }
 
-export function consecutivePunctuationRuns(pages: string[][], lineas: number, anchoMinimo: number): ConsecutivePunctuation[] {
+function consecutivePunctuationRuns(pages: string[][], lineas: number, anchoMinimo: number): ConsecutivePunctuation[] {
   const clave = (linea: string): string | undefined => (linea.trimEnd().length >= anchoMinimo && endsWithPunctuation(linea) ? 'p' : undefined);
   const hallados: ConsecutivePunctuation[] = [];
   for (const tirada of tiradasCoincidentes(pages, lineas, clave)) {
@@ -265,7 +265,7 @@ export function consecutivePunctuationRuns(pages: string[][], lineas: number, an
   return hallados;
 }
 
-export interface ExcepcionTipografia {
+interface ExcepcionTipografia {
   file: string;
   page: number;
   type: string;
@@ -375,7 +375,7 @@ function parseaExcepcionDeBloque(lines: string[], archivo: string): ExcepcionTip
   };
 }
 
-export function filtraExcepciones<T extends TypographyIncidence>(
+function filtraExcepciones<T extends TypographyIncidence>(
   incidencias: readonly T[],
   archivo: string,
   excepciones: readonly ExcepcionTipografia[],

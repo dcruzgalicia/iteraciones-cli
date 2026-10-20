@@ -14,7 +14,7 @@ import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
 import { preparePaths } from './prepare.js';
 import type { BuildDocument } from './types.js';
 
-export interface ExportMetadata {
+interface ExportMetadata {
   title: string;
   creator: string[];
   date?: string;

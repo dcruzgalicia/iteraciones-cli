@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import { runBuild, runDoctor, runFilters } from '../../cli/dispatcher.js';
 import * as runModule from '../../lib/run.js';
-import { capture, escribirEnProyecto, jsonSalida, raiz, world } from './cli-world.steps.js';
+import { capture, escribirEnProyecto, lista, raiz, world } from './cli-world.steps.js';
 
 const PREAMBLE_PDF = 'language: es-MX\nformat:\n  pdf:\n    generate: true\n';
 
@@ -12,14 +12,6 @@ let espioExec: { mockRestore: () => void } | undefined;
 
 function configConFiltroDesactivado(filtro: string): string {
   return `language: es-MX\nformat:\n  pdf:\n    disabledPreambleFilters:\n      - ${filtro}\n`;
-}
-
-function lista(clave: string): Record<string, unknown>[] {
-  const valor = jsonSalida()[clave];
-  if (!Array.isArray(valor)) {
-    throw new Error(`la clave ${JSON.stringify(clave)} del JSON no es una lista: ${JSON.stringify(valor)}`);
-  }
-  return valor as Record<string, unknown>[];
 }
 
 After(() => {

@@ -1,7 +1,7 @@
 import { copyFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../lib/resources/xmp/pdfx.xmp');
+const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../lib/resources/xmp/pdfx.xmp');
 
 export async function preparePaths(dirs: string[], xmpDirs: string[]): Promise<void> {
   for (const dir of new Set([...dirs, ...xmpDirs])) await mkdir(dir, { recursive: true });
