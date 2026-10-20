@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
-import type { BibFileCache, FileCacheEntry, FilterFileCache } from './state-serialize.js';
+import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from './state-serialize.js';
 import { hashString, STATE_SCHEMA_VERSION } from './state-serialize.js';
 import type { DiscoveryEntry } from './types.js';
 
@@ -67,18 +67,13 @@ export function takeDeletedEntries(
 export interface DiscoverOptions {
   full?: boolean;
   activeFormats?: string[];
-  prevState: import('./state-serialize.js').BuildState | null;
+  prevState: BuildState | null;
   outputDir?: string;
   meta?: DiscoverMeta;
   tolerateInvalidFrontmatter?: boolean;
 }
 
-function stateHasChanged(
-  useCache: boolean,
-  prevState: import('./state-serialize.js').BuildState | null,
-  options: DiscoverOptions,
-  anyDocChanges: boolean,
-): boolean {
+function stateHasChanged(useCache: boolean, prevState: BuildState | null, options: DiscoverOptions, anyDocChanges: boolean): boolean {
   return (
     anyDocChanges ||
     !useCache ||
@@ -93,13 +88,13 @@ function stateHasChanged(
 
 export function computePendingState(
   useCache: boolean,
-  prevState: import('./state-serialize.js').BuildState | null,
+  prevState: BuildState | null,
   startedAt: number,
   discoveryIndex: Map<string, DiscoveryEntry>,
   options: DiscoverOptions,
   anyDocChanges: boolean,
   anyTouches = false,
-): import('./state-serialize.js').BuildState | null {
+): BuildState | null {
   if (!stateHasChanged(useCache, prevState, options, anyDocChanges || anyTouches)) return null;
   return {
     schemaVersion: STATE_SCHEMA_VERSION,

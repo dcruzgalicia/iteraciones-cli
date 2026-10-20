@@ -7,11 +7,6 @@ import { htmlResourceFiles } from './html-composer.js';
 import { projectPreambleDirs } from './preamble-loader.js';
 import { type FileCacheEntry, type FilterFileCache, hashString } from './state-serialize.js';
 
-export function cacheHitFor(prev: FileCacheEntry | undefined, mtime: number, size: number): string | null {
-  if (prev && prev.mtime === mtime && prev.size === size) return prev.hash;
-  return null;
-}
-
 export async function hashFileCached(
   abs: string,
   key: string,
@@ -30,10 +25,9 @@ export async function hashFileCached(
     throw err;
   }
   const prev = prevCache?.[key];
-  const hit = cacheHitFor(prev, mtime, size);
-  if (prev !== undefined && hit !== null) {
+  if (prev !== undefined && prev.mtime === mtime && prev.size === size) {
     cacheOut[key] = prev;
-    return hit;
+    return prev.hash;
   }
   const content = await file.text();
   const entry: FileCacheEntry = { mtime, size, hash: hashString(content) };
