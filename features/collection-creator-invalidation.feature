@@ -12,7 +12,7 @@ Característica: editar una creadora reconstruye las collections que la listan
       Cuando construyo el proyecto con sus creators
       Y edito el archivo de la creadora
       Y construyo el proyecto con sus creators otra vez
-      Entonces se reconstruyen 2 documentos
+      Entonces se reconstruyen 3 documentos
 
     Escenario: La collection guarda a quién debe su bloque de autoras
       Dado que el proyecto tiene una collection con una creadora

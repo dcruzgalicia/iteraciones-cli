@@ -889,7 +889,7 @@ export async function resolveCollectionCreatorDocs(
   return result.sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
 
-async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string, filters: ExportContext['filters']): Promise<string> {
+async function buildAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string, filters: ExportContext['filters']): Promise<string> {
   if (creatorDocs.length === 0) return '';
   const subsubsectionStyle =
     '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\raggedright\\normalsize\\normalfont\\scshape}';
@@ -1014,8 +1014,8 @@ async function emitCollectionFormats(
   ) {
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
-    const creatorDocs = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : [];
-    const authorsBlock = await buildCollectionAuthorsLatex(creatorDocs, doc.filePath, exportCtx.filters);
+    const docsAutoras = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : creatorDocs;
+    const authorsBlock = await buildAuthorsLatex(docsAutoras, doc.filePath, exportCtx.filters);
     await emitLatexAndQueuePdf(
       doc,
       { ...outputs, content: prependLinksLatex(base, creatorLinks) },
