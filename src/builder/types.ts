@@ -11,6 +11,7 @@ export interface DiscoveryEntry {
   type?: 'file' | 'collection' | 'creator' | 'intervention' | 'list';
   files?: string[];
   creatorDocs?: string[];
+  containedBy?: string[];
   fm?: Record<string, unknown>;
   mtime?: number;
   size?: number;
