@@ -610,7 +610,8 @@ const MEMBER_BADGE_CLASSES =
 
 const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora' };
 
-const LINK_STRETCH_CLASSES = 'after:absolute after:inset-0';
+const MEMBER_LINK_CLASSES =
+  'text-accent-700 underline decoration-accent-500/60 underline-offset-4 transition-colors duration-200 hover:decoration-accent-500 dark:text-accent-300';
 
 function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>): string {
   const creator =
@@ -636,7 +637,7 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
   if (e.subtitle) card.push('', `<h4 class="text-center text-xl uppercase tracking-wide">${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
-    card.push('', `<p class="text-center"><a href="${href}" class="${LINK_STRETCH_CLASSES}">Leer el texto completo →</a></p>`);
+    card.push('', `<p class="text-center"><a href="${href}" class="${MEMBER_LINK_CLASSES}">Leer el texto completo →</a></p>`);
   }
   card.push('', '::::');
   return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
