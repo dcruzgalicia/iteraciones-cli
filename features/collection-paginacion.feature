@@ -74,6 +74,13 @@ Característica: La paginación de las colecciones
       Entonces el nav de la página 2 es flotante
       Y el nav de la página 2 no está dentro del texto
 
+    Escenario: Los botones se esconden hasta que el scroll llega al final
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una colección con 5 miembros
+      Y el proyecto pagina de 2 tarjetas
+      Cuando hago un build del proyecto
+      Entonces el nav de la página 2 se revela al final de la página
+
     Escenario: Con una sola página no hay nav
       Dado que la colección tiene 3 miembros
       Y que la colección tiene el cuerpo propio:
