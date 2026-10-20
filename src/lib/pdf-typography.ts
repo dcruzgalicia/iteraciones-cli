@@ -4,8 +4,6 @@ import { exec, ProcessSpawnError, type RunResult } from './run.js';
 
 export const TYPOGRAPHY_RULES = ['single-word-line', 'consecutive-punctuation', 'repeated-first-letter', 'repeated-last-letter'] as const;
 
-export type TypographyRule = (typeof TYPOGRAPHY_RULES)[number];
-
 interface Incidence {
   page: number;
   line: number;

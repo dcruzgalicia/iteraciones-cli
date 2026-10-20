@@ -70,8 +70,10 @@ export async function killProcessTree(rootPid: number): Promise<void> {
   }
 }
 
+type Spawned = Bun.Subprocess<'pipe' | 'ignore', 'pipe', 'pipe'>;
+
 export async function exec(command: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
-  let proc: ReturnType<typeof Bun.spawn>;
+  let proc: Spawned;
 
   try {
     proc = Bun.spawn([command, ...args], {
@@ -102,7 +104,7 @@ export async function killInFlightProcesses(): Promise<void> {
   inFlightPids.clear();
 }
 
-async function awaitProcess(command: string, proc: ReturnType<typeof Bun.spawn>, options: RunOptions): Promise<RunResult> {
+async function awaitProcess(command: string, proc: Spawned, options: RunOptions): Promise<RunResult> {
   if (options.input !== undefined) {
     if (proc.stdin == null || typeof proc.stdin === 'number') {
       throw new Error(`No se pudo escribir stdin del comando "${command}".`);
@@ -110,14 +112,6 @@ async function awaitProcess(command: string, proc: ReturnType<typeof Bun.spawn>,
     proc.stdin.write(options.input);
     await proc.stdin.flush();
     proc.stdin.end();
-  }
-
-  if (proc.stdout == null || typeof proc.stdout === 'number') {
-    throw new Error(`No se pudo leer stdout del comando "${command}".`);
-  }
-
-  if (proc.stderr == null || typeof proc.stderr === 'number') {
-    throw new Error(`No se pudo leer stderr del comando "${command}".`);
   }
 
   const outputPromise = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);

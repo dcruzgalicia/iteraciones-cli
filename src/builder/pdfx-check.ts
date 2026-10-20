@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { GLYPHS, logNotice, logWarning } from '../lib/logger.js';
+import { GLYPHS, logInfo, logWarning } from '../lib/logger.js';
 import { posix } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency } from '../lib/run.js';
@@ -33,7 +33,7 @@ export async function resolvePdfCheckBinary(): Promise<string | null> {
 async function buildPdfCheckBinary(): Promise<string | null> {
   const manifest = join(import.meta.dir, '../../tools/pdfx-validator/Cargo.toml');
   if (!existsSync(manifest)) return null;
-  logNotice('compilando iteraciones-pdfcheck (primer build, puede tardar varios minutos)…', 'pdfx');
+  logInfo('compilando iteraciones-pdfcheck (primer build, puede tardar varios minutos)…', 'pdfx', process.stderr);
   try {
     await exec('cargo', ['build', '--release', '--quiet', '--manifest-path', manifest], {
       timeoutMs: CARGO_BUILD_TIMEOUT_MS,
