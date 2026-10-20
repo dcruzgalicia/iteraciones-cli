@@ -3,7 +3,7 @@ import { basename, dirname, join, normalize, relative, resolve, sep } from 'node
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
@@ -263,7 +263,7 @@ export async function readCollectionEntries(files: string[], collectionPath: str
         `collection "${collectionPath}": archivo configurado en files no encontrado: "${file}" (probado: ${candidates.join(', ')})`,
       );
     }
-    const parsed = parseFileFrontmatter(text);
+    const parsed = parseFileFrontmatter(text, file);
 
     const rootRelative = posix(file).replace(/^\.\//, '');
     if (parsed.body.trim()) entries.push({ file: rootRelative, ...parsed });
@@ -584,11 +584,14 @@ async function collectCreatorNamesFromFiles(files: string[], cwd: string): Promi
     }
     const { yaml } = splitFrontmatter(text);
     if (!yaml) continue;
-    try {
-      const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
-      extractCreatorNames(parsed.creator, names);
-      extractCreatorNames(parsed.contributor, names);
-    } catch {}
+    const { value, error } = parseYamlWithPosition(yaml);
+    if (error) {
+      logWarning(`no se pudo leer el frontmatter de "${file}": ${error}`, 'build');
+      continue;
+    }
+    const parsed = value as Record<string, unknown> | undefined;
+    extractCreatorNames(parsed?.creator, names);
+    extractCreatorNames(parsed?.contributor, names);
   }
   return names;
 }
@@ -609,11 +612,11 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collec
   let name = '';
   let links: { name: string; url: string }[] = [];
   if (yaml) {
-    try {
-      const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
-      name = typeof parsed.name === 'string' && parsed.name ? parsed.name : typeof parsed.title === 'string' ? parsed.title : '';
-      links = getCreatorLinks(parsed);
-    } catch {}
+    const { value, error } = parseYamlWithPosition(yaml);
+    if (error) throw new BuildError(`collection "${collectionPath}": frontmatter inválido en "${relativePath}": ${error}`);
+    const parsed = value as Record<string, unknown> | undefined;
+    name = typeof parsed?.name === 'string' && parsed.name ? parsed.name : typeof parsed?.title === 'string' ? parsed.title : '';
+    links = parsed ? getCreatorLinks(parsed) : [];
   }
   if (!body.trim()) {
     throw new BuildError(`collection "${collectionPath}": creator "${name}" debe tener body (contenido después del frontmatter)`);
