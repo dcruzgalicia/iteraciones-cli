@@ -233,6 +233,7 @@ const TITULO_POR_DEFECTO = 'Sin título';
 
 export type CollectionEntry = {
   file: string;
+  posicion: number;
   title: string;
   creator: string[];
   subtitle: string | undefined;
@@ -244,7 +245,7 @@ export type CollectionEntry = {
 
 export async function readCollectionEntries(files: string[], collectionPath: string, bases: string[]): Promise<CollectionEntry[]> {
   const entries: CollectionEntry[] = [];
-  for (const file of files) {
+  for (const [indice, file] of files.entries()) {
     const candidates = [...new Set(bases.map((base) => join(base, file)))];
     let text: string | undefined;
     for (const candidate of candidates) {
@@ -266,7 +267,7 @@ export async function readCollectionEntries(files: string[], collectionPath: str
     const parsed = parseFileFrontmatter(text, file);
 
     const rootRelative = posix(file).replace(/^\.\//, '');
-    if (parsed.body.trim()) entries.push({ file: rootRelative, ...parsed });
+    if (parsed.body.trim()) entries.push({ file: rootRelative, posicion: indice + 1, ...parsed });
   }
   return entries;
 }
@@ -469,6 +470,9 @@ const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounde
 const MEMBER_PILL_CLASSES =
   'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-600 dark:text-accent-400';
 
+const MEMBER_BADGE_CLASSES =
+  'inline-block shrink-0 rounded-full border border-accent-500/50 bg-accent-500/25 px-2 py-1 font-semibold text-xs leading-none text-accent-700 dark:text-accent-300';
+
 const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora' };
 
 const LINK_STRETCH_CLASSES = 'after:absolute after:inset-0';
@@ -480,7 +484,12 @@ function collectionCard(e: CollectionEntry, href: string | undefined): string {
 
   const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
   const typeLabel = MEMBER_TYPE_LABEL[e.type ?? 'file'];
-  if (typeLabel !== undefined) card.push(`<h2 class="${MEMBER_PILL_CLASSES}">${typeLabel}</h2>`, '');
+  if (typeLabel !== undefined) {
+    card.push(
+      `<div class="flex items-start justify-between gap-4"><h2 class="${MEMBER_PILL_CLASSES}">${typeLabel}</h2><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
+      '',
+    );
+  }
   card.push(
     `<h2 class="text-center text-xl">${creator}</h2>`,
     '',

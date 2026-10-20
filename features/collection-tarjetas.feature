@@ -99,6 +99,32 @@ Característica: la tarjeta de cada miembro de una colección
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML es "cuerpo propio"
 
+  Regla de negocio: La tarjeta dice en qué posición de files[] está el archivo
+
+    Escenario: El badge lleva la posición del archivo en files[]
+      Dado que la colección tiene 3 miembros
+      Y que la colección tiene el cuerpo propio:
+      """
+      """
+      Cuando compogo las tarjetas de la página HTML
+      Entonces los badges de las tarjetas son "1, 2, 3"
+
+    Escenario: El badge va a la misma altura que el chip, del lado derecho
+      Dado que la colección tiene 1 miembros
+      Y que la colección tiene el cuerpo propio:
+      """
+      """
+      Cuando compogo las tarjetas de la página HTML
+      Entonces el chip y el badge van en la misma fila
+
+    Escenario: Un archivo sin cuerpo no corre la numeración
+      Dado que el proyecto tiene:
+      """
+      {"a.md": "---\ntitle: A\n---\n\nContenido.\n", "vacio.md": "---\ntitle: Vacío\n---\n", "b.md": "---\ntitle: B\n---\n\nContenido.\n"}
+      """
+      Cuando leo los miembros de "a.md,vacio.md,b.md"
+      Entonces las posiciones son "1, 3"
+
   Regla de negocio: El EPUB sigue llevando la fusión completa
 
     Escenario: El EPUB recibe el cuerpo entero del miembro

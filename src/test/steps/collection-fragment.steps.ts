@@ -94,6 +94,7 @@ import { collectionBaseContent, collectionCardsContent, collectionScanContent, m
 function miembro(over: Partial<CollectionEntry> = {}): CollectionEntry {
   return {
     file: 'doc.md',
+    posicion: 1,
     title: 'Documento',
     creator: ['Autora A'],
     subtitle: undefined,
@@ -106,7 +107,7 @@ function miembro(over: Partial<CollectionEntry> = {}): CollectionEntry {
 }
 
 function coleccion(members: Miembro[]): CollectionEntry[] {
-  return members.map((m) => miembro(m)) as CollectionEntry[];
+  return members.map((m, indice) => miembro({ ...m, posicion: indice + 1 })) as CollectionEntry[];
 }
 
 type Miembro = { file: string; title: string; creator: string[]; body: string };
@@ -182,6 +183,20 @@ Then('el HTML pone {string} antes que {string}', (primero: string, segundo: stri
 Then('el HTML tiene {int} contenedores de masonry', (cuantos: number) => {
   const leidos = (world.html.match(/break-inside-avoid pb-6/g) ?? []).length;
   if (leidos !== cuantos) throw new Error(`hay ${leidos} contenedores y son ${cuantos}`);
+});
+
+Then('los badges de las tarjetas son {string}', (esperados: string) => {
+  const leidos = [...world.html.matchAll(/<span class="[^"]*">(\d+)<\/span>/g)].map((m) => m[1]).join(', ');
+  if (leidos !== esperados) {
+    throw new Error(`los badges son ${JSON.stringify(leidos)} y deberían ser ${JSON.stringify(esperados)}`);
+  }
+});
+
+Then('el chip y el badge van en la misma fila', () => {
+  const fila = world.html.match(/<div class="flex items-start justify-between gap-4">.*?<\/div>/s);
+  if (fila === null) throw new Error('el chip y el badge no van en una fila con el chip a la izquierda y el badge a la derecha');
+  if (!fila[0].includes('<h2')) throw new Error('la fila no tiene el chip');
+  if (!fila[0].includes('<span')) throw new Error('la fila no tiene el badge');
 });
 
 Then('el HTML no tiene triple salto de línea', () => {

@@ -157,6 +157,7 @@ function nuevoMundo() {
     nombreActual: '',
     enLinea: [] as string[],
     miembros: [] as { file: string; title: string; creator: string[]; body: string }[],
+    entradas: [] as { file: string; posicion: number }[],
     cuerpoColeccion: '',
     rutaColeccion: 'coleccion.md',
     html: '',
