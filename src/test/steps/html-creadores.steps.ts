@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { nombresEnlazados } from '../../builder/pipeline-formats.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
@@ -36,4 +38,13 @@ Then('el nombre enlazado es {string}', (esperado: string) => {
   if (leidos !== esperado) {
     throw new Error(`el nombre enlazado es ${JSON.stringify(leidos)} y debería ser ${JSON.stringify(esperado)}`);
   }
+});
+
+Then('el HTML del texto pone {string} antes que {string}', (primero: string, segundo: string) => {
+  const html = readFileSync(join(world.root, 'dist', 'files', 'un-texto-por-ana-garcia.html'), 'utf8');
+  const a = html.indexOf(primero);
+  const b = html.indexOf(segundo);
+  if (a < 0) throw new Error(`el HTML no tiene ${JSON.stringify(primero)}`);
+  if (b < 0) throw new Error(`el HTML no tiene ${JSON.stringify(segundo)}`);
+  if (a >= b) throw new Error(`${JSON.stringify(primero)} (${a}) no va antes que ${JSON.stringify(segundo)} (${b})`);
 });

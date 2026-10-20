@@ -261,10 +261,20 @@ function assertNoNestedCollections(resolved: string[], relativePath: string, dis
   }
 }
 
-function resolveListMembers(relativePath: string, entry: DiscoveryEntry, discoveryIndex: Map<string, DiscoveryEntry>): void {
+function resolveListMembers(
+  relativePath: string,
+  entry: DiscoveryEntry,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  owners: Map<string, string[]>,
+): void {
   const members = selectListMembers(relativePath, entry.fm ?? {}, discoveryIndex);
   entry.files = members;
   if (entry.fm) entry.fm.files = members;
+  for (const member of members) {
+    const lista = owners.get(member);
+    if (lista === undefined) owners.set(member, [relativePath]);
+    else lista.push(relativePath);
+  }
 }
 
 async function resolveCollectionMembers(
@@ -273,6 +283,7 @@ async function resolveCollectionMembers(
   discoveryIndex: Map<string, DiscoveryEntry>,
   cwd: string,
   creatorOwners: Map<string, string[]>,
+  owners: Map<string, string[]>,
 ): Promise<void> {
   const resolved = await resolveCollectionFiles(entry.files ?? [], relativePath, cwd);
   assertNoNestedCollections(resolved, relativePath, discoveryIndex);
@@ -287,18 +298,30 @@ async function resolveCollectionMembers(
     if (list === undefined) creatorOwners.set(creatorDoc, [relativePath]);
     else list.push(relativePath);
   }
+  for (const member of resolved) {
+    const lista = owners.get(member);
+    if (lista === undefined) owners.set(member, [relativePath]);
+    else lista.push(relativePath);
+  }
 }
 
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Map<string, string[]>> {
   const creatorOwners = new Map<string, string[]>();
+  const owners = new Map<string, string[]>();
 
   for (const [relativePath, entry] of discoveryIndex) {
     if (entry.type === 'list') {
-      resolveListMembers(relativePath, entry, discoveryIndex);
+      resolveListMembers(relativePath, entry, discoveryIndex, owners);
       continue;
     }
     if (entry.type !== 'collection' || !entry.files) continue;
-    await resolveCollectionMembers(relativePath, entry, discoveryIndex, cwd, creatorOwners);
+    await resolveCollectionMembers(relativePath, entry, discoveryIndex, cwd, creatorOwners, owners);
+  }
+
+  for (const [ruta, entry] of discoveryIndex) {
+    const contenedores = owners.get(ruta);
+    if (contenedores === undefined) continue;
+    entry.containedBy = [...contenedores].sort((a, b) => a.localeCompare(b, 'es'));
   }
 
   return creatorOwners;

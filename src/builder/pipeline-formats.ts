@@ -637,6 +637,35 @@ function chipHtml(label: string, type: string | undefined, dir: string): string 
 const MEMBER_LINK_CLASSES =
   'text-accent-700 underline decoration-accent-500/60 underline-offset-4 transition-colors duration-200 hover:decoration-accent-500 dark:text-accent-300';
 
+const EXTRA_CARD_CLASSES = `relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
+
+/** La tarjeta con la biografía de una creadora. */
+export function creatorCard(doc: CreatorDoc): string {
+  return [
+    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
+    '',
+    `<h2 class="text-center text-xl uppercase tracking-wide">${doc.name}</h2>`,
+    '',
+    doc.body.trim(),
+    '',
+    '::::',
+  ].join('\n');
+}
+
+/** La tarjeta con las colecciones y listas donde vive un documento. */
+export function containersCard(contenedores: { titulo: string; href: string }[]): string {
+  const items = contenedores.map((c) => `- [${c.titulo}](${c.href})`).join('\n');
+  return [
+    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
+    '',
+    '<h2 class="text-center text-xl uppercase tracking-wide">Colecciones y listas</h2>',
+    '',
+    items,
+    '',
+    '::::',
+  ].join('\n');
+}
+
 function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>, dir: string): string {
   const creator =
     e.creator.length > 0
@@ -746,6 +775,32 @@ interface CreatorDoc {
   links: { name: string; url: string }[];
 }
 
+export function creatorDocPathsFor(nombres: string[], discoveryIndex: Map<string, DiscoveryEntry>): string[] {
+  const wanted = new Set(nombres);
+  const paths: string[] = [];
+  for (const [ruta, entry] of discoveryIndex) {
+    if (entry.type !== 'creator') continue;
+    const nombre = entry.fm?.name ?? entry.fm?.title;
+    if (typeof nombre !== 'string' || !wanted.has(nombre)) continue;
+    paths.push(ruta);
+  }
+  return paths;
+}
+
+/** Los documentos de creator que corresponden a los nombres de un documento. */
+export async function resolveCreatorDocs(
+  nombres: string[],
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  cwd: string,
+  label: string,
+): Promise<CreatorDoc[]> {
+  const docs: CreatorDoc[] = [];
+  for (const ruta of creatorDocPathsFor(nombres, discoveryIndex)) {
+    docs.push(await resolveSingleCreatorDoc(ruta, cwd, label));
+  }
+  return docs;
+}
+
 async function collectCreatorNamesFromFiles(files: string[], cwd: string): Promise<Set<string>> {
   const names = new Set<string>();
   for (const file of files) {
@@ -773,26 +828,26 @@ function extractCreatorNames(raw: unknown, target: Set<string>): void {
   for (const name of parseAuthors(raw)) target.add(name);
 }
 
-async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collectionPath: string): Promise<CreatorDoc> {
+async function resolveSingleCreatorDoc(relativePath: string, cwd: string, label: string): Promise<CreatorDoc> {
   const filePath = join(cwd, relativePath);
   let text: string;
   try {
     text = await Bun.file(filePath).text();
   } catch {
-    throw new BuildError(`collection "${collectionPath}": archivo de creator no encontrado: "${relativePath}"`);
+    throw new BuildError(`${label}: archivo de creator no encontrado: "${relativePath}"`);
   }
   const { yaml, body } = splitFrontmatter(text);
   let name = '';
   let links: { name: string; url: string }[] = [];
   if (yaml) {
     const { value, error } = parseYamlWithPosition(yaml);
-    if (error) throw new BuildError(`collection "${collectionPath}": frontmatter inválido en "${relativePath}": ${error}`);
+    if (error) throw new BuildError(`${label}: frontmatter inválido en "${relativePath}": ${error}`);
     const parsed = value as Record<string, unknown> | undefined;
     name = typeof parsed?.name === 'string' && parsed.name ? parsed.name : typeof parsed?.title === 'string' ? parsed.title : '';
     links = parsed ? getCreatorLinks(parsed) : [];
   }
   if (!body.trim()) {
-    throw new BuildError(`collection "${collectionPath}": creator "${name}" debe tener body (contenido después del frontmatter)`);
+    throw new BuildError(`${label}: creator "${name}" debe tener body (contenido después del frontmatter)`);
   }
   return { name, body, relativePath, links };
 }
@@ -887,6 +942,36 @@ async function collectionPandocInput(
   return path;
 }
 
+/** Los nombres de las autoras de un documento: su creator y sus contributors. */
+export function nombresDeAutora(doc: BuildDocument, fm: Record<string, unknown>): string[] {
+  return [...doc.frontmatter.creator, ...parseAuthors(fm.contributor)];
+}
+
+/** Las colecciones y listas donde vive un documento, con su enlace. */
+function contenedoresDe(doc: BuildDocument, dir: string, discoveryIndex: Map<string, DiscoveryEntry>): { titulo: string; href: string }[] {
+  const entry = discoveryIndex.get(doc.relativePath);
+  const rutas = entry?.containedBy ?? [];
+  return rutas.map((ruta) => {
+    const contenedor = discoveryIndex.get(ruta);
+    const html = join(dirname(ruta), `${htmlSlugFor(ruta, contenedor?.slug)}.html`)
+      .split(sep)
+      .join('/');
+    return { titulo: contenedor?.title || ruta, href: relativeHref(dir, html) };
+  });
+}
+
+/**
+ * Las tarjetas que van al final de la página de un documento: la biografía de
+ * cada creadora y las colecciones y listas donde vive.
+ */
+export function extrasDelDocumento(doc: BuildDocument, dir: string, discoveryIndex: Map<string, DiscoveryEntry>, creatorDocs: CreatorDoc[]): string {
+  const cards: string[] = creatorDocs.map(creatorCard);
+  const contenedores = contenedoresDe(doc, dir, discoveryIndex);
+  if (contenedores.length > 0) cards.push(containersCard(contenedores));
+  if (cards.length === 0) return '';
+  return `\n\n${cards.join('\n\n')}\n\n`;
+}
+
 async function emitCollectionFormats(
   doc: BuildDocument,
   outputs: DocumentOutputs,
@@ -901,8 +986,11 @@ async function emitCollectionFormats(
   const content = outputs.content;
   const { formatCfg } = renderCtx;
 
+  const esFile = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
+  const creatorDocs = esFile ? await resolveCreatorDocs(nombresDeAutora(doc, outputs.fm), discoveryIndex, ctx.cwd, `"${doc.relativePath}"`) : [];
+
   const images = await preprocessDocumentImages(
-    collectionScanContent(collectionEntries, content),
+    [collectionScanContent(collectionEntries, content), ...creatorDocs.map((c) => c.body)].join('\n\n'),
     doc,
     mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
     renderCtx.pageDimensions ?? detectPageSize([]),
@@ -945,10 +1033,11 @@ async function emitCollectionFormats(
     const memberHrefs = memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex);
     const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
     const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
-    const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize, hrefsCreadores);
+    const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize, hrefsCreadores, outputs.dir);
     assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
+    const extras = extrasDelDocumento(doc, outputs.dir, discoveryIndex, creatorDocs);
     const contenidos = paginas.map((base, indice) =>
-      prependLinksMarkdown(base + paginationNav(outputs.dir, outputs.outSlug, indice + 1, paginas.length), creatorLinks),
+      prependLinksMarkdown(base + paginationNav(outputs.dir, outputs.outSlug, indice + 1, paginas.length) + extras, creatorLinks),
     );
 
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
