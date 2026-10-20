@@ -52,25 +52,16 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
   try {
     const raw = await file.text();
     const parsed = JSON.parse(raw) as Partial<BuildState>;
-    if (typeof parsed.startedAt !== 'number') return null;
-    if (parsed.schemaVersion !== STATE_SCHEMA_VERSION) return null;
-    if (parsed.completed !== true) return null;
+    const { schemaVersion, startedAt, completed } = parsed;
+    if (typeof startedAt !== 'number') return null;
+    if (schemaVersion !== STATE_SCHEMA_VERSION) return null;
+    if (completed !== true) return null;
     return {
-      schemaVersion: parsed.schemaVersion,
-      startedAt: parsed.startedAt,
+      ...parsed,
+      schemaVersion,
+      startedAt,
+      completed,
       activeFormats: Array.isArray(parsed.activeFormats) ? parsed.activeFormats : [],
-      outputDir: parsed.outputDir,
-      filtersHash: parsed.filtersHash,
-      filterFileCache: parsed.filterFileCache,
-      schemaFileCache: parsed.schemaFileCache,
-      configHashes: parsed.configHashes,
-      configFileCache: parsed.configFileCache,
-      bibHash: parsed.bibHash,
-      bibFileCache: parsed.bibFileCache,
-      pdfxCache: parsed.pdfxCache,
-      cssHash: parsed.cssHash,
-      cssFileCache: parsed.cssFileCache,
-      completed: parsed.completed,
       entries: new Map(Object.entries((parsed.entries ?? {}) as Record<string, DiscoveryEntry>)),
     };
   } catch (err) {

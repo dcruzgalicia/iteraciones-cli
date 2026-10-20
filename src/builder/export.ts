@@ -1,5 +1,4 @@
 import { mkdir, readdir, rename, rm } from 'node:fs/promises';
-import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { stringify } from 'yaml';
 import { formatHumanDate } from '../lib/date.js';
@@ -8,7 +7,7 @@ import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmBool, fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
-import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
+import { cpuConcurrency, exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
@@ -242,7 +241,7 @@ export async function collectCover(pngPath: string): Promise<string | undefined>
 }
 
 export async function generateCoverImages(entries: CoverImageEntry[]): Promise<void> {
-  await mapWithConcurrency(entries, Math.min(4, Math.max(1, cpus().length)), async ({ pdfPath, pngPath }) => {
+  await mapWithConcurrency(entries, cpuConcurrency(4), async ({ pdfPath, pngPath }) => {
     try {
       await mkdir(dirname(pngPath), { recursive: true });
       await exec('pdftoppm', ['-png', '-f', '1', '-l', '1', pdfPath, join(dirname(pngPath), coverPrefix(pngPath))], {

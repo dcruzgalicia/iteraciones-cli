@@ -4,12 +4,12 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import ignore from 'ignore';
 import { discover } from '../../builder/discover.js';
 import { listMarkdownDocuments } from '../../builder/discover-files.js';
-import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules, parseGitignore } from '../../builder/gitignore.js';
+import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from '../../builder/gitignore.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 Given('que el .gitignore dice:', (reglas: string) => {
   world.reglasTexto = reglas.replace(/<br>/g, '\n');
-  world.reglasGitignore = parseGitignore(world.reglasTexto);
+  world.reglasGitignore = ignore().add(world.reglasTexto);
 });
 
 Then('el archivo {string} {string} por las reglas', (ruta: string, resultado: string) => {

@@ -59,12 +59,16 @@ export function applyCreatorTitle(record: Record<string, unknown>): void {
   }
 }
 
+export function parseFrontmatterRecord(yaml: string, label: string): Record<string, unknown> {
+  const { value, error } = parseYamlWithPosition(yaml);
+  if (error) throw new BuildError(`frontmatter inválido en "${label}": ${error}`);
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
 export function readFrontmatter(text: string, label: string): Record<string, unknown> {
   const { yaml } = splitFrontmatter(text);
   if (yaml === undefined) return {};
-  const { value, error } = parseYamlWithPosition(yaml);
-  if (error) throw new BuildError(`frontmatter inválido en "${label}": ${error}`);
-  const fm = typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  const fm = parseFrontmatterRecord(yaml, label);
   applyCreatorTitle(fm);
   return fm;
 }

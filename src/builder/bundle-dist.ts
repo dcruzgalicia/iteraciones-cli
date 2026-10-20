@@ -1,9 +1,10 @@
-import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, relative } from 'node:path';
+import { cp, mkdir, rm } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { isDir, isInside } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import { pruneEmptyDirs } from './cleanup.js';
+import { writeOutput } from './pipeline-io.js';
 import { projectPreambleDirs } from './preamble-loader.js';
 import { resolveBibOptions } from './state-bib.js';
 
@@ -40,8 +41,7 @@ async function writeManifest(cwd: string, rels: string[]): Promise<void> {
     await rm(path, { force: true });
     return;
   }
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(rels, null, 2)}\n`, 'utf8');
+  await writeOutput(path, `${JSON.stringify(rels, null, 2)}\n`);
 }
 
 export async function writeBundle(cwd: string, outputDir: string, config: SiteConfig): Promise<string[]> {

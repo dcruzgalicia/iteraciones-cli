@@ -42,19 +42,25 @@ export function detectPageSize(filters: PreambleFilter[]): { w: number; h: numbe
   return { w: 215.9, h: 279.4, textW: 165.1 };
 }
 
+const PT_TO_MM = 0.352778;
+
+export function toMm(value: number, unit: string): number | undefined {
+  switch (unit) {
+    case 'mm':
+      return value;
+    case 'cm':
+      return value * 10;
+    case 'pt':
+      return value * PT_TO_MM;
+    default:
+      return undefined;
+  }
+}
+
 function parseMarginMm(value: string | undefined, unit: string | undefined): number {
   if (!value || !unit) return 25.4;
   const v = Number.parseFloat(value);
-  switch (unit) {
-    case 'mm':
-      return v;
-    case 'cm':
-      return v * 10;
-    case 'pt':
-      return v * 0.352778;
-    default:
-      return 25.4;
-  }
+  return toMm(v, unit) ?? 25.4;
 }
 
 export function buildCropContent(widthMm: number, heightMm: number): string {

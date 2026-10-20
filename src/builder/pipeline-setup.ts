@@ -14,7 +14,7 @@ import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from '.
 import { PDF_WORK_BASE } from './output-layout.js';
 import type { PdfJob } from './pdf-pool.js';
 import { writeIfChanged } from './pipeline-io.js';
-import { disableBibliographyWithoutBibFiles, loadPreambleFilters, type PreambleDocType } from './preamble-loader.js';
+import { disableBibliographyWithoutBibFiles, loadPreambleFilters, type PreambleDocType, type PreambleFilter } from './preamble-loader.js';
 import type { resolveBibOptions } from './state-bib.js';
 import type { BuildContext } from './types.js';
 
@@ -112,13 +112,14 @@ export interface TemplateInput {
   bibFiles: string[];
   effectiveDisabledPreamble: string[];
   logoInline?: string;
+  preambleFilters?: PreambleFilter[];
 }
 
 export async function composeTemplate(kind: TemplateKind, input: TemplateInput): Promise<string> {
   const htmlType = htmlDocTypeOf(kind);
   if (htmlType !== undefined) return composeHtmlTemplate(input.siteConfig, input.logoInline, htmlType);
   const scope = TEMPLATE_SCOPES[kind];
-  const filters = await loadPreambleFilters(input.effectiveDisabledPreamble, input.cwd, scope);
+  const filters = input.preambleFilters ?? (await loadPreambleFilters(input.effectiveDisabledPreamble, input.cwd, scope));
 
   const dims = detectPageSize(filters);
   return composeLatexTemplate({
@@ -156,9 +157,9 @@ export async function writeEffectiveTemplates(
 
   const disabledPreamble = disableBibliographyWithoutBibFiles(effectiveDisabledPreamble, bibFiles);
   const tpl: TemplateInput = { cwd: ctx.cwd, siteConfig, bibFiles, effectiveDisabledPreamble: disabledPreamble, logoInline };
-  const writeTemplate = async (kind: TemplateKind): Promise<void> => {
+  const writeTemplate = async (kind: TemplateKind, preambleFilters?: PreambleFilter[]): Promise<void> => {
     const path = state.templates[kind];
-    await writeIfChanged(path, await composeTemplate(kind, tpl));
+    await writeIfChanged(path, await composeTemplate(kind, { ...tpl, preambleFilters }));
 
     recordSupportCommand('resources', path, ['iteraciones', 'template', kind, '-o', path]);
   };
@@ -172,7 +173,6 @@ export async function writeEffectiveTemplates(
     for (const kind of PREAMBLE_TEMPLATE_KINDS) {
       const preambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, TEMPLATE_SCOPES[kind]);
       const pageDimensions = detectPageSize(preambleFilters);
-      applyPrintQueueDynamics(preambleFilters, pageDimensions);
 
       if (TEMPLATE_SCOPES[kind] === 'file') {
         state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
@@ -180,7 +180,7 @@ export async function writeEffectiveTemplates(
         state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
         state.pageDimensions = pageDimensions;
       }
-      await writeTemplate(kind);
+      await writeTemplate(kind, preambleFilters);
     }
   }
   return state;

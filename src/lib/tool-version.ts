@@ -17,6 +17,10 @@ async function probe(bin: string, args: string[]): Promise<string> {
   return version;
 }
 
+export function resetToolVersionCache(): void {
+  memo.clear();
+}
+
 export const toolVersionMagick = (): Promise<string> => probe('magick', ['-version']);
 
 export const toolVersionPdfToPpm = (): Promise<string> => probe('pdftoppm', ['-v']);

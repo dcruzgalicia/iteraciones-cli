@@ -1,9 +1,9 @@
 import { readdir, rm, stat } from 'node:fs/promises';
-import { basename, dirname, join, normalize, resolve, sep } from 'node:path';
+import { basename, dirname, join, normalize, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import type { FormatKey } from '../config/site-config.js';
 import { resolveBooleanField } from '../lib/frontmatter-fields.js';
-import { isDir } from '../lib/paths.js';
+import { isDir, isInside } from '../lib/paths.js';
 import { htmlSlugFor } from './discover.js';
 import { LATEXMK_AUX_EXTENSIONS } from './export.js';
 import {
@@ -13,18 +13,9 @@ import {
   ASSETS_LOGO_FILE,
   FORMAT_OUTPUT_EXTENSIONS,
   LEGACY_ASSETS_IMG_DIR,
+  PDF_WORK_DIR,
 } from './output-layout.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
-
-async function removeIfExists(path: string): Promise<boolean> {
-  try {
-    await rm(path, { force: true });
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') return false;
-    throw err;
-  }
-}
 
 export async function pruneEmptyDirs(outputDir: string): Promise<void> {
   const dirs: string[] = [];
@@ -45,8 +36,9 @@ export async function pruneEmptyDirs(outputDir: string): Promise<void> {
 
 async function removeCachedArtifacts(cacheBase: string, dir: string, slug: string): Promise<number> {
   let removed = 0;
-  if (await removeIfExists(join(cacheBase, 'tmp', 'pdf', dir, `${slug}.tex`))) removed++;
-  const workDir = join(cacheBase, 'tmp', 'pdf', dir);
+  await rm(join(cacheBase, PDF_WORK_DIR, dir, `${slug}.tex`), { force: true });
+  removed++;
+  const workDir = join(cacheBase, PDF_WORK_DIR, dir);
   const targets: string[] = [''];
   try {
     const entries = await readdir(workDir, { withFileTypes: true });
@@ -54,7 +46,8 @@ async function removeCachedArtifacts(cacheBase: string, dir: string, slug: strin
   } catch {}
   for (const sub of targets) {
     for (const ext of LATEXMK_AUX_EXTENSIONS) {
-      if (await removeIfExists(join(workDir, sub, `${slug}${ext}`))) removed++;
+      await rm(join(workDir, sub, `${slug}${ext}`), { force: true });
+      removed++;
     }
   }
   return removed;
@@ -63,7 +56,8 @@ async function removeCachedArtifacts(cacheBase: string, dir: string, slug: strin
 async function removeOutputFiles(outputDir: string, dir: string, slug: string, extensions: string[]): Promise<number> {
   let removed = 0;
   for (const ext of extensions) {
-    if (await removeIfExists(join(outputDir, dir, `${slug}${ext}`))) removed++;
+    await rm(join(outputDir, dir, `${slug}${ext}`), { force: true });
+    removed++;
   }
   return removed;
 }
@@ -104,7 +98,10 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
     if (removedFormats.includes('markdown') && doc.frontmatter.type === 'collection') {
       for (const f of doc.frontmatter.files ?? []) {
         const dest = resolve(root, normalize(f));
-        if (dest.startsWith(`${root}${sep}`) && (await removeIfExists(dest))) removed++;
+        if (isInside(root, dest)) {
+          await rm(dest, { force: true });
+          removed++;
+        }
       }
     }
   }
@@ -141,7 +138,8 @@ export async function cleanupCoverImages(
     const rawFm = discoveryIndex.get(doc.relativePath)?.fm ?? {};
     if (resolveBooleanField(rawFm, siteConfig.format?.pdf, siteConfig, 'coverImage') === true) continue;
     const png = join(ctx.outputDir, dirname(doc.relativePath), `${htmlSlugFor(doc.relativePath, doc.slug)}.png`);
-    if (await removeIfExists(png)) removed++;
+    await rm(png, { force: true });
+    removed++;
   }
   return removed;
 }

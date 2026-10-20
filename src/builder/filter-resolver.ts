@@ -4,7 +4,7 @@ import { ConfigError } from '../lib/errors.js';
 import { isDir } from '../lib/paths.js';
 import { DESCRIPCIONES_LUA } from './filter-descriptions.js';
 
-const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
+export const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
 
 const FLAGS_FILTER = join(LUA_FILTERS_ROOT, 'internal', 'flags.lua');
 

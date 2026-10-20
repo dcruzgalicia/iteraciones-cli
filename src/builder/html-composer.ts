@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js';
 
-const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
+export const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
 export function slot(nombre: string): string {
   return `<div id="slot-${nombre}"></div>`;
