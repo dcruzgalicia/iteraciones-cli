@@ -690,3 +690,35 @@ Característica: la corrección tipográfica del markdown
       Cuando parseo el comando "typography dist/files/libro.pdf --fix" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y el error dice "typography --fix requiere un repositorio git"
+
+    Escenario: Encuentra el markdown por el slug de la creadora
+      Dado que la raíz del proyecto está vacía
+      Y que la raíz del proyecto es un repositorio git
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Volvi a la casa de mis padres un martes
+        de enero. Y me quede pensando en las tardes
+        con las cosas que pasan en las casas
+        y las que se quedan en las palabras
+        \f
+        """
+      Y que el archivo "libro.md" tiene este contenido
+        """
+        ---
+        title: Libro
+        creator: Pérez & Soto
+        ---
+        Un texto que no es el que hay que corregir.
+        """
+      Y que el archivo "perez-y-soto.md" tiene este contenido
+        """
+        ---
+        title: Ensayo
+        creator: Pérez & Soto
+        ---
+        Volvi a la casa de mis padres un martes de enero. Y me quede pensando en las tardes con las cosas que pasan en las casas y las que se quedan en las palabras.
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --rules repeated-last-letter --min-lines 2 --min-letters 1 --min-line-width 0 --fix" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "repeated-last-letter  corregido"
+      Y el archivo "perez-y-soto.md" contiene "un martes&nbsp;de enero"
