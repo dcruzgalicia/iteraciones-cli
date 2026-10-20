@@ -29,7 +29,7 @@ interface DiscoverResult {
   slugComputer: SlugComputer;
 }
 
-function slugify(text: string): string {
+export function slugify(text: string): string {
   const mapped = text.replace(/&/g, ' y ').replace(/%/g, ' por-ciento');
   return slugifyLib(mapped, { lower: true, strict: true });
 }

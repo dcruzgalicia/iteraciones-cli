@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
+import { slugify } from '../builder/discover.js';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
@@ -234,14 +235,6 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
   const directo = join(cwd, `${stem}.md`);
   if (await Bun.file(directo).exists()) out.add(directo);
 
-  const slugDe = (nombre: string): string =>
-    nombre
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^\w\s-]/g, '')
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, '-');
   const recolectaNombres = (valor: unknown, nombres: Set<string>): void => {
     if (Array.isArray(valor)) {
       for (const x of valor) if (typeof x === 'string') nombres.add(x);
@@ -251,7 +244,7 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
   };
   const agregaCreators = async (nombres: Set<string>): Promise<void> => {
     for (const nombre of nombres) {
-      const slug = slugDe(nombre);
+      const slug = slugify(nombre);
       const candidato = slug ? join(cwd, `${slug}.md`) : '';
       if (candidato && (await Bun.file(candidato).exists())) out.add(candidato);
     }
