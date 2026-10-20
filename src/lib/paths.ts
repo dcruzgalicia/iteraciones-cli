@@ -9,10 +9,6 @@ export function relativeLabel(root: string, path: string): string {
   return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? path : rel;
 }
 
-export function escapeRegExp(text: string): string {
-  return RegExp.escape(text);
-}
-
 export function isInside(root: string, abs: string): boolean {
   const rel = relative(root, abs);
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
