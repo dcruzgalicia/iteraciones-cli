@@ -59,9 +59,10 @@ Característica: la tarjeta de cada miembro de una colección
       """
       """
       Cuando compogo las tarjetas de la página HTML
-      Entonces el HTML dice "<a href=\"./documento-por-autora-a.html\" class=\"after:absolute after:inset-0\">"
+      Entonces el HTML dice "<a href=\"./documento-por-autora-a.html\""
       Y el HTML dice "tarjeta-fragmento relative"
       Y el HTML dice "<p class=\"text-center\">"
+      Y el HTML no dice "after:absolute after:inset-0"
 
     Escenario: Cada tarjeta va en su propio contenedor del masonry
       Dado que la colección tiene 1 miembros
@@ -98,6 +99,15 @@ Característica: la tarjeta de cada miembro de una colección
       """
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML es "cuerpo propio"
+
+    Escenario: El enlace de texto se conserva
+      Dado que la colección tiene 1 miembros
+      Y que la colección tiene el cuerpo propio:
+      """
+      """
+      Cuando compogo las tarjetas de la página HTML
+      Entonces el HTML dice "Leer el texto completo →"
+      Y el HTML dice "href=\"./documento-por-autora-a.html\""
 
   Regla de negocio: La tarjeta dice en qué posición de files[] está el archivo
 
