@@ -523,7 +523,7 @@ export function nombresEnlazados(nombres: string[], hrefs: Map<string, string>):
 function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>): string {
   const href = hrefs.get(nombre);
   if (href === undefined) return nombre;
-  return `<a href="${href}" class="underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current">${nombre}</a>`;
+  return `<a href="${href}" class="text-stone-900 underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current dark:text-stone-100">${nombre}</a>`;
 }
 
 function collectionCards(
@@ -583,24 +583,27 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
   return body.trim() === '' ? sections : `${sections}\n\n${body}`;
 }
 
-const PAGINATION_CARD_CLASSES =
-  'relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5';
+const PAGINATION_BUTTON_CLASSES =
+  'pointer-events-auto flex size-12 items-center justify-center rounded-full border border-accent-500/90 bg-accent-500/35 text-accent-600 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-400 dark:hover:border-accent-500 dark:hover:bg-accent-500/35 dark:hover:border-accent-500/90';
 
-const PAGINATION_LINK_CLASSES =
-  'rounded-full border border-accent-500/40 bg-accent-500/10 px-4 py-2 text-accent-700 hover:bg-accent-500/20 dark:text-accent-300';
+const PAGINATION_NAV_CLASSES = 'pointer-events-none fixed inset-x-0 bottom-6 z-50 flex items-center justify-center gap-4';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
 }
 
+/**
+ * Los botones de paginación, flotantes junto al de «volver al principio»: el
+ * anterior a su izquierda y el siguiente a su derecha. El hueco del medio es
+ * para el botón de volver, que vive en el esqueleto.
+ */
 export function paginationNav(dir: string, outSlug: string, pagina: number, total: number): string {
   if (total <= 1) return '';
   const enlace = (n: number, texto: string): string =>
-    `<a href="${relativeHref(dir, `${pageSlug(outSlug, n)}.html`)}" class="${PAGINATION_LINK_CLASSES}">${texto}</a>`;
-  const anterior = pagina > 1 ? enlace(pagina - 1, '← Anterior') : '<span></span>';
-  const siguiente = pagina < total ? enlace(pagina + 1, 'Siguiente →') : '<span></span>';
-  const estado = `<span class="text-sm font-mono text-accent-600 dark:text-accent-400">Página ${pagina} de ${total}</span>`;
-  return `<nav class="${PAGINATION_CARD_CLASSES} flex flex-wrap items-center justify-between gap-4 text-lg">${anterior}${estado}${siguiente}</nav>`;
+    `<a href="${relativeHref(dir, `${pageSlug(outSlug, n)}.html`)}" class="${PAGINATION_BUTTON_CLASSES}" aria-label="${texto}">${texto}</a>`;
+  const anterior = pagina > 1 ? enlace(pagina - 1, '←') : '<span class="size-12"></span>';
+  const siguiente = pagina < total ? enlace(pagina + 1, '→') : '<span class="size-12"></span>';
+  return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}<span class="size-12"></span>${siguiente}</nav>`;
 }
 
 function assertPaginasLibres(relativePath: string, dir: string, outSlug: string, total: number, discoveryIndex: Map<string, DiscoveryEntry>): void {
@@ -644,7 +647,7 @@ function chipHtml(label: string, type: string | undefined, dir: string): string 
 
 const MEMBER_LINK_CLASSES = 'underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current';
 
-const EXTRA_CARD_CLASSES = `relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
+const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
 /** La tarjeta con la biografía de una creadora. */
 export function creatorCard(doc: CreatorDoc): string {
@@ -688,8 +691,12 @@ async function buildExtrasHtml(args: {
   sourcePath: string;
 }): Promise<string> {
   const partes: string[] = [];
-  for (const doc of args.creatorDocs) partes.push(creatorCard(doc));
-  if (args.contenedores.length > 0) partes.push(containersCard(args.contenedores));
+  // Cada tarjeta va en su propia celda del masonry, con su separación.
+  for (const doc of args.creatorDocs) partes.push([MASONRY_WRAPPER, '', creatorCard(doc), '', '</div>'].join('\n'));
+  // Con una sola colección o lista no hace falta la tarjeta: no aporta nada.
+  if (args.contenedores.length > 1) {
+    partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores), '', '</div>'].join('\n'));
+  }
   if (partes.length === 0) return '';
 
   const extraArgs = ['--shift-heading-level-by=4'];

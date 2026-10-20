@@ -34,8 +34,8 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
 const IDENTITY_APERTURA = '    <div id="card-identity" class="break-inside-avoid pb-6">\n\n';
 const FOOTER_APERTURA = '    <div id="card-identity-footer" class="break-inside-avoid">\n';
 
-const EXTRAS_CARD = '    $if(extras)$\n    <div class="break-inside-avoid pb-6">$extras$</div>\n    $endif$\n';
-const PAGINATION_CARD = '    $if(pagination)$\n    <div class="break-inside-avoid pb-6">$pagination$</div>\n    $endif$\n';
+const EXTRAS_CARD = '    $if(extras)$$extras$$endif$\n';
+const PAGINATION_CARD = '    $if(pagination)$$pagination$$endif$\n';
 
 function comoFooter(card: string): string {
   return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA);

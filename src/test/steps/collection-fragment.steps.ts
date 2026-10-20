@@ -325,18 +325,12 @@ Then('el archivo {string} no dice {string}', async (relativa: string, texto: str
   }
 });
 
-Then('el nav de la página {int} está en su propia tarjeta', (_pagina: number) => {
+Then('el nav de la página {int} es flotante', (_pagina: number) => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'antologia-2.html'), 'utf8');
-  const nav = html.indexOf('<nav class=');
-  if (nav < 0) throw new Error('la página no tiene nav');
-  const antes = html.slice(Math.max(0, nav - 300), nav);
-  if (!antes.includes('break-inside-avoid')) {
-    throw new Error('el nav no está dentro de una tarjeta del masonry');
-  }
-  const article = html.indexOf('<article');
-  const fin = html.indexOf('</article>');
-  if (article >= 0 && fin >= 0 && article < nav && nav < fin) {
-    throw new Error('el nav sigue dentro del artículo del texto');
+  const nav = html.match(/<nav class="([^"]*)"/);
+  if (nav === null) throw new Error('la página no tiene nav');
+  if (!nav[1]?.includes('fixed') || !nav[1]?.includes('bottom-6')) {
+    throw new Error(`el nav no flota al pie: ${nav[1]}`);
   }
 });
 
@@ -356,5 +350,12 @@ Then('el nombre de la creadora de la tarjeta no usa el color del accent', () => 
   if (linea === null) throw new Error('la tarjeta no tiene la línea de la creadora');
   if (linea[1]?.includes('text-accent') === true) {
     throw new Error(`la creadora usa el color del accent: ${linea[1]}`);
+  }
+});
+
+Then('el nav de la página {int} no dice {string}', (pagina: number, texto: string) => {
+  const nav = (world.navs as string[])[pagina - 1] ?? '';
+  if (nav.includes(texto)) {
+    throw new Error(`el nav de la página ${pagina} sí dice ${JSON.stringify(texto)}: ${nav}`);
   }
 });
