@@ -1,7 +1,7 @@
 import { exists } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 
-export type CollectionFileResolution = { ok: true; rootRelative: string } | { ok: false; tried: string[] };
+type CollectionFileResolution = { ok: true; rootRelative: string } | { ok: false; tried: string[] };
 
 export async function resolveCollectionFile(file: string, collectionRelPath: string, cwd: string): Promise<CollectionFileResolution> {
   const fromCollection = join(cwd, dirname(collectionRelPath), file);

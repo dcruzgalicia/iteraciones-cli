@@ -1,52 +1,38 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { buildProgram } from '../../cli/parser.js';
-import { capture, jsonSalida, raiz, world } from './cli-world.steps.js';
-
-function lista(clave: string): Record<string, unknown>[] {
-  const valor = jsonSalida()[clave];
-  if (!Array.isArray(valor)) {
-    throw new Error(`la clave ${JSON.stringify(clave)} del JSON no es una lista: ${JSON.stringify(valor)}`);
-  }
-  return valor as Record<string, unknown>[];
-}
-
-function escribir(ruta: string, contenido: string): void {
-  mkdirSync(dirname(ruta), { recursive: true });
-  writeFileSync(ruta, contenido, 'utf8');
-}
+import { capture, escribirEnProyecto, jsonSalida, lista, raiz, world } from './cli-world.steps.js';
 
 Given('que la raíz del proyecto tiene un documento pero no la configuración', async () => {
   world.root = await mkdtemp(join(tmpdir(), 'iteraciones-cli-validate-'));
-  escribir(join(world.root, 'doc.md'), '---\ntitle: Doc\ndate: 2026-01-01\n---\n\nTexto.\n');
+  escribirEnProyecto('doc.md', '---\ntitle: Doc\ndate: 2026-01-01\n---\n\nTexto.\n');
 });
 
 Given('que el archivo {string} tiene este contenido', (ruta: string, contenido: string) => {
-  escribir(join(world.root, ruta), contenido);
+  escribirEnProyecto(ruta, contenido);
 });
 
 Given('que el archivo {string} tiene el contenido {string}', (ruta: string, contenido: string) => {
-  escribir(join(world.root, ruta), contenido);
+  escribirEnProyecto(ruta, contenido);
 });
 
 Given('que el archivo {string} está vacío', (ruta: string) => {
-  escribir(join(world.root, ruta), '');
+  escribirEnProyecto(ruta, '');
 });
 
 Given('que el documento {string} tiene el frontmatter {string}', (ruta: string, frontmatter: string) => {
-  escribir(join(world.root, ruta), `---\n${frontmatter}\n---\n\n# Hola\n`);
+  escribirEnProyecto(ruta, `---\n${frontmatter}\n---\n\n# Hola\n`);
 });
 
 Given('que el documento {string} tiene el frontmatter sin cerrar', (ruta: string) => {
-  escribir(join(world.root, ruta), '---\ntitle: "sin cerrar\n---\n\nContenido.\n');
+  escribirEnProyecto(ruta, '---\ntitle: "sin cerrar\n---\n\nContenido.\n');
 });
 
 Given('que el documento {string} declara varios campos efectivos', (ruta: string) => {
-  escribir(
-    join(world.root, ruta),
+  escribirEnProyecto(
+    ruta,
     [
       '---',
       'title: Efectivos',
@@ -65,16 +51,16 @@ Given('que el documento {string} declara varios campos efectivos', (ruta: string
 });
 
 Given('que la configuración declara la clave {string} con el valor {string}', (clave: string, valor: string) => {
-  escribir(join(world.root, 'iteraciones.config.yaml'), `language: es-MX\n${clave}: ${valor}\n`);
+  escribirEnProyecto('iteraciones.config.yaml', `language: es-MX\n${clave}: ${valor}\n`);
 });
 
 Given('que la configuración desactiva un filtro global {string}', (filtro: string) => {
   raiz();
-  escribir(join(world.root, 'iteraciones.config.yaml'), `language: es-MX\nformat:\n  html:\n    generate: true\ndisabledFilters:\n  - ${filtro}\n`);
+  escribirEnProyecto('iteraciones.config.yaml', `language: es-MX\nformat:\n  html:\n    generate: true\ndisabledFilters:\n  - ${filtro}\n`);
 });
 
 Given('que la configuración desactiva un filtro del preámbulo {string}', (filtro: string) => {
-  escribir(join(world.root, 'iteraciones.config.yaml'), `language: es-MX\nformat:\n  pdf:\n    disabledPreambleFilters:\n      - ${filtro}\n`);
+  escribirEnProyecto('iteraciones.config.yaml', `language: es-MX\nformat:\n  pdf:\n    disabledPreambleFilters:\n      - ${filtro}\n`);
 });
 
 When('valido el proyecto pidiendo JSON', async () => {

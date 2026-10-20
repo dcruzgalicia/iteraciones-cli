@@ -1,4 +1,4 @@
-export const COLLECTION_FRAGMENT_MAX_WORDS = 100;
+const COLLECTION_FRAGMENT_MAX_WORDS = 100;
 
 const CUT_MARK = '...';
 

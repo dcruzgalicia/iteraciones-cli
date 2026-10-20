@@ -11,7 +11,7 @@ export const MISSING_TITLE_WARNING: ValidationIssue = {
   message: 'no tiene título en el frontmatter; se usará "Sin título"',
 };
 
-export const KNOWN_FRONTMATTER_FIELDS = [
+const KNOWN_FRONTMATTER_FIELDS = [
   'title',
   'creator',
   'subject',
@@ -209,7 +209,7 @@ const DICTUM_WIDTH_RE = /^:::\s*\{[^}]*\.dictum[^}]*\bwidth\s*=\s*([0-9]*\.?[0-9
 const DICTUM_WIDTH_MIN = 0.1;
 const DICTUM_WIDTH_MAX = 1.0;
 
-export interface DictumWidthWarning {
+interface DictumWidthWarning {
   line: number;
   value: number;
 }

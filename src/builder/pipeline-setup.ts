@@ -18,7 +18,7 @@ import { disableBibliographyWithoutBibFiles, loadPreambleFilters, type PreambleD
 import type { resolveBibOptions } from './state-bib.js';
 import type { BuildContext } from './types.js';
 
-export interface PipelineSetup {
+interface PipelineSetup {
   bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
   bibFiles: string[];
   globalBibliography: string | undefined;
@@ -53,7 +53,7 @@ export async function loadLogoInline(cwd: string, logoRel?: string): Promise<str
   }
 }
 
-export interface EffectiveTemplates {
+interface EffectiveTemplates {
   biblatexAvailable: boolean;
   pdfxActive: boolean;
   cropActive: boolean;
@@ -106,7 +106,7 @@ export function htmlKindFor(type: HtmlDocType): TemplateKind {
   return type === 'file' ? 'html' : `html-${type}`;
 }
 
-export interface TemplateInput {
+interface TemplateInput {
   cwd: string;
   siteConfig: SiteConfig;
   bibFiles: string[];

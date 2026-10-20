@@ -6,14 +6,14 @@ import { computeConfigHashes, computeFiltersHash } from './state-hash.js';
 import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from './state-serialize.js';
 import type { BuildDocument } from './types.js';
 
-export const WORK_FORMAT_SOURCES = {
+const WORK_FORMAT_SOURCES = {
   print: ['pdf', 'latex'],
   html: ['html'],
   epub: ['epub'],
   markdown: ['markdown'],
 } as const satisfies Record<string, readonly FormatKey[]>;
 
-export type WorkFormatKey = keyof typeof WORK_FORMAT_SOURCES;
+type WorkFormatKey = keyof typeof WORK_FORMAT_SOURCES;
 
 const WORK_FORMATS = Object.keys(WORK_FORMAT_SOURCES) as WorkFormatKey[];
 

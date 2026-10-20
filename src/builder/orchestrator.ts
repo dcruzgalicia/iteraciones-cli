@@ -81,7 +81,7 @@ async function assertSelectionCompatible(options: BuildOptions, root: string): P
   }
 }
 
-export interface BuildSummary {
+interface BuildSummary {
   processed: number;
   cached: number;
   formats: string[];

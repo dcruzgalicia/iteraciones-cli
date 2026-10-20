@@ -341,9 +341,17 @@ Given('que la raíz del proyecto está vacía', () => {
   world.root = tempRoot('iteraciones-cli-');
 });
 
-export function escribirEnProyecto(relativa: string, contenido: string): void {
+export function escribirEnProyecto(relativa: string, contenido: string | Uint8Array): void {
   mkdirSync(dirname(join(world.root, relativa)), { recursive: true });
-  writeFileSync(join(world.root, relativa), contenido, 'utf8');
+  writeFileSync(join(world.root, relativa), contenido);
+}
+
+export function lista(clave: string): Record<string, unknown>[] {
+  const valor = jsonSalida()[clave];
+  if (!Array.isArray(valor)) {
+    throw new Error(`la clave ${JSON.stringify(clave)} del JSON no es una lista: ${JSON.stringify(valor)}`);
+  }
+  return valor as Record<string, unknown>[];
 }
 
 Given('que la raíz del proyecto tiene un proyecto de prueba', () => {

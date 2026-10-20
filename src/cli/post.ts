@@ -7,7 +7,7 @@ import { BuildError } from '../lib/errors.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { minifyHtml } from '../lib/minify.js';
 
-export const POST_KINDS = ['html', 'latex'] as const;
+const POST_KINDS = ['html', 'latex'] as const;
 
 async function readStdin(): Promise<string> {
   return new Response(Bun.stdin).text();

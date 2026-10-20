@@ -169,7 +169,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
   return { errors, warnings, count: entries.length };
 }
 
-export interface ValidationSummary {
+interface ValidationSummary {
   ok: boolean;
   documents: number;
   errors: ValidationError[];

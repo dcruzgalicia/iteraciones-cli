@@ -1,6 +1,5 @@
 import { spyOn } from 'bun:test';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import {
   computeProcessTargets,
@@ -12,7 +11,7 @@ import {
   scanInlineImages,
   scanTitlePageFieldImages,
 } from '../../builder/image-processor.js';
-import { world } from './cli-world.steps.ts';
+import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 const DIR_DOC = '/proyecto/capitulos';
 const PROCESADA = '/proyecto/capitulos/.iteraciones/processed-images/img.jpg';
@@ -101,10 +100,7 @@ Given('que el frontmatter declara el campo {string} con:', (campo: string, valor
 });
 
 Given('que el proyecto tiene la imagen {string}', (ruta: string) => {
-  const destino = `${world.root}/${ruta}`;
-  mkdirSync(dirname(destino), { recursive: true });
-
-  writeFileSync(destino, Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
+  escribirEnProyecto(ruta, Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
 });
 
 When('escaneo las imágenes de los campos de portada', async () => {

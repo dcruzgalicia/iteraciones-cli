@@ -57,7 +57,7 @@ function pidVivo(pid: number): boolean {
   }
 }
 
-export async function acquirePreviewLock(cwd: string, onNotice?: (msg: string) => void): Promise<() => Promise<void>> {
+async function acquirePreviewLock(cwd: string, onNotice?: (msg: string) => void): Promise<() => Promise<void>> {
   const lockfile = join(cwd, LOCK_PATH);
   const previo = await Bun.file(lockfile)
     .text()
@@ -78,7 +78,7 @@ export async function acquirePreviewLock(cwd: string, onNotice?: (msg: string) =
   };
 }
 
-export interface PreviewOptions {
+interface PreviewOptions {
   only?: string[];
   verbose?: boolean;
   pollMs?: number;

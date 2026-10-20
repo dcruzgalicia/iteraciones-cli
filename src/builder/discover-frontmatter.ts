@@ -15,7 +15,7 @@ import type { DiscoveryEntry } from './types.js';
 
 export type FrontmatterIssue = { file: string; error: string; kind: 'syntax' | 'field' };
 
-export interface IngestedFrontmatter {
+interface IngestedFrontmatter {
   title: string;
   subtitle: string | undefined;
   date: string | undefined;

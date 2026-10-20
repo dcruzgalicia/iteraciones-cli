@@ -19,7 +19,7 @@ export type SlugComputer = (meta: { title: string; creator: string[] }, opts: { 
 
 const FILE_IO_CONCURRENCY = Math.max(1, cpus().length - 1);
 
-export type DiscoverResultAndPending = DiscoverResult & { pendingState: BuildState | null };
+type DiscoverResultAndPending = DiscoverResult & { pendingState: BuildState | null };
 
 interface DiscoverResult {
   relativePaths: string[];

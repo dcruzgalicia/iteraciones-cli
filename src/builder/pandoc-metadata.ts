@@ -1,6 +1,6 @@
 import { PACKAGED_APA7_CSL } from './state-bib.js';
 
-export interface MetadataEntry {
+interface MetadataEntry {
   key: string;
   value: string | string[] | undefined;
 }
