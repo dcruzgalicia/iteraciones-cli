@@ -9,27 +9,16 @@ export type PreambleDocType = 'file' | 'collection' | 'creator' | 'intervention'
 
 const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
 const PROJECT_PREAMBLE_DIR = 'preamble';
-const PKG_PREAMBLE_COLLECTION_DIR = join(import.meta.dir, '../lib/resources/preamble-collection');
-const PKG_PREAMBLE_CREATOR_DIR = join(import.meta.dir, '../lib/resources/preamble-creator');
-const PKG_PREAMBLE_INTERVENTION_DIR = join(import.meta.dir, '../lib/resources/preamble-intervention');
 
-function preamblePkgDir(docType: PreambleDocType): string {
-  if (docType === 'collection') return PKG_PREAMBLE_COLLECTION_DIR;
-  if (docType === 'creator') return PKG_PREAMBLE_CREATOR_DIR;
-  if (docType === 'intervention') return PKG_PREAMBLE_INTERVENTION_DIR;
-  return PKG_PREAMBLE_DIR;
-}
-
-function preambleProjectDir(docType: PreambleDocType): string {
-  if (docType === 'collection') return 'preamble-collection';
-  if (docType === 'creator') return 'preamble-creator';
-  if (docType === 'intervention') return 'preamble-intervention';
-  return PROJECT_PREAMBLE_DIR;
-}
+const PREAMBLE_DIRS: Record<PreambleDocType, { pkg?: string; project: string }> = {
+  file: { pkg: PKG_PREAMBLE_DIR, project: PROJECT_PREAMBLE_DIR },
+  collection: { pkg: join(import.meta.dir, '../lib/resources/preamble-collection'), project: 'preamble-collection' },
+  creator: { pkg: join(import.meta.dir, '../lib/resources/preamble-creator'), project: 'preamble-creator' },
+  intervention: { project: 'preamble-intervention' },
+};
 
 export function projectPreambleDirs(): string[] {
-  const types: PreambleDocType[] = ['file', 'collection', 'creator', 'intervention'];
-  return types.map(preambleProjectDir);
+  return Object.values(PREAMBLE_DIRS).map((dirs) => dirs.project);
 }
 
 let builtinPreambleNames: string[] | null = null;
@@ -63,15 +52,14 @@ async function primeraQueExista(candidatas: string[]): Promise<string | undefine
 export async function loadPreambleFilters(disabledList?: string[], cwd?: string, docType: PreambleDocType = 'file'): Promise<PreambleFilter[]> {
   const excluded = new Set(disabledList ?? []);
   const result: PreambleFilter[] = [];
-  const pkgDir = preamblePkgDir(docType);
-  const projectDir = preambleProjectDir(docType);
+  const { pkg, project } = PREAMBLE_DIRS[docType];
 
   for (const name of getBuiltinPreambleFilterNames()) {
     if (excluded.has(name)) continue;
     const delPaqueteBase = join(PKG_PREAMBLE_DIR, `${name}.tex`);
     const candidatas = [
-      ...(cwd === undefined ? [] : [join(cwd, projectDir, `${name}.tex`)]),
-      join(pkgDir, `${name}.tex`),
+      ...(cwd === undefined ? [] : [join(cwd, project, `${name}.tex`)]),
+      ...(pkg === undefined ? [] : [join(pkg, `${name}.tex`)]),
       ...(cwd === undefined ? [] : [join(cwd, PROJECT_PREAMBLE_DIR, `${name}.tex`)]),
       delPaqueteBase,
     ];
