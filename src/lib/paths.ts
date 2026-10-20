@@ -1,7 +1,7 @@
-import { isAbsolute, relative, sep } from 'node:path';
+import { isAbsolute, relative } from 'node:path';
 
 export function posix(path: string): string {
-  return path.split(sep).join('/');
+  return path.replaceAll('\\', '/');
 }
 
 export function relativeLabel(root: string, path: string): string {
