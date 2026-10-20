@@ -36,6 +36,16 @@
   animation-range: 150px 300px;
 }
 
+/* Lo contrario: se esconden al principio y aparecen cuando el scroll ya
+   llegó al final de la página. Sin scroll no hay nada que revelar, así que
+   se quedan a la vista (el animation-range no aplica si la página no
+   scrollea). */
+@utility scroll-reveal-at-end {
+  animation: scroll-reveal linear both;
+  animation-timeline: scroll();
+  animation-range: 90% 100%;
+}
+
 @keyframes scroll-reveal {
   from {
     opacity: 0;

@@ -334,6 +334,17 @@ Then('el nav de la página {int} es flotante', (_pagina: number) => {
   }
 });
 
+Then('el nav de la página {int} se revela al final de la página', (_pagina: number) => {
+  const html = readFileSync(join(world.root, 'dist', 'files', 'antologia-2.html'), 'utf8');
+  if (!html.includes('scroll-reveal-at-end')) {
+    throw new Error('los botones del nav no se esconden hasta el final');
+  }
+  const css = readFileSync(join(world.root, 'dist', 'files', 'assets', 'css', 'styles.css'), 'utf8');
+  if (!/animation-range:\s*90%\s*100%/.test(css)) {
+    throw new Error('el CSS no revela los botones al final del scroll');
+  }
+});
+
 Then('el nav de la página {int} no está dentro del texto', (_pagina: number) => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'antologia-2.html'), 'utf8');
   const nav = html.indexOf('<nav class=');

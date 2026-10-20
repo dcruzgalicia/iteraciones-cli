@@ -584,9 +584,9 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'pointer-events-auto flex size-12 items-center justify-center rounded-full border border-accent-500/90 bg-accent-500/35 text-accent-600 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-400 dark:hover:border-accent-500 dark:hover:bg-accent-500/35 dark:hover:border-accent-500/90';
+  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/90 bg-accent-500/35 px-4 text-accent-600 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-400 dark:hover:border-accent-500 dark:hover:bg-accent-500/35';
 
-const PAGINATION_NAV_CLASSES = 'pointer-events-none fixed inset-x-0 bottom-6 z-50 flex items-center justify-center gap-4';
+const PAGINATION_NAV_CLASSES = 'pointer-events-none fixed inset-x-0 bottom-6 z-50';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
@@ -594,16 +594,16 @@ function pageSlug(outSlug: string, pagina: number): string {
 
 /**
  * Los botones de paginación, flotantes junto al de «volver al principio»: el
- * anterior a su izquierda y el siguiente a su derecha. El hueco del medio es
- * para el botón de volver, que vive en el esqueleto.
+ * anterior a su izquierda y el siguiente a su derecha. Se esconden hasta que
+ * el scroll llega al final de la página.
  */
 export function paginationNav(dir: string, outSlug: string, pagina: number, total: number): string {
   if (total <= 1) return '';
-  const enlace = (n: number, texto: string): string =>
-    `<a href="${relativeHref(dir, `${pageSlug(outSlug, n)}.html`)}" class="${PAGINATION_BUTTON_CLASSES}" aria-label="${texto}">${texto}</a>`;
-  const anterior = pagina > 1 ? enlace(pagina - 1, '←') : '<span class="size-12"></span>';
-  const siguiente = pagina < total ? enlace(pagina + 1, '→') : '<span class="size-12"></span>';
-  return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}<span class="size-12"></span>${siguiente}</nav>`;
+  const enlace = (n: number, texto: string, posicion: string): string =>
+    `<a href="${relativeHref(dir, `${pageSlug(outSlug, n)}.html`)}" class="${PAGINATION_BUTTON_CLASSES} fixed bottom-6 left-1/2 ${posicion}" aria-label="${texto}">${texto}</a>`;
+  const anterior = pagina > 1 ? enlace(pagina - 1, '← Anterior', '-translate-x-[calc(100%_+_2rem)]') : '';
+  const siguiente = pagina < total ? enlace(pagina + 1, 'Siguiente →', 'translate-x-[2rem]') : '';
+  return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}${siguiente}</nav>`;
 }
 
 function assertPaginasLibres(relativePath: string, dir: string, outSlug: string, total: number, discoveryIndex: Map<string, DiscoveryEntry>): void {
