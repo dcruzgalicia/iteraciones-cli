@@ -26,49 +26,27 @@ export function fmStringList(value: unknown): string[] | undefined {
 
 type MetadataValue = string | string[];
 
-function metadataValue(value: unknown): MetadataValue | undefined {
-  if (typeof value === 'string' || Array.isArray(value)) return value;
+type CfgMap = Record<string, unknown>;
+
+function candidatos(fm: CfgMap, formatCfg: CfgMap | undefined, rootCfg: CfgMap, field: string): unknown[] {
+  return [fm[field], formatCfg?.[field], rootCfg[field]];
+}
+
+export function resolveMetadataField(fm: CfgMap, formatCfg: CfgMap | undefined, rootCfg: CfgMap, field: string): MetadataValue | undefined {
+  const value = candidatos(fm, formatCfg, rootCfg, field).find((c) => c !== undefined);
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value as string[];
   return undefined;
 }
 
-export function resolveMetadataField(
-  fm: Record<string, unknown>,
-  formatCfg: Record<string, unknown> | undefined,
-  rootCfg: Record<string, unknown>,
-  field: string,
-): MetadataValue | undefined {
-  const fmValue = fm[field];
-  if (fmValue !== undefined) return metadataValue(fmValue);
-  if (formatCfg) {
-    const fmtValue = formatCfg[field];
-    if (fmtValue !== undefined) return metadataValue(fmtValue);
-  }
-  return metadataValue(rootCfg[field]);
-}
-
-export function resolveStringField(
-  fm: Record<string, unknown>,
-  formatCfg: Record<string, unknown> | undefined,
-  rootCfg: Record<string, unknown>,
-  field: string,
-): string | undefined {
-  const value = resolveMetadataField(fm, formatCfg, rootCfg, field);
+export function resolveStringField(fm: CfgMap, formatCfg: CfgMap | undefined, rootCfg: CfgMap, field: string): string | undefined {
+  const value = candidatos(fm, formatCfg, rootCfg, field).find((c) => c !== undefined);
   return typeof value === 'string' ? value : undefined;
 }
 
-export function resolveBooleanField(
-  fm: Record<string, unknown>,
-  formatCfg: Record<string, unknown> | undefined,
-  rootCfg: Record<string, unknown>,
-  field: string,
-): boolean | undefined {
-  const fmValue = fm[field];
-  if (typeof fmValue === 'boolean') return fmValue;
-  if (formatCfg) {
-    const fmtValue = formatCfg[field];
-    if (typeof fmtValue === 'boolean') return fmtValue;
+export function resolveBooleanField(fm: CfgMap, formatCfg: CfgMap | undefined, rootCfg: CfgMap, field: string): boolean | undefined {
+  for (const value of candidatos(fm, formatCfg, rootCfg, field)) {
+    if (typeof value === 'boolean') return value;
   }
-  const rootValue = rootCfg[field];
-  if (typeof rootValue === 'boolean') return rootValue;
   return undefined;
 }
