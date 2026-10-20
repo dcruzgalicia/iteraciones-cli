@@ -3,8 +3,9 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { MD_READER } from '../lib/pandoc-runner.js';
 import { toolVersionLatexmk, toolVersionMagick, toolVersionMinify, toolVersionPdfToPpm } from '../lib/tool-version.js';
-import { htmlResourceFiles } from './html-composer.js';
-import { projectPreambleDirs } from './preamble-loader.js';
+import { LUA_FILTERS_ROOT } from './filter-resolver.js';
+import { HTML_RESOURCES_DIR, htmlResourceFiles } from './html-composer.js';
+import { PKG_PREAMBLE_DIR, projectPreambleDirs } from './preamble-loader.js';
 import { type FileCacheEntry, type FilterFileCache, hashString } from './state-serialize.js';
 
 export async function hashFileCached(
@@ -34,8 +35,6 @@ export async function hashFileCached(
   cacheOut[key] = entry;
   return entry.hash;
 }
-
-const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
 const SCHEMA_SOURCE_GLOB = '**/*.ts';
 
@@ -82,8 +81,8 @@ async function hashSpecFiles(specs: Array<[string, string]>, prevCache: FilterFi
 }
 
 const PACKAGE_SPECS: Array<[string, string]> = [
-  [join(import.meta.dir, '../lib/resources/filters'), '**/*.lua'],
-  [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
+  [LUA_FILTERS_ROOT, '**/*.lua'],
+  [PKG_PREAMBLE_DIR, '*.tex'],
 ];
 
 export function projectFilterSpecs(cwd: string): Array<[string, string]> {

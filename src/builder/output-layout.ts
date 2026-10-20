@@ -15,7 +15,9 @@ export const ASSETS_LOGO_FILE = 'assets/logo.svg';
 
 export const LEGACY_ASSETS_IMG_DIR = 'assets/img';
 
-export const PDF_WORK_BASE = join('.iteraciones', 'tmp', 'pdf');
+export const PDF_WORK_DIR = join('tmp', 'pdf');
+
+export const PDF_WORK_BASE = join('.iteraciones', PDF_WORK_DIR);
 
 export const FORMAT_OUTPUT_EXTENSIONS: Record<FormatKey, string[]> = {
   latex: ['.tex'],

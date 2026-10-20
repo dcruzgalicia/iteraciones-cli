@@ -1,5 +1,5 @@
 import { copyFile, mkdir } from 'node:fs/promises';
-import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { stringify } from 'yaml';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
@@ -12,7 +12,14 @@ import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import type { PageDimensions } from './image-processor.js';
-import { imageNamerFor, processDocumentImages, scanInlineImages, scanTitlePageFieldImages, uniqueName } from './image-processor.js';
+import {
+  COVER_IMAGE_FIELDS,
+  imageNamerFor,
+  processDocumentImages,
+  scanInlineImages,
+  scanTitlePageFieldImages,
+  uniqueName,
+} from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { ASSETS_IMAGES_DIR } from './output-layout.js';
 import { metadataArgs } from './pandoc-metadata.js';
@@ -127,8 +134,6 @@ async function resolveAndPushImage(
   }
   extraArgs.push(`--metadata=${field}:${imageMap.get(imagePath) ?? imagePath}`);
 }
-
-const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper'] as const;
 
 function toAbsoluteImagePaths(value: string | string[], cwd: string): string | string[] {
   if (Array.isArray(value)) return value.map((v) => (isAbsolute(v) ? v : resolve(cwd, v)));
@@ -419,9 +424,7 @@ async function distAssetTarget(
   }
   if (ext !== '.bib' || !bundle || !isInside(projectRoot, abs)) return null;
   return {
-    rel: relative(texDir, join(distRoot, relative(projectRoot, abs)))
-      .split(sep)
-      .join('/'),
+    rel: posix(relative(texDir, join(distRoot, relative(projectRoot, abs)))),
     copy: false,
   };
 }

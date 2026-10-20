@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'node:fs';
 import { chmod, copyFile, mkdir } from 'node:fs/promises';
-import { cpus, homedir } from 'node:os';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
@@ -8,7 +8,7 @@ import { BuildError } from '../lib/errors.js';
 import { GLYPHS, logInfo, logWarning } from '../lib/logger.js';
 import { posix } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
-import { exec, mapWithConcurrency } from '../lib/run.js';
+import { cpuConcurrency, exec, mapWithConcurrency } from '../lib/run.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import { hashFileContent } from './state-serialize.js';
 
@@ -228,9 +228,7 @@ export async function runPdfxOutputValidation(
 
   const binFp = getBinFingerprint(binary);
   const { pendientes, claves, preValidated } = await buildCacheKeys(pdfs, outputDir, binFp, disabled, cache);
-  const results = await mapWithConcurrency(pendientes, Math.min(4, Math.max(1, cpus().length)), (file) =>
-    validatePdfX1a(join(outputDir, file), binary),
-  );
+  const results = await mapWithConcurrency(pendientes, cpuConcurrency(4), (file) => validatePdfX1a(join(outputDir, file), binary));
   const porFile = mapResultsToFiles(pendientes, results);
 
   let validated = preValidated;

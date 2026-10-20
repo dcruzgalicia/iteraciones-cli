@@ -7,7 +7,7 @@ import { DESCRIPCIONES_PREAMBLE } from './filter-descriptions.js';
 
 export type PreambleDocType = 'file' | 'collection' | 'creator' | 'intervention';
 
-const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
+export const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
 const PROJECT_PREAMBLE_DIR = 'preamble';
 
 const PREAMBLE_DIRS: Record<PreambleDocType, { pkg?: string; project: string }> = {
@@ -58,10 +58,12 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string,
     if (excluded.has(name)) continue;
     const delPaqueteBase = join(PKG_PREAMBLE_DIR, `${name}.tex`);
     const candidatas = [
-      ...(cwd === undefined ? [] : [join(cwd, project, `${name}.tex`)]),
-      ...(pkg === undefined ? [] : [join(pkg, `${name}.tex`)]),
-      ...(cwd === undefined ? [] : [join(cwd, PROJECT_PREAMBLE_DIR, `${name}.tex`)]),
-      delPaqueteBase,
+      ...new Set([
+        ...(cwd === undefined ? [] : [join(cwd, project, `${name}.tex`)]),
+        ...(pkg === undefined ? [] : [join(pkg, `${name}.tex`)]),
+        ...(cwd === undefined ? [] : [join(cwd, PROJECT_PREAMBLE_DIR, `${name}.tex`)]),
+        delPaqueteBase,
+      ]),
     ];
     const elegida = (await primeraQueExista(candidatas)) ?? delPaqueteBase;
     const content = await Bun.file(elegida).text();

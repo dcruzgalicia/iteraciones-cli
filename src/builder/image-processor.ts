@@ -1,33 +1,25 @@
 import { mkdir } from 'node:fs/promises';
-import { cpus } from 'node:os';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { fmStringList } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
-import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
+import { cpuConcurrency, exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
+import { resetToolVersionCache, toolVersionMagick } from '../lib/tool-version.js';
+import { toMm } from './latex-preamble.js';
 import { ASSETS_IMAGES_DIR } from './output-layout.js';
 
 const MM_TO_PX_300DPI = 300 / 25.4;
 
-let magickAvailable: boolean | null = null;
-
 const MAGICK_TIMEOUT_MS = 120_000;
 
 export async function detectMagick(): Promise<boolean> {
-  if (magickAvailable !== null) return magickAvailable;
-  try {
-    const proc = Bun.spawn(['magick', '-version'], { stdout: 'ignore', stderr: 'ignore' });
-    magickAvailable = (await proc.exited) === 0;
-  } catch {
-    magickAvailable = false;
-  }
-  return magickAvailable;
+  return (await toolVersionMagick()) !== '';
 }
 
 let warnedMissingMagick = false;
 
 export function resetMagickCache(): void {
-  magickAvailable = null;
+  resetToolVersionCache();
   warnedMissingMagick = false;
 }
 
@@ -148,8 +140,6 @@ async function processImage(
 
 const MD_IMAGE_RE = /!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?/g;
 
-const PT_TO_MM = 0.352778;
-
 const PX_TO_MM_96DPI = 25.4 / 96;
 
 function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | undefined {
@@ -160,21 +150,12 @@ function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | 
   const unit = match[2];
   if (!valueStr || !unit) return undefined;
   const value = Number.parseFloat(valueStr);
-  switch (unit) {
-    case 'pt':
-      return value * PT_TO_MM;
-    case 'mm':
-      return value;
-    case 'cm':
-      return value * 10;
-    case 'px':
-      return value * PX_TO_MM_96DPI;
-    case '%':
-      return pageWidthmm * (value / 100);
-    default:
-      return undefined;
-  }
+  if (unit === 'px') return value * PX_TO_MM_96DPI;
+  if (unit === '%') return pageWidthmm * (value / 100);
+  return toMm(value, unit);
 }
+
+export const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper'] as const;
 
 const MULTILINE_IMAGE_FIELDS = [
   'lowertitleback',
@@ -304,7 +285,7 @@ export function imagePathsMap(imageMap: Map<string, string>, docDir: string, rel
 export function rewriteFmImagePaths(fm: Record<string, unknown>, imageMap: Map<string, string>, docDir: string): Record<string, unknown> {
   if (imageMap.size === 0) return fm;
   const out: Record<string, unknown> = { ...fm };
-  for (const field of ['titleImage', 'publisherImage', 'startpaper', ...MULTILINE_IMAGE_FIELDS]) {
+  for (const field of [...COVER_IMAGE_FIELDS, ...MULTILINE_IMAGE_FIELDS]) {
     const value = out[field];
     if (typeof value === 'string') out[field] = rewriteImagePaths(value, imageMap, docDir);
     else if (Array.isArray(value)) out[field] = value.map((v) => (typeof v === 'string' ? rewriteImagePaths(v, imageMap, docDir) : v));
@@ -333,10 +314,6 @@ function recordProcessed(imageMap: Map<string, string>, processedFiles: string[]
   if (processed !== absPath) processedFiles.push(processed);
 }
 
-function magickConcurrency(): number {
-  return Math.min(4, Math.max(1, cpus().length));
-}
-
 async function collectFrontmatterImageTasks(
   fm: Record<string, unknown>,
   docDir: string,
@@ -344,7 +321,7 @@ async function collectFrontmatterImageTasks(
   imageMap: Map<string, string>,
 ): Promise<{ absPath: string; w: number; h: number; cover: boolean }[]> {
   const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
-  for (const field of ['titleImage', 'publisherImage', 'startpaper']) {
+  for (const field of COVER_IMAGE_FIELDS) {
     const cover = field === 'startpaper';
     const w = cover ? targets.startpaperW : targets.targetW;
     const h = cover ? targets.startpaperH : targets.targetH;
@@ -364,7 +341,7 @@ async function runImageTasks(
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
-  const processed = await mapWithConcurrency(tasks, magickConcurrency(), (task) =>
+  const processed = await mapWithConcurrency(tasks, cpuConcurrency(4), (task) =>
     processImage(task.absPath, task.w, task.h, task.cover, outputDir, naming(task.absPath)),
   );
   for (const [index, result] of processed.entries()) {

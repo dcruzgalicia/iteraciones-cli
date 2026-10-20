@@ -79,7 +79,8 @@ export async function computeBuildMetadata(
   const filtersInvalidated = prevState !== null && prevState.filtersHash !== filtersHash;
   const bibInvalidated = prevState !== null && prevState.bibHash !== bibHashResult.hash;
 
-  const currentFormats: string[] = computeActiveFormats(siteConfig.format);
+  const active = computeActiveFormats(siteConfig.format);
+  const currentFormats: string[] = active;
 
   let newFormats: string[] = [];
   let removedFormats: string[] = [];
@@ -89,7 +90,7 @@ export async function computeBuildMetadata(
     removedFormats = prevState.activeFormats.filter((f) => !currentFormats.includes(f));
   }
 
-  const activeFormats = toActiveFormats(computeActiveFormats(siteConfig.format));
+  const activeFormats = toActiveFormats(active);
   const generateLatex = activeFormats.pdf || activeFormats.latex;
   const needsCss = activeFormats.html;
 

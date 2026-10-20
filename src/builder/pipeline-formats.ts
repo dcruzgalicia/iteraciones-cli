@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises';
-import { basename, dirname, join, normalize, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, normalize, relative, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
@@ -330,9 +330,7 @@ export async function writeDistMarkdown(p: {
           'build',
         );
       }
-      return relative(outDir, memberMarkdownPath(p.memberSlugs, outputDir, f))
-        .split(sep)
-        .join('/');
+      return posix(relative(outDir, memberMarkdownPath(p.memberSlugs, outputDir, f)));
     });
   }
   const base = merge ? collectionBaseContent(p.entries, 'markdown', p.content) : p.content;
@@ -354,6 +352,13 @@ function interventionSectionRaw(lineLength = 0.5): string {
 \`\`\``;
 }
 
+function entryHeadings(e: CollectionEntry): { creator: string; title: string } {
+  return {
+    creator: e.creator.length > 0 ? e.creator.join(', ') : AUTORA_POR_DEFECTO,
+    title: e.title || TITULO_POR_DEFECTO,
+  };
+}
+
 function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean): string[] {
   const parts: string[] = [];
   if (e.type === 'intervention') {
@@ -364,8 +369,7 @@ function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean): strin
       parts.push('\\thispagestyle{empty}\n\\null\\newpage\n'.repeat(e.pages).trim());
     }
   } else {
-    const creator = e.creator.length > 0 ? e.creator.join(', ') : AUTORA_POR_DEFECTO;
-    const title = e.title || TITULO_POR_DEFECTO;
+    const { creator, title } = entryHeadings(e);
     parts.push(`\\chapter{${creator}}`);
     if (isHeader) parts.push('\\thispagestyle{empty}');
     if (e.subtitle) {
@@ -407,8 +411,7 @@ const MARKDOWN_HEADINGS: Headings = [
 function buildCollectionSections(entries: CollectionEntry[], headings: Headings): string {
   const parts: string[] = [];
   for (const e of entries) {
-    const creator = e.creator.length > 0 ? e.creator.join(', ') : AUTORA_POR_DEFECTO;
-    const title = e.title || TITULO_POR_DEFECTO;
+    const { creator, title } = entryHeadings(e);
     parts.push(`${headings[0][0]}${creator}${headings[0][1]}`);
     parts.push(`${headings[1][0]}${title}${headings[1][1]}`);
     if (e.subtitle) parts.push(`${headings[2][0]}${e.subtitle}${headings[2][1]}`);
@@ -427,9 +430,7 @@ export function memberHtmlHrefs(collectionPath: string, entries: CollectionEntry
   for (const e of entries) {
     const slug = slugIndex.get(e.file)?.slug;
     if (slug === undefined) continue;
-    const html = join(dirname(e.file), `${htmlSlugFor(e.file, slug)}.html`)
-      .split(sep)
-      .join('/');
+    const html = posix(join(dirname(e.file), `${htmlSlugFor(e.file, slug)}.html`));
     hrefs.set(e.file, relativeHref(dir, html));
   }
   return hrefs;

@@ -1,3 +1,4 @@
+import { cpus } from 'node:os';
 import { logWarning } from './logger.js';
 import { recordScriptExec } from './script-recorder.js';
 
@@ -133,6 +134,10 @@ async function awaitProcess(command: string, proc: Spawned, options: RunOptions)
     );
   }
   return { stdout, stderr, exitCode };
+}
+
+export function cpuConcurrency(max: number): number {
+  return Math.min(max, Math.max(1, cpus().length));
 }
 
 interface MapConcurrencyOptions {
