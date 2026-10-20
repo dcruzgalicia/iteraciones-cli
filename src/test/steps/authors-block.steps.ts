@@ -30,6 +30,16 @@ Given('el proyecto de una collection con una creadora', () => {
   proyecto('Contenido.');
 });
 
+Given('el proyecto de un texto con una creadora', () => {
+  escribirEnProyecto('iteraciones.config.yaml', CONFIG);
+  escribirEnProyecto('texto.md', '---\ntitle: Un texto\ncreator: Ana García\n---\n\nContenido.\n');
+  escribirEnProyecto('ana.md', '---\ntype: creator\nname: Ana García\n---\n\nBio de Ana.\n');
+});
+
+Given('el proyecto cambia la creadora', () => {
+  escribirEnProyecto('ana.md', '---\ntype: creator\nname: Ana García\n---\n\nBio nueva.\n');
+});
+
 Given('el proyecto de una collection que cita su bibliografía', () => {
   escribirEnProyecto('iteraciones.config.yaml', CONFIG_BIB);
   escribirEnProyecto('bibliography.bib', '@book{k1, title={T}, author={Ana García}}\n');
@@ -43,6 +53,12 @@ Given('el proyecto no tiene el archivo {string}', (relativa: string) => {
 When('compilo el proyecto para leer su LaTeX', async () => {
   await capture(() => build(world.root, {}));
   local.archivo = 'antologia-por-editora.tex';
+  local.tex = readFileSync(join(world.root, 'dist', 'files', local.archivo), 'utf8');
+});
+
+When('compilo el proyecto para leer el LaTeX del texto', async () => {
+  await capture(() => build(world.root, {}));
+  local.archivo = 'un-texto-por-ana-garcia.tex';
   local.tex = readFileSync(join(world.root, 'dist', 'files', local.archivo), 'utf8');
 });
 
@@ -73,6 +89,15 @@ Then('el bloque va antes de {string}', (ancla: string) => {
   if (bloque > donde) {
     throw new Error(`el bloque está en ${bloque} y el ancla en ${donde}: quedó después`);
   }
+});
+
+Then('el LaTeX de {string} pone {string} antes que {string}', (archivo: string, primero: string, segundo: string) => {
+  const tex = texDe(archivo);
+  const a = tex.indexOf(primero);
+  const b = tex.indexOf(segundo);
+  if (a < 0) throw new Error(`el .tex no tiene ${JSON.stringify(primero)}`);
+  if (b < 0) throw new Error(`el .tex no tiene ${JSON.stringify(segundo)}`);
+  if (a >= b) throw new Error(`${JSON.stringify(primero)} (${a}) no va antes que ${JSON.stringify(segundo)} (${b})`);
 });
 
 Given('el LaTeX de la colección es {string}', (tex: string) => {

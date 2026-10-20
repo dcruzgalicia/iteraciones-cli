@@ -23,7 +23,7 @@ import { selectListMembers } from './list-filter.js';
 import { DIST_FILES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
-import { collectionCreatorDocPaths, resolveCollectionCreatorDocs } from './pipeline-formats.js';
+import { collectionCreatorDocPaths, creatorDocPathsFor, resolveCollectionCreatorDocs } from './pipeline-formats.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths, validateConfigRules } from './project-validator.js';
 
@@ -305,6 +305,30 @@ async function resolveCollectionMembers(
   }
 }
 
+/**
+ * Las creadoras de un documento: las del frontmatter. Se usa para saber qué
+ * documentos hay que rehacer cuando cambia una creadora.
+ */
+function creatorDocsDe(entry: DiscoveryEntry, discoveryIndex: Map<string, DiscoveryEntry>): string[] {
+  const type = entry.type ?? 'file';
+  if (type !== 'file') return [];
+  const nombres = [...entry.creator, ...parseAuthors(entry.fm?.contributor)];
+  return creatorDocPathsFor(nombres, discoveryIndex);
+}
+
+function anotaCreadoras(
+  relativePath: string,
+  entry: DiscoveryEntry,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  creatorOwners: Map<string, string[]>,
+): void {
+  for (const creatorDoc of creatorDocsDe(entry, discoveryIndex)) {
+    const list = creatorOwners.get(creatorDoc);
+    if (list === undefined) creatorOwners.set(creatorDoc, [relativePath]);
+    else list.push(relativePath);
+  }
+}
+
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Map<string, string[]>> {
   const creatorOwners = new Map<string, string[]>();
   const owners = new Map<string, string[]>();
@@ -316,6 +340,10 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
     }
     if (entry.type !== 'collection' || !entry.files) continue;
     await resolveCollectionMembers(relativePath, entry, discoveryIndex, cwd, creatorOwners, owners);
+  }
+
+  for (const [relativePath, entry] of discoveryIndex) {
+    anotaCreadoras(relativePath, entry, discoveryIndex, creatorOwners);
   }
 
   for (const [ruta, entry] of discoveryIndex) {
