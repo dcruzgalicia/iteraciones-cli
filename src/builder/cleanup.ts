@@ -4,6 +4,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import type { FormatKey } from '../config/site-config.js';
 import { resolveBooleanField } from '../lib/frontmatter-fields.js';
 import { isDir, isInside } from '../lib/paths.js';
+import { DEFAULT_LISTS } from './default-lists.js';
 import { htmlSlugFor } from './discover.js';
 import { LATEXMK_AUX_EXTENSIONS } from './export.js';
 import {
@@ -107,6 +108,20 @@ export async function removeExtraHtmlPages(
   return removed;
 }
 
+/** Borra las listas por defecto (y sus páginas) de la salida. */
+export async function removeDefaultLists(outputDir: string): Promise<number> {
+  let removed = 0;
+  for (const lista of DEFAULT_LISTS) {
+    const path = join(outputDir, `${lista.slug}.html`);
+    if (await exists(path)) {
+      await rm(path, { force: true });
+      removed++;
+    }
+    removed += await removeExtraHtmlPages(outputDir, '.', lista.slug, 0, new Map());
+  }
+  return removed;
+}
+
 async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>): Promise<number> {
   const cacheBase = join(ctx.cwd, '.iteraciones');
   let removed = 0;
@@ -159,7 +174,10 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
     }
   }
 
-  if (!sinHtml) await removeHtmlAssets(ctx.outputDir);
+  if (!sinHtml) {
+    await removeHtmlAssets(ctx.outputDir);
+    removed += await removeDefaultLists(ctx.outputDir);
+  }
   return removed;
 }
 

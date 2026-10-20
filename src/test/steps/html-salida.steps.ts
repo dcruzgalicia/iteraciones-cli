@@ -213,7 +213,7 @@ Then('el chip de la banda nombra el type de cada documento', () => {
     ['antologia.html', 'Colección'],
     ['autora.html', 'Creadora'],
   ] as const) {
-    if (!new RegExp(`>\\s*${chip}\\s*</h2>`).test(salida(archivo))) {
+    if (!new RegExp(`>\\s*${chip}\\s*</a>`).test(salida(archivo))) {
       throw new Error(`${archivo} no tiene el chip ${JSON.stringify(chip)}`);
     }
   }

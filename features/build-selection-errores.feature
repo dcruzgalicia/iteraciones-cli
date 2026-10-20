@@ -18,10 +18,14 @@ Característica: qué pasa cuando la selección está mal
       ana-garcia.md
       capitulo-uno-por-ana-garcia.html
       capitulo-uno-por-ana-garcia.md
+      coleccion.html
+      creadora.html
       index.html
       index.md
+      lista.html
       miembros/miembro-por-bruno-diaz.html
       miembros/miembro-por-bruno-diaz.md
+      texto.html
       """
 
     Escenario: Un miembro de files[] se queda solo en él
@@ -31,8 +35,12 @@ Característica: qué pasa cuando la selección está mal
       Cuando hago un build solo de los paths indicados
       Entonces las salidas de documento son:
       """
+      coleccion.html
+      creadora.html
+      lista.html
       miembros/miembro-por-bruno-diaz.html
       miembros/miembro-por-bruno-diaz.md
+      texto.html
       """
 
   Regla de negocio: Una selección imposible es un error, no una variante

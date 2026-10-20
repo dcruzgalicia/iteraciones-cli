@@ -8,7 +8,7 @@ import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { generateCoverImages } from './export.js';
 import { PDF_WORK_BASE } from './output-layout.js';
 import { createPdfConsumer } from './pdf-pool.js';
-import { processDocumentFormats } from './pipeline-formats.js';
+import { emitDefaultLists, processDocumentFormats } from './pipeline-formats.js';
 import {
   buildPoolContexts,
   type ExportContext,
@@ -106,6 +106,16 @@ export async function documentPipeline(
       await pdfConsumer.quiesce();
     },
   });
+
+  if (activeFormats.html) {
+    await emitDefaultLists({
+      cwd: ctx.cwd,
+      outputDir: ctx.outputDir,
+      renderCtx,
+      exportCtx,
+      discoveryIndex,
+    });
+  }
 
   pdfConsumer.markProducerDone();
 

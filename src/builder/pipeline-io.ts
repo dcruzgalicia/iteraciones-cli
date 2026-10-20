@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { BuildError, translateSystemError } from '../lib/errors.js';
-import { parseFrontmatterRecord, splitFrontmatter } from '../lib/frontmatter.js';
+import { applyCreatorTitle, parseFrontmatterRecord, splitFrontmatter } from '../lib/frontmatter.js';
 import type { BuildMetadata } from './build-planner.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { docProducesFormat, primaryOutputExtension } from './output-layout.js';
@@ -96,6 +96,7 @@ export function parseFileFrontmatter(
   const { yaml, body } = splitFrontmatter(content);
   if (!yaml) return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, body };
   const parsed = parseFrontmatterRecord(yaml, label);
+  applyCreatorTitle(parsed);
   return {
     title: typeof parsed.title === 'string' ? parsed.title : '',
     creator: parseAuthors(parsed.creator),

@@ -12,12 +12,21 @@ import { posix } from '../lib/paths.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
 import { htmlOwner, removeExtraHtmlPages } from './cleanup.js';
 import { extractFragment } from './collection-fragment.js';
+import { DEFAULT_LISTS, defaultListHref } from './default-lists.js';
 import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import type { HtmlDocType, HtmlPageVars } from './html-composer.js';
-import { imagePathsMap, relImageMapFor, rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
+import {
+  imageNamerFor,
+  imagePathsMap,
+  processDocumentImages,
+  relImageMapFor,
+  rewriteFmImagePaths,
+  rewriteImagePaths,
+  scanInlineImages,
+} from './image-processor.js';
 import {
   buildTexDistribution,
   composeLatexFinalOutput,
@@ -56,7 +65,7 @@ function docChipLabel(type: string | undefined): string {
   return 'Texto';
 }
 
-interface DocumentOutputs {
+export interface DocumentOutputs {
   slug: string;
   outSlug: string;
   dir: string;
@@ -88,7 +97,7 @@ function xmpMetadataFor(
   return meta as PdfXmpMetadata;
 }
 
-async function writeImagePaths(
+export async function writeImagePaths(
   doc: BuildDocument,
   cwd: string,
   format: 'latex' | 'html' | 'epub',
@@ -211,10 +220,11 @@ function htmlVars(args: {
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: docChipLabel(doc.frontmatter.type),
+    docChipHref: defaultListHref(dir, doc.frontmatter.type),
   };
 }
 
-async function emitHtmlPage(
+export async function emitHtmlPage(
   doc: BuildDocument,
   outputs: DocumentOutputs,
   renderCtx: RenderContext,
@@ -480,6 +490,7 @@ export function creatorHrefs(discoveryIndex: Map<string, DiscoveryEntry>, fromDi
     if (entry.type !== 'creator') continue;
     const nombre = entry.fm?.name ?? entry.fm?.title;
     if (typeof nombre !== 'string' || nombre.trim() === '') continue;
+    if (hrefs.has(nombre)) continue;
     const html = join(dirname(ruta), `${htmlSlugFor(ruta, entry.slug)}.html`)
       .split(sep)
       .join('/');
@@ -515,11 +526,12 @@ function collectionCards(
   desde: number,
   hasta: number,
   creatorHrefs: Map<string, string>,
+  dir: string,
 ): string {
   const cards: string[] = [];
   if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
   for (const e of printableEntries(entries).slice(desde, hasta)) {
-    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs));
+    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir));
   }
   return cards.join('\n\n');
 }
@@ -529,9 +541,10 @@ export function collectionCardsContent(
   memberHrefs: Map<string, string>,
   content: string,
   creatorHrefs: Map<string, string> = new Map(),
+  dir = '.',
 ): string {
   if (entries.length === 0) return content;
-  return collectionCards(entries, memberHrefs, splitFrontmatter(content).body.trim(), 0, Number.POSITIVE_INFINITY, creatorHrefs);
+  return collectionCards(entries, memberHrefs, splitFrontmatter(content).body.trim(), 0, Number.POSITIVE_INFINITY, creatorHrefs, dir);
 }
 
 /**
@@ -544,13 +557,14 @@ export function collectionCardsPages(
   content: string,
   pageSize: number,
   creatorHrefs: Map<string, string> = new Map(),
+  dir = '.',
 ): string[] {
   if (entries.length === 0) return [content];
   const imprimibles = printableEntries(entries);
   const intro = splitFrontmatter(content).body.trim();
   const paginas: string[] = [];
   for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
-    paginas.push(collectionCards(entries, memberHrefs, desde === 0 ? intro : '', desde, desde + pageSize, creatorHrefs));
+    paginas.push(collectionCards(entries, memberHrefs, desde === 0 ? intro : '', desde, desde + pageSize, creatorHrefs, dir));
   }
   return paginas.length > 0 ? paginas : [content];
 }
@@ -610,10 +624,20 @@ const MEMBER_BADGE_CLASSES =
 
 const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora' };
 
+const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
+
+/** El chip de tipo, con enlace a la lista por defecto de ese type. */
+function chipHtml(label: string, type: string | undefined, dir: string): string {
+  const href = defaultListHref(dir, type);
+  const chip = `<h2 class="${MEMBER_PILL_CLASSES}">${label}</h2>`;
+  if (href === undefined) return chip;
+  return `<h2 class="${MEMBER_PILL_CLASSES}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
+}
+
 const MEMBER_LINK_CLASSES =
   'text-accent-700 underline decoration-accent-500/60 underline-offset-4 transition-colors duration-200 hover:decoration-accent-500 dark:text-accent-300';
 
-function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>): string {
+function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>, dir: string): string {
   const creator =
     e.creator.length > 0
       ? e.creator.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs)}</span>`).join(', ')
@@ -625,7 +649,7 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
   const typeLabel = MEMBER_TYPE_LABEL[e.type ?? 'file'];
   if (typeLabel !== undefined) {
     card.push(
-      `<div class="flex items-start justify-between gap-4"><h2 class="${MEMBER_PILL_CLASSES}">${typeLabel}</h2><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
+      `<div class="flex items-start justify-between gap-4">${chipHtml(typeLabel, e.type, dir)}<span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
       '',
     );
   }
@@ -999,6 +1023,109 @@ async function emitCollectionMarkdown(
     merge: isCollection && formatCfg?.markdown?.merge === true,
     entries: collectionEntries,
   });
+}
+
+function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
+  const miembros: string[] = [];
+  for (const [ruta, entry] of discoveryIndex) {
+    if ((entry.type ?? 'file') === type) miembros.push(ruta);
+  }
+  return miembros;
+}
+
+function imagenesDeLosFragmentos(entradas: CollectionEntry[], cwd: string): string[] {
+  const imagenes: string[] = [];
+  for (const entrada of entradas) {
+    const fragmento = extractFragment(entrada.body);
+    if (fragmento === '') continue;
+    imagenes.push(...scanInlineImages(fragmento, dirname(join(cwd, entrada.file))));
+  }
+  return imagenes;
+}
+
+/**
+ * Las listas por defecto: una página por type, con los documentos de ese type
+ * como tarjetas. Se escriben en la raíz de la salida, sin archivo fuente.
+ */
+export async function emitDefaultLists(args: {
+  cwd: string;
+  outputDir: string;
+  renderCtx: RenderContext;
+  exportCtx: ExportContext;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+}): Promise<void> {
+  const { cwd, outputDir, renderCtx, exportCtx, discoveryIndex } = args;
+  const { plan, formatCfg } = renderCtx;
+  if (!plan.activeFormats.html) return;
+
+  const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
+  const hrefsCreadores = creatorHrefs(discoveryIndex, '.');
+
+  const listas = [];
+  for (const lista of DEFAULT_LISTS) {
+    const miembros = miembrosDeUnType(discoveryIndex, lista.type);
+    const entradas = await readCollectionEntries(miembros, `${lista.slug}.md`, [cwd]);
+    listas.push({ ...lista, miembros, entradas });
+  }
+
+  const dimensiones = renderCtx.pageDimensions ?? detectPageSize([]);
+  const procesadas = await processDocumentImages(
+    imagenesDeLosFragmentos(
+      listas.flatMap((l) => l.entradas),
+      cwd,
+    ),
+    {},
+    cwd,
+    dimensiones,
+    renderCtx.cropActive,
+    join(outputDir, ASSETS_IMAGES_DIR),
+    imageNamerFor('lista'),
+    undefined,
+    renderCtx.pdfxActive,
+  );
+
+  for (const { slug, title, type, miembros, entradas } of listas) {
+    const dueno = htmlOwner(discoveryIndex, '.', slug);
+    if (dueno !== undefined) {
+      logWarning(
+        `no se escribió la lista de ${type} porque "${slug}.html" es el archivo de "${dueno}": renombra ese documento (con "slug:" en su frontmatter) para que la lista exista`,
+        'build',
+      );
+      continue;
+    }
+
+    const memberHrefs = memberHtmlHrefs(`${slug}.md`, entradas, discoveryIndex);
+    const paginas = collectionCardsPages(entradas, memberHrefs, '', pageSize, hrefsCreadores, '.');
+    const contenidos = paginas.map((base, indice) => base + paginationNav('.', slug, indice + 1, paginas.length));
+
+    const doc: BuildDocument = {
+      filePath: join(cwd, `${slug}.md`),
+      relativePath: `${slug}.md`,
+      frontmatter: { title, date: '', creator: [], type: 'list', files: miembros },
+    };
+    const outputs: DocumentOutputs = {
+      slug,
+      outSlug: slug,
+      dir: '.',
+      fm: { title, type: 'list' },
+      content: '',
+      outBase: (name: string): string => join(outputDir, name),
+    };
+
+    const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
+    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores);
+  }
+}
+
+/**
+ * El archivo de rutas de imágenes de una lista por defecto. No usa el nombre
+ * del documento (que no existe) para no pisar el de un documento de verdad.
+ */
+async function writeListImagePaths(cwd: string, slug: string, imageMap: Map<string, string>): Promise<string> {
+  const path = join(cwd, '.iteraciones', 'paths', `_lista-${slug}.html.json`);
+  await mkdir(dirname(path), { recursive: true });
+  await Bun.write(path, `${JSON.stringify(imagePathsMap(imageMap, cwd, true))}\n`);
+  return path;
 }
 
 export async function processDocumentFormats(
