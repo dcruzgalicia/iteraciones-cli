@@ -34,6 +34,9 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
 const IDENTITY_APERTURA = '    <div id="card-identity" class="break-inside-avoid pb-6">\n\n';
 const FOOTER_APERTURA = '    <div id="card-identity-footer" class="break-inside-avoid">\n';
 
+const EXTRAS_CARD = '    $if(extras)$\n    <div class="break-inside-avoid pb-6">$extras$</div>\n    $endif$\n';
+const PAGINATION_CARD = '    $if(pagination)$\n    <div class="break-inside-avoid pb-6">$pagination$</div>\n    $endif$\n';
+
 function comoFooter(card: string): string {
   return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA);
 }
@@ -56,6 +59,11 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
     else cards.push(card);
     if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
   }
+  // Las tarjetas de creadoras y de colecciones, y el nav de paginación, van
+  // después de todo lo demás y antes del footer: son tarjetas del masonry, no
+  // parte de la del texto.
+  cards.push(EXTRAS_CARD);
+  cards.push(PAGINATION_CARD);
   const logoBlock = logoInline
     ? `<span class="flex h-10 w-10 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
     : '';
@@ -89,6 +97,12 @@ export interface HtmlPageVars {
 
   docChip?: string;
   docChipHref?: string;
+
+  /** Las tarjetas de creadoras y de colecciones, ya en HTML. */
+  extras?: string;
+
+  /** El nav de paginación, ya en HTML. */
+  pagination?: string;
 
   authors?: string[];
   collectionCreator?: string[];

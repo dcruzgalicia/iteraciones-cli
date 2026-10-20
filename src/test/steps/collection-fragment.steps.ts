@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { extractFragment } from '../../builder/collection-fragment.js';
@@ -321,5 +322,39 @@ Then('el archivo {string} no dice {string}', async (relativa: string, texto: str
   const contenido = await Bun.file(join(world.root, relativa)).text();
   if (contenido.includes(texto)) {
     throw new Error(`${relativa} sí dice ${JSON.stringify(texto)} y no debería`);
+  }
+});
+
+Then('el nav de la página {int} está en su propia tarjeta', (_pagina: number) => {
+  const html = readFileSync(join(world.root, 'dist', 'files', 'antologia-2.html'), 'utf8');
+  const nav = html.indexOf('<nav class=');
+  if (nav < 0) throw new Error('la página no tiene nav');
+  const antes = html.slice(Math.max(0, nav - 300), nav);
+  if (!antes.includes('break-inside-avoid')) {
+    throw new Error('el nav no está dentro de una tarjeta del masonry');
+  }
+  const article = html.indexOf('<article');
+  const fin = html.indexOf('</article>');
+  if (article >= 0 && fin >= 0 && article < nav && nav < fin) {
+    throw new Error('el nav sigue dentro del artículo del texto');
+  }
+});
+
+Then('el nav de la página {int} no está dentro del texto', (_pagina: number) => {
+  const html = readFileSync(join(world.root, 'dist', 'files', 'antologia-2.html'), 'utf8');
+  const nav = html.indexOf('<nav class=');
+  const article = html.indexOf('<article');
+  const fin = html.indexOf('</article>');
+  if (article >= 0 && fin >= 0 && article < nav && nav < fin) {
+    throw new Error('el nav sigue dentro del artículo del texto');
+  }
+});
+
+Then('el nombre de la creadora de la tarjeta no usa el color del accent', () => {
+  const html = world.html as string;
+  const linea = html.match(/<h2 class="text-center text-xl">([\s\S]*?)<\/h2>/);
+  if (linea === null) throw new Error('la tarjeta no tiene la línea de la creadora');
+  if (linea[1]?.includes('text-accent') === true) {
+    throw new Error(`la creadora usa el color del accent: ${linea[1]}`);
   }
 });

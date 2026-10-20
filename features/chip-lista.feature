@@ -36,6 +36,14 @@ Característica: El chip de tipo lleva a la lista de ese type
       Entonces el archivo "dist/files/lista.html" existe
       Y el archivo "dist/files/lista.html" no dice "tarjeta-fragmento"
 
+    Escenario: La lista de creadoras no pone "Anónima" en las tarjetas
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una creadora llamada "Ana García"
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/creadora.html" dice "Ana García"
+      Y el archivo "dist/files/creadora.html" no dice "Anónima"
+
   Regla de negocio: El chip es un enlace
 
     Escenario: El chip de un texto lleva a la lista de textos

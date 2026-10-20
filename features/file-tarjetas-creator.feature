@@ -32,6 +32,15 @@ Característica: Las tarjetas que van al final de la página de un texto
       Entonces el HTML del texto pone "Cuerpo del texto." antes que "Bio de Ana García."
       Y el HTML del texto pone "Bio de Ana García." antes que "card-identity-footer"
 
+    Escenario: La biografía es una tarjeta propia, no va dentro de la del texto
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una creadora llamada "Ana García"
+      Y un texto de "Ana García"
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces la biografía del texto está fuera de su artículo
+      Y la biografía del texto está en su propia tarjeta
+
   Regla de negocio: Las colecciones donde vive el texto
 
     Escenario: El texto lista las colecciones donde está
@@ -40,7 +49,7 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y una colección de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Colecciones y listas"
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "También está en"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "href=\"./antologia-por-ana-garcia.html\""
 
     Escenario: Un texto que no está en ninguna colección no lleva esa tarjeta
@@ -48,4 +57,4 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y un texto de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "Colecciones y listas"
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "También está en"

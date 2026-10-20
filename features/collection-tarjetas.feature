@@ -109,8 +109,17 @@ Característica: la tarjeta de cada miembro de una colección
       Entonces el HTML dice "Leer el texto completo →"
       Y el HTML dice "href=\"./documento-por-autora-a.html\""
 
-  Regla de negocio: La tarjeta dice en qué posición de files[] está el archivo
+  Regla de negocio: El enlace de la creadora va en negro
 
+    Escenario: El nombre de la creadora no usa el color del accent
+      Dado que la colección tiene 1 miembros
+      Y que la colección tiene el cuerpo propio:
+      """
+      """
+      Cuando compogo las tarjetas de la página HTML
+      Entonces el nombre de la creadora de la tarjeta no usa el color del accent
+
+  Regla de negocio: La tarjeta dice en qué posición de files[] está el archivo
     Escenario: El badge lleva la posición del archivo en files[]
       Dado que la colección tiene 3 miembros
       Y que la colección tiene el cuerpo propio:

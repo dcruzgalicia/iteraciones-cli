@@ -7,7 +7,8 @@ import { BuildError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
-import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
+import { minifyHtml } from '../lib/minify.js';
+import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { posix } from '../lib/paths.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
 import { htmlOwner, removeExtraHtmlPages } from './cleanup.js';
@@ -193,8 +194,10 @@ function htmlVars(args: {
   hasHomePage: boolean;
   sufijo: string;
   creatorHrefs: Map<string, string>;
+  extras: string;
+  pagination: string;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, sufijo, creatorHrefs } = args;
+  const { doc, outputs, renderCtx, formats, hasHomePage, sufijo, creatorHrefs, extras, pagination } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
@@ -221,6 +224,8 @@ function htmlVars(args: {
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: docChipLabel(doc.frontmatter.type),
     docChipHref: defaultListHref(dir, doc.frontmatter.type),
+    extras: extras === '' ? undefined : extras,
+    pagination: pagination === '' ? undefined : pagination,
   };
 }
 
@@ -233,6 +238,7 @@ export async function emitHtmlPage(
   imagePaths?: string,
   paginas?: string[],
   creatorHrefs: Map<string, string> = new Map(),
+  extras = '',
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -248,6 +254,7 @@ export async function emitHtmlPage(
     const slugPagina = indice === 0 ? outSlug : `${outSlug}-${indice + 1}`;
     const htmlPath = outBase(`${slugPagina}${primaryOutputExtension('html')}`);
     const sufijo = indice === 0 ? '' : ` (${indice + 1}/${contenidos.length})`;
+    const pagination = paginationNav(dir, outSlug, indice + 1, contenidos.length);
     const html = await htmlPageFromMarkdown(contenido, doc, {
       cwd,
       inputTarget: await collectionPandocInput(doc, cwd, outSlug, 'html'),
@@ -255,7 +262,7 @@ export async function emitHtmlPage(
       templatePath: exportCtx.templates[htmlKindFor(htmlType)],
       refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
       docType: htmlType,
-      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, sufijo, creatorHrefs }),
+      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, sufijo, creatorHrefs, extras, pagination }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
       bibOptions: exportCtx.bibOptions,
@@ -516,7 +523,7 @@ export function nombresEnlazados(nombres: string[], hrefs: Map<string, string>):
 function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>): string {
   const href = hrefs.get(nombre);
   if (href === undefined) return nombre;
-  return `<a href="${href}" class="text-accent-700 underline decoration-accent-500/60 underline-offset-4 hover:decoration-accent-500 dark:text-accent-300">${nombre}</a>`;
+  return `<a href="${href}" class="underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current">${nombre}</a>`;
 }
 
 function collectionCards(
@@ -576,7 +583,8 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
   return body.trim() === '' ? sections : `${sections}\n\n${body}`;
 }
 
-const PAGINATION_NAV_CLASSES = '[column-span:all] my-10 flex flex-wrap items-center justify-between gap-4 text-lg';
+const PAGINATION_CARD_CLASSES =
+  'relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5';
 
 const PAGINATION_LINK_CLASSES =
   'rounded-full border border-accent-500/40 bg-accent-500/10 px-4 py-2 text-accent-700 hover:bg-accent-500/20 dark:text-accent-300';
@@ -592,7 +600,7 @@ export function paginationNav(dir: string, outSlug: string, pagina: number, tota
   const anterior = pagina > 1 ? enlace(pagina - 1, '← Anterior') : '<span></span>';
   const siguiente = pagina < total ? enlace(pagina + 1, 'Siguiente →') : '<span></span>';
   const estado = `<span class="text-sm font-mono text-accent-600 dark:text-accent-400">Página ${pagina} de ${total}</span>`;
-  return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}${estado}${siguiente}</nav>`;
+  return `<nav class="${PAGINATION_CARD_CLASSES} flex flex-wrap items-center justify-between gap-4 text-lg">${anterior}${estado}${siguiente}</nav>`;
 }
 
 function assertPaginasLibres(relativePath: string, dir: string, outSlug: string, total: number, discoveryIndex: Map<string, DiscoveryEntry>): void {
@@ -634,8 +642,7 @@ function chipHtml(label: string, type: string | undefined, dir: string): string 
   return `<h2 class="${MEMBER_PILL_CLASSES}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
 }
 
-const MEMBER_LINK_CLASSES =
-  'text-accent-700 underline decoration-accent-500/60 underline-offset-4 transition-colors duration-200 hover:decoration-accent-500 dark:text-accent-300';
+const MEMBER_LINK_CLASSES = 'underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current';
 
 const EXTRA_CARD_CLASSES = `relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
@@ -658,7 +665,7 @@ export function containersCard(contenedores: { titulo: string; href: string }[])
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    '<h2 class="text-center text-xl uppercase tracking-wide">Colecciones y listas</h2>',
+    '<h2 class="text-center text-xl uppercase tracking-wide">También está en</h2>',
     '',
     items,
     '',
@@ -666,11 +673,48 @@ export function containersCard(contenedores: { titulo: string; href: string }[])
   ].join('\n');
 }
 
+/**
+ * Las tarjetas que van después del texto: la biografía de cada creadora y las
+ * colecciones donde vive el documento.
+ *
+ * Los bios son Markdown, así que se convierten aparte: si entraran en el
+ * cuerpo del documento quedarían dentro de su tarjeta.
+ */
+async function buildExtrasHtml(args: {
+  creatorDocs: CreatorDoc[];
+  contenedores: { titulo: string; href: string }[];
+  filters: ExportContext['filters'];
+  imagePaths?: string;
+  sourcePath: string;
+}): Promise<string> {
+  const partes: string[] = [];
+  for (const doc of args.creatorDocs) partes.push(creatorCard(doc));
+  if (args.contenedores.length > 0) partes.push(containersCard(args.contenedores));
+  if (partes.length === 0) return '';
+
+  const extraArgs = ['--shift-heading-level-by=4'];
+  for (const f of [...args.filters.semantic, ...args.filters.user, ...args.filters.flags, ...args.filters.html]) {
+    extraArgs.push('--lua-filter', f);
+  }
+  const html = await execPandoc({
+    input: partes.join('\n\n'),
+    sourcePath: args.sourcePath,
+    from: MD_READER,
+    to: 'html5',
+    extraArgs,
+    env: imagePathsEnv(args.imagePaths),
+  });
+  return minifyHtml(html);
+}
+
 function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>, dir: string): string {
+  // Un type creator no tiene creator: su tarjeta muestra el name y nada más.
   const creator =
-    e.creator.length > 0
-      ? e.creator.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs)}</span>`).join(', ')
-      : AUTORA_POR_DEFECTO;
+    e.type === 'creator'
+      ? ''
+      : e.creator.length > 0
+        ? e.creator.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs)}</span>`).join(', ')
+        : AUTORA_POR_DEFECTO;
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body);
 
@@ -682,11 +726,10 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
       '',
     );
   }
-  card.push(
-    `<h2 class="text-center text-xl">${creator}</h2>`,
-    '',
-    `<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300">${title}</h3>`,
-  );
+  if (creator !== '') {
+    card.push(`<h2 class="text-center text-xl">${creator}</h2>`, '');
+  }
+  card.push(`<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300">${title}</h3>`);
   if (e.subtitle) card.push('', `<h4 class="text-center text-xl uppercase tracking-wide">${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
@@ -960,18 +1003,6 @@ function contenedoresDe(doc: BuildDocument, dir: string, discoveryIndex: Map<str
   });
 }
 
-/**
- * Las tarjetas que van al final de la página de un documento: la biografía de
- * cada creadora y las colecciones y listas donde vive.
- */
-export function extrasDelDocumento(doc: BuildDocument, dir: string, discoveryIndex: Map<string, DiscoveryEntry>, creatorDocs: CreatorDoc[]): string {
-  const cards: string[] = creatorDocs.map(creatorCard);
-  const contenedores = contenedoresDe(doc, dir, discoveryIndex);
-  if (contenedores.length > 0) cards.push(containersCard(contenedores));
-  if (cards.length === 0) return '';
-  return `\n\n${cards.join('\n\n')}\n\n`;
-}
-
 async function emitCollectionFormats(
   doc: BuildDocument,
   outputs: DocumentOutputs,
@@ -1035,13 +1066,18 @@ async function emitCollectionFormats(
     const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
     const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize, hrefsCreadores, outputs.dir);
     assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
-    const extras = extrasDelDocumento(doc, outputs.dir, discoveryIndex, creatorDocs);
-    const contenidos = paginas.map((base, indice) =>
-      prependLinksMarkdown(base + paginationNav(outputs.dir, outputs.outSlug, indice + 1, paginas.length) + extras, creatorLinks),
-    );
 
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores);
+    const extras = await buildExtrasHtml({
+      creatorDocs,
+      contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
+      filters: exportCtx.filters,
+      imagePaths,
+      sourcePath: doc.filePath,
+    });
+    const contenidos = paginas.map((base) => prependLinksMarkdown(base, creatorLinks));
+
+    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, extras);
     await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
   }
 
