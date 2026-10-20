@@ -68,6 +68,8 @@ const ImageFieldsSchema = {
   titleImage: z.string().optional(),
   publisherImage: z.union([z.string(), z.array(z.string())]).optional(),
   startpaper: z.string().optional(),
+  frontCover: z.string().optional(),
+  backCover: z.string().optional(),
 };
 
 const HtmlBlocksSchema = z.array(z.enum(DEFAULT_HTML_BLOCKS)).optional();

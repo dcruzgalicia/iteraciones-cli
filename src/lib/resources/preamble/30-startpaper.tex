@@ -8,9 +8,44 @@
 \fp_new:N \l_ep_winH_fp
 \ExplSyntaxOff
 \newcommand*{\@startpaper}{}%
+\newcommand*{\@coverone}{}%
+\newcommand*{\@covertwo}{}%
+\newcommand*{\@coverthree}{}%
+\newcount\l@covercount
+\newcount\l@coveronepage
+\newcount\l@covertwopage
+\newcount\l@coverthreepage
+\newcount\l@coverfourthpage
+\newcommand*{\@coverfourth}{}%
+% Una guarda por cada portada definida, en el orden en que se declaran:
+% frontCover (1), backCover (2) y startpaper (3). La que no se define no
+% ocupa página: las que sí, se encadenan desde la primera.
+\newcommand{\setcover}[1]{%
+  \advance\l@covercount by 1\relax%
+  \ifcase\l@covercount
+    \relax
+  \or
+    \gdef\@coverone{#1}%
+    \global\l@coveronepage=1%
+  \or
+    \gdef\@covertwo{#1}%
+    \global\l@covertwopage=2%
+  \or
+    \gdef\@coverthree{#1}%
+    \global\l@coverthreepage=3%
+  \else
+    \gdef\@coverfourth{#1}%
+    \global\l@coverfourthpage=4%
+  \fi
+}
+\newcommand{\setstartpaper}[1]{%
+  \gdef\@startpaper{#1}%
+  \setcover{#1}%
+}
+% La imagen se mide al dibujarla: así cada guarda usa su propia caja y todas
+% comparten las mismas macros de dimensión.
 \ExplSyntaxOn
-\cs_new_protected:Npn \setstartpaper #1 {
-  \gdef \@startpaper {#1}
+\cs_new_protected:Npn \ep@measurecover #1 {
   \sbox \papersbox { \includegraphics {#1} }
   \fp_set:Nn \l_ep_scale_fp {
     max( ( \dim_to_fp:n { \the\paperwidth } ) / \dim_to_fp:n { \the\wd\papersbox },
@@ -24,30 +59,48 @@
   \dim_set:Nn \ep@vyh { \fp_to_dim:n { ( \dim_to_fp:n { \the\ht\papersbox } + \l_ep_winH_fp ) / 2 } }
 }
 \ExplSyntaxOff
-\newcommand{\drawstartpaper}{%
-  \ifnum\value{page}=1
-    \iftitlepageguards
-      \ifx\@startpaper\@empty
-      \else
-        \put(.5\paperwidth,\ifx\ESO@HookIIIBG\@empty .5\paperheight\else -.5\paperheight\fi){%
-          \vbox to 0pt{%
-            \vss
-            \hbox to 0pt{%
-              \hss
-              \includegraphics[%
-                viewport={\the\ep@vx} {\the\ep@vy} {\the\ep@vxw} {\the\ep@vyh},%
-                clip,%
-                width=\dimexpr\paperwidth\relax,%
-                height=\dimexpr\paperheight\relax,%
-              ]{\@startpaper}%
-              \hss
-            }%
-            \vss
-          }%
-        }%
+\newcommand{\drawcoverimage}[1]{%
+  \ep@measurecover{#1}%
+  \put(.5\paperwidth,\ifx\ESO@HookIIIBG\@empty .5\paperheight\else -.5\paperheight\fi){%
+    \vbox to 0pt{%
+      \vss
+      \hbox to 0pt{%
+        \hss
+        \includegraphics[%
+          viewport={\the\ep@vx} {\the\ep@vy} {\the\ep@vxw} {\the\ep@vyh},%
+          clip,%
+          width=\dimexpr\paperwidth\relax,%
+          height=\dimexpr\paperheight\relax,%
+        ]{#1}%
+        \hss
+      }%
+      \vss
+    }%
+  }%
+}
+\newcommand{\drawcovers}{%
+  \iftitlepageguards
+    \ifx\@coverone\@empty\else
+      \ifnum\value{page}=\l@coveronepage
+        \drawcoverimage{\@coverone}%
+      \fi
+    \fi
+    \ifx\@covertwo\@empty\else
+      \ifnum\value{page}=\l@covertwopage
+        \drawcoverimage{\@covertwo}%
+      \fi
+    \fi
+    \ifx\@coverthree\@empty\else
+      \ifnum\value{page}=\l@coverthreepage
+        \drawcoverimage{\@coverthree}%
+      \fi
+    \fi
+    \ifx\@coverfourth\@empty\else
+      \ifnum\value{page}=\l@coverfourthpage
+        \drawcoverimage{\@coverfourth}%
       \fi
     \fi
   \fi
 }
-\AddToShipoutPictureBG*{\drawstartpaper}
+\AddToShipoutPictureBG{\drawcovers}
 \makeatother

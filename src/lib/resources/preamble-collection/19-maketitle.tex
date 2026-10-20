@@ -66,9 +66,17 @@
   \fi\fi
 }
 \renewcommand{\maketitle}{%
-  \ifx\@startpaper\@empty\else
+  \ifnum\l@covercount>0
     \titlepageguardstrue
+  \fi
+  \ifcase\l@covercount
+    \relax
+  \or
     \titlepage@blankpage
+  \or
+    \titlepage@blankpage \titlepage@blankpage
+  \or
+    \titlepage@blankpage \titlepage@blankpage \titlepage@blankpage
   \fi
   \ifcourtepage
     \titlepage@blankpage

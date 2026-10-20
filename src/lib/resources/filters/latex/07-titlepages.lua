@@ -342,7 +342,7 @@ local function serialize_titleback(blocks)
   return latex:gsub('%s+$', '')
 end
 
-local RAW_PATH_FIELDS = { 'titleImage', 'publisherImage', 'startpaper' }
+local RAW_PATH_FIELDS = { 'titleImage', 'publisherImage', 'startpaper', 'frontCover', 'backCover' }
 
 local function meta_to_rawpath(meta)
   if type(meta) == 'string' then

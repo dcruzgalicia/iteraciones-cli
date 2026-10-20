@@ -162,7 +162,7 @@ async function pushCoverImageMetadata(
   doc: BuildDocument,
   imageMap: Map<string, string>,
 ): Promise<void> {
-  for (const field of ['titleImage', 'startpaper']) {
+  for (const field of ['titleImage', 'startpaper', 'frontCover', 'backCover']) {
     const value = fmTrimmedString(fm[field]);
     if (value) await resolveAndPushImage(extraArgs, field, value, doc, imageMap);
   }
