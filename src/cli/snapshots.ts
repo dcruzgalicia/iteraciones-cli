@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logError, logInfo, logSuccess, logWarning } from '../lib/logger.js';
-import { relativeLabel } from '../lib/paths.js';
+import { posix, relativeLabel } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import type { VisualDiffResult } from '../lib/visual-diff.js';
 import {
@@ -57,7 +57,7 @@ async function listHtmlRoutes(outputDir: string): Promise<string[]> {
     return [];
   const routes: string[] = [];
   for await (const rel of new Bun.Glob('**/*.html').scan({ cwd: outputDir, onlyFiles: true })) {
-    routes.push(rel.replaceAll('\\', '/'));
+    routes.push(posix(rel));
   }
   return routes.sort();
 }

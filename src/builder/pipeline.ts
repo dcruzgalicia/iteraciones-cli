@@ -1,6 +1,7 @@
 import { dirname, join, relative } from 'node:path';
 
 import type { SiteConfig } from '../config/config-schema.js';
+import { posix } from '../lib/paths.js';
 import { killInFlightProcesses, mapWithConcurrency } from '../lib/run.js';
 import { notePdfSlots } from '../lib/script-recorder.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
@@ -124,7 +125,7 @@ export async function documentPipeline(
     }
   }
 
-  const pdfOutputs = pdfConsumer.pdfJobs.map((job) => relative(ctx.outputDir, job.pdfDest).replaceAll('\\', '/'));
+  const pdfOutputs = pdfConsumer.pdfJobs.map((job) => posix(relative(ctx.outputDir, job.pdfDest)));
 
   return { processed, pdfOutputs };
 }

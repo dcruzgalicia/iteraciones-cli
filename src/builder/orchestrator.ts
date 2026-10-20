@@ -8,6 +8,7 @@ import { BuildError, ConfigError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
+import { posix } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import { abortScriptCapture, beginScriptCapture, commitScriptCapture } from '../lib/script-recorder.js';
 import { buildAssets } from './build-assets.js';
@@ -320,9 +321,9 @@ function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, ch
 }
 
 function rootRelativeOf(raw: string, cwd: string): string {
-  const unified = raw.replaceAll('\\', '/');
+  const unified = posix(raw);
   const absolute = isAbsolute(unified) ? unified : join(cwd, unified);
-  const rel = normalize(relative(cwd, absolute)).replaceAll('\\', '/');
+  const rel = posix(normalize(relative(cwd, absolute)));
   if (rel === '' || rel === '..' || rel.startsWith('../')) {
     throw new BuildError(`la ruta de build "${raw}" está fuera del proyecto (raíz del proyecto: "${cwd}")`);
   }

@@ -6,6 +6,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { GLYPHS, logNotice, logWarning } from '../lib/logger.js';
+import { posix } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency } from '../lib/run.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
@@ -195,7 +196,7 @@ function mapResultsToFiles(
 function existingInScope(outputDir: string, scope: string[]): string[] {
   const files = new Set<string>();
   for (const raw of scope) {
-    const rel = raw.replaceAll('\\', '/');
+    const rel = posix(raw);
     if (rel === '' || rel.startsWith('/') || rel.split('/').includes('..')) continue;
     if (existsSync(join(outputDir, rel))) files.add(rel);
   }
