@@ -26,6 +26,12 @@ Característica: el bloque de autoras de un texto llega al LaTeX
       Cuando compilo el proyecto para leer el LaTeX del texto
       Entonces el LaTeX de "un-texto-por-ana-garcia.tex" pone "Contenido." antes que "Autoras y colaboradoras"
 
+    Escenario: En un texto la sección de autoras es una sección, no una parte
+      Dado el proyecto de un texto con una creadora
+      Cuando compilo el proyecto para leer el LaTeX del texto
+      Entonces el LaTeX de "un-texto-por-ana-garcia.tex" tiene "section{Autoras y colaboradoras}"
+      Y el LaTeX de "un-texto-por-ana-garcia.tex" no tiene "part{Autoras y colaboradoras}"
+
   Regla de negocio: Cambia la creadora, se rehace el texto
 
     Escenario: Al cambiar la creadora se rehace el texto que la cita

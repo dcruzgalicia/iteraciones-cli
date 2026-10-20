@@ -28,6 +28,12 @@ Característica: el bloque de autoras de una collection llega al LaTeX siempre q
       Cuando compilo el proyecto para leer su LaTeX
       Entonces el LaTeX de "antologia-por-editora.tex" no tiene "Autoras y colaboradoras"
 
+    Escenario: En una colección la sección de autoras es una parte
+      Dado el proyecto de una collection con una creadora
+      Cuando compilo el proyecto para leer su LaTeX
+      Entonces el LaTeX de "antologia-por-editora.tex" tiene "part{Autoras y colaboradoras}"
+      Y el LaTeX de "antologia-por-editora.tex" no tiene "section{Autoras y colaboradoras}"
+
   Regla de negocio: Con bibliografía el bloque conserva su lugar
 
     Escenario: El bloque se inserta antes de la bibliografía
