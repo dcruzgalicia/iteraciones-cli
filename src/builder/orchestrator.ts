@@ -19,6 +19,7 @@ import { resolveCollectionFiles } from './collection-files.js';
 import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { validateDisabledFilters } from './filter-resolver.js';
+import { selectListMembers } from './list-filter.js';
 import { DIST_FILES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
@@ -260,25 +261,44 @@ function assertNoNestedCollections(resolved: string[], relativePath: string, dis
   }
 }
 
+function resolveListMembers(relativePath: string, entry: DiscoveryEntry, discoveryIndex: Map<string, DiscoveryEntry>): void {
+  const members = selectListMembers(relativePath, entry.fm ?? {}, discoveryIndex);
+  entry.files = members;
+  if (entry.fm) entry.fm.files = members;
+}
+
+async function resolveCollectionMembers(
+  relativePath: string,
+  entry: DiscoveryEntry,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  cwd: string,
+  creatorOwners: Map<string, string[]>,
+): Promise<void> {
+  const resolved = await resolveCollectionFiles(entry.files ?? [], relativePath, cwd);
+  assertNoNestedCollections(resolved, relativePath, discoveryIndex);
+  entry.files = resolved;
+  if (entry.fm) entry.fm.files = resolved;
+  entry.aggregatedCreator = await aggregateCollectionCreators(entry, cwd);
+
+  const previos = entry.creatorDocs ?? [];
+  entry.creatorDocs = await collectionCreatorDocPaths(resolved, entry.fm ?? {}, discoveryIndex, cwd);
+  for (const creatorDoc of new Set([...previos, ...entry.creatorDocs])) {
+    const list = creatorOwners.get(creatorDoc);
+    if (list === undefined) creatorOwners.set(creatorDoc, [relativePath]);
+    else list.push(relativePath);
+  }
+}
+
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Map<string, string[]>> {
   const creatorOwners = new Map<string, string[]>();
 
   for (const [relativePath, entry] of discoveryIndex) {
-    if (entry.type !== 'collection' || !entry.files) continue;
-
-    const resolved = await resolveCollectionFiles(entry.files, relativePath, cwd);
-    assertNoNestedCollections(resolved, relativePath, discoveryIndex);
-    entry.files = resolved;
-    if (entry.fm) entry.fm.files = resolved;
-    entry.aggregatedCreator = await aggregateCollectionCreators(entry, cwd);
-
-    const previos = entry.creatorDocs ?? [];
-    entry.creatorDocs = await collectionCreatorDocPaths(resolved, entry.fm ?? {}, discoveryIndex, cwd);
-    for (const creatorDoc of new Set([...previos, ...entry.creatorDocs])) {
-      const list = creatorOwners.get(creatorDoc);
-      if (list === undefined) creatorOwners.set(creatorDoc, [relativePath]);
-      else list.push(relativePath);
+    if (entry.type === 'list') {
+      resolveListMembers(relativePath, entry, discoveryIndex);
+      continue;
     }
+    if (entry.type !== 'collection' || !entry.files) continue;
+    await resolveCollectionMembers(relativePath, entry, discoveryIndex, cwd, creatorOwners);
   }
 
   return creatorOwners;
@@ -318,6 +338,17 @@ function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, ch
   }
 }
 
+/**
+ * Una lista depende del proyecto entero: si cualquier documento cambia, se
+ * agrega, se borra o cambia de fecha, la lista se vuelve a hacer.
+ */
+function expandListChanges(discoveryIndex: Map<string, DiscoveryEntry>, changed: Set<string>): void {
+  if (changed.size === 0) return;
+  for (const [ruta, entry] of discoveryIndex) {
+    if (entry.type === 'list') changed.add(ruta);
+  }
+}
+
 function rootRelativeOf(raw: string, cwd: string): string {
   const unified = posix(raw);
   const absolute = isAbsolute(unified) ? unified : join(cwd, unified);
@@ -339,9 +370,11 @@ function resolveRequestedDoc(raw: string, cwd: string, docsByPath: Map<string, B
 
 async function collectionClosure(doc: BuildDocument, discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<string[]> {
   const paths = [...(doc.frontmatter.files ?? [])];
-  const collectionFm = discoveryIndex.get(doc.relativePath)?.fm ?? {};
-  for (const creator of await resolveCollectionCreatorDocs(doc, discoveryIndex, cwd, collectionFm)) {
-    paths.push(creator.relativePath);
+  if (doc.frontmatter.type === 'collection') {
+    const collectionFm = discoveryIndex.get(doc.relativePath)?.fm ?? {};
+    for (const creator of await resolveCollectionCreatorDocs(doc, discoveryIndex, cwd, collectionFm)) {
+      paths.push(creator.relativePath);
+    }
   }
   return paths;
 }
@@ -353,7 +386,7 @@ async function selectDocs(only: string[], allDocs: BuildDocument[], discoveryInd
   for (const raw of only) {
     const doc = resolveRequestedDoc(raw, cwd, docsByPath);
     selected.add(doc.relativePath);
-    if (doc.frontmatter.type !== 'collection') continue;
+    if (doc.frontmatter.type !== 'collection' && doc.frontmatter.type !== 'list') continue;
     for (const path of await collectionClosure(doc, discoveryIndex, cwd)) {
       if (docsByPath.has(path)) selected.add(path);
     }
@@ -430,6 +463,7 @@ async function discoverDocuments(
   let allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
   expandCollectionChanges(discoveryIndex, discoveredChanges, creatorOwners);
+  expandListChanges(discoveryIndex, discoveredChanges);
 
   const only = selectionOf(options);
   const selection = only === undefined ? undefined : await selectDocs(only, allDocs, discoveryIndex, cwd);

@@ -8,10 +8,17 @@ export function slot(nombre: string): string {
   return `<div id="slot-${nombre}"></div>`;
 }
 
-export type HtmlDocType = 'file' | 'collection' | 'creator';
+export type HtmlDocType = 'file' | 'collection' | 'creator' | 'list';
+
+const CARD_DIRS: Record<HtmlDocType, string> = {
+  file: 'file',
+  collection: 'collection',
+  creator: 'file',
+  list: 'collection',
+};
 
 export async function loadCard(type: HtmlDocType, name: string): Promise<string> {
-  const own = Bun.file(join(HTML_RESOURCES_DIR, type, name));
+  const own = Bun.file(join(HTML_RESOURCES_DIR, CARD_DIRS[type], name));
   return (await own.exists()) ? own.text() : Bun.file(join(HTML_RESOURCES_DIR, 'file', name)).text();
 }
 

@@ -63,7 +63,6 @@ interface EffectiveTemplates {
 
   refsCardTemplates: Record<HtmlDocType, string>;
 }
-
 export type TemplateKind = 'html' | 'html-collection' | 'html-creator' | 'latex' | 'latex-collection' | 'latex-creator' | 'latex-intervention';
 
 const TEMPLATE_FILES: Record<TemplateKind, string> = {
@@ -98,12 +97,16 @@ export const templatePathFor = (kind: TemplateKind, templatesDir: string): strin
 
 const PREAMBLE_TEMPLATE_KINDS = ['latex', 'latex-collection', 'latex-creator', 'latex-intervention'] as const satisfies readonly TemplateKind[];
 
-export function latexKindFor(type: PreambleDocType | undefined): TemplateKind {
-  return type === undefined || type === 'file' ? 'latex' : `latex-${type}`;
+export function latexKindFor(type: PreambleDocType | 'list' | undefined): TemplateKind {
+  if (type === undefined || type === 'file') return 'latex';
+  if (type === 'list') return 'latex-collection';
+  return `latex-${type}`;
 }
 
 export function htmlKindFor(type: HtmlDocType): TemplateKind {
-  return type === 'file' ? 'html' : `html-${type}`;
+  if (type === 'file') return 'html';
+  if (type === 'list') return 'html-collection';
+  return `html-${type}`;
 }
 
 interface TemplateInput {
@@ -146,13 +149,14 @@ export async function writeEffectiveTemplates(
     cropActive: false,
     pageDimensions: undefined,
     templates: Object.fromEntries(TEMPLATE_KINDS.map((kind) => [kind, templatePathFor(kind, templatesDir)])) as Record<TemplateKind, string>,
-    refsCardTemplates: { file: '', collection: '', creator: '' },
+    refsCardTemplates: { file: '', collection: '', creator: '', list: '' },
   };
 
   state.refsCardTemplates = {
     file: await loadReferencesCardTemplate('file'),
     collection: await loadReferencesCardTemplate('collection'),
     creator: await loadReferencesCardTemplate('creator'),
+    list: await loadReferencesCardTemplate('collection'),
   };
 
   const disabledPreamble = disableBibliographyWithoutBibFiles(effectiveDisabledPreamble, bibFiles);

@@ -53,11 +53,19 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'courtesyPage',
   'type',
   'files',
+  'filter',
+  'order',
   'name',
   'links',
   'pages',
   'lineLength',
 ];
+
+export const LIST_FILTER_KEYS = ['type', 'creator', 'date', 'keyword', 'path'] as const;
+
+export const LIST_ORDERS = ['date-desc', 'date-asc', 'title-asc', 'title-desc', 'creator-asc'] as const;
+
+const LIST_TYPES = ['file', 'collection', 'creator', 'list'] as const;
 
 const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -181,15 +189,85 @@ function validateInterventionType(parsed: Record<string, unknown>): ValidationIs
   return [];
 }
 
+function validateListDate(value: unknown): ValidationIssue[] {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return [{ severity: 'error', message: 'frontmatter: "filter.date" debe ser un mapa con "from" y/o "to"' }];
+  }
+  const issues: ValidationIssue[] = [];
+  for (const [borde, fecha] of Object.entries(value as Record<string, unknown>)) {
+    if (borde !== 'from' && borde !== 'to') {
+      issues.push({
+        severity: 'error',
+        message: `frontmatter: "filter.date" no tiene "${borde}"; los bordes son: from, to`,
+      });
+      continue;
+    }
+    if (typeof fecha !== 'string' || !DATE_ISO_RE.test(fecha.trim())) {
+      issues.push({
+        severity: 'error',
+        message: `frontmatter: "filter.date.${borde}" debe ser una fecha ISO (YYYY-MM-DD)`,
+      });
+    }
+  }
+  return issues;
+}
+
+function validateListFilter(filter: unknown): ValidationIssue[] {
+  if (typeof filter !== 'object' || filter === null || Array.isArray(filter)) {
+    return [{ severity: 'error', message: 'frontmatter: "filter" debe ser un mapa con los criterios de selección' }];
+  }
+  const issues: ValidationIssue[] = [];
+  for (const [key, value] of Object.entries(filter as Record<string, unknown>)) {
+    if (!(LIST_FILTER_KEYS as readonly string[]).includes(key)) {
+      issues.push({
+        severity: 'error',
+        message: `frontmatter: "filter" no tiene el criterio "${key}"; los criterios son: ${LIST_FILTER_KEYS.join(', ')}`,
+      });
+      continue;
+    }
+    if (key === 'type') {
+      if (typeof value !== 'string' || !(LIST_TYPES as readonly string[]).includes(value)) {
+        issues.push({
+          severity: 'error',
+          message: `frontmatter: "filter.type" debe ser uno de: ${LIST_TYPES.join(', ')}`,
+        });
+      }
+      continue;
+    }
+    if (key === 'date') {
+      issues.push(...validateListDate(value));
+      continue;
+    }
+    if (typeof value !== 'string') {
+      issues.push({ severity: 'error', message: `frontmatter: "filter.${key}" debe ser un texto` });
+    }
+  }
+  return issues;
+}
+
+function validateListType(parsed: Record<string, unknown>): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (parsed.filter !== undefined) issues.push(...validateListFilter(parsed.filter));
+  const order = parsed.order;
+  if (order !== undefined && !(LIST_ORDERS as readonly string[]).includes(String(order))) {
+    issues.push({
+      severity: 'error',
+      message: `frontmatter: "order" debe ser uno de: ${LIST_ORDERS.join(', ')}`,
+    });
+  }
+  return issues;
+}
+
 function validateTypeField(parsed: Record<string, unknown>): ValidationIssue[] {
   const type = parsed.type;
   if (type === undefined) return [];
-  if (type !== 'file' && type !== 'collection' && type !== 'creator' && type !== 'intervention') {
-    return [{ severity: 'error', message: 'frontmatter: "type" debe ser "file", "collection", "creator" o "intervention"' }];
+  if (type !== 'file' && type !== 'collection' && type !== 'creator' && type !== 'intervention' && type !== 'list') {
+    return [{ severity: 'error', message: 'frontmatter: "type" debe ser "file", "collection", "creator", "intervention" o "list"' }];
   }
   if (type === 'collection') return validateCollectionType(parsed);
   if (type === 'creator') return validateCreatorType(parsed);
   if (type === 'intervention') return validateInterventionType(parsed);
+  if (type === 'list') return validateListType(parsed);
   return [];
 }
 
