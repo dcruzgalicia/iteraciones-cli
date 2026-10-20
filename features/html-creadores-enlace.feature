@@ -67,3 +67,22 @@ Característica: Los nombres de las autoras enlazan a su página
       """
       Y los nombres enlazados son "Ana García, Beto Ruiz"
       Entonces el nombre enlazado es "[Ana García](<./ana-garcia.html>), Beto Ruiz"
+
+  Regla de negocio: Los nombres de la banda llevan línea de enlace
+
+    Escenario: La banda de un texto underline sus nombres
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una creadora llamada "Ana García"
+      Y un texto de "Ana García"
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "nombres-enlazados"
+
+    Escenario: La banda de una colección underline a su collectionCreator
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una creadora llamada "Ana García"
+      Y un texto de "Ana García"
+      Y una colección de "Ana García"
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/antologia-por-ana-garcia.html" dice "nombres-enlazados"

@@ -83,3 +83,10 @@
   line-height: 1.65;
   text-align: left;
 }
+
+/* Los nombres que enlazan a la página de su creadora: en negro, con una
+   línea debajo para que se note que son un enlace. */
+.nombres-enlazados a {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}

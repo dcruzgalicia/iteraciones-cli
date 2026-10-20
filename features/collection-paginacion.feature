@@ -95,3 +95,11 @@ Característica: La paginación de las colecciones
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/antologia-2.html" dice "Página 2 de 3"
       Y el archivo "dist/files/antologia.html" dice "Página 1 de 3"
+
+    Escenario: El nav es una tarjeta del masonry, no va pegado al texto
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una colección con 5 miembros
+      Y el proyecto pagina de 2 tarjetas
+      Cuando hago un build del proyecto
+      Entonces el nav de la página 2 está en su propia tarjeta
+      Y el nav de la página 2 no está dentro del texto

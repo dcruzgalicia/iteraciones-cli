@@ -48,3 +48,27 @@ Then('el HTML del texto pone {string} antes que {string}', (primero: string, seg
   if (b < 0) throw new Error(`el HTML no tiene ${JSON.stringify(segundo)}`);
   if (a >= b) throw new Error(`${JSON.stringify(primero)} (${a}) no va antes que ${JSON.stringify(segundo)} (${b})`);
 });
+
+Then('la biografía del texto está fuera de su artículo', () => {
+  const html = readFileSync(join(world.root, 'dist', 'files', 'un-texto-por-ana-garcia.html'), 'utf8');
+  const article = html.indexOf('<article');
+  const fin = html.indexOf('</article>');
+  const bio = html.indexOf('Bio de Ana García.');
+  if (article < 0 || fin < 0) throw new Error('el texto no tiene artículo');
+  if (bio < 0) throw new Error('el texto no tiene la biografía');
+  if (bio < fin) throw new Error('la biografía sigue dentro del artículo');
+});
+
+Then('la biografía del texto está en su propia tarjeta', () => {
+  const html = readFileSync(join(world.root, 'dist', 'files', 'un-texto-por-ana-garcia.html'), 'utf8');
+  const bio = html.indexOf('Bio de Ana García.');
+  const antes = html.slice(0, bio);
+  const wrapper = antes.lastIndexOf('break-inside-avoid');
+  if (wrapper < 0) {
+    throw new Error('la biografía no está dentro de una tarjeta del masonry');
+  }
+  const finArticulo = html.indexOf('</article>');
+  if (finArticulo >= 0 && wrapper < finArticulo) {
+    throw new Error('la biografía sigue dentro de la tarjeta del texto');
+  }
+});
