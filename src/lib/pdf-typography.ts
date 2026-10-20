@@ -267,8 +267,6 @@ export function consecutivePunctuationRuns(pages: string[][], lineas: number, an
   return hallados;
 }
 
-export const TODAS_LAS_REGLAS: readonly TypographyRule[] = TYPOGRAPHY_RULES;
-
 export interface ExcepcionTipografia {
   file: string;
   page: number;
@@ -419,7 +417,7 @@ export interface OpcionesAnalisis {
 
 export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
   const { primeraPagina = 1, ultimaPagina, porcentajeCorta = 75, lineasMinimas = 3, letrasMinimas = 2, excepciones = [] } = opciones;
-  const pedidas = new Set(opciones.reglas ?? TODAS_LAS_REGLAS);
+  const pedidas = new Set(opciones.reglas ?? TYPOGRAPHY_RULES);
   const pages = splitPages(stdout);
   const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
   const halladas: TypographyIncidence[] = [
