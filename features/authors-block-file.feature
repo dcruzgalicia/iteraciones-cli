@@ -15,10 +15,12 @@ Característica: el bloque de autoras de un texto llega al LaTeX
       Y el LaTeX de "un-texto-por-ana-garcia.tex" tiene "de Ana."
       Y el bloque va antes de "\end{document}"
 
-    Escenario: Un texto con una sola creadora no lleva la sección
+    Escenario: Un texto con una sola creadora no lleva el encabezado de la sección
       Dado el proyecto de un texto con una creadora
       Cuando compilo el proyecto para leer el LaTeX del texto
       Entonces el LaTeX de "un-texto-por-ana-garcia.tex" no tiene "Autoras y colaboradoras"
+      Y el LaTeX de "un-texto-por-ana-garcia.tex" tiene "subsubsection{Ana García}"
+      Y el LaTeX de "un-texto-por-ana-garcia.tex" tiene "de Ana."
 
     Escenario: El nombre de cada creadora va centrado
       Dado el proyecto de un texto con dos creadoras
