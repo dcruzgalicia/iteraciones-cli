@@ -75,18 +75,10 @@
   \ifnum\l@covercount>0
     \titlepageguardstrue
   \fi
-  % Las guardas de portada y contraportada ocupan una página cada una, y la
-  % del startpaper va con su verso en blanco (así el elemento siguiente cae en
-  % página impar). La página de cada guarda tiene que existir y estar vacía:
-  % la imagen se dibuja sobre ella.
-  \ifx\@coverone\@empty\else
-    \thispagestyle{empty}%
-    \null\clearpage
-  \fi
-  \ifx\@covertwo\@empty\else
-    \thispagestyle{empty}%
-    \null\clearpage
-  \fi
+  % Las guardas de portada y contraportada ya tienen su página en blanco:
+  % la crea \coverblankpage, antes de este comando. Aquí sólo va la del
+  % startpaper, con su verso en blanco, para que el elemento siguiente caiga
+  % en página impar.
   \ifx\@startpaper\@empty\else
     \titlepage@blankpage
   \fi
