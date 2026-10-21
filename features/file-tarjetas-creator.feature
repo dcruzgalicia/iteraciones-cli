@@ -49,7 +49,7 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y una colección de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "También está en"
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "href=\"./antologia-por-ana-garcia.html\""
 
     Escenario: Con más de una colección el texto las lista
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -58,8 +58,7 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y otra colección con el mismo texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "También está en"
-      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "href=\"./antologia-por-ana-garcia.html\""
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "href=\"./antologia-por-ana-garcia.html\""
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "href=\"./otra.html\""
 
     Escenario: Un texto que no está en ninguna colección no lleva esa tarjeta
@@ -67,4 +66,64 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y un texto de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "href=\"./antologia-por-ana-garcia.html\""
+
+  Regla de negocio: La tarjeta de las colecciones lleva chips, no un título
+
+    Escenario: El texto no lleva el título de la tarjeta
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un texto de "Ana García"
+      Y el texto es de una colección y de una lista
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
       Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "También está en"
+
+    Escenario: Un texto en una colección y en una lista lleva los dos chips
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un texto de "Ana García"
+      Y el texto es de una colección y de una lista
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces la tarjeta de las colecciones lleva el chip "Colecciones"
+      Y la tarjeta de las colecciones lleva el chip "Listas"
+      Y el chip "Colecciones" enlaza a "./coleccion.html"
+      Y el chip "Listas" enlaza a "./lista.html"
+
+    Escenario: Un texto sólo en una lista lleva el chip de listas
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un texto de "Ana García"
+      Y el texto está en una lista
+      Y otra lista con el mismo texto
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces la tarjeta de las colecciones lleva el chip "Listas"
+      Y la tarjeta de las colecciones no lleva el chip "Colecciones"
+
+  Regla de negocio: La biografía de la creadora lleva su chip
+
+    Escenario: La tarjeta de la biografía lleva el chip de creadora
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una creadora llamada "Ana García"
+      Y un texto de "Ana García"
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces la tarjeta de las colecciones lleva el chip "Creadora"
+      Y el chip "Creadora" enlaza a "./creadora.html"
+
+  Regla de negocio: La página de la creadora lista sus textos
+
+    Escenario: La creadora ve los textos en los que aparece
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una creadora llamada "Ana García"
+      Y un texto de "Ana García"
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces la página de la creadora lleva la tarjeta de textos
+      Y el archivo "dist/files/ana-garcia.html" dice "href=\"./un-texto-por-ana-garcia.html\""
+
+    Escenario: Un texto no lleva la tarjeta de textos
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un texto de "Ana García"
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces la página de la creadora no lleva la tarjeta de textos

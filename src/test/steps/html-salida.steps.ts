@@ -132,6 +132,16 @@ Given('que el documento tiene una clase que hay que compilar', () => {
   escribirEnProyecto('test.md', `${FRONTMATTER}<div class="bg-teal-300">x</div>\n\nNuevo contenido.\n`);
 });
 
+Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
+  const html = salida('test-document.html');
+  const inicio = html.indexOf('>Descarga</h2>');
+  if (inicio < 0) throw new Error('la página no tiene tarjeta de descargas');
+  const tarjeta = html.slice(inicio, html.indexOf('</section>', inicio));
+  if (!tarjeta.includes('<ul')) throw new Error('la tarjeta de descargas no es una lista');
+  if (tarjeta.includes('<svg')) throw new Error('la tarjeta de descargas todavía tiene iconos');
+  if (tarjeta.includes('Documento final')) throw new Error('la tarjeta de descargas todavía tiene descripciones');
+});
+
 Then('las tarjetas del documento salen en el orden por defecto', () => {
   const archivo = 'test-document.html';
   enOrden(salida(archivo), archivo, 'id="card-identity", id="TOC", >Descarga</h2>, <article, id="refs-heading", id="card-identity-footer"');

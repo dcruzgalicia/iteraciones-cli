@@ -14,6 +14,12 @@ Característica: las tarjetas del masonry salen en el orden que el autor espera
       Entonces el comando termina con el código de salida 0
       Y las tarjetas del documento salen en el orden por defecto
 
+    Escenario: La tarjeta de descargas es una lista sencilla
+      Dado que la raíz del proyecto tiene un proyecto con índice y una cita
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la tarjeta de descargas es una lista sin iconos ni descripciones
+
     Escenario: Una lista explícita de bloques ES el orden
       Dado que la raíz del proyecto ordena los bloques así:
       """

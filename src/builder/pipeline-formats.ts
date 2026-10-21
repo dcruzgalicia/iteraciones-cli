@@ -630,8 +630,10 @@ const CARD_CORNERS =
 
 const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
-const MEMBER_PILL_CLASSES =
-  'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-600 dark:text-accent-400';
+const PILL_CLASSES =
+  'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-600 dark:text-accent-400';
+
+const MEMBER_PILL_CLASSES = `${PILL_CLASSES} mt-0 mb-6`;
 
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-accent-500/50 bg-accent-500/25 px-2 py-1 font-semibold text-xs leading-none text-accent-700 dark:text-accent-300';
@@ -641,11 +643,11 @@ const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Cre
 const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
 
 /** El chip de tipo, con enlace a la lista por defecto de ese type. */
-function chipHtml(label: string, type: string | undefined, dir: string): string {
+function chipHtml(label: string, type: string | undefined, dir: string, classes = MEMBER_PILL_CLASSES): string {
   const href = defaultListHref(dir, type);
-  const chip = `<h2 class="${MEMBER_PILL_CLASSES}">${label}</h2>`;
+  const chip = `<h2 class="${classes}">${label}</h2>`;
   if (href === undefined) return chip;
-  return `<h2 class="${MEMBER_PILL_CLASSES}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
+  return `<h2 class="${classes}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
 }
 
 const MEMBER_LINK_CLASSES = 'underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current';
@@ -653,9 +655,11 @@ const MEMBER_LINK_CLASSES = 'underline underline-offset-4 decoration-current/40 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
 /** La tarjeta con la biografía de una creadora. */
-export function creatorCard(doc: CreatorDoc): string {
+export function creatorCard(doc: CreatorDoc, dir: string): string {
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
+    '',
+    chipHtml('Creadora', 'creator', dir, PILL_CLASSES),
     '',
     `<h2 class="text-center text-xl uppercase tracking-wide">${doc.name}</h2>`,
     '',
@@ -665,18 +669,30 @@ export function creatorCard(doc: CreatorDoc): string {
   ].join('\n');
 }
 
-/** La tarjeta con las colecciones y listas donde vive un documento. */
-export function containersCard(contenedores: { titulo: string; href: string }[]): string {
+/**
+ * La tarjeta con las colecciones y listas donde vive un documento. En vez de
+ * un título, lleva un chip por cada tipo: Colecciones y Listas.
+ */
+export function containersCard(contenedores: { titulo: string; href: string; type: string | undefined }[], dir: string): string {
+  const chips: string[] = [];
+  if (contenedores.some((c) => c.type === 'collection')) chips.push(chipHtml('Colecciones', 'collection', dir, PILL_CLASSES));
+  if (contenedores.some((c) => c.type === 'list')) chips.push(chipHtml('Listas', 'list', dir, PILL_CLASSES));
   const items = contenedores.map((c) => `- [${c.titulo}](${c.href})`).join('\n');
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    '<h2 class="text-center text-xl uppercase tracking-wide">También está en</h2>',
+    `<div class="flex flex-wrap items-center gap-2">${chips.join('')}</div>`,
     '',
     items,
     '',
     '::::',
   ].join('\n');
+}
+
+/** La tarjeta con los textos donde aparece una creadora. */
+export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string): string {
+  const items = textos.map((t) => `- [${t.titulo}](${t.href})`).join('\n');
+  return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', chipHtml('Textos', 'file', dir, PILL_CLASSES), '', items, '', '::::'].join('\n');
 }
 
 /**
@@ -688,17 +704,23 @@ export function containersCard(contenedores: { titulo: string; href: string }[])
  */
 async function buildExtrasHtml(args: {
   creatorDocs: CreatorDoc[];
-  contenedores: { titulo: string; href: string }[];
+  contenedores: { titulo: string; href: string; type: string | undefined }[];
+  textos: { titulo: string; href: string }[];
   filters: ExportContext['filters'];
   imagePaths?: string;
   sourcePath: string;
+  dir: string;
 }): Promise<string> {
   const partes: string[] = [];
+  // Los textos donde aparece la creadora van primero: es lo que la identifica.
+  if (args.textos.length > 0) {
+    partes.push([MASONRY_WRAPPER, '', creatorTextsCard(args.textos, args.dir), '', '</div>'].join('\n'));
+  }
   // Cada tarjeta va en su propia celda del masonry, con su separación.
-  for (const doc of args.creatorDocs) partes.push([MASONRY_WRAPPER, '', creatorCard(doc), '', '</div>'].join('\n'));
+  for (const doc of args.creatorDocs) partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir), '', '</div>'].join('\n'));
   // Con una sola colección o lista no hace falta la tarjeta: no aporta nada.
   if (args.contenedores.length > 1) {
-    partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores), '', '</div>'].join('\n'));
+    partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores, args.dir), '', '</div>'].join('\n'));
   }
   if (partes.length === 0) return '';
 
@@ -739,7 +761,12 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
   if (creator !== '') {
     card.push(`<h2 class="text-center text-xl">${creator}</h2>`, '');
   }
-  card.push(`<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300">${title}</h3>`);
+  const tituloHref = href;
+  card.push(
+    tituloHref === undefined
+      ? `<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300">${title}</h3>`
+      : `<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
+  );
   if (e.subtitle) card.push('', `<h4 class="text-center text-xl uppercase tracking-wide">${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
@@ -1018,7 +1045,11 @@ export function nombresDeAutora(doc: BuildDocument, fm: Record<string, unknown>)
 }
 
 /** Las colecciones y listas donde vive un documento, con su enlace. */
-function contenedoresDe(doc: BuildDocument, dir: string, discoveryIndex: Map<string, DiscoveryEntry>): { titulo: string; href: string }[] {
+function contenedoresDe(
+  doc: BuildDocument,
+  dir: string,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): { titulo: string; href: string; type: string | undefined }[] {
   const entry = discoveryIndex.get(doc.relativePath);
   const rutas = entry?.containedBy ?? [];
   return rutas.map((ruta) => {
@@ -1026,8 +1057,37 @@ function contenedoresDe(doc: BuildDocument, dir: string, discoveryIndex: Map<str
     const html = join(dirname(ruta), `${htmlSlugFor(ruta, contenedor?.slug)}.html`)
       .split(sep)
       .join('/');
-    return { titulo: contenedor?.title || ruta, href: relativeHref(dir, html) };
+    return { titulo: contenedor?.title || ruta, href: relativeHref(dir, html), type: contenedor?.type };
   });
+}
+
+/** Los textos donde aparece la creadora del documento, si el documento es una creadora. */
+function textosDeLaCreadoraDelDoc(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): { titulo: string; href: string }[] {
+  if (doc.frontmatter.type !== 'creator') return [];
+  return textosDeCreadora(String(outputs.fm.name ?? outputs.fm.title ?? ''), outputs.dir, discoveryIndex);
+}
+
+/**
+ * Los textos donde aparece una creadora: como creator o como collectionCreator.
+ * El criterio de coincidencia es el mismo que usa la sección de autoras.
+ */
+function textosDeCreadora(nombre: string, dir: string, discoveryIndex: Map<string, DiscoveryEntry>): { titulo: string; href: string }[] {
+  if (nombre === '') return [];
+  const textos: { titulo: string; href: string }[] = [];
+  for (const [ruta, entry] of discoveryIndex.entries()) {
+    if (entry.type !== undefined && entry.type !== 'file') continue;
+    const autores = [...entry.creator, ...parseAuthors(entry.fm?.collectionCreator)];
+    if (!autores.includes(nombre)) continue;
+    const html = join(dirname(ruta), `${htmlSlugFor(ruta, entry.slug)}.html`)
+      .split(sep)
+      .join('/');
+    textos.push({ titulo: entry.title || ruta, href: relativeHref(dir, html) });
+  }
+  return textos.sort((a, b) => a.titulo.localeCompare(b.titulo, 'es'));
 }
 
 async function emitCollectionFormats(
@@ -1099,9 +1159,11 @@ async function emitCollectionFormats(
     const extras = await buildExtrasHtml({
       creatorDocs,
       contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
+      textos: textosDeLaCreadoraDelDoc(doc, outputs, discoveryIndex),
       filters: exportCtx.filters,
       imagePaths,
       sourcePath: doc.filePath,
+      dir: outputs.dir,
     });
     const contenidos = paginas.map((base) => prependLinksMarkdown(base, creatorLinks));
 

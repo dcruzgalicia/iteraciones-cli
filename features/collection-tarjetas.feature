@@ -49,7 +49,7 @@ Característica: la tarjeta de cada miembro de una colección
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML dice "tarjeta-fragmento"
       Y el HTML dice "<h2 class=\"text-center text-xl\"><span class=\"whitespace-nowrap\">Autora A</span></h2>"
-      Y el HTML dice "<h3 class=\"text-center text-2xl text-accent-700 dark:text-accent-300\">Documento</h3>"
+      Y el título de la tarjeta del miembro es un enlace
       Y el HTML dice "Contenido de doc."
       Y el HTML dice "Leer el texto completo →"
 
