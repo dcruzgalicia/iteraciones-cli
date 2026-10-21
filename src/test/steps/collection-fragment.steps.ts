@@ -68,6 +68,14 @@ Then('el fragmento tiene {int} palabras', (cuantas: number) => {
   }
 });
 
+Then('el título de la tarjeta del miembro es un enlace', () => {
+  const titulo = world.html.match(/<h3 class="[^"]*">(.*?)<\/h3>/s);
+  if (titulo === null) throw new Error('la tarjeta del miembro no tiene título');
+  if (!titulo[1]?.includes('<a href="')) {
+    throw new Error(`el título del miembro no es un enlace: ${titulo[1]}`);
+  }
+});
+
 Then('el fragmento no dice {string}', (texto: string) => {
   if (world.fragmento.includes(texto)) {
     throw new Error(`el fragmento sí dice ${JSON.stringify(texto)} y no debería`);
