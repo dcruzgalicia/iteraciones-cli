@@ -44,6 +44,14 @@ Given('el libro lleva la portada {string}', (campo: string) => {
   if (proc.exitCode !== 0) throw new Error('magick no pudo crear la portada de prueba');
 });
 
+Given('el libro lleva el epígrafe {string}', (texto: string) => {
+  const frontmatter = readFileSync(join(world.root, 'libro.md'), 'utf8').replace(
+    '---\ntitle: Un libro\n',
+    `---\ntitle: Un libro\nextratitle: "${texto}"\n`,
+  );
+  escribirEnProyecto('libro.md', frontmatter);
+});
+
 When('compilo el proyecto del libro para leer su LaTeX', async () => {
   await capture(() => build(world.root, {}));
   world.tex = readFileSync(join(world.root, 'dist', 'files', 'un-libro.tex'), 'utf8');
@@ -90,6 +98,14 @@ Then('el PDF del libro tiene {int} páginas', (paginas: number) => {
   const leidas = Number.parseInt(match[1] ?? '0', 10);
   if (leidas !== paginas) {
     throw new Error(`el PDF tiene ${leidas} páginas y son ${paginas}`);
+  }
+});
+
+Then('la página {int} del PDF no dice {string}', (pagina: number, texto: string) => {
+  const salida = corre('pdftotext', ['-f', String(pagina), '-l', String(pagina), String(world.pdf), '-']);
+  if (salida.codigo !== 0) throw new Error(`pdftotext no pudo leer la página ${pagina}: ${salida.error}`);
+  if (salida.salida.includes(texto)) {
+    throw new Error(`la página ${pagina} sí dice ${JSON.stringify(texto)} y no debería`);
   }
 });
 
