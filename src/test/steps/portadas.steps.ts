@@ -44,6 +44,11 @@ Given('el libro lleva la portada {string}', (campo: string) => {
   if (proc.exitCode !== 0) throw new Error('magick no pudo crear la portada de prueba');
 });
 
+Given('el libro lleva las guardas en color', () => {
+  const config = readFileSync(join(world.root, 'iteraciones.config.yaml'), 'utf8');
+  escribirEnProyecto('iteraciones.config.yaml', config.replace('  pdf:\n    generate: true', '  pdf:\n    generate: true\n    coverColor: true'));
+});
+
 Given('el libro lleva el epígrafe {string}', (texto: string) => {
   const frontmatter = readFileSync(join(world.root, 'libro.md'), 'utf8').replace(
     '---\ntitle: Un libro\n',
@@ -100,6 +105,34 @@ Then('el PDF del libro tiene {int} páginas', (paginas: number) => {
     throw new Error(`el PDF tiene ${leidas} páginas y son ${paginas}`);
   }
 });
+
+Then('la página {int} del PDF conserva el color', (pagina: number) => {
+  const pix = pixelDeLaPagina(pagina);
+  const [r, g, b] = pix;
+  if (r === g && g === b) {
+    throw new Error(`la página ${pagina} es gris (${pix.join(',')}) y debería conservar su color`);
+  }
+});
+
+Then('la página {int} del PDF está en escala de grises', (pagina: number) => {
+  const pix = pixelDeLaPagina(pagina);
+  const [r, g, b] = pix;
+  if (r !== g || g !== b) {
+    throw new Error(`la página ${pagina} tiene color (${pix.join(',')}) y debería estar en grises`);
+  }
+});
+
+function pixelDeLaPagina(pagina: number): number[] {
+  const tmp = join(world.root, '.iteraciones', 'tmp');
+  const render = corre('pdftoppm', ['-f', String(pagina), '-l', String(pagina), '-r', '20', '-png', String(world.pdf), join(tmp, 'pagina')]);
+  if (render.codigo !== 0) throw new Error(`pdftoppm no pudo renderizar la página ${pagina}: ${render.error}`);
+  const archivo = readdirSync(tmp).find((f) => f.startsWith('pagina'));
+  if (archivo === undefined) throw new Error('pdftoppm no dejó ninguna imagen');
+  const color = corre('magick', [join(tmp, archivo), '-format', '%[pixel:p{2,2}]', 'info:']);
+  const numeros = [...color.salida.matchAll(/\d+/g)].map((m) => Number.parseInt(m[0] ?? '0', 10));
+  if (numeros.length < 3) throw new Error(`no pude leer el color de la página ${pagina}: ${color.salida}`);
+  return numeros.slice(0, 3);
+}
 
 Then('la página {int} del PDF no dice {string}', (pagina: number, texto: string) => {
   const salida = corre('pdftotext', ['-f', String(pagina), '-l', String(pagina), String(world.pdf), '-']);

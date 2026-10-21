@@ -29,6 +29,23 @@ Característica: las portadas del PDF
       Entonces el LaTeX del libro tiene "\setstartpaper{"
       Y el LaTeX del libro no llama a "\setcover"
 
+  Regla de negocio: Las guardas pueden ir en color
+
+    Escenario: Con coverColor las guardas conservan su color
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "frontCover"
+      Y el libro lleva las guardas en color
+      Y el proyecto compila el PDF
+      Entonces la página 1 del PDF conserva el color
+
+    Escenario: Sin coverColor las guardas van en escala de grises
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "frontCover"
+      Y el proyecto compila el PDF
+      Entonces la página 1 del PDF está en escala de grises
+
   Regla de negocio: El PDF sale con las portadas en su página
 
     Escenario: Las tres portadas son las tres primeras páginas

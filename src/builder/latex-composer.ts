@@ -153,6 +153,11 @@ export function mergeConfigImages(
     if (configValue === undefined) continue;
     merged[field] = toAbsoluteImagePaths(configValue as string | string[], cwd);
   }
+  // Las guardas en color: si el frontmatter no lo dice, lo decide la config.
+  if (merged.coverColor === undefined) {
+    const enColor = formatCfg?.coverColor ?? siteConfig.coverColor;
+    if (enColor !== undefined) merged.coverColor = enColor;
+  }
   return merged;
 }
 

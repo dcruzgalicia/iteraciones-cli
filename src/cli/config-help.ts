@@ -17,6 +17,7 @@ iteraciones.config.yaml — todo se pone aquí (un archivo vacío vale todos los
   pageNumber                               posición del folio en el PDF: header-left | header-center | header-right | footer-left | footer-center | footer-right
   coverImage                               la portada del PDF sale en PNG
   courtesyPage                             página de cortesía con el título
+  coverColor                               las guardas (frontCover y backCover) salen en color, no en grises
   bibliography                             ruta a un .bib (o varios)
   csl                                      ruta a un .csl (por defecto: APA 7)
   disabledFilters: []                      filtros Lua del paquete que se apagan
