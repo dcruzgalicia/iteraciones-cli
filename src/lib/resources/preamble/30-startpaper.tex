@@ -22,6 +22,7 @@
 % ocupa página: las que sí, se encadenan desde la primera.
 \newcommand{\setcover}[1]{%
   \advance\l@covercount by 1\relax%
+  \titlepageguardstrue%
   \ifcase\l@covercount
     \relax
   \or
@@ -41,6 +42,13 @@
 \newcommand{\setstartpaper}[1]{%
   \gdef\@startpaper{#1}%
   \setcover{#1}%
+}
+% La página en blanco de una guarda. Se crea aquí y no en \maketitle para que
+% siga existiendo aunque el proyecto redefina ese comando: si la página no
+% existiera, el contenido se montaría encima de la imagen de la guarda.
+\newcommand{\coverblankpage}{%
+  \thispagestyle{empty}%
+  \null\clearpage
 }
 % La imagen se mide al dibujarla: así cada guarda usa su propia caja y todas
 % comparten las mismas macros de dimensión.
