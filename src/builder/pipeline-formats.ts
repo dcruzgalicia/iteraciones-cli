@@ -37,6 +37,7 @@ import {
   markdownToLatex,
   mergeConfigImages,
   preprocessDocumentImages,
+  removeEmptyToc,
 } from './latex-composer.js';
 import { detectPageSize } from './latex-preamble.js';
 import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
@@ -144,6 +145,10 @@ async function emitLatexAndQueuePdf(
   });
   const xmp = renderCtx.pdfxActive ? xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig) : undefined;
 
+  // El índice se quita antes de meter el bloque de autoras: ese bloque es
+  // propio de la CLI y no cuenta como contenido del documento.
+  const tex = removeEmptyToc(fullTex);
+
   if (latexOn) {
     const texDir = dirname(texDistPath);
     const distribution = buildTexDistribution(processedImages);
@@ -156,7 +161,7 @@ async function emitLatexAndQueuePdf(
       distRoot: ctx.outputDir,
       bundle: ctx.siteConfig.bundle === true,
     };
-    const distTex = await composeLatexFinalOutput(fullTex, manifest, texDir);
+    const distTex = await composeLatexFinalOutput(tex, manifest, texDir);
 
     let post: string[] | undefined;
     if (isScriptCapture()) {
@@ -164,12 +169,12 @@ async function emitLatexAndQueuePdf(
       await writeOutput(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
       post = ['iteraciones', 'post', 'latex', '--post', manifestPath, '-o', texDistPath];
     }
-    resolveScriptStdout(fullTex, texDistPath, distTex, post);
+    resolveScriptStdout(tex, texDistPath, distTex, post);
     await writeOutput(texDistPath, distTex);
   }
 
   if (pdfOn) {
-    const texWithAuthors = insertAuthorsBlock(fullTex, authorsBlock);
+    const texWithAuthors = insertAuthorsBlock(tex, authorsBlock);
     const texWithXmp = xmp === undefined ? texWithAuthors : injectXmpMetadataIntoLatex(texWithAuthors, xmp);
     const texPath = join(exportCtx.pdfWorkDir, dir, `${outSlug}${primaryOutputExtension('latex')}`);
     await writeOutput(texPath, texWithXmp);
