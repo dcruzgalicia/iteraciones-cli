@@ -942,10 +942,19 @@ export async function resolveCollectionCreatorDocs(
   return result.sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
 
-async function buildAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string, filters: ExportContext['filters'], esFile: boolean): Promise<string> {
+async function buildAuthorsLatex(
+  creatorDocs: CreatorDoc[],
+  sourcePath: string,
+  filters: ExportContext['filters'],
+  esFile: boolean,
+  numCreadoras: number,
+): Promise<string> {
   if (creatorDocs.length === 0) return '';
+  // En un texto con una sola creadora la sección repite lo que ya está en la
+  // portada: sólo tiene sentido cuando hay más de una.
+  if (esFile && numCreadoras < 2) return '';
   const subsubsectionStyle =
-    '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\raggedright\\normalsize\\normalfont\\scshape}';
+    '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\centering\\normalsize\\normalfont\\scshape}';
   const subsubsectionReset =
     '\\RedeclareSectionCommand[beforeskip=\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\normalsize\\normalfont\\bfseries}';
   // En un texto suelto la sección de autoras es una sección más; en una
@@ -1031,7 +1040,8 @@ async function emitCollectionFormats(
   const { formatCfg } = renderCtx;
 
   const esFile = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
-  const creatorDocs = esFile ? await resolveCreatorDocs(nombresDeAutora(doc, outputs.fm), discoveryIndex, ctx.cwd, `"${doc.relativePath}"`) : [];
+  const nombresCreadoras = nombresDeAutora(doc, outputs.fm);
+  const creatorDocs = esFile ? await resolveCreatorDocs(nombresCreadoras, discoveryIndex, ctx.cwd, `"${doc.relativePath}"`) : [];
 
   const images = await preprocessDocumentImages(
     [collectionScanContent(collectionEntries, content), ...creatorDocs.map((c) => c.body)].join('\n\n'),
@@ -1059,7 +1069,7 @@ async function emitCollectionFormats(
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
     const docsAutoras = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : creatorDocs;
-    const authorsBlock = await buildAuthorsLatex(docsAutoras, doc.filePath, exportCtx.filters, esFile);
+    const authorsBlock = await buildAuthorsLatex(docsAutoras, doc.filePath, exportCtx.filters, esFile, nombresCreadoras.length);
     await emitLatexAndQueuePdf(
       doc,
       { ...outputs, content: prependLinksLatex(base, creatorLinks) },
