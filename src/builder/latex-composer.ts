@@ -483,6 +483,56 @@ export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
   return tex;
 }
 
+/** El nivel de cada encabezado de LaTeX: el índice muestra los ≤ tocdepth. */
+const NIVEL_ENCABEZADO: Record<string, number> = {
+  part: -1,
+  chapter: 0,
+  section: 1,
+  subsection: 2,
+  subsubsection: 3,
+  paragraph: 4,
+  subparagraph: 5,
+};
+
+/**
+ * El tocdepth que va a mandar: el último \setcounter{tocdepth} del .tex. El
+ * preamble y los filtros de Lua van pegados al .tex, así que con escanearlo
+ * sale el valor final, sin importar de dónde venga.
+ */
+export function effectiveTocdepth(tex: string): number | undefined {
+  const todos = [...tex.matchAll(/\\setcounter\s*\{\s*tocdepth\s*\}\s*\{\s*(-?\d+)\s*\}/g)];
+  const ultimo = todos.at(-1);
+  return ultimo === undefined ? undefined : Number(ultimo[1]);
+}
+
+/** El nivel del encabezado más alto del .tex: el más cercano a la parte. */
+export function minimoNivelEncabezado(tex: string): number | undefined {
+  // Sólo el cuerpo: en el preamble hay definiciones de comandos (biblatex
+  // define un \subsubsection{#1}) que no son encabezados del documento.
+  const inicio = tex.indexOf('\\begin{document}');
+  const cuerpo = inicio < 0 ? tex : tex.slice(inicio);
+  let minimo: number | undefined;
+  for (const m of cuerpo.matchAll(/\\(subparagraph|subsubsection|subsection|section|paragraph|part|chapter)\{/g)) {
+    const nivel = NIVEL_ENCABEZADO[m[1] ?? ''];
+    if (nivel !== undefined && (minimo === undefined || nivel < minimo)) minimo = nivel;
+  }
+  return minimo;
+}
+
+/**
+ * Quita el índice cuando no hay nada que indizar. El índice sólo muestra los
+ * encabezados de nivel menor o igual al tocdepth, así que si el documento no
+ * tiene ninguno de ese nivel, la página saldría vacía.
+ */
+export function removeEmptyToc(tex: string): string {
+  const tocdepth = effectiveTocdepth(tex);
+  // Sin tocdepth explícito no se sabe qué entraría: mejor dejar el índice.
+  if (tocdepth === undefined) return tex;
+  const minimo = minimoNivelEncabezado(tex);
+  if (minimo !== undefined && minimo <= tocdepth) return tex;
+  return tex.replace(/^[ \t]*\\tableofcontents[ \t]*$/m, '');
+}
+
 export async function composeLatexFinalOutput(tex: string, manifest: LatexPostManifest, texDir?: string): Promise<string> {
   const withAuthors = insertAuthorsBlock(tex, manifest.authorsBlock ?? '');
   const withXmp = manifest.xmp === undefined ? withAuthors : injectXmpMetadataIntoLatex(withAuthors, manifest.xmp);
