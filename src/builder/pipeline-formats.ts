@@ -950,17 +950,22 @@ async function buildAuthorsLatex(
   numCreadoras: number,
 ): Promise<string> {
   if (creatorDocs.length === 0) return '';
-  // En un texto con una sola creadora la sección repite lo que ya está en la
-  // portada: sólo tiene sentido cuando hay más de una.
-  if (esFile && numCreadoras < 2) return '';
-  const subsubsectionStyle =
-    '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\centering\\normalsize\\normalfont\\scshape}';
+  // El nombre de cada creadora va centrado en el texto suelto; en la
+  // colección se mantiene a la izquierda, como estaba.
+  const alineacion = esFile ? '\\centering' : '\\raggedright';
+  const subsubsectionStyle = `\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{${alineacion}\\normalsize\\normalfont\\scshape}`;
   const subsubsectionReset =
     '\\RedeclareSectionCommand[beforeskip=\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\normalsize\\normalfont\\bfseries}';
   // En un texto suelto la sección de autoras es una sección más; en una
   // colección es una parte, porque el documento reúne muchas pieces.
   const nivel = esFile ? 'section' : 'part';
-  const md = [`\\${nivel}{Autoras y colaboradoras}\n\n${subsubsectionStyle}`];
+  const md: string[] = [];
+  // Con una sola creadora el encabezado «Autoras y colaboradoras» sobra: su
+  // nombre y su bio se quedan, pero sin el título de sección.
+  if (!(esFile && numCreadoras < 2)) {
+    md.push(`\\${nivel}{Autoras y colaboradoras}`);
+  }
+  md.push(subsubsectionStyle);
   for (const doc of creatorDocs) {
     md.push(`\\subsubsection{${doc.name}}`);
     if (doc.links.length > 0) {

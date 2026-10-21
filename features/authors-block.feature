@@ -34,6 +34,11 @@ Característica: el bloque de autoras de una collection llega al LaTeX siempre q
       Entonces el LaTeX de "antologia-por-editora.tex" tiene "part{Autoras y colaboradoras}"
       Y el LaTeX de "antologia-por-editora.tex" no tiene "section{Autoras y colaboradoras}"
 
+    Escenario: En una colección el nombre de cada creadora va a la izquierda
+      Dado el proyecto de una collection con una creadora
+      Cuando compilo el proyecto para leer su LaTeX
+      Entonces el LaTeX de "antologia-por-editora.tex" tiene "setkomafont{subsubsection}{\raggedright\normalsize\normalfont\scshape}"
+
   Regla de negocio: Con bibliografía el bloque conserva su lugar
 
     Escenario: El bloque se inserta antes de la bibliografía
