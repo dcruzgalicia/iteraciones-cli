@@ -1,3 +1,8 @@
+% Las páginas de título. Este archivo, preamble-collection/19-maketitle.tex y
+% preamble-creator/19-maketitle.tex son casi idénticos: lo único que cambia
+% entre ellos es el diseño (si el autor va antes o después del título, cuánto
+% espacio se deja). Cuando cambies el orden o el ritmo de las páginas, cambia
+% los tres.
 \usepackage{graphicx}
 \makeatletter
 \renewcommand{\subtitle}[1]{\gdef\@subtitle{%
@@ -57,6 +62,7 @@
 
 \newif\iftitlepageguards
 \newif\ifcourtepage
+\newcommand*{\interventionflag}{}
 \newcommand{\titlepage@blankpage}{%
   \thispagestyle{empty}%
   \null\clearpage
@@ -69,14 +75,20 @@
   \ifnum\l@covercount>0
     \titlepageguardstrue
   \fi
-  \ifcase\l@covercount
-    \relax
-  \or
+  % Las guardas de portada y contraportada ocupan una página cada una, y la
+  % del startpaper va con su verso en blanco (así el elemento siguiente cae en
+  % página impar). La página de cada guarda tiene que existir y estar vacía:
+  % la imagen se dibuja sobre ella.
+  \ifx\@coverone\@empty\else
+    \thispagestyle{empty}%
+    \null\clearpage
+  \fi
+  \ifx\@covertwo\@empty\else
+    \thispagestyle{empty}%
+    \null\clearpage
+  \fi
+  \ifx\@startpaper\@empty\else
     \titlepage@blankpage
-  \or
-    \titlepage@blankpage \titlepage@blankpage
-  \or
-    \titlepage@blankpage \titlepage@blankpage \titlepage@blankpage
   \fi
   \ifcourtepage
     \titlepage@blankpage
