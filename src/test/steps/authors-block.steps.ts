@@ -36,6 +36,13 @@ Given('el proyecto de un texto con una creadora', () => {
   escribirEnProyecto('ana.md', '---\ntype: creator\nname: Ana García\n---\n\nBio de Ana.\n');
 });
 
+Given('el proyecto de un texto con dos creadoras', () => {
+  escribirEnProyecto('iteraciones.config.yaml', CONFIG);
+  escribirEnProyecto('texto.md', '---\ntitle: Un texto\ncreator:\n  - Ana García\n  - Berta López\n---\n\nContenido.\n');
+  escribirEnProyecto('ana.md', '---\ntype: creator\nname: Ana García\n---\n\nBio de Ana.\n');
+  escribirEnProyecto('berta.md', '---\ntype: creator\nname: Berta López\n---\n\nBio de Berta.\n');
+});
+
 Given('el proyecto cambia la creadora', () => {
   escribirEnProyecto('ana.md', '---\ntype: creator\nname: Ana García\n---\n\nBio nueva.\n');
 });

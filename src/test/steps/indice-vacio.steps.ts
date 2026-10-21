@@ -24,8 +24,9 @@ Given('un texto con el encabezado {string}', (encabezado: string) => {
 });
 
 Given('un texto con el encabezado {string} y con creadora', (encabezado: string) => {
-  escribirEnProyecto('texto.md', `---\ntitle: Un texto\ncreator: Ana García\n---\n\nCuerpo.\n\n${encabezado}\n\nMás texto.\n`);
+  escribirEnProyecto('texto.md', `---\ntitle: Un texto\ncreator:\n  - Ana García\n  - Berta López\n---\n\nCuerpo.\n\n${encabezado}\n\nMás texto.\n`);
   escribirEnProyecto('ana.md', '---\ntype: creator\nname: Ana García\n---\n\nBio de Ana.\n');
+  escribirEnProyecto('berta.md', '---\ntype: creator\nname: Berta López\n---\n\nBio de Berta.\n');
 });
 
 Given('una colección con un miembro', () => {
