@@ -109,6 +109,14 @@ Then('la página {int} del PDF no dice {string}', (pagina: number, texto: string
   }
 });
 
+Then('la página {int} del PDF dice {string}', (pagina: number, texto: string) => {
+  const salida = corre('pdftotext', ['-f', String(pagina), '-l', String(pagina), String(world.pdf), '-']);
+  if (salida.codigo !== 0) throw new Error(`pdftotext no pudo leer la página ${pagina}: ${salida.error}`);
+  if (!salida.salida.includes(texto)) {
+    throw new Error(`la página ${pagina} no dice ${JSON.stringify(texto)}`);
+  }
+});
+
 Then('la página {int} del PDF es {string}', (pagina: number, portada: string) => {
   const esperada = PORTADAS.find((p) => p.campo === portada);
   if (esperada === undefined) throw new Error(`no conozco la portada ${portada}`);
