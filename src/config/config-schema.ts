@@ -101,6 +101,7 @@ const PdfFormatSchema = z
     disabledPreambleFilters: z.array(z.string()).optional(),
     coverImage: z.boolean().optional(),
     courtesyPage: z.boolean().optional(),
+    coverColor: z.boolean().optional(),
     ...ImageFieldsSchema,
     ...DublinCoreFieldsSchema,
     ...TitlePageFieldsSchema,
@@ -151,6 +152,7 @@ export const SiteConfigSchema = z
     pageNumber: z.enum(PAGE_NUMBER_OPTIONS).optional(),
     coverImage: z.boolean().optional(),
     courtesyPage: z.boolean().optional(),
+    coverColor: z.boolean().optional(),
     disabledPreambleFilters: z.array(z.string()).optional(),
     disabledFilters: z
       .array(z.string())

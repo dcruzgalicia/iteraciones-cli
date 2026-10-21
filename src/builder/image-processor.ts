@@ -79,6 +79,7 @@ async function processImage(
   cover: boolean,
   outputDir: string,
   outName?: string,
+  enColor = false,
 ): Promise<string> {
   await mkdir(outputDir, { recursive: true });
 
@@ -111,7 +112,9 @@ async function processImage(
   }
 
   args.push('-density', '300', '-units', 'PixelsPerInch');
-  args.push('-colorspace', 'Gray', '-quality', '100', '-background', 'white', '-flatten', outPath);
+  // Las guardas pueden pedir su color original; el resto va a grises.
+  if (!enColor) args.push('-colorspace', 'Gray');
+  args.push('-quality', '100', '-background', 'white', '-flatten', outPath);
 
   let result: Awaited<ReturnType<typeof exec>>;
   try {
@@ -316,35 +319,45 @@ function recordProcessed(imageMap: Map<string, string>, processedFiles: string[]
 
 const FULL_PAGE_COVER_FIELDS = ['startpaper', 'frontCover', 'backCover'];
 
+/** Las guardas de portada y contraportada pueden ir en color. */
+function guardaEnColor(field: string, enColor: boolean): boolean {
+  if (!enColor) return false;
+  return field === 'frontCover' || field === 'backCover';
+}
+
 async function collectFrontmatterImageTasks(
   fm: Record<string, unknown>,
   docDir: string,
   targets: ProcessTargets,
   imageMap: Map<string, string>,
-): Promise<{ absPath: string; w: number; h: number; cover: boolean }[]> {
-  const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
+): Promise<{ absPath: string; w: number; h: number; cover: boolean; enColor: boolean }[]> {
+  const tasks: { absPath: string; w: number; h: number; cover: boolean; enColor: boolean }[] = [];
+  const enColor = fm.coverColor === true;
   for (const field of COVER_IMAGE_FIELDS) {
     const cover = FULL_PAGE_COVER_FIELDS.includes(field);
+    // Sólo la portada y la contraportada pueden ir en color: el startpaper
+    // sigue a escala de grises.
+    const color = guardaEnColor(field, enColor);
     const w = cover ? targets.startpaperW : targets.targetW;
     const h = cover ? targets.startpaperH : targets.targetH;
     for (const value of fmStringList(fm[field]) ?? []) {
       const absPath = isAbsolute(value) ? value : resolve(docDir, value);
       if (!(await Bun.file(absPath).exists()) || imageMap.has(absPath)) continue;
-      tasks.push({ absPath, w, h, cover });
+      tasks.push({ absPath, w, h, cover, enColor: color });
     }
   }
   return tasks;
 }
 
 async function runImageTasks(
-  tasks: { absPath: string; w: number; h: number; cover: boolean }[],
+  tasks: { absPath: string; w: number; h: number; cover: boolean; enColor: boolean }[],
   outputDir: string,
   naming: (absPath: string) => string,
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
   const processed = await mapWithConcurrency(tasks, cpuConcurrency(4), (task) =>
-    processImage(task.absPath, task.w, task.h, task.cover, outputDir, naming(task.absPath)),
+    processImage(task.absPath, task.w, task.h, task.cover, outputDir, naming(task.absPath), task.enColor),
   );
   for (const [index, result] of processed.entries()) {
     const task = tasks[index];
@@ -360,7 +373,7 @@ async function processMultilineCoverImages(
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
-  const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
+  const tasks: { absPath: string; w: number; h: number; cover: boolean; enColor: boolean }[] = [];
   const seen = new Set<string>();
   for (const img of multilineImages) {
     if (imageMap.has(img.absPath) || seen.has(img.absPath)) continue;
@@ -368,7 +381,7 @@ async function processMultilineCoverImages(
 
     const imgTargetW = img.widthMm ?? targets.targetW;
     const imgTargetH = img.widthMm ? 0 : targets.targetH;
-    tasks.push({ absPath: img.absPath, w: imgTargetW, h: imgTargetH, cover: false });
+    tasks.push({ absPath: img.absPath, w: imgTargetW, h: imgTargetH, cover: false, enColor: false });
   }
   await runImageTasks(tasks, outputDir, naming, imageMap, processedFiles);
 }
@@ -383,7 +396,7 @@ async function processInlineImages(
 ): Promise<void> {
   const tasks = [...new Set(inlineImages)]
     .filter((absPath) => !imageMap.has(absPath))
-    .map((absPath) => ({ absPath, w: targets.targetW, h: targets.targetH, cover: false }));
+    .map((absPath) => ({ absPath, w: targets.targetW, h: targets.targetH, cover: false, enColor: false }));
   await runImageTasks(tasks, outputDir, naming, imageMap, processedFiles);
 }
 
