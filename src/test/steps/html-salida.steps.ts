@@ -138,6 +138,7 @@ Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
   if (inicio < 0) throw new Error('la página no tiene tarjeta de descargas');
   const tarjeta = html.slice(inicio, html.indexOf('</section>', inicio));
   if (!tarjeta.includes('<ul')) throw new Error('la tarjeta de descargas no es una lista');
+  if (!/<ul class="[^"]*list-disc/.test(tarjeta)) throw new Error('la lista de descargas no tiene viñetas');
   if (tarjeta.includes('<svg')) throw new Error('la tarjeta de descargas todavía tiene iconos');
   if (tarjeta.includes('Documento final')) throw new Error('la tarjeta de descargas todavía tiene descripciones');
 });
