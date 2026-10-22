@@ -164,6 +164,7 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
     'scroll-reveal',
     'scroll-reveal-at-end',
     'smallcaps',
+    'tarjeta',
     'tarjeta-extras',
     'verse',
   ];
@@ -239,19 +240,13 @@ Then('el marcador de referencias no lleva marco propio', async () => {
 
 When('reviso la transparencia de las tarjetas de {string}, {string} y {string}', (_a: string, _b: string, _c: string) => {});
 
-Then('todas las tarjetas comparten la misma transparencia', async () => {
+Then('todas las tarjetas comparten la misma superficie', async () => {
   for (const type of TYPES) {
     for (const card of CARDS) {
       if (sinMarco(type, card)) continue;
       const html = await readCard(type, card);
-      const found = [...new Set(html.match(/bg-stone-50\/\d+/g) ?? [])];
-      if (JSON.stringify(found) !== JSON.stringify(['bg-stone-50/75'])) {
-        throw new Error(`${type}/${card} usa ${JSON.stringify(found)} en lugar de bg-stone-50/75`);
-      }
-
-      const dark = [...new Set(html.match(/bg-stone-900\/\d+/g) ?? [])];
-      if (JSON.stringify(dark) !== JSON.stringify(['bg-stone-900/65'])) {
-        throw new Error(`${type}/${card} usa ${JSON.stringify(dark)} en lugar de bg-stone-900/65`);
+      if (!html.includes('tarjeta')) {
+        throw new Error(`${type}/${card} no usa la utilidad "tarjeta"`);
       }
     }
   }
