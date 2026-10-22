@@ -90,6 +90,17 @@ Then('la biografía del texto está en su propia tarjeta', () => {
   }
 });
 
+Then('el nombre de la creadora en la biografía es un enlace', () => {
+  const html = readFileSync(join(world.root, 'dist', 'files', 'un-texto-por-ana-garcia.html'), 'utf8');
+  const bio = html.indexOf('Bio de Ana García.');
+  if (bio < 0) throw new Error('la página no tiene la biografía de la creadora');
+  const antes = html.slice(0, bio);
+  const titulo = html.slice(antes.lastIndexOf('<h2'), bio);
+  if (!titulo.includes('<a href="./ana-garcia.html"')) {
+    throw new Error(`el nombre de la creadora no es un enlace: ${titulo}`);
+  }
+});
+
 Then('la tarjeta de las colecciones lleva el chip {string}', (chip: string) => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'un-texto-por-ana-garcia.html'), 'utf8');
   if (!html.includes(`>${chip}</a>`)) {
