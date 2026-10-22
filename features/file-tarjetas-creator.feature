@@ -43,13 +43,13 @@ Característica: Las tarjetas que van al final de la página de un texto
 
   Regla de negocio: Las colecciones donde vive el texto
 
-    Escenario: Con una sola colección no hace falta la tarjeta
+    Escenario: Con una sola colección la tarjeta se muestra
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
       Y una colección de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "href=\"./antologia-por-ana-garcia.html\""
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "href=\"./antologia-por-ana-garcia.html\""
 
     Escenario: Con más de una colección el texto las lista
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -89,14 +89,14 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y el chip "Colecciones" enlaza a "./coleccion.html"
       Y el chip "Listas" enlaza a "./lista.html"
 
-    Escenario: Un texto sólo en una lista lleva el chip de listas
+    Escenario: Un texto sólo en listas no lleva la tarjeta de colecciones
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
       Y el texto está en una lista
       Y otra lista con el mismo texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces la tarjeta de las colecciones lleva el chip "Listas"
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "href=\"./mi-lista.html\""
       Y la tarjeta de las colecciones no lleva el chip "Colecciones"
 
   Regla de negocio: La biografía de la creadora lleva su chip
