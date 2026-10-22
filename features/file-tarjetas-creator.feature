@@ -14,7 +14,7 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Bio de Ana García."
-      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Ana García</h2>"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Ana García</a></h2>"
 
     Escenario: Sin documento de creadora no hay tarjeta
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -109,6 +109,16 @@ Característica: Las tarjetas que van al final de la página de un texto
       Cuando hago un build del proyecto
       Entonces la tarjeta de las colecciones lleva el chip "Creadora"
       Y el chip "Creadora" enlaza a "./creadora.html"
+
+  Regla de negocio: El nombre de la creadora lleva a su página
+
+    Escenario: El nombre de la creadora en la biografía es un enlace
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una creadora llamada "Ana García"
+      Y un texto de "Ana García"
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces el nombre de la creadora en la biografía es un enlace
 
   Regla de negocio: La página de la creadora lista sus textos
 

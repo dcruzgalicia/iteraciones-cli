@@ -655,13 +655,13 @@ const MEMBER_LINK_CLASSES = 'underline underline-offset-4 decoration-current/40 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
 /** La tarjeta con la biografía de una creadora. */
-export function creatorCard(doc: CreatorDoc, dir: string): string {
+export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<string, string>): string {
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
     chipHtml('Creadora', 'creator', dir, PILL_CLASSES),
     '',
-    `<h2 class="text-center text-xl uppercase tracking-wide">${doc.name}</h2>`,
+    `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
     '',
     doc.body.trim(),
     '',
@@ -706,6 +706,7 @@ async function buildExtrasHtml(args: {
   creatorDocs: CreatorDoc[];
   contenedores: { titulo: string; href: string; type: string | undefined }[];
   textos: { titulo: string; href: string }[];
+  creatorHrefs: Map<string, string>;
   filters: ExportContext['filters'];
   imagePaths?: string;
   sourcePath: string;
@@ -717,7 +718,9 @@ async function buildExtrasHtml(args: {
     partes.push([MASONRY_WRAPPER, '', creatorTextsCard(args.textos, args.dir), '', '</div>'].join('\n'));
   }
   // Cada tarjeta va en su propia celda del masonry, con su separación.
-  for (const doc of args.creatorDocs) partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir), '', '</div>'].join('\n'));
+  for (const doc of args.creatorDocs) {
+    partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs), '', '</div>'].join('\n'));
+  }
   // Con una sola colección o lista no hace falta la tarjeta: no aporta nada.
   if (args.contenedores.length > 1) {
     partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores, args.dir), '', '</div>'].join('\n'));
@@ -1160,6 +1163,7 @@ async function emitCollectionFormats(
       creatorDocs,
       contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
       textos: textosDeLaCreadoraDelDoc(doc, outputs, discoveryIndex),
+      creatorHrefs: hrefsCreadores,
       filters: exportCtx.filters,
       imagePaths,
       sourcePath: doc.filePath,
