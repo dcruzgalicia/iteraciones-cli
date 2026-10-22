@@ -630,10 +630,14 @@ const CARD_CORNERS =
 
 const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
-const PILL_CLASSES =
+const PILL_BASE =
   'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-600 dark:text-accent-400';
 
-const MEMBER_PILL_CLASSES = `${PILL_CLASSES} mt-0 mb-6`;
+const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
+
+// En las tarjetas extras el chip no deja espacio ni arriba ni abajo: es el
+// primero de la tarjeta y el h2 traería sus márgenes del navegador.
+const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-accent-500/50 bg-accent-500/25 px-2 py-1 font-semibold text-xs leading-none text-accent-700 dark:text-accent-300';
@@ -659,7 +663,7 @@ export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<stri
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    chipHtml('Creadora', 'creator', dir, PILL_CLASSES),
+    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_CLASSES),
     '',
     `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
     '',
@@ -675,8 +679,8 @@ export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<stri
  */
 export function containersCard(contenedores: { titulo: string; href: string; type: string | undefined }[], dir: string): string {
   const chips: string[] = [];
-  if (contenedores.some((c) => c.type === 'collection')) chips.push(chipHtml('Colecciones', 'collection', dir, PILL_CLASSES));
-  if (contenedores.some((c) => c.type === 'list')) chips.push(chipHtml('Listas', 'list', dir, PILL_CLASSES));
+  if (contenedores.some((c) => c.type === 'collection')) chips.push(chipHtml('Colecciones', 'collection', dir, EXTRA_PILL_CLASSES));
+  if (contenedores.some((c) => c.type === 'list')) chips.push(chipHtml('Listas', 'list', dir, EXTRA_PILL_CLASSES));
   const items = contenedores.map((c) => `- [${c.titulo}](${c.href})`).join('\n');
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
@@ -692,7 +696,7 @@ export function containersCard(contenedores: { titulo: string; href: string; typ
 /** La tarjeta con los textos donde aparece una creadora. */
 export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string): string {
   const items = textos.map((t) => `- [${t.titulo}](${t.href})`).join('\n');
-  return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', chipHtml('Textos', 'file', dir, PILL_CLASSES), '', items, '', '::::'].join('\n');
+  return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', chipHtml('Textos', 'file', dir, EXTRA_PILL_CLASSES), '', items, '', '::::'].join('\n');
 }
 
 /**

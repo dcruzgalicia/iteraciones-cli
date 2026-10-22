@@ -103,8 +103,13 @@ Then('el nombre de la creadora en la biografía es un enlace', () => {
 
 Then('la tarjeta de las colecciones lleva el chip {string}', (chip: string) => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'un-texto-por-ana-garcia.html'), 'utf8');
-  if (!html.includes(`>${chip}</a>`)) {
+  const match = new RegExp(`<h2 class="([^"]*)">[^<]*<a[^>]*>${chip}</a>`).exec(html);
+  if (match === null) {
     throw new Error(`la tarjeta de las colecciones no lleva el chip ${JSON.stringify(chip)}`);
+  }
+  // Sin márgenes: el chip es el primero de la tarjeta y el h2 traería los suyos.
+  if (!match[1]?.includes('mt-0') || !match[1]?.includes('mb-0')) {
+    throw new Error(`el chip ${JSON.stringify(chip)} conserva los márgenes del h2: ${match[1]}`);
   }
 });
 
