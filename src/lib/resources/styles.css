@@ -65,14 +65,13 @@
    fuera, para que se distinga sobre cualquier superficie. */
 @layer base {
   :focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--color-accent-600) 85%, transparent);
+    outline: 2px solid var(--color-accent-700);
     outline-offset: 2px;
   }
 
-  &:where([data-theme="dark"], [data-theme="dark"] *) {
-    :focus-visible {
-      outline-color: var(--color-accent-300);
-    }
+  [data-theme="dark"] :focus-visible,
+  [data-theme="dark"]:focus-visible {
+    outline-color: var(--color-accent-300);
   }
 }
 
