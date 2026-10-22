@@ -46,6 +46,13 @@
     content: "";
   }
 
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    &::before,
+    &::after {
+      border-color: color-mix(in srgb, var(--color-accent-400) 34%, transparent);
+    }
+  }
+
   &::before {
     left: 0.5rem;
     top: 0.5rem;
