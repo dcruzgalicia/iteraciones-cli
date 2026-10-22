@@ -26,6 +26,11 @@
   \titlepage@next
   \if@twoside\ifodd\value{page}\else\null\titlepage@next\fi\fi
 }
+% Deja el elemento que sigue en un recto (página impar): si la página actual es
+% par, su verso queda en blanco.
+\newcommand{\titlepage@oddpage}{%
+  \if@twoside\ifodd\value{page}\else\null\clearpage\fi\fi
+}
 \makeatother
 
 \makeatletter
