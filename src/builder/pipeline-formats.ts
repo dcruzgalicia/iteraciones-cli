@@ -587,7 +587,7 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/90 bg-accent-500/35 px-4 text-accent-600 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-400 dark:hover:border-accent-500 dark:hover:bg-accent-500/35';
+  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/70 bg-accent-500/35 px-4 text-accent-700 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500 dark:hover:bg-accent-500/35';
 
 const PAGINATION_NAV_CLASSES = 'pointer-events-none fixed inset-x-0 bottom-6 z-50';
 
@@ -623,15 +623,12 @@ function assertPaginasLibres(relativePath: string, dir: string, outSlug: string,
 const MASONRY_WRAPPER = '<div class="break-inside-avoid pb-6">';
 
 const CARD_TEXT_CLASSES =
-  'prose prose-xl dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-600)] [--tw-prose-invert-links:var(--color-accent-500)]';
+  'prose prose-lg dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)]';
 
-const CARD_CORNERS =
-  "[&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-['']";
-
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
 
 const PILL_BASE =
-  'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-600 dark:text-accent-400';
+  'inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-700 dark:text-accent-300';
 
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
@@ -640,7 +637,7 @@ const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 
 const MEMBER_BADGE_CLASSES =
-  'inline-block shrink-0 rounded-full border border-accent-500/50 bg-accent-500/25 px-2 py-1 font-semibold text-xs leading-none text-accent-700 dark:text-accent-300';
+  'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
 const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora' };
 
@@ -656,7 +653,7 @@ function chipHtml(label: string, type: string | undefined, dir: string, classes 
 
 const MEMBER_LINK_CLASSES = 'underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current';
 
-const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
+const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
 
 /** La tarjeta con la biografía de una creadora. */
 export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<string, string>): string {
@@ -766,15 +763,15 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
     );
   }
   if (creator !== '') {
-    card.push(`<h2 class="text-center text-xl">${creator}</h2>`, '');
+    card.push(`<h2 class="text-center text-lg">${creator}</h2>`, '');
   }
   const tituloHref = href;
   card.push(
     tituloHref === undefined
-      ? `<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300">${title}</h3>`
-      : `<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
+      ? `<h3 class="text-center text-[22px] text-accent-700 dark:text-accent-300">${title}</h3>`
+      : `<h3 class="text-center text-[22px] text-accent-700 dark:text-accent-300"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
   );
-  if (e.subtitle) card.push('', `<h4 class="text-center text-xl uppercase tracking-wide">${e.subtitle}</h4>`);
+  if (e.subtitle) card.push('', `<h4 class="text-center text-lg uppercase tracking-wide">${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
     card.push('', `<p class="text-center"><a href="${href}" class="${MEMBER_LINK_CLASSES}">Leer el texto completo →</a></p>`);

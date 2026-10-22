@@ -5,8 +5,8 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @utility bg-paper-grid {
-  --grid-fine: color-mix(in srgb, var(--color-accent-600) 2.5%, transparent);
-  --grid-bold: color-mix(in srgb, var(--color-accent-600) 8%, transparent);
+  --grid-fine: color-mix(in srgb, var(--color-accent-700) 2.5%, transparent);
+  --grid-bold: color-mix(in srgb, var(--color-accent-700) 7%, transparent);
   background-image:
     linear-gradient(to right, var(--grid-bold) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-bold) 1px, transparent 1px),
     linear-gradient(to right, var(--grid-fine) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
@@ -17,8 +17,62 @@
     10px 10px;
 
   &:where([data-theme="dark"], [data-theme="dark"] *) {
-    --grid-fine: color-mix(in srgb, var(--color-accent-500) 2.5%, transparent);
-    --grid-bold: color-mix(in srgb, var(--color-accent-500) 10%, transparent);
+    --grid-fine: color-mix(in srgb, var(--color-accent-500) 2%, transparent);
+    --grid-bold: color-mix(in srgb, var(--color-accent-500) 5%, transparent);
+  }
+}
+
+/* La superficie de las tarjetas: papel claro sobre el fondo, con su borde fino
+   y las marcas de esquina. La comparten todas las tarjetas del sitio, así que
+   el color vive aquí y no repetido en cada plantilla. */
+@utility tarjeta {
+  background-color: color-mix(in srgb, var(--color-stone-50) 82%, transparent);
+  border-color: color-mix(in srgb, var(--color-stone-300) 90%, transparent);
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    background-color: color-mix(in srgb, var(--color-stone-700) 70%, transparent);
+    border-color: color-mix(in srgb, var(--color-stone-600) 40%, transparent);
+  }
+
+  /* Las marcas de esquina: la firma técnica del sitio, en el acento y muy
+     tenues, para que no compitan con el texto ni con el borde. */
+  &::before,
+  &::after {
+    pointer-events: none;
+    position: absolute;
+    height: 0.75rem;
+    width: 0.75rem;
+    border-color: color-mix(in srgb, var(--color-accent-600) 34%, transparent);
+    content: "";
+  }
+
+  &::before {
+    left: 0.5rem;
+    top: 0.5rem;
+    border-left-width: 1px;
+    border-top-width: 1px;
+  }
+
+  &::after {
+    bottom: 0.5rem;
+    right: 0.5rem;
+    border-bottom-width: 1px;
+    border-right-width: 1px;
+  }
+}
+
+/* El foco se ve en todos los temas: el anillo usa el acento y un contorno
+   fuera, para que se distinga sobre cualquier superficie. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-accent-600) 85%, transparent);
+    outline-offset: 2px;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    :focus-visible {
+      outline-color: var(--color-accent-300);
+    }
   }
 }
 

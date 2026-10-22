@@ -112,7 +112,7 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
 
     Escenario: Todas las tarjetas comparten la misma transparencia
       Cuando reviso la transparencia de las tarjetas de "file", "collection" y "creator"
-      Entonces todas las tarjetas comparten la misma transparencia
+      Entonces todas las tarjetas comparten la misma superficie
 
     Escenario: La punta dibujada queda en las esquinas rectas
       Cuando reviso la punta de las tarjetas de "file", "collection" y "creator"

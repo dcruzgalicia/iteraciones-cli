@@ -378,7 +378,7 @@ Then('el nav de la página {int} no está dentro del texto', (_pagina: number) =
 
 Then('el nombre de la creadora de la tarjeta no usa el color del accent', () => {
   const html = world.html as string;
-  const linea = html.match(/<h2 class="text-center text-xl">([\s\S]*?)<\/h2>/);
+  const linea = html.match(/<h2 class="text-center text-lg">([\s\S]*?)<\/h2>/);
   if (linea === null) throw new Error('la tarjeta no tiene la línea de la creadora');
   if (linea[1]?.includes('text-accent') === true) {
     throw new Error(`la creadora usa el color del accent: ${linea[1]}`);
