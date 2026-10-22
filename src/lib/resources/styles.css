@@ -49,7 +49,7 @@
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     &::before,
     &::after {
-      border-color: color-mix(in srgb, var(--color-accent-400) 34%, transparent);
+      border-color: color-mix(in srgb, var(--color-accent-300) 34%, transparent);
     }
   }
 
