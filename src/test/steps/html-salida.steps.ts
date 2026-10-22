@@ -266,7 +266,7 @@ Then('la página trae el botón de volver al principio y el CSS su animación', 
     'aria-label="Volver al principio"',
     'scroll-reveal',
 
-    '<main class="md:container mx-auto columns-1 lg:columns-2 2xl:columns-3 gap-4 sm:gap-6 px-2 sm:px-4 lg:px-8 pt-6 sm:pt-8 pb-20 sm:pb-24">',
+    '<main class="lg:container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-4 sm:gap-6 px-2 sm:px-4 lg:px-8 pt-6 sm:pt-8 pb-20 sm:pb-24">',
   ]);
 
   prohibe(html, archivo, ['block:volver']);
