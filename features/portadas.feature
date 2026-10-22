@@ -90,6 +90,17 @@ Característica: las portadas del PDF
       Y la página 2 del PDF no dice "Un epígrafe de apertura"
       Y la página 3 del PDF dice "Un epígrafe de apertura"
 
+    Escenario: El epígrafe va en un recto, con su verso en blanco
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "frontCover"
+      Y el libro lleva la portada "startpaper"
+      Y el libro lleva el epígrafe "Un epígrafe de apertura"
+      Y el proyecto compila el PDF
+      Entonces la página 5 del PDF dice "Un epígrafe de apertura"
+      Y la página 6 del PDF no dice "Un epígrafe de apertura"
+      Y la página 7 del PDF dice "UN LIBRO"
+
     Escenario: El epígrafe va en su propia página, después de las guardas
       Dado que la raíz del proyecto está vacía
       Y el proyecto tiene un libro

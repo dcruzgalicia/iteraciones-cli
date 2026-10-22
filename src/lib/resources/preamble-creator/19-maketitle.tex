@@ -85,6 +85,9 @@
     \titlepage@blankpage
   \fi
   \ifx\@extratitle\@empty\else
+    % El epígrafe va en un recto: si la página actual es par, su verso queda
+    % en blanco.
+    \titlepage@oddpage
     \vspace*{7\baselineskip}%
     \titlepageblock
       {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
