@@ -154,18 +154,18 @@
   text-align: left;
 }
 
-/* Los nombres que enlazan a la página de su creadora: en negro, con una
+/* Los nombres que enlazan a la página de su creadora: con el acento, con una
    línea debajo para que se note que son un enlace. */
 @utility nombres-enlazados {
   a {
-    color: var(--color-stone-900);
+    color: var(--color-accent-700);
     text-decoration: underline;
     text-underline-offset: 0.25em;
   }
 
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     a {
-      color: var(--color-stone-100);
+      color: var(--color-accent-300);
     }
   }
 }

@@ -526,7 +526,7 @@ export function nombresEnlazados(nombres: string[], hrefs: Map<string, string>):
 function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>): string {
   const href = hrefs.get(nombre);
   if (href === undefined) return nombre;
-  return `<a href="${href}" class="text-stone-900 underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current dark:text-stone-100">${nombre}</a>`;
+  return `<a href="${href}" class="text-accent-700 underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current dark:text-accent-300">${nombre}</a>`;
 }
 
 function collectionCards(
