@@ -587,7 +587,7 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/70 bg-accent-500/35 px-4 text-accent-700 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500 dark:hover:bg-accent-500/35';
+  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/70 bg-accent-500/35 px-4 text-accent-900 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500 dark:hover:bg-accent-500/35';
 
 const PAGINATION_NAV_CLASSES = 'pointer-events-none fixed inset-x-0 bottom-6 z-50';
 
@@ -628,7 +628,7 @@ const CARD_TEXT_CLASSES =
 const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
 
 const PILL_BASE =
-  'inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-700 dark:text-accent-300';
+  'inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-800 dark:text-accent-300';
 
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
@@ -637,7 +637,7 @@ const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 
 const MEMBER_BADGE_CLASSES =
-  'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
+  'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
 const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora' };
 
@@ -768,8 +768,8 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
   const tituloHref = href;
   card.push(
     tituloHref === undefined
-      ? `<h3 class="text-center text-[22px] text-accent-700 dark:text-accent-300">${title}</h3>`
-      : `<h3 class="text-center text-[22px] text-accent-700 dark:text-accent-300"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
+      ? `<h3 class="text-center text-[22px] text-accent-800 dark:text-accent-300">${title}</h3>`
+      : `<h3 class="text-center text-[22px] text-accent-800 dark:text-accent-300"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
   );
   if (e.subtitle) card.push('', `<h4 class="text-center text-lg uppercase tracking-wide">${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
