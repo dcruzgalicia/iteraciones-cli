@@ -215,6 +215,7 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   lines.push('\\setcover{$backCover$}');
   lines.push('\\coverblankpage');
   lines.push('$endif$');
+  lines.push('\\coververso');
   lines.push('$if(startpaper)$');
   lines.push('\\setstartpaper{$startpaper$}');
   lines.push('$endif$');
