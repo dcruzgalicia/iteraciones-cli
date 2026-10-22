@@ -27,28 +27,52 @@
     \relax
   \or
     \gdef\@coverone{#1}%
-    \global\l@coveronepage=1%
   \or
     \gdef\@covertwo{#1}%
-    \global\l@covertwopage=2%
   \or
     \gdef\@coverthree{#1}%
-    \global\l@coverthreepage=3%
   \else
     \gdef\@coverfourth{#1}%
-    \global\l@coverfourthpage=4%
   \fi
 }
 \newcommand{\setstartpaper}[1]{%
   \gdef\@startpaper{#1}%
   \setcover{#1}%
 }
+% La página de la guarda que se acaba de definir: la actual. Se asigna
+% cuando se crea la página, no cuando se define la guarda, porque entre una y
+% otra puede haber páginas en blanco de por medio.
+\newcommand{\coverassign}{%
+  \ifcase\l@covercount
+    \relax
+  \or
+    \global\l@coveronepage=\value{page}%
+  \or
+    \global\l@covertwopage=\value{page}%
+  \or
+    \global\l@coverthreepage=\value{page}%
+  \else
+    \global\l@coverfourthpage=\value{page}%
+  \fi
+}
 % La página en blanco de una guarda. Se crea aquí y no en \maketitle para que
 % siga existiendo aunque el proyecto redefina ese comando: si la página no
 % existiera, el contenido se montaría encima de la imagen de la guarda.
 \newcommand{\coverblankpage}{%
+  \coverassign
   \thispagestyle{empty}%
   \null\clearpage
+}
+% El verso de la guarda. Con una sola guarda (frontCover o backCover) su verso
+% queda en blanco: así el startpaper y lo que siguen caen en páginas impares.
+% Con dos guardas no hace falta: el startpaper ya cae en un recto.
+\newcommand{\coververso}{%
+  \if@twoside
+    \ifnum\l@covercount=1
+      \thispagestyle{empty}%
+      \null\clearpage
+    \fi
+  \fi
 }
 % La imagen se mide al dibujarla: así cada guarda usa su propia caja y todas
 % comparten las mismas macros de dimensión.
