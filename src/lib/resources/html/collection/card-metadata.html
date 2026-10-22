@@ -1,5 +1,5 @@
     <div class="break-inside-avoid pb-6">
-    <div class="relative rounded-tr-2xl rounded-bl-2xl tarjeta p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-all duration-200 hover:ring-accent-500/40 [overflow-wrap:anywhere] text-center">
+    <div class="relative rounded-tr-2xl rounded-bl-2xl tarjeta p-4 sm:p-6 shadow-sm ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 transition-all duration-200 hover:ring-accent-500/40 [overflow-wrap:anywhere] text-center">
 
       <div class="text-left">
         $if(doc-chip-href)$
@@ -15,20 +15,19 @@
       <p class="mb-4 text-base italic text-stone-900 dark:text-stone-100">$subject$</p>
       $endif$
       $if(doc-title)$
-      <h1 class="mb-4 font-bold uppercase tracking-wide text-[27px] text-accent-800 dark:text-accent-300">$doc-title$</h1>
+      <h1 class="mb-8 font-bold uppercase tracking-wide text-[24px] text-accent-800 dark:text-accent-300">$doc-title$</h1>
       $endif$
       $if(subtitle)$
       <p class="mb-6 text-xl italic text-stone-900 dark:text-stone-100">$subtitle$</p>
       $endif$
       $if(author-names)$
-      <p class="mb-1 text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Autoras y colaboradoras</p>
-       <p class="nombres-enlazados mb-4 text-base leading-relaxed text-stone-900 dark:text-stone-100">$author-names$</p>
+      <p class="nombres-enlazados mt-2 mb-6 text-base leading-relaxed text-stone-900 dark:text-stone-100">$author-names$</p>
       $endif$
       $if(collection-creator-prefix)$
-      <p class="mb-1 text-sm font-mono text-stone-600 dark:text-stone-400">$collection-creator-prefix$</p>
+      <p class="mt-4 mb-1 text-sm font-mono text-stone-600 dark:text-stone-400">$collection-creator-prefix$</p>
       $endif$
       $if(collection-creator-names)$
-      <p class="nombres-enlazados mb-3 text-lg font-bold text-stone-900 dark:text-stone-100">$collection-creator-names$</p>
+      <p class="nombres-enlazados mb-8 text-lg font-bold text-stone-900 dark:text-stone-100">$collection-creator-names$</p>
       $endif$
       $if(date)$
       <p class="mb-2 text-sm font-mono text-stone-600 dark:text-stone-400">$date$</p>
