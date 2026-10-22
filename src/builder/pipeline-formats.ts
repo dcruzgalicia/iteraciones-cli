@@ -722,8 +722,10 @@ async function buildExtrasHtml(args: {
   for (const doc of args.creatorDocs) {
     partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs), '', '</div>'].join('\n'));
   }
-  // Con una sola colección o lista no hace falta la tarjeta: no aporta nada.
-  if (args.contenedores.length > 1) {
+  // La tarjeta "También está en" se muestra si el texto vive en al menos una
+  // colección real. No se crea si no pertenece a ninguna colección o sólo a
+  // las listas por defecto (que nunca aparecen aquí).
+  if (args.contenedores.some((c) => c.type === 'collection')) {
     partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores, args.dir), '', '</div>'].join('\n'));
   }
   if (partes.length === 0) return '';
