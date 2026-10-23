@@ -48,7 +48,7 @@ Característica: la tarjeta de cada miembro de una colección
       """
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML dice "tarjeta-fragmento"
-      Y el HTML dice "<h2 class=\"text-center text-lg\"><span class=\"whitespace-nowrap\">Autora A</span></h2>"
+      Y el HTML dice "<h2 class=\"text-center text-base\"><span class=\"whitespace-nowrap\">Autora A</span></h2>"
       Y el título de la tarjeta del miembro es un enlace
       Y el HTML dice "Contenido de doc."
       Y el HTML dice "Leer el texto completo →"
@@ -61,7 +61,7 @@ Característica: la tarjeta de cada miembro de una colección
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML dice "<a href=\"./documento-por-autora-a.html\""
       Y el HTML dice "tarjeta-fragmento relative"
-      Y el HTML dice "<p class=\"text-center\">"
+      Y el HTML dice "<p class=\"text-center mt-4\">"
       Y el HTML no dice "after:absolute after:inset-0"
 
     Escenario: Cada tarjeta va en su propio contenedor del masonry
