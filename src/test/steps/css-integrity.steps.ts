@@ -161,6 +161,7 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
     'dictum',
     'logo-fill',
     'nombres-enlazados',
+    'nombres-enlazados-gris',
     'scroll-reveal',
     'scroll-reveal-at-end',
     'smallcaps',
