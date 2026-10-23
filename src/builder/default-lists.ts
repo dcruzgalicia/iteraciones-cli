@@ -6,11 +6,21 @@ import { relativeHref } from './pipeline-io.js';
  * salida.
  */
 export const DEFAULT_LISTS = [
-  { type: 'file', slug: 'texto', title: 'Texto' },
-  { type: 'collection', slug: 'coleccion', title: 'Colección' },
-  { type: 'creator', slug: 'creadora', title: 'Creadora' },
-  { type: 'list', slug: 'lista', title: 'Lista' },
-  { type: 'all', slug: 'index', title: 'Inicio' },
+  {
+    type: 'file',
+    slug: 'texto',
+    title: 'Textos',
+    description: 'Los textos de esta iteración: ciencia, ciencia ficción y matemáticas, escritos por sus autoras.',
+  },
+  { type: 'collection', slug: 'coleccion', title: 'Colecciones', description: 'Las colecciones que reúnen los textos de esta iteración.' },
+  { type: 'creator', slug: 'creadora', title: 'Creadoras', description: 'Las creadoras que escriben, comparten y re-existen en esta iteración.' },
+  { type: 'list', slug: 'lista', title: 'Listas', description: 'Las listas que organizan los contenidos de esta iteración.' },
+  {
+    type: 'all',
+    slug: 'index',
+    title: 'Publicaciones',
+    description: 'Todas las publicaciones de esta iteración: ciencia, ciencia ficción y matemáticas.',
+  },
 ] as const;
 
 export function defaultListSlug(type: string | undefined): string | undefined {
