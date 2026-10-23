@@ -13,7 +13,7 @@ export const DEFAULT_HTML_FORMAT = {
     color: 'lime' as const,
   },
   generate: true,
-  pageSize: 10,
+  pageSize: 20,
 };
 
 export const DEFAULT_LATEX_FORMAT = {

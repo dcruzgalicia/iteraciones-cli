@@ -15,9 +15,9 @@ Característica: El chip de tipo lleva a la lista de ese type
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/texto.html" existe
-      Y el archivo "dist/files/coleccion.html" existe
       Y el archivo "dist/files/creadora.html" existe
-      Y el archivo "dist/files/lista.html" existe
+      Y el archivo "dist/files/coleccion.html" no existe
+      Y el archivo "dist/files/lista.html" no existe
 
     Escenario: Cada lista trae los documentos de su type
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -27,14 +27,13 @@ Característica: El chip de tipo lleva a la lista de ese type
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/texto.html" dice "Un texto"
       Y el archivo "dist/files/creadora.html" dice "Ana García"
-      Y el archivo "dist/files/coleccion.html" no dice "Un texto"
+      Y el archivo "dist/files/coleccion.html" no existe
 
     Escenario: La lista de un type que no existe queda vacía
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/lista.html" existe
-      Y el archivo "dist/files/lista.html" no dice "tarjeta-fragmento"
+      Entonces el archivo "dist/files/lista.html" no existe
 
     Escenario: La lista de creadoras no pone "Anónima" en las tarjetas
       Dado que la raíz del proyecto tiene un proyecto de prueba
