@@ -10,16 +10,16 @@ export const DEFAULT_LISTS = [
     type: 'file',
     slug: 'texto',
     title: 'Textos',
-    description: 'Los textos de esta iteración: ciencia, ciencia ficción y matemáticas, escritos por sus autoras.',
+    description: 'Textos compartidos por esta comunidad.',
   },
-  { type: 'collection', slug: 'coleccion', title: 'Colecciones', description: 'Las colecciones que reúnen los textos de esta iteración.' },
-  { type: 'creator', slug: 'creadora', title: 'Creadoras', description: 'Las creadoras que escriben, comparten y re-existen en esta iteración.' },
-  { type: 'list', slug: 'lista', title: 'Listas', description: 'Las listas que organizan los contenidos de esta iteración.' },
+  { type: 'collection', slug: 'coleccion', title: 'Colecciones', description: 'Conjuntos de contenidos reunidos por esta comunidad.' },
+  { type: 'creator', slug: 'creadora', title: 'Creadoras', description: 'Personas que participan en esta comunidad.' },
+  { type: 'list', slug: 'lista', title: 'Listas', description: 'Listas de contenidos de esta comunidad.' },
   {
     type: 'all',
     slug: 'index',
     title: 'Publicaciones',
-    description: 'Todas las publicaciones de esta iteración: ciencia, ciencia ficción y matemáticas.',
+    description: 'Publicaciones compartidas por esta comunidad.',
   },
 ] as const;
 
