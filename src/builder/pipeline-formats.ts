@@ -547,13 +547,14 @@ export function nombresEnlazados(nombres: string[], hrefs: Map<string, string>):
 }
 
 /** El nombre tal como va dentro de una tarjeta: HTML. */
-function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>, tono: 'accent' | 'gris' = 'accent'): string {
+function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>, tono: 'accent' | 'gris' | 'plano' = 'accent'): string {
   const href = hrefs.get(nombre);
   if (href === undefined) return nombre;
+  if (tono === 'plano') return `<a href="${href}">${nombre}</a>`;
   const clases =
     tono === 'gris'
-      ? 'text-stone-600 underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current dark:text-stone-400'
-      : 'text-accent-700 underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current dark:text-accent-300';
+      ? 'text-stone-600 underline underline-offset-4 dark:text-stone-400'
+      : 'text-accent-700 underline underline-offset-4 dark:text-accent-300';
   return `<a href="${href}" class="${clases}">${nombre}</a>`;
 }
 
@@ -824,7 +825,7 @@ function ordenarNombres(nombres: string[]): string[] {
   return [...new Set(nombres)].sort((a, b) => a.localeCompare(b, 'es'));
 }
 
-function renderNombres(lista: string[], tono: 'accent' | 'gris', creatorHrefs: Map<string, string>): string {
+function renderNombres(lista: string[], tono: 'accent' | 'gris' | 'plano', creatorHrefs: Map<string, string>): string {
   return lista.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`).join(', ');
 }
 
@@ -837,13 +838,20 @@ function partesDeColeccion(
 ): string[] {
   const partes = [titleHtml, ''];
   const nombres = discoveryIndex === undefined ? [] : creadoresDeArchivosDeColeccion(e, discoveryIndex);
-  if (nombres.length > 0) partes.push(`<h2 class="text-center text-base">${renderNombres(nombres, 'gris', creatorHrefs)}</h2>`, '');
+  if (nombres.length > 0) {
+    partes.push(
+      `<p class="not-prose nombres-enlazados-gris mt-2 mb-6 text-center text-base leading-relaxed text-stone-900 dark:text-stone-100">${renderNombres(nombres, 'plano', creatorHrefs)}</p>`,
+    );
+  }
   const coleccion = discoveryIndex?.get(e.file);
   const prefijo = typeof coleccion?.fm?.collectionCreatorPrefix === 'string' ? coleccion.fm.collectionCreatorPrefix : '';
-  if (prefijo !== '') partes.push(`<p class="mt-6 mb-0 text-center text-sm font-mono text-stone-600 dark:text-stone-400">${prefijo}</p>`);
+  if (prefijo !== '') partes.push(`<p class="not-prose mt-8 mb-1 text-center text-sm font-mono text-stone-700 dark:text-stone-300">${prefijo}</p>`);
   const antologistas = ordenarNombres(parseAuthors(coleccion?.fm?.collectionCreator));
-  if (antologistas.length > 0)
-    partes.push(`<p class="mt-1 mb-0 text-center text-lg font-bold">${renderNombres(antologistas, 'accent', creatorHrefs)}</p>`);
+  if (antologistas.length > 0) {
+    partes.push(
+      `<p class="not-prose nombres-enlazados-gris mb-8 text-center text-lg font-bold text-stone-900 dark:text-stone-100">${renderNombres(antologistas, 'plano', creatorHrefs)}</p>`,
+    );
+  }
   return partes;
 }
 

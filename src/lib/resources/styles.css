@@ -132,6 +132,13 @@
   font-size: 0.95em;
   text-align: left;
 
+  /* La tipografía de Tailwind pone comillas a todo blockquote; el dictum va
+     en cursivas, sin comillas. El selector duplicado le gana a la tipografía. */
+  && p:first-of-type::before,
+  && p:last-of-type::after {
+    content: none;
+  }
+
   & > :first-child {
     margin-block-start: 0;
   }
@@ -140,11 +147,19 @@
     margin-block-end: 0;
   }
 
+  & > p:last-of-type {
+    margin-block-end: 0;
+  }
+
   & .author {
-    margin-block-start: 0.5em;
+    margin-block-start: 0.2em;
     font-size: 0.9em;
-    font-style: italic;
+    font-style: normal;
     text-align: right;
+
+    & p {
+      margin-block: 0;
+    }
   }
 }
 
