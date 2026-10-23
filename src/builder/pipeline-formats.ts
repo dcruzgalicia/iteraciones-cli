@@ -523,10 +523,14 @@ export function nombresEnlazados(nombres: string[], hrefs: Map<string, string>):
 }
 
 /** El nombre tal como va dentro de una tarjeta: HTML. */
-function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>): string {
+function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>, tono: 'accent' | 'gris' = 'accent'): string {
   const href = hrefs.get(nombre);
   if (href === undefined) return nombre;
-  return `<a href="${href}" class="text-accent-700 underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current dark:text-accent-300">${nombre}</a>`;
+  const clases =
+    tono === 'gris'
+      ? 'text-stone-600 underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current dark:text-stone-400'
+      : 'text-accent-700 underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current dark:text-accent-300';
+  return `<a href="${href}" class="${clases}">${nombre}</a>`;
 }
 
 function collectionCards(
@@ -747,11 +751,12 @@ async function buildExtrasHtml(args: {
 
 function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>, dir: string): string {
   // Un type creator no tiene creator: su tarjeta muestra el name y nada más.
+  const tonoCreator = e.type === 'file' ? 'gris' : 'accent';
   const creator =
     e.type === 'creator'
       ? ''
       : e.creator.length > 0
-        ? e.creator.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs)}</span>`).join(', ')
+        ? e.creator.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs, tonoCreator)}</span>`).join(', ')
         : AUTORA_POR_DEFECTO;
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body);
@@ -765,13 +770,13 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
     );
   }
   if (creator !== '') {
-    card.push(`<h2 class="text-center text-lg">${creator}</h2>`, '');
+    card.push(`<h2 class="text-center text-base">${creator}</h2>`, '');
   }
   const tituloHref = href;
   card.push(
     tituloHref === undefined
-      ? `<h3 class="text-center text-[22px] text-accent-800 dark:text-accent-300">${title}</h3>`
-      : `<h3 class="text-center text-[22px] text-accent-800 dark:text-accent-300"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
+      ? `<h3 class="text-center text-[22px] text-accent-900 dark:text-accent-300">${title}</h3>`
+      : `<h3 class="text-center text-[22px] text-accent-900 dark:text-accent-300"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
   );
   if (e.subtitle) card.push('', `<h4 class="text-center text-lg uppercase tracking-wide">${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
