@@ -192,6 +192,19 @@ async function emitLatexAndQueuePdf(
   }
 }
 
+function contentChipPara(type: string | undefined): string | undefined {
+  if (type === 'creator') return 'Bio';
+  if (type === undefined || type === 'file') return 'Contenido';
+  return undefined;
+}
+
+function docChipHrefPara(dir: string, type: string | undefined, available?: Set<string>): string | undefined {
+  const slug = defaultListSlug(type);
+  if (slug === undefined) return undefined;
+  if (available !== undefined && !available.has(slug)) return undefined;
+  return defaultListHref(dir, type);
+}
+
 function htmlVars(args: {
   doc: BuildDocument;
   outputs: DocumentOutputs;
@@ -230,12 +243,8 @@ function htmlVars(args: {
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: docChip ?? docChipLabel(doc.frontmatter.type),
-    docChipHref: (() => {
-      const slug = defaultListSlug(doc.frontmatter.type);
-      if (slug === undefined) return undefined;
-      if (available !== undefined && !available.has(slug)) return undefined;
-      return defaultListHref(dir, doc.frontmatter.type);
-    })(),
+    contentChip: contentChipPara(doc.frontmatter.type),
+    docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
     pagination: pagination === '' ? undefined : pagination,
   };
@@ -301,7 +310,12 @@ export type CollectionEntry = {
   body: string;
 };
 
-export async function readCollectionEntries(files: string[], collectionPath: string, bases: string[]): Promise<CollectionEntry[]> {
+export async function readCollectionEntries(
+  files: string[],
+  collectionPath: string,
+  bases: string[],
+  incluirSinCuerpo = false,
+): Promise<CollectionEntry[]> {
   const entries: CollectionEntry[] = [];
   for (const [indice, file] of files.entries()) {
     const candidates = [...new Set(bases.map((base) => join(base, file)))];
@@ -325,7 +339,7 @@ export async function readCollectionEntries(files: string[], collectionPath: str
     const parsed = parseFileFrontmatter(text, file);
 
     const rootRelative = posix(file).replace(/^\.\//, '');
-    if (parsed.body.trim()) entries.push({ file: rootRelative, posicion: indice + 1, ...parsed });
+    if (incluirSinCuerpo || parsed.body.trim()) entries.push({ file: rootRelative, posicion: indice + 1, ...parsed });
   }
   return entries;
 }
@@ -552,11 +566,12 @@ function collectionCards(
   creatorHrefs: Map<string, string>,
   dir: string,
   available?: Set<string>,
+  discoveryIndex?: Map<string, DiscoveryEntry>,
 ): string {
   const cards: string[] = [];
   if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
   for (const e of printableEntries(entries).slice(desde, hasta)) {
-    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available));
+    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex));
   }
   return cards.join('\n\n');
 }
@@ -568,9 +583,20 @@ export function collectionCardsContent(
   creatorHrefs: Map<string, string> = new Map(),
   dir = '.',
   available?: Set<string>,
+  discoveryIndex?: Map<string, DiscoveryEntry>,
 ): string {
   if (entries.length === 0) return content;
-  return collectionCards(entries, memberHrefs, splitFrontmatter(content).body.trim(), 0, Number.POSITIVE_INFINITY, creatorHrefs, dir, available);
+  return collectionCards(
+    entries,
+    memberHrefs,
+    splitFrontmatter(content).body.trim(),
+    0,
+    Number.POSITIVE_INFINITY,
+    creatorHrefs,
+    dir,
+    available,
+    discoveryIndex,
+  );
 }
 
 /**
@@ -586,6 +612,7 @@ export function collectionCardsPages(
   dir = '.',
   available?: Set<string>,
   repeatIntro = false,
+  discoveryIndex?: Map<string, DiscoveryEntry>,
 ): string[] {
   if (entries.length === 0) return [content];
   const imprimibles = printableEntries(entries);
@@ -593,7 +620,17 @@ export function collectionCardsPages(
   const paginas: string[] = [];
   for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
     paginas.push(
-      collectionCards(entries, memberHrefs, desde === 0 || repeatIntro ? intro : '', desde, desde + pageSize, creatorHrefs, dir, available),
+      collectionCards(
+        entries,
+        memberHrefs,
+        desde === 0 || repeatIntro ? intro : '',
+        desde,
+        desde + pageSize,
+        creatorHrefs,
+        dir,
+        available,
+        discoveryIndex,
+      ),
     );
   }
   return paginas.length > 0 ? paginas : [content];
@@ -659,7 +696,7 @@ const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
-const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora' };
+const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora', collection: 'Colección', list: 'Lista' };
 
 const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
 
@@ -773,42 +810,96 @@ async function buildExtrasHtml(args: {
   return minifyHtml(html);
 }
 
+/** Las creadoras de cada texto de la colección, sin repetir y en orden alfabético. */
+function creadoresDeArchivosDeColeccion(e: CollectionEntry, discoveryIndex: Map<string, DiscoveryEntry>): string[] {
+  const coleccion = discoveryIndex.get(e.file);
+  const nombres = new Set<string>();
+  for (const miembro of coleccion?.files ?? []) {
+    for (const nombre of discoveryIndex.get(miembro)?.creator ?? []) nombres.add(nombre);
+  }
+  return [...nombres].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+function ordenarNombres(nombres: string[]): string[] {
+  return [...new Set(nombres)].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+function renderNombres(lista: string[], tono: 'accent' | 'gris', creatorHrefs: Map<string, string>): string {
+  return lista.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`).join(', ');
+}
+
+/** Las partes de una tarjeta de colección, después del chip: título, autoras de los textos, prefijo y antologadora. */
+function partesDeColeccion(
+  e: CollectionEntry,
+  titleHtml: string,
+  creatorHrefs: Map<string, string>,
+  discoveryIndex?: Map<string, DiscoveryEntry>,
+): string[] {
+  const partes = [titleHtml, ''];
+  const nombres = discoveryIndex === undefined ? [] : creadoresDeArchivosDeColeccion(e, discoveryIndex);
+  if (nombres.length > 0) partes.push(`<h2 class="text-center text-base">${renderNombres(nombres, 'gris', creatorHrefs)}</h2>`, '');
+  const coleccion = discoveryIndex?.get(e.file);
+  const prefijo = typeof coleccion?.fm?.collectionCreatorPrefix === 'string' ? coleccion.fm.collectionCreatorPrefix : '';
+  if (prefijo !== '') partes.push(`<p class="mt-6 mb-0 text-center text-sm font-mono text-stone-600 dark:text-stone-400">${prefijo}</p>`);
+  const antologistas = ordenarNombres(parseAuthors(coleccion?.fm?.collectionCreator));
+  if (antologistas.length > 0)
+    partes.push(`<p class="mt-1 mb-0 text-center text-lg font-bold">${renderNombres(antologistas, 'accent', creatorHrefs)}</p>`);
+  return partes;
+}
+
+function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, DiscoveryEntry>): { tono: 'accent' | 'gris'; nombres?: string[] } {
+  const tipo = e.type ?? 'file';
+  if (tipo === 'creator') return { tono: 'accent' };
+  if (tipo === 'collection') return { tono: 'gris', nombres: discoveryIndex === undefined ? [] : creadoresDeArchivosDeColeccion(e, discoveryIndex) };
+  return { tono: 'gris', nombres: e.creator };
+}
+
+function titleHtmlPara(title: string, href: string | undefined): string {
+  if (href === undefined) return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6">${title}</h3>`;
+  return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
+}
+
+function cabeceraDeTarjeta(
+  e: CollectionEntry,
+  titleHtml: string,
+  creatorHrefs: Map<string, string>,
+  dir: string,
+  available?: Set<string>,
+  discoveryIndex?: Map<string, DiscoveryEntry>,
+): string[] {
+  const tipo = e.type ?? 'file';
+  const partes: string[] = [];
+  const typeLabel = MEMBER_TYPE_LABEL[tipo];
+  if (typeLabel !== undefined) {
+    partes.push(
+      `<div class="flex items-start justify-between gap-4">${chipHtml(typeLabel, e.type, dir, MEMBER_PILL_CLASSES, available)}<span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
+      '',
+    );
+  }
+  if (tipo === 'collection') return [...partes, ...partesDeColeccion(e, titleHtml, creatorHrefs, discoveryIndex)];
+  const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
+  const creator = nombres === undefined ? '' : nombres.length > 0 ? renderNombres(nombres, tono, creatorHrefs) : AUTORA_POR_DEFECTO;
+  if (creator !== '') partes.push(`<h2 class="text-center text-base">${creator}</h2>`, '');
+  partes.push(titleHtml);
+  if (e.subtitle) partes.push('', `<h4 class="text-center text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
+  return partes;
+}
+
 function collectionCard(
   e: CollectionEntry,
   href: string | undefined,
   creatorHrefs: Map<string, string>,
   dir: string,
   available?: Set<string>,
+  discoveryIndex?: Map<string, DiscoveryEntry>,
 ): string {
-  // Un type creator no tiene creator: su tarjeta muestra el name y nada más.
-  const tonoCreator = (e.type ?? 'file') === 'file' ? 'gris' : 'accent';
-  const creator =
-    e.type === 'creator'
-      ? ''
-      : e.creator.length > 0
-        ? e.creator.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs, tonoCreator)}</span>`).join(', ')
-        : AUTORA_POR_DEFECTO;
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body);
-
-  const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
-  const typeLabel = MEMBER_TYPE_LABEL[e.type ?? 'file'];
-  if (typeLabel !== undefined) {
-    card.push(
-      `<div class="flex items-start justify-between gap-4">${chipHtml(typeLabel, e.type, dir, MEMBER_PILL_CLASSES, available)}<span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
-      '',
-    );
-  }
-  if (creator !== '') {
-    card.push(`<h2 class="text-center text-base">${creator}</h2>`, '');
-  }
-  const tituloHref = href;
-  card.push(
-    tituloHref === undefined
-      ? `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6">${title}</h3>`
-      : `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
-  );
-  if (e.subtitle) card.push('', `<h4 class="text-center text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
+  const card = [
+    `:::: {class="${COLLECTION_CARD_CLASSES}"}`,
+    '',
+    ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex),
+  ];
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
     card.push('', `<p class="text-center mt-4"><a href="${href}" class="${MEMBER_LINK_CLASSES}">Leer el texto completo →</a></p>`);
@@ -1194,7 +1285,17 @@ async function emitCollectionFormats(
     const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
     const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
     const available = availableDefaultListSlugs(discoveryIndex);
-    const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize, hrefsCreadores, outputs.dir, available);
+    const paginas = collectionCardsPages(
+      collectionEntries,
+      memberHrefs,
+      content,
+      pageSize,
+      hrefsCreadores,
+      outputs.dir,
+      available,
+      false,
+      discoveryIndex,
+    );
     assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
@@ -1296,14 +1397,26 @@ export function availableDefaultListSlugs(discoveryIndex: Map<string, DiscoveryE
   return slugs;
 }
 
-function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
-  if (type === 'all') return [...discoveryIndex.keys()];
-  const miembros: string[] = [];
-  for (const [ruta, entry] of discoveryIndex) {
-    const tipo = entry.type ?? (entry.files && entry.files.length > 0 ? 'collection' : 'file');
-    if (tipo === type) miembros.push(ruta);
+function tipoDe(entry: DiscoveryEntry): string {
+  return entry.type ?? (entry.files && entry.files.length > 0 ? 'collection' : 'file');
+}
+
+/** La fecha del `date` del frontmatter o, si no existe, la última modificación del archivo. */
+function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
+  if (entry?.date !== undefined) {
+    const fecha = Date.parse(entry.date);
+    if (!Number.isNaN(fecha)) return fecha;
   }
-  return miembros;
+  return entry?.mtime ?? 0;
+}
+
+/** Las listas por defecto se ordenan de lo más reciente a lo más antiguo. */
+function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
+  const rutas = [...discoveryIndex.entries()].filter(([, entry]) => type === 'all' || tipoDe(entry) === type).map(([ruta]) => ruta);
+  return rutas.sort((a, b) => {
+    const diferencia = fechaOrdenable(discoveryIndex.get(b)) - fechaOrdenable(discoveryIndex.get(a));
+    return diferencia !== 0 ? diferencia : a.localeCompare(b);
+  });
 }
 
 function imagenesDeLosFragmentos(entradas: CollectionEntry[], cwd: string): string[] {
@@ -1338,7 +1451,7 @@ export async function emitDefaultLists(args: {
   const listas = [];
   for (const lista of DEFAULT_LISTS) {
     const miembros = miembrosDeUnType(discoveryIndex, lista.type);
-    const entradas = await readCollectionEntries(miembros, `${lista.slug}.md`, [cwd]);
+    const entradas = await readCollectionEntries(miembros, `${lista.slug}.md`, [cwd], true);
     listas.push({ ...lista, miembros, entradas });
   }
 
@@ -1371,8 +1484,9 @@ export async function emitDefaultLists(args: {
     }
 
     const memberHrefs = memberHtmlHrefs(`${slug}.md`, entradas, discoveryIndex);
-    const paginas = collectionCardsPages(entradas, memberHrefs, description ?? '', pageSize, hrefsCreadores, '.', available, true);
-    const contenidos = paginas.map((base, indice) => base + paginationNav('.', slug, indice + 1, paginas.length));
+    const paginas = collectionCardsPages(entradas, memberHrefs, description ?? '', pageSize, hrefsCreadores, '.', available, true, discoveryIndex);
+    // La paginación la inserta emitHtmlPage; no debe duplicarse aquí.
+    const contenidos = paginas;
 
     const doc: BuildDocument = {
       filePath: join(cwd, `${slug}.md`),
@@ -1389,18 +1503,7 @@ export async function emitDefaultLists(args: {
     };
 
     const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
-    await emitHtmlPage(
-      doc,
-      outputs,
-      renderCtx,
-      exportCtx,
-      discoveryIndex,
-      imagePaths,
-      contenidos,
-      hrefsCreadores,
-      '',
-      docChipLabel(type as string | undefined),
-    );
+    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, '', 'Lista');
   }
 }
 

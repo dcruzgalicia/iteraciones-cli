@@ -40,6 +40,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   ]);
   if (vars.docChip) args.push(`--variable=doc-chip:${vars.docChip}`);
   if (vars.docChipHref) args.push(`--variable=doc-chip-href:${vars.docChipHref}`);
+  if (vars.contentChip) args.push(`--variable=content-chip:${vars.contentChip}`);
   if (vars.extras) args.push(`--variable=extras:${vars.extras}`);
   if (vars.pagination) args.push(`--variable=pagination:${vars.pagination}`);
   return args;

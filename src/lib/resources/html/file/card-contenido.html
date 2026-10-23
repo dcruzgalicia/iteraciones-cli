@@ -13,6 +13,9 @@
         [&_h6:not([class])]:text-xl [&_h6:not([class])]:italic [&_h6:not([class])]:font-normal
         [&_table]:border-accent-500/10 [&_th]:border-accent-500/10 [&_td]:border-accent-500/10"
       >
+        $if(content-chip)$
+        <div class="not-prose"><h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-800 dark:text-accent-300">$content-chip$</h2></div>
+        $endif$
         $body$
       </article>
     </div>

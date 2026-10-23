@@ -16,14 +16,14 @@ Característica: El type list, una colección que se arma sola
       Cuando descubro y post-proceso el proyecto
       Entonces los miembros de "lista.md" son "a.md, b.md"
 
-    Escenario: Sin fecha van al final
+    Escenario: Sin fecha se usa la última modificación
       Dado que la raíz del proyecto está vacía
       Y que el proyecto tiene:
       """
-      {"lista.md": "---\ntitle: Todos\ntype: list\n---\n", "a.md": "---\ntitle: A\ndate: 2026-03-01\n---\n\nCuerpo.\n", "b.md": "---\ntitle: B\n---\n\nCuerpo.\n"}
+      {"lista.md": "---\ntitle: Todos\ntype: list\n---\n", "a.md": "---\ntitle: A\ndate: 2000-01-01\n---\n\nCuerpo.\n", "b.md": "---\ntitle: B\n---\n\nCuerpo.\n"}
       """
       Cuando descubro y post-proceso el proyecto
-      Entonces los miembros de "lista.md" son "a.md, b.md"
+      Entonces los miembros de "lista.md" son "b.md, a.md"
 
   Regla de negocio: Cada filtro acota
 
