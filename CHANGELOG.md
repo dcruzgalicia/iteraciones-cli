@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.27.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.26.0...v0.27.0) (2026-10-23)
+
+
+### Features
+
+* **builder:** nuevo type list que filtra los archivos del proyecto ([bd0799d](https://github.com/dcruzgalicia/iteraciones-cli/commit/bd0799d00f919964a95e49f06f576602d576ac6d)), closes [#2713](https://github.com/dcruzgalicia/iteraciones-cli/issues/2713)
+* **html:** badge con la posición del archivo en las tarjetas de collection ([17e12a8](https://github.com/dcruzgalicia/iteraciones-cli/commit/17e12a8c26ac67cbc9c03c244fb842580517b6f6)), closes [#2711](https://github.com/dcruzgalicia/iteraciones-cli/issues/2711)
+* **html:** el chip de tipo enlaza a la lista por defecto del type ([314619e](https://github.com/dcruzgalicia/iteraciones-cli/commit/314619ea9489d4ef57a208848dcf930751c51d82)), closes [#2719](https://github.com/dcruzgalicia/iteraciones-cli/issues/2719)
+* **html:** el nombre de la creadora de la biografía lleva a su página ([bb5689e](https://github.com/dcruzgalicia/iteraciones-cli/commit/bb5689eae96707866f6e996b0705622ed4d9d692)), closes [#2723](https://github.com/dcruzgalicia/iteraciones-cli/issues/2723)
+* **html:** la tarjeta de un file in files deja de ser un enlace global ([2d58eef](https://github.com/dcruzgalicia/iteraciones-cli/commit/2d58eef2e5b1bc8687c0f2c36de24710545dceb9)), closes [#2718](https://github.com/dcruzgalicia/iteraciones-cli/issues/2718)
+* **html:** los chips reemplazan a los títulos y llegan los textos de la creadora ([f5a63b4](https://github.com/dcruzgalicia/iteraciones-cli/commit/f5a63b466b4bf17f94eb67d58a29cc96a69a2f3c)), closes [#2723](https://github.com/dcruzgalicia/iteraciones-cli/issues/2723)
+* **html:** los nombres de creator y collectionCreator enlazan a su type creator ([3d30ee3](https://github.com/dcruzgalicia/iteraciones-cli/commit/3d30ee32a7350d02a00dff547c289ad0931daf2a)), closes [#2717](https://github.com/dcruzgalicia/iteraciones-cli/issues/2717)
+* **html:** paginación de las colecciones con format.html.pageSize ([f3f1d13](https://github.com/dcruzgalicia/iteraciones-cli/commit/f3f1d1313bdf5de4ce61a9c3c261408b5562639e)), closes [#2712](https://github.com/dcruzgalicia/iteraciones-cli/issues/2712)
+* **html:** tarjetas de creator y de colecciones/listas en la página de un type file ([df40453](https://github.com/dcruzgalicia/iteraciones-cli/commit/df40453bc7cd03ed1a9e02ae7e2ffc4a0ab38a59)), closes [#2720](https://github.com/dcruzgalicia/iteraciones-cli/issues/2720)
+* **latex:** cada guarda ocupa una página y el startpaper su verso ([bad320c](https://github.com/dcruzgalicia/iteraciones-cli/commit/bad320ca17753062d1ad0d134563adb0ff22c3ca)), closes [#2715](https://github.com/dcruzgalicia/iteraciones-cli/issues/2715)
+* **latex:** el índice no sale si no hay nada que indizar ([b3bb8ab](https://github.com/dcruzgalicia/iteraciones-cli/commit/b3bb8ab0519bf3d9e733805103270097514bf5de)), closes [#2723](https://github.com/dcruzgalicia/iteraciones-cli/issues/2723)
+* **latex:** el nombre y la bio se quedan aunque no haya encabezado ([9fb1269](https://github.com/dcruzgalicia/iteraciones-cli/commit/9fb1269bf00890631fbadc04960cf260fda5900c)), closes [#2714](https://github.com/dcruzgalicia/iteraciones-cli/issues/2714)
+* **latex:** frontCover y backCover antes del startpaper ([4f48f08](https://github.com/dcruzgalicia/iteraciones-cli/commit/4f48f0817c7e3a782d037a635fb42f19a2465f60)), closes [#2715](https://github.com/dcruzgalicia/iteraciones-cli/issues/2715)
+* **latex:** la sección de autoras es una sección en los type file ([c9f5d9f](https://github.com/dcruzgalicia/iteraciones-cli/commit/c9f5d9f7f686cc4d02798f4335d7830e42dc3b02)), closes [#2714](https://github.com/dcruzgalicia/iteraciones-cli/issues/2714)
+* **latex:** la sección de autoras sólo sale si hay más de una creadora ([11c77df](https://github.com/dcruzgalicia/iteraciones-cli/commit/11c77df77176eb71f16472a4885d62af1073ca6c)), closes [#2714](https://github.com/dcruzgalicia/iteraciones-cli/issues/2714)
+* **latex:** sección de autoras y colaboradoras en los type file ([cc960de](https://github.com/dcruzgalicia/iteraciones-cli/commit/cc960de233b2a95ab96264bcac8515104a0a6a4c)), closes [#2714](https://github.com/dcruzgalicia/iteraciones-cli/issues/2714)
+* **listas:** chips condicionales, botón normalizado, descripciones y títulos plurales ([a56ef51](https://github.com/dcruzgalicia/iteraciones-cli/commit/a56ef516512f44ba246966e2051cfab035cf2edd))
+* **listas:** chips de contenido, orden por fecha y tarjeta de colección reordenada ([0da2919](https://github.com/dcruzgalicia/iteraciones-cli/commit/0da29199dc079f0ce97c4ffbf9d5628f9f9f3f79))
+* **listas:** descripciones neutrales sobre la comunidad ([48d1db0](https://github.com/dcruzgalicia/iteraciones-cli/commit/48d1db01b17d1059776eb6ba94aa6bb8016080f8))
+* **listas:** pageSize 20, lista index condicional y listas vacías no se crean ([36fe426](https://github.com/dcruzgalicia/iteraciones-cli/commit/36fe426dd56c5182816055afa86bb46f770896e9))
+* **pdf:** las guardas pueden ir en color ([2a975b2](https://github.com/dcruzgalicia/iteraciones-cli/commit/2a975b2cde10bb174ffbe61474fec77b3312e54a)), closes [#2723](https://github.com/dcruzgalicia/iteraciones-cli/issues/2723)
+* **snapshots:** captura visual de las páginas HTML del sitio ([d38c82a](https://github.com/dcruzgalicia/iteraciones-cli/commit/d38c82a0e7719f868430c29f4fb4cc2d4a2e44de)), closes [#2716](https://github.com/dcruzgalicia/iteraciones-cli/issues/2716)
+* **snapshots:** guarda el mapa de rutas HTML como línea base ([a405440](https://github.com/dcruzgalicia/iteraciones-cli/commit/a40544085eaef7e4120159464fac5c4ce7cdd71d))
+
+
+### Bug Fixes
+
+* **css:** el anillo de foco funciona en el tema oscuro ([b285e3c](https://github.com/dcruzgalicia/iteraciones-cli/commit/b285e3ce8c74cba26133766146aca96127135504)), closes [#2723](https://github.com/dcruzgalicia/iteraciones-cli/issues/2723)
+* **html:** creador de tarjeta file en gris (type puede ser undefined) ([60f7679](https://github.com/dcruzgalicia/iteraciones-cli/commit/60f7679a27dceb43a2f4dfd53c0ee4e87a111a70))
+* **html:** la lista de descargas vuelve a tener viñetas ([443ca91](https://github.com/dcruzgalicia/iteraciones-cli/commit/443ca9148989f589236c05ace775634a8fa84840)), closes [#2723](https://github.com/dcruzgalicia/iteraciones-cli/issues/2723)
+* **latex:** el epígrafe de apertura va en un recto ([2624d2d](https://github.com/dcruzgalicia/iteraciones-cli/commit/2624d2da3f299813ca637cc5024ff35222a8d08b)), closes [#2723](https://github.com/dcruzgalicia/iteraciones-cli/issues/2723)
+* **latex:** el startpaper ya no se lleva una página de más ([2274c3d](https://github.com/dcruzgalicia/iteraciones-cli/commit/2274c3dac328a042e335880e1000bd22d805c5a8)), closes [#2715](https://github.com/dcruzgalicia/iteraciones-cli/issues/2715)
+* **latex:** la página de cada guarda se asigna cuando se crea ([b3858d3](https://github.com/dcruzgalicia/iteraciones-cli/commit/b3858d32b17c0a157017cb22d444169dd69d4143)), closes [#2723](https://github.com/dcruzgalicia/iteraciones-cli/issues/2723)
+* **listas:** descripción en todas las páginas, chip por tipo y botón normalizado ([3feb3db](https://github.com/dcruzgalicia/iteraciones-cli/commit/3feb3dbe2b92380d917a886e8884e7da5f496fea))
+
 ## [0.26.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.25.0...v0.26.0) (2026-10-19)
 
 
