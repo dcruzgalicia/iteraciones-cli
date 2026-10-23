@@ -775,10 +775,10 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
   const tituloHref = href;
   card.push(
     tituloHref === undefined
-      ? `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-4">${title}</h3>`
-      : `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-4"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
+      ? `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6">${title}</h3>`
+      : `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6"><a href="${tituloHref}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`,
   );
-  if (e.subtitle) card.push('', `<h4 class="text-center text-lg uppercase tracking-wide">${e.subtitle}</h4>`);
+  if (e.subtitle) card.push('', `<h4 class="text-center text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
     card.push('', `<p class="text-center mt-4"><a href="${href}" class="${MEMBER_LINK_CLASSES}">Leer el texto completo →</a></p>`);
