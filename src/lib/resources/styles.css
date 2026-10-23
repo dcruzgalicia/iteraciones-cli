@@ -170,6 +170,22 @@
   }
 }
 
+/* Lo mismo, pero en gris: para los nombres de creadora en las tarjetas de un
+   archivo individual, donde son información secundaria. */
+@utility nombres-enlazados-gris {
+  a {
+    color: var(--color-stone-600);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    a {
+      color: var(--color-stone-400);
+    }
+  }
+}
+
 /* La viñeta del listado de "También está en": un color sólido, no el gris
    que trae la tipografía por defecto. */
 @utility tarjeta-extras {
