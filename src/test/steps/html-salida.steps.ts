@@ -134,7 +134,7 @@ Given('que el documento tiene una clase que hay que compilar', () => {
 
 Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
   const html = salida('test-document.html');
-  const inicio = html.indexOf('>Descarga</h2>');
+  const inicio = html.indexOf('>Formatos</h2>');
   if (inicio < 0) throw new Error('la página no tiene tarjeta de descargas');
   const tarjeta = html.slice(inicio, html.indexOf('</section>', inicio));
   if (!tarjeta.includes('<ul')) throw new Error('la tarjeta de descargas no es una lista');
@@ -145,12 +145,12 @@ Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
 
 Then('las tarjetas del documento salen en el orden por defecto', () => {
   const archivo = 'test-document.html';
-  enOrden(salida(archivo), archivo, 'id="card-identity", id="TOC", >Descarga</h2>, <article, id="refs-heading", id="card-identity-footer"');
+  enOrden(salida(archivo), archivo, 'id="card-identity", id="TOC", >Formatos</h2>, <article, id="refs-heading", id="card-identity-footer"');
 });
 
 Then('la lista explícita de bloques ES el orden', () => {
   const archivo = 'test-document.html';
-  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="TOC", >Descarga</h2>');
+  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="TOC", >Formatos</h2>');
 });
 
 Then('los bloques que no aplican no dejan huecos', () => {
@@ -158,13 +158,13 @@ Then('los bloques que no aplican no dejan huecos', () => {
   const html = salida(archivo);
 
   enOrden(html, archivo, 'id="card-identity", <article, id="card-identity-footer"');
-  prohibe(html, archivo, ['>Descarga</h2>', 'id="TOC"', 'refs-heading']);
+  prohibe(html, archivo, ['>Formatos</h2>', 'id="TOC"', 'refs-heading']);
 });
 
 Then('las tarjetas de formatos y referencias quedan fuera de la de contenido', () => {
   const archivo = 'test-document.html';
   const html = salida(archivo);
-  const html1 = html.indexOf('>Descarga</h2>');
+  const html1 = html.indexOf('>Formatos</h2>');
   const article = html.indexOf('<article');
   const refs = html.indexOf('id="refs-heading"');
   const cierre = html.indexOf('</article>');
@@ -228,7 +228,7 @@ Then('el chip de la banda nombra el type de cada documento', () => {
       throw new Error(`${archivo} no tiene el chip ${JSON.stringify(chip)}`);
     }
   }
-  prohibe(salida('test-document.html'), 'test-document.html', ['>Contenido</h2>']);
+  exige(salida('test-document.html'), 'test-document.html', ['>Contenido</h2>']);
 });
 
 Then('los campos de portada salen renderizados como markdown', () => {

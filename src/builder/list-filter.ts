@@ -92,13 +92,18 @@ function cumple(ruta: string, entry: DiscoveryEntry, filtro: ListFilter): boolea
   );
 }
 
-function compararFecha(a: string | undefined, b: string | undefined, descendente: boolean): number {
-  if (a === undefined && b === undefined) return 0;
-  if (a === undefined) return 1;
-  if (b === undefined) return -1;
-  if (a === b) return 0;
-  const menor = a < b ? -1 : 1;
-  return descendente ? -menor : menor;
+function fechaOrdenable(entry: DiscoveryEntry): number {
+  if (entry.date !== undefined) {
+    const fecha = Date.parse(entry.date);
+    if (!Number.isNaN(fecha)) return fecha;
+  }
+  return entry.mtime ?? 0;
+}
+
+function compararFecha(a: DiscoveryEntry, b: DiscoveryEntry, descendente: boolean): number {
+  const diferencia = fechaOrdenable(a) - fechaOrdenable(b);
+  if (diferencia === 0) return 0;
+  return descendente ? -diferencia : diferencia;
 }
 
 function compararTexto(a: string, b: string): number {
@@ -111,11 +116,11 @@ function primerCreator(entry: DiscoveryEntry): string {
 
 function comparador(orden: string): (a: { ruta: string; entry: DiscoveryEntry }, b: { ruta: string; entry: DiscoveryEntry }) => number {
   const porRuta = (a: { ruta: string }, b: { ruta: string }): number => compararTexto(a.ruta, b.ruta);
-  if (orden === 'date-asc') return (a, b) => compararFecha(a.entry.date, b.entry.date, false) || porRuta(a, b);
+  if (orden === 'date-asc') return (a, b) => compararFecha(a.entry, b.entry, false) || porRuta(a, b);
   if (orden === 'title-asc') return (a, b) => compararTexto(a.entry.title, b.entry.title) || porRuta(a, b);
   if (orden === 'title-desc') return (a, b) => -compararTexto(a.entry.title, b.entry.title) || porRuta(a, b);
   if (orden === 'creator-asc') return (a, b) => compararTexto(primerCreator(a.entry), primerCreator(b.entry)) || porRuta(a, b);
-  return (a, b) => compararFecha(a.entry.date, b.entry.date, true) || porRuta(a, b);
+  return (a, b) => compararFecha(a.entry, b.entry, true) || porRuta(a, b);
 }
 
 export function listOrder(fm: Record<string, unknown>): string {

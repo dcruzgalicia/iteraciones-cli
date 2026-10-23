@@ -97,6 +97,7 @@ export interface HtmlPageVars {
 
   docChip?: string;
   docChipHref?: string;
+  contentChip?: string;
 
   /** Las tarjetas de creadoras y de colecciones, ya en HTML. */
   extras?: string;
