@@ -751,7 +751,7 @@ async function buildExtrasHtml(args: {
 
 function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>, dir: string): string {
   // Un type creator no tiene creator: su tarjeta muestra el name y nada más.
-  const tonoCreator = e.type === 'file' ? 'gris' : 'accent';
+  const tonoCreator = (e.type ?? 'file') === 'file' ? 'gris' : 'accent';
   const creator =
     e.type === 'creator'
       ? ''
