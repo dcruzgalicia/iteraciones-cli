@@ -1,7 +1,0 @@
-{
-  "default": {
-    "paths": ["features/collection-tarjetas.feature"],
-    "import": ["src/test/steps/*.steps.ts"],
-    "i18n": { "languages": ["es"], "default": "es" }
-  }
-}
