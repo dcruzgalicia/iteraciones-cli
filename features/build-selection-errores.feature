@@ -22,7 +22,6 @@ Característica: qué pasa cuando la selección está mal
       creadora.html
       index.html
       index.md
-      lista.html
       miembros/miembro-por-bruno-diaz.html
       miembros/miembro-por-bruno-diaz.md
       texto.html
@@ -37,7 +36,6 @@ Característica: qué pasa cuando la selección está mal
       """
       coleccion.html
       creadora.html
-      lista.html
       miembros/miembro-por-bruno-diaz.html
       miembros/miembro-por-bruno-diaz.md
       texto.html

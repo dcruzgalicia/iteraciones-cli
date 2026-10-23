@@ -25,12 +25,12 @@ Característica: El home y la bibliografía se resuelven antes de publicar
 
   Regla de negocio: La tarjeta identidad sólo enlaza si existe el home
 
-    Escenario: Sin index.md la tarjeta identidad no es un enlace
+    Escenario: Sin index.md la lista por defecto crea index.html y la tarjeta enlaza
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/test-document.html" no contiene '<a href="./index.html"'
-      Y el archivo "dist/files/test-document.html" contiene "id=\"card-identity\""
+      Y el archivo "dist/files/test-document.html" contiene 'href="./index.html"'
+      Y el archivo "dist/files/index.html" existe
 
     Escenario: Con index.md la tarjeta identidad enlaza al home
       Dado que la raíz del proyecto tiene un proyecto de prueba

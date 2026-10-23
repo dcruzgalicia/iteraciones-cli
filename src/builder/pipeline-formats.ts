@@ -249,7 +249,7 @@ export async function emitHtmlPage(
   const cwd = ctx.cwd;
 
   const formats = formatLinksFor(plan, dir, outSlug, doc.frontmatter.type);
-  const hasHomePage = discoveryIndex.has('index.md');
+  const hasHomePage = discoveryIndex.has('index.md') || discoveryIndex.size > 0;
 
   const htmlType: HtmlDocType =
     doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' || doc.frontmatter.type === 'list' ? doc.frontmatter.type : 'file';
@@ -1253,6 +1253,7 @@ async function emitCollectionMarkdown(
 }
 
 function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
+  if (type === 'all') return [...discoveryIndex.keys()];
   const miembros: string[] = [];
   for (const [ruta, entry] of discoveryIndex) {
     if ((entry.type ?? 'file') === type) miembros.push(ruta);
@@ -1312,6 +1313,8 @@ export async function emitDefaultLists(args: {
   );
 
   for (const { slug, title, type, miembros, entradas } of listas) {
+    // Las listas por defecto sólo se escriben si hay elementos que listar.
+    if (miembros.length === 0) continue;
     const dueno = htmlOwner(discoveryIndex, '.', slug);
     if (dueno !== undefined) {
       logWarning(

@@ -10,9 +10,11 @@ export const DEFAULT_LISTS = [
   { type: 'collection', slug: 'coleccion', title: 'Colección' },
   { type: 'creator', slug: 'creadora', title: 'Creadora' },
   { type: 'list', slug: 'lista', title: 'Lista' },
+  { type: 'all', slug: 'index', title: 'Inicio' },
 ] as const;
 
 export function defaultListSlug(type: string | undefined): string | undefined {
+  if (type === 'all') return undefined;
   return DEFAULT_LISTS.find((lista) => lista.type === (type ?? 'file'))?.slug;
 }
 
