@@ -13,7 +13,7 @@ import { posix } from '../lib/paths.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
 import { htmlOwner, removeExtraHtmlPages } from './cleanup.js';
 import { extractFragment } from './collection-fragment.js';
-import { DEFAULT_LISTS, defaultListHref } from './default-lists.js';
+import { DEFAULT_LISTS, defaultListHref, defaultListSlug } from './default-lists.js';
 import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
@@ -197,11 +197,12 @@ function htmlVars(args: {
   renderCtx: RenderContext;
   formats: HtmlPageVars['formats'];
   hasHomePage: boolean;
+  available?: Set<string>;
   creatorHrefs: Map<string, string>;
   extras: string;
   pagination: string;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, creatorHrefs, extras, pagination } = args;
+  const { doc, outputs, renderCtx, formats, hasHomePage, available, creatorHrefs, extras, pagination } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
@@ -227,7 +228,12 @@ function htmlVars(args: {
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: docChipLabel(doc.frontmatter.type),
-    docChipHref: defaultListHref(dir, doc.frontmatter.type),
+    docChipHref: (() => {
+      const slug = defaultListSlug(doc.frontmatter.type);
+      if (slug === undefined) return undefined;
+      if (available !== undefined && !available.has(slug)) return undefined;
+      return defaultListHref(dir, doc.frontmatter.type);
+    })(),
     extras: extras === '' ? undefined : extras,
     pagination: pagination === '' ? undefined : pagination,
   };
@@ -250,6 +256,7 @@ export async function emitHtmlPage(
 
   const formats = formatLinksFor(plan, dir, outSlug, doc.frontmatter.type);
   const hasHomePage = discoveryIndex.has('index.md') || discoveryIndex.size > 0;
+  const available = availableDefaultListSlugs(discoveryIndex);
 
   const htmlType: HtmlDocType =
     doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' || doc.frontmatter.type === 'list' ? doc.frontmatter.type : 'file';
@@ -265,7 +272,7 @@ export async function emitHtmlPage(
       templatePath: exportCtx.templates[htmlKindFor(htmlType)],
       refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
       docType: htmlType,
-      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, creatorHrefs, extras, pagination }),
+      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, available, creatorHrefs, extras, pagination }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
       bibOptions: exportCtx.bibOptions,
@@ -541,11 +548,12 @@ function collectionCards(
   hasta: number,
   creatorHrefs: Map<string, string>,
   dir: string,
+  available?: Set<string>,
 ): string {
   const cards: string[] = [];
   if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
   for (const e of printableEntries(entries).slice(desde, hasta)) {
-    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir));
+    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available));
   }
   return cards.join('\n\n');
 }
@@ -556,9 +564,10 @@ export function collectionCardsContent(
   content: string,
   creatorHrefs: Map<string, string> = new Map(),
   dir = '.',
+  available?: Set<string>,
 ): string {
   if (entries.length === 0) return content;
-  return collectionCards(entries, memberHrefs, splitFrontmatter(content).body.trim(), 0, Number.POSITIVE_INFINITY, creatorHrefs, dir);
+  return collectionCards(entries, memberHrefs, splitFrontmatter(content).body.trim(), 0, Number.POSITIVE_INFINITY, creatorHrefs, dir, available);
 }
 
 /**
@@ -572,13 +581,14 @@ export function collectionCardsPages(
   pageSize: number,
   creatorHrefs: Map<string, string> = new Map(),
   dir = '.',
+  available?: Set<string>,
 ): string[] {
   if (entries.length === 0) return [content];
   const imprimibles = printableEntries(entries);
   const intro = splitFrontmatter(content).body.trim();
   const paginas: string[] = [];
   for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
-    paginas.push(collectionCards(entries, memberHrefs, desde === 0 ? intro : '', desde, desde + pageSize, creatorHrefs, dir));
+    paginas.push(collectionCards(entries, memberHrefs, desde === 0 ? intro : '', desde, desde + pageSize, creatorHrefs, dir, available));
   }
   return paginas.length > 0 ? paginas : [content];
 }
@@ -591,7 +601,7 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/70 bg-accent-500/35 px-4 text-accent-900 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500 dark:hover:bg-accent-500/35';
+  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/70 bg-accent-500/35 px-4 text-accent-700 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500 dark:hover:bg-accent-500/35';
 
 const PAGINATION_NAV_CLASSES = 'pointer-events-none fixed inset-x-0 bottom-6 z-50';
 
@@ -648,8 +658,9 @@ const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Cre
 const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
 
 /** El chip de tipo, con enlace a la lista por defecto de ese type. */
-function chipHtml(label: string, type: string | undefined, dir: string, classes = MEMBER_PILL_CLASSES): string {
-  const href = defaultListHref(dir, type);
+function chipHtml(label: string, type: string | undefined, dir: string, classes = MEMBER_PILL_CLASSES, available?: Set<string>): string {
+  const slug = defaultListSlug(type);
+  const href = slug !== undefined && (available === undefined || available.has(slug)) ? defaultListHref(dir, type) : undefined;
   const chip = `<h2 class="${classes}">${label}</h2>`;
   if (href === undefined) return chip;
   return `<h2 class="${classes}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
@@ -660,11 +671,11 @@ const MEMBER_LINK_CLASSES = 'underline underline-offset-4 decoration-current/40 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
 
 /** La tarjeta con la biografía de una creadora. */
-export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<string, string>): string {
+export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<string, string>, available?: Set<string>): string {
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_CLASSES),
+    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_CLASSES, available),
     '',
     `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
     '',
@@ -678,10 +689,14 @@ export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<stri
  * La tarjeta con las colecciones y listas donde vive un documento. En vez de
  * un título, lleva un chip por cada tipo: Colecciones y Listas.
  */
-export function containersCard(contenedores: { titulo: string; href: string; type: string | undefined }[], dir: string): string {
+export function containersCard(
+  contenedores: { titulo: string; href: string; type: string | undefined }[],
+  dir: string,
+  available?: Set<string>,
+): string {
   const chips: string[] = [];
-  if (contenedores.some((c) => c.type === 'collection')) chips.push(chipHtml('Colecciones', 'collection', dir, EXTRA_PILL_CLASSES));
-  if (contenedores.some((c) => c.type === 'list')) chips.push(chipHtml('Listas', 'list', dir, EXTRA_PILL_CLASSES));
+  if (contenedores.some((c) => c.type === 'collection')) chips.push(chipHtml('Colecciones', 'collection', dir, EXTRA_PILL_CLASSES, available));
+  if (contenedores.some((c) => c.type === 'list')) chips.push(chipHtml('Listas', 'list', dir, EXTRA_PILL_CLASSES, available));
   const items = contenedores.map((c) => `- [${c.titulo}](${c.href})`).join('\n');
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
@@ -695,9 +710,11 @@ export function containersCard(contenedores: { titulo: string; href: string; typ
 }
 
 /** La tarjeta con los textos donde aparece una creadora. */
-export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string): string {
+export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string, available?: Set<string>): string {
   const items = textos.map((t) => `- [${t.titulo}](${t.href})`).join('\n');
-  return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', chipHtml('Textos', 'file', dir, EXTRA_PILL_CLASSES), '', items, '', '::::'].join('\n');
+  return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', chipHtml('Textos', 'file', dir, EXTRA_PILL_CLASSES, available), '', items, '', '::::'].join(
+    '\n',
+  );
 }
 
 /**
@@ -712,6 +729,7 @@ async function buildExtrasHtml(args: {
   contenedores: { titulo: string; href: string; type: string | undefined }[];
   textos: { titulo: string; href: string }[];
   creatorHrefs: Map<string, string>;
+  available?: Set<string>;
   filters: ExportContext['filters'];
   imagePaths?: string;
   sourcePath: string;
@@ -720,17 +738,17 @@ async function buildExtrasHtml(args: {
   const partes: string[] = [];
   // Los textos donde aparece la creadora van primero: es lo que la identifica.
   if (args.textos.length > 0) {
-    partes.push([MASONRY_WRAPPER, '', creatorTextsCard(args.textos, args.dir), '', '</div>'].join('\n'));
+    partes.push([MASONRY_WRAPPER, '', creatorTextsCard(args.textos, args.dir, args.available), '', '</div>'].join('\n'));
   }
   // Cada tarjeta va en su propia celda del masonry, con su separación.
   for (const doc of args.creatorDocs) {
-    partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs), '', '</div>'].join('\n'));
+    partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs, args.available), '', '</div>'].join('\n'));
   }
   // La tarjeta "También está en" se muestra si el texto vive en al menos una
   // colección real. No se crea si no pertenece a ninguna colección o sólo a
   // las listas por defecto (que nunca aparecen aquí).
   if (args.contenedores.some((c) => c.type === 'collection')) {
-    partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores, args.dir), '', '</div>'].join('\n'));
+    partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores, args.dir, args.available), '', '</div>'].join('\n'));
   }
   if (partes.length === 0) return '';
 
@@ -749,7 +767,13 @@ async function buildExtrasHtml(args: {
   return minifyHtml(html);
 }
 
-function collectionCard(e: CollectionEntry, href: string | undefined, creatorHrefs: Map<string, string>, dir: string): string {
+function collectionCard(
+  e: CollectionEntry,
+  href: string | undefined,
+  creatorHrefs: Map<string, string>,
+  dir: string,
+  available?: Set<string>,
+): string {
   // Un type creator no tiene creator: su tarjeta muestra el name y nada más.
   const tonoCreator = (e.type ?? 'file') === 'file' ? 'gris' : 'accent';
   const creator =
@@ -765,7 +789,7 @@ function collectionCard(e: CollectionEntry, href: string | undefined, creatorHre
   const typeLabel = MEMBER_TYPE_LABEL[e.type ?? 'file'];
   if (typeLabel !== undefined) {
     card.push(
-      `<div class="flex items-start justify-between gap-4">${chipHtml(typeLabel, e.type, dir)}<span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
+      `<div class="flex items-start justify-between gap-4">${chipHtml(typeLabel, e.type, dir, MEMBER_PILL_CLASSES, available)}<span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
       '',
     );
   }
@@ -1163,7 +1187,8 @@ async function emitCollectionFormats(
     const memberHrefs = memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex);
     const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
     const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
-    const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize, hrefsCreadores, outputs.dir);
+    const available = availableDefaultListSlugs(discoveryIndex);
+    const paginas = collectionCardsPages(collectionEntries, memberHrefs, content, pageSize, hrefsCreadores, outputs.dir, available);
     assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
@@ -1176,6 +1201,7 @@ async function emitCollectionFormats(
       imagePaths,
       sourcePath: doc.filePath,
       dir: outputs.dir,
+      available: availableDefaultListSlugs(discoveryIndex),
     });
     const contenidos = paginas.map((base) => prependLinksMarkdown(base, creatorLinks));
 
@@ -1252,11 +1278,24 @@ async function emitCollectionMarkdown(
   });
 }
 
+export function availableDefaultListSlugs(discoveryIndex: Map<string, DiscoveryEntry>): Set<string> {
+  const slugs = new Set<string>();
+  for (const lista of DEFAULT_LISTS) {
+    if (lista.type === 'all') {
+      if (discoveryIndex.size > 0 && !discoveryIndex.has('index.md')) slugs.add(lista.slug);
+    } else {
+      if (miembrosDeUnType(discoveryIndex, lista.type).length > 0) slugs.add(lista.slug);
+    }
+  }
+  return slugs;
+}
+
 function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
   if (type === 'all') return [...discoveryIndex.keys()];
   const miembros: string[] = [];
   for (const [ruta, entry] of discoveryIndex) {
-    if ((entry.type ?? 'file') === type) miembros.push(ruta);
+    const tipo = entry.type ?? (entry.files && entry.files.length > 0 ? 'collection' : 'file');
+    if (tipo === type) miembros.push(ruta);
   }
   return miembros;
 }
@@ -1288,6 +1327,7 @@ export async function emitDefaultLists(args: {
 
   const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
   const hrefsCreadores = creatorHrefs(discoveryIndex, '.');
+  const available = availableDefaultListSlugs(discoveryIndex);
 
   const listas = [];
   for (const lista of DEFAULT_LISTS) {
@@ -1312,7 +1352,7 @@ export async function emitDefaultLists(args: {
     renderCtx.pdfxActive,
   );
 
-  for (const { slug, title, type, miembros, entradas } of listas) {
+  for (const { slug, title, type, miembros, entradas, description } of listas) {
     // Las listas por defecto sólo se escriben si hay elementos que listar.
     if (miembros.length === 0) continue;
     const dueno = htmlOwner(discoveryIndex, '.', slug);
@@ -1325,7 +1365,7 @@ export async function emitDefaultLists(args: {
     }
 
     const memberHrefs = memberHtmlHrefs(`${slug}.md`, entradas, discoveryIndex);
-    const paginas = collectionCardsPages(entradas, memberHrefs, '', pageSize, hrefsCreadores, '.');
+    const paginas = collectionCardsPages(entradas, memberHrefs, description ?? '', pageSize, hrefsCreadores, '.', available);
     const contenidos = paginas.map((base, indice) => base + paginationNav('.', slug, indice + 1, paginas.length));
 
     const doc: BuildDocument = {
