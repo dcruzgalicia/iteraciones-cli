@@ -64,6 +64,7 @@ function docChipLabel(type: string | undefined): string {
   if (type === 'collection') return 'Colección';
   if (type === 'creator') return 'Creadora';
   if (type === 'list') return 'Lista';
+  if (type === 'all') return 'Publicaciones';
   return 'Texto';
 }
 
@@ -198,11 +199,12 @@ function htmlVars(args: {
   formats: HtmlPageVars['formats'];
   hasHomePage: boolean;
   available?: Set<string>;
+  docChip?: string;
   creatorHrefs: Map<string, string>;
   extras: string;
   pagination: string;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, available, creatorHrefs, extras, pagination } = args;
+  const { doc, outputs, renderCtx, formats, hasHomePage, available, docChip, creatorHrefs, extras, pagination } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
@@ -227,7 +229,7 @@ function htmlVars(args: {
     collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
-    docChip: docChipLabel(doc.frontmatter.type),
+    docChip: docChip ?? docChipLabel(doc.frontmatter.type),
     docChipHref: (() => {
       const slug = defaultListSlug(doc.frontmatter.type);
       if (slug === undefined) return undefined;
@@ -249,6 +251,7 @@ export async function emitHtmlPage(
   paginas?: string[],
   creatorHrefs: Map<string, string> = new Map(),
   extras = '',
+  docChipOverride?: string,
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -272,7 +275,7 @@ export async function emitHtmlPage(
       templatePath: exportCtx.templates[htmlKindFor(htmlType)],
       refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
       docType: htmlType,
-      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, available, creatorHrefs, extras, pagination }),
+      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, available, docChip: docChipOverride, creatorHrefs, extras, pagination }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
       bibOptions: exportCtx.bibOptions,
@@ -582,13 +585,16 @@ export function collectionCardsPages(
   creatorHrefs: Map<string, string> = new Map(),
   dir = '.',
   available?: Set<string>,
+  repeatIntro = false,
 ): string[] {
   if (entries.length === 0) return [content];
   const imprimibles = printableEntries(entries);
   const intro = splitFrontmatter(content).body.trim();
   const paginas: string[] = [];
   for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
-    paginas.push(collectionCards(entries, memberHrefs, desde === 0 ? intro : '', desde, desde + pageSize, creatorHrefs, dir, available));
+    paginas.push(
+      collectionCards(entries, memberHrefs, desde === 0 || repeatIntro ? intro : '', desde, desde + pageSize, creatorHrefs, dir, available),
+    );
   }
   return paginas.length > 0 ? paginas : [content];
 }
@@ -601,7 +607,7 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/70 bg-accent-500/35 px-4 text-accent-700 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500 dark:hover:bg-accent-500/35';
+  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/90 bg-accent-500/35 px-4 text-accent-700 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500/90 dark:hover:bg-accent-500/35';
 
 const PAGINATION_NAV_CLASSES = 'pointer-events-none fixed inset-x-0 bottom-6 z-50';
 
@@ -1365,7 +1371,7 @@ export async function emitDefaultLists(args: {
     }
 
     const memberHrefs = memberHtmlHrefs(`${slug}.md`, entradas, discoveryIndex);
-    const paginas = collectionCardsPages(entradas, memberHrefs, description ?? '', pageSize, hrefsCreadores, '.', available);
+    const paginas = collectionCardsPages(entradas, memberHrefs, description ?? '', pageSize, hrefsCreadores, '.', available, true);
     const contenidos = paginas.map((base, indice) => base + paginationNav('.', slug, indice + 1, paginas.length));
 
     const doc: BuildDocument = {
@@ -1383,7 +1389,18 @@ export async function emitDefaultLists(args: {
     };
 
     const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores);
+    await emitHtmlPage(
+      doc,
+      outputs,
+      renderCtx,
+      exportCtx,
+      discoveryIndex,
+      imagePaths,
+      contenidos,
+      hrefsCreadores,
+      '',
+      docChipLabel(type as string | undefined),
+    );
   }
 }
 
