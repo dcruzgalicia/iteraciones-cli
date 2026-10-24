@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises';
-import { basename, dirname, join, normalize, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
@@ -192,6 +192,42 @@ async function emitLatexAndQueuePdf(
   }
 }
 
+/**
+ * Copia las portadas originales a los assets del HTML y devuelve su URL. No se
+ * recortan: la tarjeta las muestra a todo el ancho conservando la proporción.
+ */
+async function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, imagesDir: string): Promise<{ front?: string; back?: string }> {
+  const covers: { front?: string; back?: string } = {};
+  for (const [field, key] of [
+    ['frontCover', 'front'],
+    ['backCover', 'back'],
+  ] as const) {
+    const raw = fm[field];
+    if (typeof raw !== 'string' || raw === '') continue;
+    const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
+    if (!(await Bun.file(abs).exists())) continue;
+    const name = `portada-${key}-${basename(abs)}`;
+    await mkdir(imagesDir, { recursive: true });
+    await Bun.write(join(imagesDir, name), Bun.file(abs));
+    covers[key] = `./${ASSETS_IMAGES_DIR}/${name}`;
+  }
+  return covers;
+}
+
+/** La ruta de la portada para el cover del EPUB, si está definida y existe. */
+async function epubCoverPath(
+  fm: Record<string, unknown>,
+  docDir: string,
+  cwd: string,
+  formatCfg: RenderContext['formatCfg'],
+  siteConfig: SiteConfig,
+): Promise<string | undefined> {
+  const value = mergeConfigImages(fm, formatCfg?.pdf, siteConfig, cwd).frontCover;
+  if (typeof value !== 'string' || value === '') return undefined;
+  const path = isAbsolute(value) ? value : resolve(docDir, value);
+  return (await Bun.file(path).exists()) ? path : undefined;
+}
+
 function contentChipPara(type: string | undefined): string | undefined {
   if (type === 'creator') return 'Bio';
   if (type === undefined || type === 'file') return 'Contenido';
@@ -213,11 +249,12 @@ function htmlVars(args: {
   hasHomePage: boolean;
   available?: Set<string>;
   docChip?: string;
+  covers?: { front?: string; back?: string };
   creatorHrefs: Map<string, string>;
   extras: string;
   pagination: string;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, available, docChip, creatorHrefs, extras, pagination } = args;
+  const { doc, outputs, renderCtx, formats, hasHomePage, available, docChip, covers, creatorHrefs, extras, pagination } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
@@ -244,6 +281,8 @@ function htmlVars(args: {
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: docChip ?? docChipLabel(doc.frontmatter.type),
     contentChip: contentChipPara(doc.frontmatter.type),
+    frontCover: covers?.front,
+    backCover: covers?.back,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
     pagination: pagination === '' ? undefined : pagination,
@@ -261,6 +300,7 @@ export async function emitHtmlPage(
   creatorHrefs: Map<string, string> = new Map(),
   extras = '',
   docChipOverride?: string,
+  covers?: { front?: string; back?: string },
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -284,7 +324,19 @@ export async function emitHtmlPage(
       templatePath: exportCtx.templates[htmlKindFor(htmlType)],
       refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
       docType: htmlType,
-      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, available, docChip: docChipOverride, creatorHrefs, extras, pagination }),
+      vars: htmlVars({
+        doc,
+        outputs,
+        renderCtx,
+        formats,
+        hasHomePage,
+        available,
+        docChip: docChipOverride,
+        covers,
+        creatorHrefs,
+        extras,
+        pagination,
+      }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
       bibOptions: exportCtx.bibOptions,
@@ -1319,14 +1371,20 @@ async function emitCollectionFormats(
       available: availableDefaultListSlugs(discoveryIndex),
     });
     const contenidos = paginas.map((base) => prependLinksMarkdown(base, creatorLinks));
+    const covers = await htmlCoverUrls(
+      mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
+      docDir,
+      outputs.outBase(ASSETS_IMAGES_DIR),
+    );
 
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, extras);
+    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, extras, undefined, covers);
     await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
   }
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
     const base = collectionBaseContent(collectionEntries, 'html', content);
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', images.imageMap, docDir, false);
+    const epubCover = await epubCoverPath(outputs.fm, docDir, ctx.cwd, formatCfg, ctx.siteConfig);
     await convertToEpub(
       prependLinksMarkdown(base, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
@@ -1336,6 +1394,7 @@ async function emitCollectionFormats(
       outputs.fm,
       await collectionPandocInput(doc, ctx.cwd, outputs.outSlug, 'epub'),
       imagePaths,
+      epubCover,
     );
   }
 
