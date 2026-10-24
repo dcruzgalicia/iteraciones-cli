@@ -58,9 +58,7 @@ export class HtmlShotter {
     await view.evaluate('document.fonts.ready');
     // Las imágenes (portadas, por ejemplo) también llegan tarde: si no están
     // cargadas al medir, el texto de abajo se desplaza entre una captura y otra.
-    await view.evaluate(
-      'Promise.all(Array.from(document.images, (img) => img.complete ? true : new Promise((resolve) => { img.addEventListener("load", resolve, { once: true }); img.addEventListener("error", resolve, { once: true }); })))',
-    );
+    await view.evaluate('Promise.all(Array.from(document.images, (img) => img.decode().catch(() => {})))');
     // El texto se pinta en segundo plano: sin estos dos frames, la captura
     // puede salir a medio pintar y cambiar de un render a otro.
     await view.evaluate('new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
@@ -69,6 +67,9 @@ export class HtmlShotter {
     // desplazamiento, el contenido se estrecha y el texto se desplaza.
     const altoFinal = Math.min(Math.max(1, Math.ceil(alto)) + 40, HTML_SHOT_MAX_HEIGHT);
     await view.resize(HTML_SHOT_WIDTH, altoFinal);
+    // El cambio de alto remaqueta: sin esperar al frame, la captura puede caer
+    // a medio reflow y desplazar el texto un píxel.
+    await view.evaluate('new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
     const png = await view.screenshot({ encoding: 'buffer' });
     return { png, alto: altoFinal };
   }
