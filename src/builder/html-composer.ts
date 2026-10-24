@@ -59,6 +59,9 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
     else cards.push(card);
     if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
   }
+  // Las portadas van justo después de la tarjeta de header y antes de la de
+  // título y creadoras, si el documento define frontCover/backCover.
+  header += await loadCard('file', 'card-portadas.html');
   // Las tarjetas de creadoras y de colecciones, y el nav de paginación, van
   // después de todo lo demás y antes del footer: son tarjetas del masonry, no
   // parte de la del texto.
@@ -98,6 +101,8 @@ export interface HtmlPageVars {
   docChip?: string;
   docChipHref?: string;
   contentChip?: string;
+  frontCover?: string;
+  backCover?: string;
 
   /** Las tarjetas de creadoras y de colecciones, ya en HTML. */
   extras?: string;
