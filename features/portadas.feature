@@ -110,3 +110,24 @@ Característica: las portadas del PDF
       Y el libro lleva el epígrafe "Un epígrafe de apertura"
       Y el proyecto compila el PDF
       Entonces la página 5 del PDF dice "Un epígrafe de apertura"
+
+  Regla de negocio: Las portadas también se ven en HTML y EPUB
+
+    Escenario: Las portadas son tarjetas del HTML después del título
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "frontCover"
+      Y el libro lleva la portada "backCover"
+      Y el libro produce html
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/un-libro.html" dice "portada-front-"
+      Y el archivo "dist/files/un-libro.html" dice "portada-back-"
+      Y las portadas del HTML van después del título y antes de los formatos
+
+    Escenario: El EPUB usa la portada como cover
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "frontCover"
+      Y el libro produce epub
+      Cuando hago un build del proyecto
+      Entonces el EPUB "dist/files/un-libro.epub" lleva la portada como cover

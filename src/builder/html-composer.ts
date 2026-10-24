@@ -45,9 +45,27 @@ export function htmlResourceFiles(): string[] {
   return [...new Bun.Glob('**/*.html').scanSync({ cwd: HTML_RESOURCES_DIR, onlyFiles: true })].sort();
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** La tarjeta de «Frecuencias» con los enlaces del proyecto, o vacía si no hay. */
+async function frecuenciasCard(siteConfig: SiteConfig): Promise<string> {
+  const links = siteConfig.format?.html?.site?.links ?? [];
+  if (links.length === 0) return '';
+  const items = links
+    .map(
+      (link: { name: string; url: string }) =>
+        `<li><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="text-accent-700 underline underline-offset-4 transition-colors duration-200 hover:decoration-current dark:text-accent-300">${escapeHtml(link.name)}</a></li>`,
+    )
+    .join('\n          ');
+  return (await loadCard('file', 'card-frecuencias.html')).replace('[[FRECUENCIAS]]', items);
+}
+
 export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: string, type: HtmlDocType = 'file'): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
-  const order = siteConfig.format?.html?.blocks ?? [...DEFAULT_HTML_BLOCKS];
+  const html = siteConfig.format?.html;
+  const order = (html !== undefined && 'blocks' in html && html.blocks) || [...DEFAULT_HTML_BLOCKS];
   const cards: string[] = [];
   let header = '';
   let metadata = '';
@@ -57,15 +75,23 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
     if (key === 'header') header = card;
     else if (key === 'footer') footer = comoFooter(card);
     else cards.push(card);
+    if (key === 'formatos') cards.push(await loadCard('file', 'card-indice-coleccion.html'));
     if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
   }
+  // «Redes» va justo después del header (slot-header) y otra vez antes del
+  // footer.
+  const redes = await frecuenciasCard(siteConfig);
+  header += redes;
+  // Las portadas van después de la tarjeta de título y antes de Formatos.
+  cards.unshift(await loadCard('file', 'card-portadas.html'));
   // Las tarjetas de creadoras y de colecciones, y el nav de paginación, van
   // después de todo lo demás y antes del footer: son tarjetas del masonry, no
   // parte de la del texto.
   cards.push(EXTRAS_CARD);
   cards.push(PAGINATION_CARD);
+  cards.push(redes);
   const logoBlock = logoInline
-    ? `<span class="flex h-10 w-10 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
+    ? `<span class="flex h-20 w-20 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
     : '';
   return skeleton
     .replace(slot('header'), () => header)
@@ -98,6 +124,9 @@ export interface HtmlPageVars {
   docChip?: string;
   docChipHref?: string;
   contentChip?: string;
+  frontCover?: string;
+  backCover?: string;
+  indiceColeccion?: string;
 
   /** Las tarjetas de creadoras y de colecciones, ya en HTML. */
   extras?: string;

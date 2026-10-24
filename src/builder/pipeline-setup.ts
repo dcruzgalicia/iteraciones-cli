@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { extname, join, resolve } from 'node:path';
 
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
@@ -43,9 +43,25 @@ export async function resolvePipelineSetup(
   };
 }
 
+const LOGO_MIME: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+};
+
 export async function loadLogoInline(cwd: string, logoRel?: string): Promise<string | undefined> {
   const logoSrc = logoRel ? join(cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
   try {
+    const ext = extname(logoSrc).toLowerCase();
+    // Un SVG se incrusta tal cual; una imagen raster va como data URI (el
+    // template de pandoc no puede llevar binario suelto).
+    if (ext !== '.svg' && LOGO_MIME[ext] !== undefined) {
+      const base64 = Buffer.from(await Bun.file(logoSrc).arrayBuffer()).toString('base64');
+      return `<img src="data:${LOGO_MIME[ext]};base64,${base64}" alt="" class="block h-full w-full object-contain">`;
+    }
     return await Bun.file(logoSrc).text();
   } catch (err) {
     logWarning(`no se pudo leer el logo: ${translateSystemError(err)}`, 'html');

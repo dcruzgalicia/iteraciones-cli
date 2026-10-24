@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises';
-import { basename, dirname, join, normalize, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
@@ -192,6 +192,42 @@ async function emitLatexAndQueuePdf(
   }
 }
 
+/**
+ * Copia las portadas originales a los assets del HTML y devuelve su URL. No se
+ * recortan: la tarjeta las muestra a todo el ancho conservando la proporción.
+ */
+async function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, imagesDir: string): Promise<{ front?: string; back?: string }> {
+  const covers: { front?: string; back?: string } = {};
+  for (const [field, key] of [
+    ['frontCover', 'front'],
+    ['backCover', 'back'],
+  ] as const) {
+    const raw = fm[field];
+    if (typeof raw !== 'string' || raw === '') continue;
+    const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
+    if (!(await Bun.file(abs).exists())) continue;
+    const name = `portada-${key}-${basename(abs)}`;
+    await mkdir(imagesDir, { recursive: true });
+    await Bun.write(join(imagesDir, name), Bun.file(abs));
+    covers[key] = `./${ASSETS_IMAGES_DIR}/${name}`;
+  }
+  return covers;
+}
+
+/** La ruta de la portada para el cover del EPUB, si está definida y existe. */
+async function epubCoverPath(
+  fm: Record<string, unknown>,
+  docDir: string,
+  cwd: string,
+  formatCfg: RenderContext['formatCfg'],
+  siteConfig: SiteConfig,
+): Promise<string | undefined> {
+  const value = mergeConfigImages(fm, formatCfg?.pdf, siteConfig, cwd).frontCover;
+  if (typeof value !== 'string' || value === '') return undefined;
+  const path = isAbsolute(value) ? value : resolve(docDir, value);
+  return (await Bun.file(path).exists()) ? path : undefined;
+}
+
 function contentChipPara(type: string | undefined): string | undefined {
   if (type === 'creator') return 'Bio';
   if (type === undefined || type === 'file') return 'Contenido';
@@ -213,11 +249,13 @@ function htmlVars(args: {
   hasHomePage: boolean;
   available?: Set<string>;
   docChip?: string;
+  covers?: { front?: string; back?: string };
+  indiceColeccion?: string;
   creatorHrefs: Map<string, string>;
   extras: string;
   pagination: string;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, available, docChip, creatorHrefs, extras, pagination } = args;
+  const { doc, outputs, renderCtx, formats, hasHomePage, available, docChip, covers, indiceColeccion, creatorHrefs, extras, pagination } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
@@ -244,6 +282,9 @@ function htmlVars(args: {
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: docChip ?? docChipLabel(doc.frontmatter.type),
     contentChip: contentChipPara(doc.frontmatter.type),
+    frontCover: covers?.front,
+    backCover: covers?.back,
+    indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
     pagination: pagination === '' ? undefined : pagination,
@@ -261,6 +302,8 @@ export async function emitHtmlPage(
   creatorHrefs: Map<string, string> = new Map(),
   extras = '',
   docChipOverride?: string,
+  covers?: { front?: string; back?: string },
+  indices?: string[],
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -284,7 +327,20 @@ export async function emitHtmlPage(
       templatePath: exportCtx.templates[htmlKindFor(htmlType)],
       refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
       docType: htmlType,
-      vars: htmlVars({ doc, outputs, renderCtx, formats, hasHomePage, available, docChip: docChipOverride, creatorHrefs, extras, pagination }),
+      vars: htmlVars({
+        doc,
+        outputs,
+        renderCtx,
+        formats,
+        hasHomePage,
+        available,
+        docChip: docChipOverride,
+        covers,
+        indiceColeccion: indices?.[indice],
+        creatorHrefs,
+        extras,
+        pagination,
+      }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
       bibOptions: exportCtx.bibOptions,
@@ -667,6 +723,58 @@ export function paginationNav(dir: string, outSlug: string, pagina: number, tota
   return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}${siguiente}</nav>`;
 }
 
+function escaparHtml(texto: string): string {
+  return texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * La tarjeta de índice de una colección, una por página: lista los textos de
+ * esa página y enlaza con los índices de la página anterior y la siguiente.
+ */
+function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, string>, dir: string, outSlug: string, pageSize: number): string[] {
+  const imprimibles = printableEntries(entries);
+  const total = Math.ceil(imprimibles.length / pageSize);
+  const indices: string[] = [];
+  for (let pagina = 1; pagina <= total; pagina++) {
+    const items = imprimibles
+      .slice((pagina - 1) * pageSize, pagina * pageSize)
+      .map((entrada) => {
+        const href = memberHrefs.get(entrada.file);
+        const titulo = escaparHtml(entrada.title || TITULO_POR_DEFECTO);
+        return href === undefined
+          ? `<li>${titulo}</li>`
+          : `<li><a href="${href}" class="text-accent-700 underline underline-offset-4 dark:text-accent-300">${titulo}</a></li>`;
+      })
+      .join('');
+    const claseEnlace = 'text-accent-700 underline underline-offset-4 dark:text-accent-300';
+    const anterior =
+      pagina > 1
+        ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina - 1)}.html`)}#indice-pagina-${pagina - 1}" class="${claseEnlace}">← Índice anterior</a>`
+        : '';
+    const siguiente =
+      pagina < total
+        ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina + 1)}.html`)}#indice-pagina-${pagina + 1}" class="${claseEnlace}">Índice siguiente →</a>`
+        : '';
+    indices.push(
+      `<div class="break-inside-avoid pb-6" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-800 dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,
+    );
+  }
+  return indices;
+}
+
+function indicesDeColeccion(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  entries: CollectionEntry[],
+  memberHrefs: Map<string, string>,
+  pageSize: number,
+  siteConfig: SiteConfig,
+): string[] {
+  const tocActivo = typeof outputs.fm.toc === 'boolean' ? outputs.fm.toc : siteConfig.toc;
+  if (doc.frontmatter.type !== 'collection' || !tocActivo) return [];
+  return collectionIndices(entries, memberHrefs, outputs.dir, outputs.outSlug, pageSize);
+}
+
 function assertPaginasLibres(relativePath: string, dir: string, outSlug: string, total: number, discoveryIndex: Map<string, DiscoveryEntry>): void {
   for (let n = 2; n <= total; n++) {
     const nombre = pageSlug(outSlug, n);
@@ -694,6 +802,9 @@ const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 // primero de la tarjeta y el h2 traería sus márgenes del navegador.
 const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 
+// El chip que abre una tarjeta extra deja aire antes del elemento que sigue.
+const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
+
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
@@ -719,7 +830,7 @@ export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<stri
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_CLASSES, available),
+    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
     '',
     `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
     '',
@@ -745,7 +856,7 @@ export function containersCard(
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    `<div class="flex flex-wrap items-center gap-2">${chips.join('')}</div>`,
+    `<div class="flex flex-wrap items-center gap-2 mb-4">${chips.join('')}</div>`,
     '',
     items,
     '',
@@ -756,9 +867,15 @@ export function containersCard(
 /** La tarjeta con los textos donde aparece una creadora. */
 export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string, available?: Set<string>): string {
   const items = textos.map((t) => `- [${t.titulo}](${t.href})`).join('\n');
-  return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', chipHtml('Textos', 'file', dir, EXTRA_PILL_CLASSES, available), '', items, '', '::::'].join(
-    '\n',
-  );
+  return [
+    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
+    '',
+    chipHtml('Textos', 'file', dir, EXTRA_PILL_SPACED_CLASSES, available),
+    '',
+    items,
+    '',
+    '::::',
+  ].join('\n');
 }
 
 /**
@@ -1319,14 +1436,34 @@ async function emitCollectionFormats(
       available: availableDefaultListSlugs(discoveryIndex),
     });
     const contenidos = paginas.map((base) => prependLinksMarkdown(base, creatorLinks));
+    const covers = await htmlCoverUrls(
+      mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
+      docDir,
+      outputs.outBase(ASSETS_IMAGES_DIR),
+    );
+    const indices = indicesDeColeccion(doc, outputs, collectionEntries, memberHrefs, pageSize, ctx.siteConfig);
 
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, extras);
+    await emitHtmlPage(
+      doc,
+      outputs,
+      renderCtx,
+      exportCtx,
+      discoveryIndex,
+      imagePaths,
+      contenidos,
+      hrefsCreadores,
+      extras,
+      undefined,
+      covers,
+      indices,
+    );
     await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
   }
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
     const base = collectionBaseContent(collectionEntries, 'html', content);
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', images.imageMap, docDir, false);
+    const epubCover = await epubCoverPath(outputs.fm, docDir, ctx.cwd, formatCfg, ctx.siteConfig);
     await convertToEpub(
       prependLinksMarkdown(base, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
@@ -1336,6 +1473,7 @@ async function emitCollectionFormats(
       outputs.fm,
       await collectionPandocInput(doc, ctx.cwd, outputs.outSlug, 'epub'),
       imagePaths,
+      epubCover,
     );
   }
 

@@ -61,11 +61,13 @@ export async function convertToEpub(
   fm: Record<string, unknown> = {},
   inputTarget?: string,
   imagePaths?: string,
+  coverImage?: string,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const extraArgs: string[] = [];
   extraArgs.push('--shift-heading-level-by=4');
+  if (coverImage !== undefined) extraArgs.push(`--epub-cover-image=${coverImage}`);
   for (const f of [...filters.semantic, STRIP_TYPOGRAPHIC_FILTER, ...filters.user]) extraArgs.push('--lua-filter', f);
   extraArgs.push(...citationCompileArgs(doc.metadata.bibliography, doc.metadata.csl));
   const tocActive = fmBool(fm.toc, toc ?? false);

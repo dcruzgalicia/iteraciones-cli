@@ -165,3 +165,56 @@ Then('la página {int} del PDF es {string}', (pagina: number, portada: string) =
     throw new Error(`la página ${pagina} es de gris ${gris} y la portada ${portada} es de gris ${referencia}`);
   }
 });
+
+const CONFIG_HTML = [
+  'language: es-MX',
+  'format:',
+  '  html:',
+  '    generate: true',
+  '  epub:',
+  '    generate: true',
+  '  latex:',
+  '    generate: false',
+  '  pdf:',
+  '    generate: false',
+].join('\n');
+const CONFIG_EPUB = [
+  'language: es-MX',
+  'format:',
+  '  epub:',
+  '    generate: true',
+  '  html:',
+  '    generate: false',
+  '  latex:',
+  '    generate: false',
+  '  pdf:',
+  '    generate: false',
+].join('\n');
+
+Given('el libro produce html', () => {
+  escribirEnProyecto('iteraciones.config.yaml', `${CONFIG_HTML}\n`);
+});
+
+Given('el libro produce epub', () => {
+  escribirEnProyecto('iteraciones.config.yaml', `${CONFIG_EPUB}\n`);
+});
+
+Then('las portadas del HTML van después del título y antes de los formatos', () => {
+  const html = readFileSync(join(world.root, 'dist', 'files', 'un-libro.html'), 'utf8');
+  const titulo = html.indexOf('<h1');
+  const front = html.indexOf('portada-front-');
+  const back = html.indexOf('portada-back-');
+  const formatos = html.indexOf('>Formatos</h2>');
+  if (titulo < 0 || front < 0 || back < 0 || formatos < 0) throw new Error('faltan el título, las portadas o los formatos');
+  if (!(titulo < front && front < back && back < formatos)) {
+    throw new Error('las portadas no van después del título y antes de los formatos');
+  }
+});
+
+Then('el EPUB {string} lleva la portada como cover', (relativa: string) => {
+  const epub = join(world.root, relativa);
+  const lista = Bun.spawnSync(['unzip', '-l', epub]).stdout.toString();
+  if (!lista.includes('cover.xhtml')) throw new Error(`el EPUB ${relativa} no tiene cover.xhtml`);
+  const opf = Bun.spawnSync(['unzip', '-p', epub, 'EPUB/content.opf']).stdout.toString();
+  if (!opf.includes('cover-image')) throw new Error(`el EPUB ${relativa} no marca la imagen de cover`);
+});
