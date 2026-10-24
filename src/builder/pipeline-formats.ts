@@ -741,14 +741,19 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
       .map((entrada) => {
         const href = memberHrefs.get(entrada.file);
         const titulo = escaparHtml(entrada.title || TITULO_POR_DEFECTO);
-        return href === undefined ? `<li>${titulo}</li>` : `<li><a href="${href}">${titulo}</a></li>`;
+        return href === undefined
+          ? `<li>${titulo}</li>`
+          : `<li><a href="${href}" class="text-accent-700 underline underline-offset-4 dark:text-accent-300">${titulo}</a></li>`;
       })
       .join('');
+    const claseEnlace = 'text-accent-700 underline underline-offset-4 dark:text-accent-300';
     const anterior =
-      pagina > 1 ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina - 1)}.html`)}#indice-pagina-${pagina - 1}">← Índice anterior</a>` : '';
+      pagina > 1
+        ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina - 1)}.html`)}#indice-pagina-${pagina - 1}" class="${claseEnlace}">← Índice anterior</a>`
+        : '';
     const siguiente =
       pagina < total
-        ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina + 1)}.html`)}#indice-pagina-${pagina + 1}">Índice siguiente →</a>`
+        ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina + 1)}.html`)}#indice-pagina-${pagina + 1}" class="${claseEnlace}">Índice siguiente →</a>`
         : '';
     indices.push(
       `<div class="break-inside-avoid pb-6" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-800 dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,

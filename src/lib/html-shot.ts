@@ -25,27 +25,23 @@ const SIN_ANIMACIONES = `(() => {
 })()`;
 
 export class HtmlShotter {
-  private view: Bun.WebView | undefined;
-
-  private async viewDe(): Promise<Bun.WebView | undefined> {
-    if (this.view !== undefined) return this.view;
+  // Cada captura estrena vista: reutilizarla deja estado (zoom, fuentes,
+  // scroll) que cambia el antialiasing de una página a otra.
+  async capture(htmlPath: string): Promise<{ png: Buffer; alto: number } | undefined> {
+    let view: Bun.WebView;
     try {
-      this.view = new Bun.WebView({ width: HTML_SHOT_WIDTH, height: HTML_SHOT_MIN_HEIGHT });
+      view = new Bun.WebView({ width: HTML_SHOT_WIDTH, height: HTML_SHOT_MIN_HEIGHT });
     } catch (err) {
       logWarning(`no hay navegador para capturar el HTML: ${(err as Error).message}`, 'snapshots');
       return undefined;
     }
-    return this.view;
-  }
-
-  async capture(htmlPath: string): Promise<{ png: Buffer; alto: number } | undefined> {
-    const view = await this.viewDe();
-    if (view === undefined) return undefined;
     try {
       return await this.capturaUna(htmlPath, view);
     } catch (err) {
       logWarning(`no se pudo capturar "${htmlPath}": ${(err as Error).message}`, 'snapshots');
       return undefined;
+    } finally {
+      view.close();
     }
   }
 
@@ -60,6 +56,11 @@ export class HtmlShotter {
     // Las tipografías se resuelven después del primer pintado: esperar a que
     // estén listas evita medir con la tipografía de reserva.
     await view.evaluate('document.fonts.ready');
+    // Las imágenes (portadas, por ejemplo) también llegan tarde: si no están
+    // cargadas al medir, el texto de abajo se desplaza entre una captura y otra.
+    await view.evaluate(
+      'Promise.all(Array.from(document.images, (img) => img.complete ? true : new Promise((resolve) => { img.addEventListener("load", resolve, { once: true }); img.addEventListener("error", resolve, { once: true }); })))',
+    );
     // El texto se pinta en segundo plano: sin estos dos frames, la captura
     // puede salir a medio pintar y cambiar de un render a otro.
     await view.evaluate('new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
@@ -73,7 +74,6 @@ export class HtmlShotter {
   }
 
   close(): void {
-    this.view?.close();
-    this.view = undefined;
+    // Cada captura cierra su propia vista; no queda nada que liberar.
   }
 }
