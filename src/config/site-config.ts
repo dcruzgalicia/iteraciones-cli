@@ -11,6 +11,7 @@ export const DEFAULT_HTML_FORMAT = {
     logo: '',
     theme: 'dark' as const,
     color: 'lime' as const,
+    links: [] as { name: string; url: string }[],
   },
   generate: true,
   pageSize: 20,

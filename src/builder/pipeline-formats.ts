@@ -250,11 +250,12 @@ function htmlVars(args: {
   available?: Set<string>;
   docChip?: string;
   covers?: { front?: string; back?: string };
+  indiceColeccion?: string;
   creatorHrefs: Map<string, string>;
   extras: string;
   pagination: string;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, available, docChip, covers, creatorHrefs, extras, pagination } = args;
+  const { doc, outputs, renderCtx, formats, hasHomePage, available, docChip, covers, indiceColeccion, creatorHrefs, extras, pagination } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
@@ -283,6 +284,7 @@ function htmlVars(args: {
     contentChip: contentChipPara(doc.frontmatter.type),
     frontCover: covers?.front,
     backCover: covers?.back,
+    indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
     pagination: pagination === '' ? undefined : pagination,
@@ -301,6 +303,7 @@ export async function emitHtmlPage(
   extras = '',
   docChipOverride?: string,
   covers?: { front?: string; back?: string },
+  indices?: string[],
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -333,6 +336,7 @@ export async function emitHtmlPage(
         available,
         docChip: docChipOverride,
         covers,
+        indiceColeccion: indices?.[indice],
         creatorHrefs,
         extras,
         pagination,
@@ -719,6 +723,53 @@ export function paginationNav(dir: string, outSlug: string, pagina: number, tota
   return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}${siguiente}</nav>`;
 }
 
+function escaparHtml(texto: string): string {
+  return texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * La tarjeta de índice de una colección, una por página: lista los textos de
+ * esa página y enlaza con los índices de la página anterior y la siguiente.
+ */
+function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, string>, dir: string, outSlug: string, pageSize: number): string[] {
+  const imprimibles = printableEntries(entries);
+  const total = Math.ceil(imprimibles.length / pageSize);
+  const indices: string[] = [];
+  for (let pagina = 1; pagina <= total; pagina++) {
+    const items = imprimibles
+      .slice((pagina - 1) * pageSize, pagina * pageSize)
+      .map((entrada) => {
+        const href = memberHrefs.get(entrada.file);
+        const titulo = escaparHtml(entrada.title || TITULO_POR_DEFECTO);
+        return href === undefined ? `<li>${titulo}</li>` : `<li><a href="${href}">${titulo}</a></li>`;
+      })
+      .join('');
+    const anterior =
+      pagina > 1 ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina - 1)}.html`)}#indice-pagina-${pagina - 1}">← Índice anterior</a>` : '';
+    const siguiente =
+      pagina < total
+        ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina + 1)}.html`)}#indice-pagina-${pagina + 1}">Índice siguiente →</a>`
+        : '';
+    indices.push(
+      `<div class="break-inside-avoid pb-6" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-800 dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,
+    );
+  }
+  return indices;
+}
+
+function indicesDeColeccion(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  entries: CollectionEntry[],
+  memberHrefs: Map<string, string>,
+  pageSize: number,
+  siteConfig: SiteConfig,
+): string[] {
+  const tocActivo = typeof outputs.fm.toc === 'boolean' ? outputs.fm.toc : siteConfig.toc;
+  if (doc.frontmatter.type !== 'collection' || !tocActivo) return [];
+  return collectionIndices(entries, memberHrefs, outputs.dir, outputs.outSlug, pageSize);
+}
+
 function assertPaginasLibres(relativePath: string, dir: string, outSlug: string, total: number, discoveryIndex: Map<string, DiscoveryEntry>): void {
   for (let n = 2; n <= total; n++) {
     const nombre = pageSlug(outSlug, n);
@@ -746,6 +797,9 @@ const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 // primero de la tarjeta y el h2 traería sus márgenes del navegador.
 const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 
+// El chip que abre una tarjeta extra deja aire antes del elemento que sigue.
+const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
+
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
@@ -771,7 +825,7 @@ export function creatorCard(doc: CreatorDoc, dir: string, creatorHrefs: Map<stri
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_CLASSES, available),
+    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
     '',
     `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
     '',
@@ -797,7 +851,7 @@ export function containersCard(
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    `<div class="flex flex-wrap items-center gap-2">${chips.join('')}</div>`,
+    `<div class="flex flex-wrap items-center gap-2 mb-4">${chips.join('')}</div>`,
     '',
     items,
     '',
@@ -808,9 +862,15 @@ export function containersCard(
 /** La tarjeta con los textos donde aparece una creadora. */
 export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string, available?: Set<string>): string {
   const items = textos.map((t) => `- [${t.titulo}](${t.href})`).join('\n');
-  return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', chipHtml('Textos', 'file', dir, EXTRA_PILL_CLASSES, available), '', items, '', '::::'].join(
-    '\n',
-  );
+  return [
+    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
+    '',
+    chipHtml('Textos', 'file', dir, EXTRA_PILL_SPACED_CLASSES, available),
+    '',
+    items,
+    '',
+    '::::',
+  ].join('\n');
 }
 
 /**
@@ -1376,8 +1436,22 @@ async function emitCollectionFormats(
       docDir,
       outputs.outBase(ASSETS_IMAGES_DIR),
     );
+    const indices = indicesDeColeccion(doc, outputs, collectionEntries, memberHrefs, pageSize, ctx.siteConfig);
 
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, extras, undefined, covers);
+    await emitHtmlPage(
+      doc,
+      outputs,
+      renderCtx,
+      exportCtx,
+      discoveryIndex,
+      imagePaths,
+      contenidos,
+      hrefsCreadores,
+      extras,
+      undefined,
+      covers,
+      indices,
+    );
     await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
   }
 
