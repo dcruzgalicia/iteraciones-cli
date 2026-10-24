@@ -1,7 +1,7 @@
 # language: es
 Característica: los enlaces del sitio y el índice paginado de una colección
 
-  Regla de negocio: Los enlaces del proyecto generan tarjetas de «Frecuencias»
+  Regla de negocio: Los enlaces del proyecto generan tarjetas de «Redes»
 
     Escenario: Con enlaces hay una tarjeta después del header y otra antes del footer
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -11,9 +11,9 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       GitHub | https://github.com/dcruzgalicia
       """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/test-document.html" dice "Frecuencias"
+      Entonces el archivo "dist/files/test-document.html" dice "Redes"
       Y el archivo "dist/files/test-document.html" dice 'target="_blank"'
-      Y las tarjetas de Frecuencias van después del header y antes del footer
+      Y las tarjetas de Redes van después del header y antes del footer
 
   Regla de negocio: La tarjeta de identidad enlaza por separado
 

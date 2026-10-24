@@ -78,18 +78,18 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
     if (key === 'formatos') cards.push(await loadCard('file', 'card-indice-coleccion.html'));
     if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
   }
-  // Las portadas van justo después de la tarjeta de header y antes de la de
-  // título y creadoras, si el documento define frontCover/backCover.
-  header += await loadCard('file', 'card-portadas.html');
-  // «Frecuencias»: una tarjeta después del header y otra antes del footer.
-  const frecuencias = await frecuenciasCard(siteConfig);
-  header += frecuencias;
+  // «Redes» va justo después del header (slot-header) y otra vez antes del
+  // footer.
+  const redes = await frecuenciasCard(siteConfig);
+  header += redes;
+  // Las portadas van después de la tarjeta de título y antes de Formatos.
+  cards.unshift(await loadCard('file', 'card-portadas.html'));
   // Las tarjetas de creadoras y de colecciones, y el nav de paginación, van
   // después de todo lo demás y antes del footer: son tarjetas del masonry, no
   // parte de la del texto.
   cards.push(EXTRAS_CARD);
   cards.push(PAGINATION_CARD);
-  cards.push(frecuencias);
+  cards.push(redes);
   const logoBlock = logoInline
     ? `<span class="flex h-10 w-10 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
     : '';

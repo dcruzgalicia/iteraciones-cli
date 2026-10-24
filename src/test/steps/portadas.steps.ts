@@ -199,15 +199,15 @@ Given('el libro produce epub', () => {
   escribirEnProyecto('iteraciones.config.yaml', `${CONFIG_EPUB}\n`);
 });
 
-Then('las portadas del HTML van después del header y antes del título', () => {
+Then('las portadas del HTML van después del título y antes de los formatos', () => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'un-libro.html'), 'utf8');
-  const header = html.indexOf('id="card-identity"');
+  const titulo = html.indexOf('<h1');
   const front = html.indexOf('portada-front-');
   const back = html.indexOf('portada-back-');
-  const titulo = html.indexOf('<h1');
-  if (header < 0 || front < 0 || back < 0 || titulo < 0) throw new Error('faltan el header, las portadas o el título');
-  if (!(header < front && front < back && back < titulo)) {
-    throw new Error('las portadas no van después del header y antes del título');
+  const formatos = html.indexOf('>Formatos</h2>');
+  if (titulo < 0 || front < 0 || back < 0 || formatos < 0) throw new Error('faltan el título, las portadas o los formatos');
+  if (!(titulo < front && front < back && back < formatos)) {
+    throw new Error('las portadas no van después del título y antes de los formatos');
   }
 });
 

@@ -21,16 +21,16 @@ Given('el sitio declara los enlaces:', (tabla: string) => {
   escribirEnProyecto('iteraciones.config.yaml', [...CONFIG_BASE, '    site:', '      links:', ...enlaces].join('\n') + '\n');
 });
 
-Then('las tarjetas de Frecuencias van después del header y antes del footer', () => {
+Then('las tarjetas de Redes van después del header y antes del footer', () => {
   const html = leer('dist/files/test-document.html');
   const header = html.indexOf('id="card-identity"');
   const titulo = html.indexOf('<h1');
   const footer = html.indexOf('id="card-identity-footer"');
-  const frecuencias = [...html.matchAll(/Frecuencias/g)].map((m) => m.index ?? -1);
-  if (frecuencias.length !== 2) throw new Error(`hay ${frecuencias.length} tarjetas de Frecuencias y deberían ser 2`);
+  const frecuencias = [...html.matchAll(/Redes/g)].map((m) => m.index ?? -1);
+  if (frecuencias.length !== 2) throw new Error(`hay ${frecuencias.length} tarjetas de Redes y deberían ser 2`);
   const [primera, segunda] = frecuencias as [number, number];
-  if (!(header < primera && primera < titulo)) throw new Error('la primera Frecuencias no va después del header y antes del título');
-  if (!(segunda < footer)) throw new Error('la segunda Frecuencias no va antes del footer');
+  if (!(header < primera && primera < titulo)) throw new Error('la primera Redes no va después del header y antes del título');
+  if (!(segunda < footer)) throw new Error('la segunda Redes no va antes del footer');
 });
 
 Then('la tarjeta de identidad no es un enlace', () => {
