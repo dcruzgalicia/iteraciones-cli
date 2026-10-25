@@ -25,6 +25,14 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Y el logo y el nombre enlazan al inicio
       Y la descripción no es un enlace
 
+  Regla de negocio: Los enlaces de Formatos abren en otra pestaña
+
+    Escenario: Los formatos disponibles no se llevan al lector fuera del sitio
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html y markdown
+      Cuando hago un build del proyecto
+      Entonces los enlaces de Formatos abren en otra pestaña
+
   Regla de negocio: El índice de una colección se pagina con sus textos
 
     Escenario: Con más de 20 textos el índice enlaza la página siguiente
