@@ -33,6 +33,19 @@ Then('las tarjetas de Redes van después del header y antes del footer', () => {
   if (!(segunda < footer)) throw new Error('la segunda Redes no va antes del footer');
 });
 
+Given('el proyecto produce html y markdown', () => {
+  escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nformat:\n  html:\n    generate: true\n  markdown:\n    generate: true\n');
+});
+
+Then('los enlaces de Formatos abren en otra pestaña', () => {
+  const html = leer('dist/files/test-document.html');
+  const enlaces = [...html.matchAll(/<a\b[^>]*>(PDF|EPUB|LaTeX|Markdown)<\/a>/g)];
+  if (enlaces.length === 0) throw new Error('la tarjeta de Formatos no tiene enlaces');
+  for (const [etiqueta, enlace] of enlaces.map((m) => [m[1], m[0]] as const)) {
+    if (!(enlace ?? '').includes('target="_blank"')) throw new Error(`el enlace ${String(etiqueta)} no abre en otra pestaña`);
+  }
+});
+
 Then('la tarjeta de identidad no es un enlace', () => {
   const html = leer('dist/files/test-document.html');
   if (!html.includes('id="card-identity" class="break-inside-avoid pb-6"><div class="relative')) {
