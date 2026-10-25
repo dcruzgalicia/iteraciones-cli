@@ -39,6 +39,18 @@ Característica: las portadas del PDF
       Y el proyecto compila el PDF
       Entonces la página 1 del PDF conserva el color
 
+    Escenario: Con coverColor sólo la portada y la contraportada conservan su color
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "frontCover"
+      Y el libro lleva la portada "backCover"
+      Y el libro lleva la portada "startpaper"
+      Y el libro lleva las guardas en color
+      Y el proyecto compila el PDF
+      Entonces la página 1 del PDF conserva el color
+      Y la página 2 del PDF conserva el color
+      Y la página 3 del PDF está en escala de grises
+
     Escenario: Sin coverColor las guardas van en escala de grises
       Dado que la raíz del proyecto está vacía
       Y el proyecto tiene un libro
