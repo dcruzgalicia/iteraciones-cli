@@ -82,6 +82,8 @@ function buildHtmlMetadataArgs(
       { key: 'author-meta', value: vars.authorMeta },
     ]),
   );
+  if (vars.logoBlock !== undefined) args.push(`--variable=logo-block:${vars.logoBlock}`);
+  if (vars.favicon !== undefined) args.push(`--variable=favicon:${vars.favicon}`);
   args.push(...metadataBandArgs(vars));
   const formats = vars.formats ?? [];
 

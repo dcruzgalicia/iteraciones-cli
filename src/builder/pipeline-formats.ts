@@ -11,6 +11,7 @@ import { minifyHtml } from '../lib/minify.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { posix } from '../lib/paths.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
+import type { LogoAsset } from './build-assets.js';
 import { htmlOwner, removeExtraHtmlPages } from './cleanup.js';
 import { extractFragment } from './collection-fragment.js';
 import { DEFAULT_LISTS, defaultListHref, defaultListSlug } from './default-lists.js';
@@ -18,7 +19,7 @@ import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import type { HtmlDocType, HtmlPageVars } from './html-composer.js';
+import { type HtmlDocType, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
 import {
   type DocumentImages,
   imageNamerFor,
@@ -232,6 +233,16 @@ function docChipHrefPara(dir: string, type: string | undefined, available?: Set<
   return defaultListHref(dir, type);
 }
 
+/** El logo y el favicon, con rutas relativas al nivel de la página. */
+function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | undefined): Pick<HtmlPageVars, 'logoBlock' | 'favicon'> {
+  if (logo === undefined) return {};
+  const href = logo.kind === 'file' ? relativeHref(dir, logo.path) : '';
+  return {
+    logoBlock: logoBlockHtml(logo, href, logoSize),
+    favicon: logo.favicon === undefined ? undefined : `<link rel="icon" href="${relativeHref(dir, logo.favicon)}">`,
+  };
+}
+
 function htmlVars(args: {
   doc: BuildDocument;
   outputs: DocumentOutputs;
@@ -252,6 +263,7 @@ function htmlVars(args: {
   const { dir, slug, fm } = outputs;
   const titulo = doc.frontmatter.title || slug;
   return {
+    ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
     title: titulo,
     siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
     tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',

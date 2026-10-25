@@ -13,6 +13,14 @@ export const ASSETS_CSS_FILE = 'assets/css/styles.css';
 
 export const ASSETS_FONTS_DIR = 'assets/fonts';
 
+/** El logo raster ya convertido: el HTML lo referencia en vez de incrustarlo. */
+export const ASSETS_LOGO_WEBP = 'assets/images/logo.webp';
+
+export const ASSETS_FAVICON_PNG = 'assets/images/favicon.png';
+
+export const ASSETS_FAVICON_SVG = 'assets/images/favicon.svg';
+
+/** Ruta del logo en la maqueta vieja; sólo se usa para limpiar. */
 export const ASSETS_LOGO_FILE = 'assets/logo.svg';
 
 export const LEGACY_ASSETS_IMG_DIR = 'assets/img';

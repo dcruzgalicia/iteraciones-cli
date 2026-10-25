@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js';
+import type { LogoAsset } from './build-assets.js';
 
 export const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
@@ -51,6 +52,16 @@ function logoSizeCss(value: string | undefined): string {
   return /^\d+(\.\d+)?(px|rem|em|vw|vh|%)$/.test(limpio) ? limpio : '100px';
 }
 
+/**
+ * El bloque del logo para una página. El raster vive en `assets/` y se
+ * referencia con una ruta relativa al nivel de la página; el SVG de fábrica va
+ * incrustado para que herede el accent del tema.
+ */
+export function logoBlockHtml(logo: LogoAsset, href: string, logoSize?: string): string {
+  const inner = logo.kind === 'inline' ? logo.html : `<img src="${href}" alt="" class="block h-auto w-full">`;
+  return `<span class="flex shrink-0 text-accent-500 logo-fill" style="width:${logoSizeCss(logoSize)}">${inner}</span>`;
+}
+
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -68,7 +79,7 @@ async function frecuenciasCard(siteConfig: SiteConfig): Promise<string> {
   return (await loadCard('file', 'card-frecuencias.html')).replace('[[FRECUENCIAS]]', items);
 }
 
-export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: string, type: HtmlDocType = 'file'): Promise<string> {
+export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocType = 'file'): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
   const html = siteConfig.format?.html;
   const order = (html !== undefined && 'blocks' in html && html.blocks) || [...DEFAULT_HTML_BLOCKS];
@@ -96,15 +107,13 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
   cards.push(EXTRAS_CARD);
   cards.push(PAGINATION_CARD);
   cards.push(redes);
-  const logoSize = logoSizeCss(siteConfig.format?.html?.site?.logoSize);
-  const logoBlock = logoInline ? `<span class="flex shrink-0 text-accent-500 logo-fill" style="width:${logoSize}">${logoInline}</span>` : '';
+  // `$logo-block$` queda como variable de pandoc: el bloque depende del nivel
+  // de la página y lo resuelve el build, página por página.
   return skeleton
     .replace(slot('header'), () => header)
     .replace(slot('metadata'), () => metadata)
     .replace(slot('footer'), () => footer)
-    .replace(slot('cards'), () => cards.join('\n'))
-    .split('$logo-block$')
-    .join(logoBlock);
+    .replace(slot('cards'), () => cards.join('\n'));
 }
 
 export interface HtmlPageVars {
@@ -112,6 +121,10 @@ export interface HtmlPageVars {
   siteTitle: string;
   tagline?: string;
   lang: string;
+  /** El bloque del logo, ya resuelto para el nivel de la página. */
+  logoBlock?: string;
+  /** La ruta relativa del favicon. */
+  favicon?: string;
   theme?: string;
   css?: string;
   authorMeta?: string;
