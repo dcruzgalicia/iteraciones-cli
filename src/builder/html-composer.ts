@@ -91,7 +91,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
   cards.push(PAGINATION_CARD);
   cards.push(redes);
   const logoBlock = logoInline
-    ? `<span class="flex h-40 w-40 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
+    ? `<span class="flex h-[120px] w-[120px] shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
     : '';
   return skeleton
     .replace(slot('header'), () => header)
