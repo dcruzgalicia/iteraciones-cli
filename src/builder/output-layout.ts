@@ -7,6 +7,8 @@ export const DIST_FILES_DIR = join(DIST_DIR, 'files');
 
 export const ASSETS_IMAGES_DIR = 'assets/images';
 
+export const ASSETS_PDF_IMAGES_DIR = 'assets/pdf/images';
+
 export const ASSETS_CSS_FILE = 'assets/css/styles.css';
 
 export const ASSETS_FONTS_DIR = 'assets/fonts';

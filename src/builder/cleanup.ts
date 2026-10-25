@@ -11,7 +11,9 @@ import {
   ALL_OUTPUT_EXTENSIONS,
   ASSETS_CSS_FILE,
   ASSETS_FONTS_DIR,
+  ASSETS_IMAGES_DIR,
   ASSETS_LOGO_FILE,
+  ASSETS_PDF_IMAGES_DIR,
   FORMAT_OUTPUT_EXTENSIONS,
   LEGACY_ASSETS_IMG_DIR,
   PDF_WORK_DIR,
@@ -131,15 +133,32 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>)
     removed += await removeCachedArtifacts(cacheBase, dir, outSlug);
     removed += await removeOutputFiles(ctx.outputDir, dir, outSlug, ALL_OUTPUT_EXTENSIONS);
     removed += await removeExtraHtmlPages(ctx.outputDir, dir, outSlug, 0, new Map());
+    removed += await removeDocImages(ctx.outputDir, dir, outSlug, [ASSETS_IMAGES_DIR, ASSETS_PDF_IMAGES_DIR]);
   }
   await pruneEmptyDirs(ctx.outputDir);
   return removed;
 }
 
 async function removeHtmlAssets(outputDir: string): Promise<void> {
-  for (const rel of [dirname(ASSETS_CSS_FILE), ASSETS_FONTS_DIR, ASSETS_LOGO_FILE, 'css', 'fonts', 'logo.svg']) {
+  for (const rel of [dirname(ASSETS_CSS_FILE), ASSETS_FONTS_DIR, ASSETS_LOGO_FILE, ASSETS_IMAGES_DIR, 'css', 'fonts', 'logo.svg']) {
     await rm(join(outputDir, rel), { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/** Borra las imágenes de un documento de las carpetas indicadas. */
+async function removeDocImages(outputDir: string, dir: string, outSlug: string, bases: string[]): Promise<number> {
+  let removed = 0;
+  const prefix = `${outSlug}-`;
+  for (const base of bases) {
+    const baseDir = join(outputDir, dir, base);
+    const entries = await readdir(baseDir).catch(() => []);
+    for (const file of entries) {
+      if (!file.startsWith(prefix)) continue;
+      await rm(join(baseDir, file), { force: true }).catch(() => {});
+      removed++;
+    }
+  }
+  return removed;
 }
 
 async function removeMarkdownMembers(doc: BuildDocument, root: string): Promise<number> {
@@ -167,6 +186,10 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
     removed += await removeOutputFiles(ctx.outputDir, dir, outSlug, extensions);
     if (!sinHtml) {
       removed += await removeExtraHtmlPages(ctx.outputDir, dir, outSlug, 0, new Map());
+      removed += await removeDocImages(ctx.outputDir, dir, outSlug, [ASSETS_IMAGES_DIR]);
+    }
+    if (removedFormats.includes('latex') && removedFormats.includes('pdf')) {
+      removed += await removeDocImages(ctx.outputDir, dir, outSlug, [ASSETS_PDF_IMAGES_DIR]);
     }
 
     if (!sinMarkdown && doc.frontmatter.type === 'collection') {

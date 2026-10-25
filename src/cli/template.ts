@@ -21,7 +21,7 @@ export async function runTemplate(cwd: string, kind: string, options: { output?:
       siteConfig,
       bibFiles,
       effectiveDisabledPreamble,
-      logoInline: await loadLogoInline(cwd, siteConfig.format?.html?.site?.logo?.trim()),
+      logoInline: await loadLogoInline(cwd, siteConfig.format?.html?.site?.logo?.trim(), siteConfig.format?.html?.site?.logoSize),
     });
     const output =
       options.output === undefined || options.output === ''

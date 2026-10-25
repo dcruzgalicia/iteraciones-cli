@@ -1,5 +1,5 @@
-import { mkdir } from 'node:fs/promises';
-import { basename, isAbsolute, join, relative, resolve } from 'node:path';
+import { mkdir, stat } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { fmStringList } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
@@ -57,7 +57,7 @@ export function uniqueName(base: string, taken: Set<string>): string {
   return name;
 }
 
-export function imageNamerFor(outSlug: string): (absPath: string) => string {
+export function imageNamerFor(outSlug: string, ext = 'jpg'): (absPath: string) => string {
   const prefix = outSlug === '' ? '' : `${outSlug}-`;
   const taken = new Set<string>();
   const cache = new Map<string, string>();
@@ -66,79 +66,79 @@ export function imageNamerFor(outSlug: string): (absPath: string) => string {
     if (cached !== undefined) return cached;
     const base = processedName(absPath);
     const stem = prefix !== '' && base.startsWith(prefix) ? base.slice(prefix.length) : base;
-    const name = uniqueName(`${prefix}${stem}.jpg`, taken);
+    const name = uniqueName(`${prefix}${stem}.${ext}`, taken);
     cache.set(absPath, name);
     return name;
   };
 }
 
-async function processImage(
-  inputPath: string,
-  targetWmm: number,
-  targetHmm: number,
-  cover: boolean,
-  outputDir: string,
-  outName?: string,
-  enColor = false,
-): Promise<string> {
-  await mkdir(outputDir, { recursive: true });
+interface ImageProcessSpec {
+  outPath: string;
+  resize?: string;
+  extent?: string;
+  density300: boolean;
+  grayscale: boolean;
+  quality: number;
+  maxBytes?: number;
+  minQuality?: number;
+  flatten: boolean;
+}
 
-  const fileName = outName ?? `${processedName(inputPath)}.jpg`;
-  const outPath = join(outputDir, fileName);
-
-  const targetW = mmToPx(targetWmm);
-  const targetH = mmToPx(targetHmm);
-
-  let resizeArg: string;
-  if (cover) {
-    resizeArg = `${targetW}x${targetH}^`;
-  } else if (targetH === 0) {
-    resizeArg = `${targetW}>`;
-  } else {
-    resizeArg = `${targetW}x${targetH}>`;
-  }
-
-  const isSvg = inputPath.toLowerCase().endsWith('.svg');
+function imageArgs(inputPath: string, spec: ImageProcessSpec, quality: number, isSvg: boolean): string[] {
   const args: string[] = [];
+  if (isSvg) args.push('-density', '300', '-units', 'PixelsPerInch');
+  args.push(inputPath);
+  if (spec.resize !== undefined) args.push('-resize', spec.resize);
+  if (spec.extent !== undefined) args.push('-gravity', 'center', '-extent', spec.extent);
+  if (spec.density300) args.push('-density', '300', '-units', 'PixelsPerInch');
+  if (spec.grayscale) args.push('-colorspace', 'Gray');
+  args.push('-quality', String(quality));
+  if (spec.flatten) args.push('-background', 'white', '-flatten');
+  args.push(spec.outPath);
+  return args;
+}
 
-  if (isSvg) {
-    args.push('-density', '300', '-units', 'PixelsPerInch');
-  }
-
-  args.push(inputPath, '-resize', resizeArg);
-
-  if (cover) {
-    args.push('-gravity', 'center', '-extent', `${targetW}x${targetH}`);
-  }
-
-  args.push('-density', '300', '-units', 'PixelsPerInch');
-  // Las guardas pueden pedir su color original; el resto va a grises.
-  if (!enColor) args.push('-colorspace', 'Gray');
-  args.push('-quality', '100', '-background', 'white', '-flatten', outPath);
-
-  let result: Awaited<ReturnType<typeof exec>>;
+/** Ejecuta magick; si falla, avisa y devuelve false. */
+async function runMagick(inputPath: string, args: string[]): Promise<boolean> {
   try {
-    result = await exec('magick', args, { timeoutMs: MAGICK_TIMEOUT_MS });
+    const result = await exec('magick', args, { timeoutMs: MAGICK_TIMEOUT_MS });
+    if (result.exitCode === 0) return true;
+    logWarning(`ImageMagick falló al procesar "${basename(inputPath)}": ${result.stderr.trim()}`, 'images');
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       logWarning(`ImageMagick no está disponible: se omite el preproceso de "${basename(inputPath)}"`, 'images');
-      return inputPath;
+      return false;
     }
     if (err instanceof ProcessTimeoutError) {
       logWarning(
         `ImageMagick no terminó en ${MAGICK_TIMEOUT_MS / 1000}s y fue terminado: se usa la imagen original "${basename(inputPath)}"`,
         'images',
       );
-      return inputPath;
+      return false;
     }
     throw err;
   }
-  if (result.exitCode !== 0) {
-    logWarning(`ImageMagick falló al procesar "${basename(inputPath)}": ${result.stderr.trim()}`, 'images');
-    return inputPath;
+  return false;
+}
+
+async function processImage(inputPath: string, spec: ImageProcessSpec): Promise<string> {
+  await mkdir(dirname(spec.outPath), { recursive: true });
+
+  const isSvg = inputPath.toLowerCase().endsWith('.svg');
+  const floor = spec.minQuality ?? spec.quality;
+  let quality = spec.quality;
+
+  for (let intento = 0; intento < 10; intento++) {
+    if (!(await runMagick(inputPath, imageArgs(inputPath, spec, quality, isSvg)))) return inputPath;
+    if (spec.maxBytes === undefined) break;
+    const size = await stat(spec.outPath)
+      .then((s) => s.size)
+      .catch(() => 0);
+    if (size <= spec.maxBytes || quality <= floor) break;
+    quality = Math.max(floor, quality - 10);
   }
 
-  return outPath;
+  return spec.outPath;
 }
 
 const MD_IMAGE_RE = /!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?/g;
@@ -312,135 +312,249 @@ export function computeProcessTargets(pageDims: PageDimensions, cropActive: bool
   };
 }
 
-function recordProcessed(imageMap: Map<string, string>, processedFiles: string[], absPath: string, processed: string): void {
-  imageMap.set(absPath, processed);
-  if (processed !== absPath) processedFiles.push(processed);
+export interface ImageSource {
+  absPath: string;
+  kind: 'cover' | 'title' | 'inline';
+  cover: boolean;
+  field?: string;
+  widthMm?: number;
+}
+
+export interface ProcessedImages {
+  imageMap: Map<string, string>;
+  processedFiles: string[];
+}
+
+export interface DocumentImages {
+  pdf?: ProcessedImages;
+  web?: ProcessedImages;
+  epub?: ProcessedImages;
 }
 
 const FULL_PAGE_COVER_FIELDS = ['startpaper', 'frontCover', 'backCover'];
-
-/** Las guardas de portada y contraportada pueden ir en color. */
-function guardaEnColor(field: string, enColor: boolean): boolean {
-  if (!enColor) return false;
-  return field === 'frontCover' || field === 'backCover';
-}
-
-async function collectFrontmatterImageTasks(
-  fm: Record<string, unknown>,
-  docDir: string,
-  targets: ProcessTargets,
-  imageMap: Map<string, string>,
-): Promise<{ absPath: string; w: number; h: number; cover: boolean; enColor: boolean }[]> {
-  const tasks: { absPath: string; w: number; h: number; cover: boolean; enColor: boolean }[] = [];
-  const enColor = fm.coverColor === true;
-  for (const field of COVER_IMAGE_FIELDS) {
-    const cover = FULL_PAGE_COVER_FIELDS.includes(field);
-    // Sólo la portada y la contraportada pueden ir en color: el startpaper
-    // sigue a escala de grises.
-    const color = guardaEnColor(field, enColor);
-    const w = cover ? targets.startpaperW : targets.targetW;
-    const h = cover ? targets.startpaperH : targets.targetH;
-    for (const value of fmStringList(fm[field]) ?? []) {
-      const absPath = isAbsolute(value) ? value : resolve(docDir, value);
-      if (!(await Bun.file(absPath).exists()) || imageMap.has(absPath)) continue;
-      tasks.push({ absPath, w, h, cover, enColor: color });
-    }
-  }
-  return tasks;
-}
-
-async function runImageTasks(
-  tasks: { absPath: string; w: number; h: number; cover: boolean; enColor: boolean }[],
-  outputDir: string,
-  naming: (absPath: string) => string,
-  imageMap: Map<string, string>,
-  processedFiles: string[],
-): Promise<void> {
-  const processed = await mapWithConcurrency(tasks, cpuConcurrency(4), (task) =>
-    processImage(task.absPath, task.w, task.h, task.cover, outputDir, naming(task.absPath), task.enColor),
-  );
-  for (const [index, result] of processed.entries()) {
-    const task = tasks[index];
-    if (task !== undefined && result !== undefined) recordProcessed(imageMap, processedFiles, task.absPath, result);
-  }
-}
-
-async function processMultilineCoverImages(
-  multilineImages: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[],
-  targets: ProcessTargets,
-  outputDir: string,
-  naming: (absPath: string) => string,
-  imageMap: Map<string, string>,
-  processedFiles: string[],
-): Promise<void> {
-  const tasks: { absPath: string; w: number; h: number; cover: boolean; enColor: boolean }[] = [];
-  const seen = new Set<string>();
-  for (const img of multilineImages) {
-    if (imageMap.has(img.absPath) || seen.has(img.absPath)) continue;
-    seen.add(img.absPath);
-
-    const imgTargetW = img.widthMm ?? targets.targetW;
-    const imgTargetH = img.widthMm ? 0 : targets.targetH;
-    tasks.push({ absPath: img.absPath, w: imgTargetW, h: imgTargetH, cover: false, enColor: false });
-  }
-  await runImageTasks(tasks, outputDir, naming, imageMap, processedFiles);
-}
-
-async function processInlineImages(
-  inlineImages: string[],
-  targets: ProcessTargets,
-  outputDir: string,
-  naming: (absPath: string) => string,
-  imageMap: Map<string, string>,
-  processedFiles: string[],
-): Promise<void> {
-  const tasks = [...new Set(inlineImages)]
-    .filter((absPath) => !imageMap.has(absPath))
-    .map((absPath) => ({ absPath, w: targets.targetW, h: targets.targetH, cover: false, enColor: false }));
-  await runImageTasks(tasks, outputDir, naming, imageMap, processedFiles);
-}
 
 function warnMissingMagick(pdfxActive: boolean): void {
   if (!warnedMissingMagick) {
     warnedMissingMagick = true;
     logWarning(
-      'ImageMagick no disponible; las imágenes no se preprocesaron a escala de grises 300dpi' +
-        (pdfxActive ? '; pueden fallar la certificación PDF/X' : ''),
+      'ImageMagick no disponible; las imágenes no se preprocesaron' + (pdfxActive ? '; pueden fallar la certificación PDF/X' : ''),
       'images',
     );
   }
 }
 
-export async function processDocumentImages(
+/**
+ * Reúne todas las imágenes del documento, sin repetir y en orden de prioridad
+ * (guardas, después páginas de título, después cuerpo).
+ */
+export async function collectImageSources(content: string, fm: Record<string, unknown>, docDir: string, pageWidthmm: number): Promise<ImageSource[]> {
+  const sources: ImageSource[] = [];
+  const seen = new Set<string>();
+  const push = (source: ImageSource): void => {
+    if (seen.has(source.absPath)) return;
+    seen.add(source.absPath);
+    sources.push(source);
+  };
+
+  for (const field of COVER_IMAGE_FIELDS) {
+    const cover = FULL_PAGE_COVER_FIELDS.includes(field);
+    for (const value of fmStringList(fm[field]) ?? []) {
+      const absPath = isAbsolute(value) ? value : resolve(docDir, value);
+      if (!(await Bun.file(absPath).exists())) continue;
+      push({ absPath, kind: 'cover', cover, field });
+    }
+  }
+
+  for (const img of await scanTitlePageFieldImages(fm, docDir, pageWidthmm)) {
+    push({ absPath: img.absPath, kind: 'title', cover: false, widthMm: img.widthMm });
+  }
+
+  for (const absPath of scanInlineImages(content, docDir)) push({ absPath, kind: 'inline', cover: false });
+  return sources;
+}
+
+interface ImageProfile {
+  outputDir: string;
+  naming: (absPath: string) => string;
+  kind: 'pdf' | 'web';
+  maxWidthPx?: number;
+  quality: number;
+  maxBytes?: number;
+  minQuality?: number;
+  flatten: boolean;
+  density300: boolean;
+  grayscale: boolean;
+  coverColor: boolean;
+}
+
+interface Geometry {
+  resize?: string;
+  extent?: string;
+}
+
+function geometryFor(source: ImageSource, profile: ImageProfile, targets: ProcessTargets): Geometry {
+  if (profile.kind === 'web') return { resize: `${profile.maxWidthPx ?? 1024}x>` };
+  if (source.cover) {
+    const w = mmToPx(targets.startpaperW);
+    const h = mmToPx(targets.startpaperH);
+    return { resize: `${w}x${h}^`, extent: `${w}x${h}` };
+  }
+  if (source.kind === 'title' && source.widthMm !== undefined) return { resize: `${mmToPx(source.widthMm)}>` };
+  return { resize: `${mmToPx(targets.targetW)}x${mmToPx(targets.targetH)}>` };
+}
+
+function grayscaleFor(source: ImageSource, profile: ImageProfile): boolean {
+  if (!profile.grayscale) return false;
+  if (profile.coverColor && source.cover && (source.field === 'frontCover' || source.field === 'backCover')) return false;
+  return true;
+}
+
+async function processSources(sources: ImageSource[], profile: ImageProfile, targets: ProcessTargets): Promise<ProcessedImages> {
+  const imageMap = new Map<string, string>();
+  const processedFiles: string[] = [];
+  const processed = await mapWithConcurrency(sources, cpuConcurrency(4), (source) => {
+    const geometry = geometryFor(source, profile, targets);
+    return processImage(source.absPath, {
+      outPath: join(profile.outputDir, profile.naming(source.absPath)),
+      resize: geometry.resize,
+      extent: geometry.extent,
+      density300: profile.density300,
+      grayscale: grayscaleFor(source, profile),
+      quality: profile.quality,
+      maxBytes: profile.maxBytes,
+      minQuality: profile.minQuality,
+      flatten: profile.flatten,
+    });
+  });
+  for (const [index, result] of processed.entries()) {
+    const source = sources[index];
+    if (source === undefined || result === undefined) continue;
+    imageMap.set(source.absPath, result);
+    if (result !== source.absPath) processedFiles.push(result);
+  }
+  return { imageMap, processedFiles };
+}
+
+interface PreprocessArgs {
+  content: string;
+  fm: Record<string, unknown>;
+  docDir: string;
+  pageDimensions: PageDimensions;
+  cropActive: boolean;
+  pdfxActive: boolean;
+  outSlug: string;
+  dirs: { pdf: string; web: string; epub: string };
+  wants: { pdf: boolean; web: boolean; epub: boolean };
+  detector?: () => Promise<boolean>;
+}
+
+/**
+ * Procesa las imágenes del documento en los perfiles pedidos: PDF (JPG a 300
+ * dpi, gris) y web/EPUB (WebP o JPG ligeros, color, ancho máximo 1024).
+ */
+export async function preprocessDocumentImages(args: PreprocessArgs): Promise<DocumentImages> {
+  const detector = args.detector ?? detectMagick;
+  if (!(await detector())) {
+    warnMissingMagick(args.pdfxActive);
+    return {};
+  }
+  const sources = await collectImageSources(args.content, args.fm, args.docDir, args.pageDimensions.w);
+  const targets = computeProcessTargets(args.pageDimensions, args.cropActive);
+  const coverColor = args.fm.coverColor === true;
+  const result: DocumentImages = {};
+
+  if (args.wants.pdf) {
+    result.pdf = await processSources(
+      sources,
+      {
+        outputDir: args.dirs.pdf,
+        naming: imageNamerFor(args.outSlug, 'jpg'),
+        kind: 'pdf',
+        quality: 100,
+        flatten: true,
+        density300: true,
+        grayscale: true,
+        coverColor,
+      },
+      targets,
+    );
+  }
+
+  if (args.wants.web) {
+    result.web = await processSources(
+      sources,
+      {
+        outputDir: args.dirs.web,
+        naming: imageNamerFor(args.outSlug, 'webp'),
+        kind: 'web',
+        maxWidthPx: 1024,
+        quality: 75,
+        maxBytes: 300 * 1024,
+        minQuality: 50,
+        flatten: false,
+        density300: false,
+        grayscale: false,
+        coverColor: false,
+      },
+      targets,
+    );
+  }
+
+  if (args.wants.epub) {
+    result.epub = await processSources(
+      sources,
+      {
+        outputDir: args.dirs.epub,
+        naming: imageNamerFor(args.outSlug, 'jpg'),
+        kind: 'web',
+        maxWidthPx: 1024,
+        quality: 75,
+        maxBytes: 300 * 1024,
+        minQuality: 50,
+        flatten: true,
+        density300: false,
+        grayscale: false,
+        coverColor: false,
+      },
+      targets,
+    );
+  }
+
+  return result;
+}
+
+/** Las imágenes del cuerpo de una lista por defecto, en su versión web. */
+export async function processWebImages(
   inlineImages: string[],
-  fm: Record<string, unknown>,
-  docDir: string,
-  pageDims: PageDimensions,
-  cropActive: boolean,
   outputDir: string,
   naming: (absPath: string) => string,
-  multilineImages?: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[],
   pdfxActive = false,
   detector: () => Promise<boolean> = detectMagick,
-): Promise<{ imageMap: Map<string, string>; processedFiles: string[] }> {
+): Promise<ProcessedImages> {
   if (!(await detector())) {
     warnMissingMagick(pdfxActive);
     return { imageMap: new Map(), processedFiles: [] };
   }
-
-  const imageMap = new Map<string, string>();
-  const processedFiles: string[] = [];
-  const targets = computeProcessTargets(pageDims, cropActive);
-
-  await runImageTasks(await collectFrontmatterImageTasks(fm, docDir, targets, imageMap), outputDir, naming, imageMap, processedFiles);
-  if (multilineImages !== undefined) await processMultilineCoverImages(multilineImages, targets, outputDir, naming, imageMap, processedFiles);
-  await processInlineImages(inlineImages, targets, outputDir, naming, imageMap, processedFiles);
-
-  return { imageMap, processedFiles };
+  const sources = [...new Set(inlineImages)].map((absPath): ImageSource => ({ absPath, kind: 'inline', cover: false }));
+  return processSources(
+    sources,
+    {
+      outputDir,
+      naming,
+      kind: 'web',
+      maxWidthPx: 1024,
+      quality: 75,
+      maxBytes: 300 * 1024,
+      minQuality: 50,
+      flatten: false,
+      density300: false,
+      grayscale: false,
+      coverColor: false,
+    },
+    { targetW: 0, targetH: 0, startpaperW: 0, startpaperH: 0 },
+  );
 }
 
-export function relImageMapFor(imageMap: Map<string, string>): Map<string, string> {
-  return new Map(
-    [...imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
-  );
+export function relImageMapFor(imageMap: Map<string, string>, base = ASSETS_IMAGES_DIR): Map<string, string> {
+  return new Map([...imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${base}/${basename(dst)}`]));
 }

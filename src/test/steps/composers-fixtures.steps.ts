@@ -313,6 +313,6 @@ Then('reescribir {string} lo deja igual', (tex: string) => {
 
 Then('las dos referencias quedan dentro de la carpeta de imágenes', () => {
   const got = rewriteTexForDist(world.texToRewrite, world.distribution);
-  const expected = '\\includegraphics{assets/images/ensayo-portada-cmyk.jpg}\n\\mbox{assets/images/ensayo-portada-cmyk.jpg}';
+  const expected = '\\includegraphics{assets/pdf/images/ensayo-portada-cmyk.jpg}\n\\mbox{assets/pdf/images/ensayo-portada-cmyk.jpg}';
   if (got !== expected) throw new Error(`esperaba ${JSON.stringify(expected)} y obtuve ${JSON.stringify(got)}`);
 });

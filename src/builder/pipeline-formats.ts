@@ -20,9 +20,12 @@ import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDo
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import type { HtmlDocType, HtmlPageVars } from './html-composer.js';
 import {
+  type DocumentImages,
   imageNamerFor,
   imagePathsMap,
-  processDocumentImages,
+  type ProcessedImages,
+  preprocessDocumentImages,
+  processWebImages,
   relImageMapFor,
   rewriteFmImagePaths,
   rewriteImagePaths,
@@ -31,16 +34,14 @@ import {
 import {
   buildTexDistribution,
   composeLatexFinalOutput,
-  type ImagePreprocessResult,
   insertAuthorsBlock,
   type LatexPostManifest,
   markdownToLatex,
   mergeConfigImages,
-  preprocessDocumentImages,
   removeEmptyToc,
 } from './latex-composer.js';
 import { detectPageSize } from './latex-preamble.js';
-import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
+import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, ASSETS_PDF_IMAGES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
 import { type ExportContext, type FormatWorkSets, htmlKindFor, latexKindFor, type RenderContext } from './pipeline-setup.js';
 import { htmlPageFromMarkdown } from './render.js';
@@ -120,7 +121,7 @@ async function emitLatexAndQueuePdf(
   renderCtx: RenderContext,
   exportCtx: ExportContext,
   sets: FormatWorkSets,
-  images: ImagePreprocessResult,
+  images: ProcessedImages,
   authorsBlock = '',
 ): Promise<void> {
   const { ctx, lang, warnedLangs, formatCfg, plan } = renderCtx;
@@ -141,7 +142,7 @@ async function emitLatexAndQueuePdf(
     formatCfg: formatCfg?.pdf,
     biblatexAvailable: exportCtx.biblatexAvailable,
     warnedLangs,
-    images,
+    images: { imageMap: images.imageMap, processedImages: images.processedFiles },
     cwd: ctx.cwd,
   });
   const xmp = renderCtx.pdfxActive ? xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig) : undefined;
@@ -192,11 +193,8 @@ async function emitLatexAndQueuePdf(
   }
 }
 
-/**
- * Copia las portadas originales a los assets del HTML y devuelve su URL. No se
- * recortan: la tarjeta las muestra a todo el ancho conservando la proporción.
- */
-async function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, imagesDir: string): Promise<{ front?: string; back?: string }> {
+/** La URL en el HTML de las portadas, ya procesadas en su versión web. */
+function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<string, string>): { front?: string; back?: string } {
   const covers: { front?: string; back?: string } = {};
   for (const [field, key] of [
     ['frontCover', 'front'],
@@ -205,27 +203,20 @@ async function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, images
     const raw = fm[field];
     if (typeof raw !== 'string' || raw === '') continue;
     const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
-    if (!(await Bun.file(abs).exists())) continue;
-    const name = `portada-${key}-${basename(abs)}`;
-    await mkdir(imagesDir, { recursive: true });
-    await Bun.write(join(imagesDir, name), Bun.file(abs));
-    covers[key] = `./${ASSETS_IMAGES_DIR}/${name}`;
+    const processed = webMap.get(abs);
+    if (processed === undefined || processed === abs) continue;
+    covers[key] = `./${ASSETS_IMAGES_DIR}/${basename(processed)}`;
   }
   return covers;
 }
 
-/** La ruta de la portada para el cover del EPUB, si está definida y existe. */
-async function epubCoverPath(
-  fm: Record<string, unknown>,
-  docDir: string,
-  cwd: string,
-  formatCfg: RenderContext['formatCfg'],
-  siteConfig: SiteConfig,
-): Promise<string | undefined> {
-  const value = mergeConfigImages(fm, formatCfg?.pdf, siteConfig, cwd).frontCover;
-  if (typeof value !== 'string' || value === '') return undefined;
-  const path = isAbsolute(value) ? value : resolve(docDir, value);
-  return (await Bun.file(path).exists()) ? path : undefined;
+/** La ruta de la portada para el cover del EPUB, ya procesada en su versión EPUB. */
+function epubCoverPath(fm: Record<string, unknown>, docDir: string, epubMap: Map<string, string>): string | undefined {
+  const raw = fm.frontCover;
+  if (typeof raw !== 'string' || raw === '') return undefined;
+  const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
+  const processed = epubMap.get(abs);
+  return processed !== undefined && processed !== abs ? processed : undefined;
 }
 
 function contentChipPara(type: string | undefined): string | undefined {
@@ -1347,6 +1338,88 @@ function textosDeCreadora(nombre: string, dir: string, discoveryIndex: Map<strin
   return textos.sort((a, b) => a.titulo.localeCompare(b.titulo, 'es'));
 }
 
+async function preprocessDocImages(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  collectionEntries: CollectionEntry[],
+  creatorDocs: CreatorDoc[],
+  content: string,
+  renderCtx: RenderContext,
+): Promise<DocumentImages> {
+  const { ctx, plan, formatCfg } = renderCtx;
+  const active = plan.activeFormats;
+  return preprocessDocumentImages({
+    content: [collectionScanContent(collectionEntries, content), ...creatorDocs.map((c) => c.body)].join('\n\n'),
+    fm: mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
+    docDir: dirname(doc.filePath),
+    pageDimensions: renderCtx.pageDimensions ?? detectPageSize([]),
+    cropActive: renderCtx.cropActive,
+    pdfxActive: renderCtx.pdfxActive,
+    outSlug: outputs.outSlug,
+    dirs: {
+      pdf: outputs.outBase(ASSETS_PDF_IMAGES_DIR),
+      web: outputs.outBase(ASSETS_IMAGES_DIR),
+      epub: join(ctx.cwd, '.iteraciones', 'tmp', 'epub-images', outputs.dir === '.' ? '' : outputs.dir, outputs.outSlug),
+    },
+    wants: { pdf: active.latex || active.pdf, web: active.html || active.epub || active.markdown, epub: active.epub },
+  });
+}
+
+async function emitCollectionHtml(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  collectionEntries: CollectionEntry[],
+  creatorDocs: CreatorDoc[],
+  content: string,
+  renderCtx: RenderContext,
+  exportCtx: ExportContext,
+  formatWorkSets: FormatWorkSets,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  mergedFm: Record<string, unknown>,
+  docDir: string,
+  webMap: Map<string, string>,
+  creatorLinks: { name: string; url: string }[],
+): Promise<void> {
+  const { ctx, plan, formatCfg } = renderCtx;
+  if (!(plan.activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html'))) return;
+
+  const memberHrefs = memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex);
+  const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
+  const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
+  const available = availableDefaultListSlugs(discoveryIndex);
+  const paginas = collectionCardsPages(
+    collectionEntries,
+    memberHrefs,
+    content,
+    pageSize,
+    hrefsCreadores,
+    outputs.dir,
+    available,
+    false,
+    discoveryIndex,
+  );
+  assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
+
+  const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', webMap, docDir, true);
+  const extras = await buildExtrasHtml({
+    creatorDocs,
+    contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
+    textos: textosDeLaCreadoraDelDoc(doc, outputs, discoveryIndex),
+    creatorHrefs: hrefsCreadores,
+    filters: exportCtx.filters,
+    imagePaths,
+    sourcePath: doc.filePath,
+    dir: outputs.dir,
+    available,
+  });
+  const contenidos = paginas.map((base) => prependLinksMarkdown(base, creatorLinks));
+  const covers = htmlCoverUrls(mergedFm, docDir, webMap);
+  const indices = indicesDeColeccion(doc, outputs, collectionEntries, memberHrefs, pageSize, ctx.siteConfig);
+
+  await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, extras, undefined, covers, indices);
+  await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
+}
+
 async function emitCollectionFormats(
   doc: BuildDocument,
   outputs: DocumentOutputs,
@@ -1365,18 +1438,13 @@ async function emitCollectionFormats(
   const nombresCreadoras = nombresDeAutora(doc, outputs.fm);
   const creatorDocs = esFile ? await resolveCreatorDocs(nombresCreadoras, discoveryIndex, ctx.cwd, `"${doc.relativePath}"`) : [];
 
-  const images = await preprocessDocumentImages(
-    [collectionScanContent(collectionEntries, content), ...creatorDocs.map((c) => c.body)].join('\n\n'),
-    doc,
-    mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
-    renderCtx.pageDimensions ?? detectPageSize([]),
-    renderCtx.cropActive,
-    renderCtx.pdfxActive,
-    outputs.outBase(ASSETS_IMAGES_DIR),
-    outputs.outSlug,
-  );
   const docDir = dirname(doc.filePath);
-  const relImageMap = relImageMapFor(images.imageMap);
+  const mergedFm = mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd);
+  const images = await preprocessDocImages(doc, outputs, collectionEntries, creatorDocs, content, renderCtx);
+  const pdfImages = images.pdf ?? { imageMap: new Map<string, string>(), processedFiles: [] };
+  const webMap = images.web?.imageMap ?? new Map<string, string>();
+  const epubMap = images.epub?.imageMap ?? new Map<string, string>();
+  const relImageMap = relImageMapFor(webMap);
 
   const fmAssets = rewriteFmImagePaths(outputs.fm, relImageMap, docDir);
 
@@ -1398,72 +1466,33 @@ async function emitCollectionFormats(
       renderCtx,
       exportCtx,
       formatWorkSets,
-      images,
+      pdfImages,
       authorsBlock,
     );
   }
 
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl);
 
-  if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
-    const memberHrefs = memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex);
-    const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
-    const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
-    const available = availableDefaultListSlugs(discoveryIndex);
-    const paginas = collectionCardsPages(
-      collectionEntries,
-      memberHrefs,
-      content,
-      pageSize,
-      hrefsCreadores,
-      outputs.dir,
-      available,
-      false,
-      discoveryIndex,
-    );
-    assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
-
-    const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
-    const extras = await buildExtrasHtml({
-      creatorDocs,
-      contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
-      textos: textosDeLaCreadoraDelDoc(doc, outputs, discoveryIndex),
-      creatorHrefs: hrefsCreadores,
-      filters: exportCtx.filters,
-      imagePaths,
-      sourcePath: doc.filePath,
-      dir: outputs.dir,
-      available: availableDefaultListSlugs(discoveryIndex),
-    });
-    const contenidos = paginas.map((base) => prependLinksMarkdown(base, creatorLinks));
-    const covers = await htmlCoverUrls(
-      mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
-      docDir,
-      outputs.outBase(ASSETS_IMAGES_DIR),
-    );
-    const indices = indicesDeColeccion(doc, outputs, collectionEntries, memberHrefs, pageSize, ctx.siteConfig);
-
-    await emitHtmlPage(
-      doc,
-      outputs,
-      renderCtx,
-      exportCtx,
-      discoveryIndex,
-      imagePaths,
-      contenidos,
-      hrefsCreadores,
-      extras,
-      undefined,
-      covers,
-      indices,
-    );
-    await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
-  }
+  await emitCollectionHtml(
+    doc,
+    outputs,
+    collectionEntries,
+    creatorDocs,
+    content,
+    renderCtx,
+    exportCtx,
+    formatWorkSets,
+    discoveryIndex,
+    mergedFm,
+    docDir,
+    webMap,
+    creatorLinks,
+  );
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
     const base = collectionBaseContent(collectionEntries, 'html', content);
-    const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', images.imageMap, docDir, false);
-    const epubCover = await epubCoverPath(outputs.fm, docDir, ctx.cwd, formatCfg, ctx.siteConfig);
+    const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', epubMap, docDir, false);
+    const epubCover = epubCoverPath(mergedFm, docDir, epubMap);
     await convertToEpub(
       prependLinksMarkdown(base, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
@@ -1601,19 +1630,13 @@ export async function emitDefaultLists(args: {
     listas.push({ ...lista, miembros, entradas });
   }
 
-  const dimensiones = renderCtx.pageDimensions ?? detectPageSize([]);
-  const procesadas = await processDocumentImages(
+  const procesadas = await processWebImages(
     imagenesDeLosFragmentos(
       listas.flatMap((l) => l.entradas),
       cwd,
     ),
-    {},
-    cwd,
-    dimensiones,
-    renderCtx.cropActive,
     join(outputDir, ASSETS_IMAGES_DIR),
-    imageNamerFor('lista'),
-    undefined,
+    imageNamerFor('lista', 'webp'),
     renderCtx.pdfxActive,
   );
 

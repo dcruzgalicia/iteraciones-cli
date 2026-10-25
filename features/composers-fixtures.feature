@@ -49,22 +49,22 @@ Característica: Los composers definen el contrato de argumentos sobre fixtures
 
   Regla de negocio: La distribución de LaTeX es portátil (#2084/#2450)
     Las rutas absolutas de las imágenes procesadas no sobreviven a la
-    distribución: el .tex que va a dist debe apuntar a assets/images.
+    distribución: el .tex que va a dist debe apuntar a assets/pdf/images.
 
-    Escenario: Apunta a assets/images y desambigua los basenames duplicados
+    Escenario: Apunta a assets/pdf/images y desambigua los basenames duplicados
       Cuando distribuyo las imágenes "/a/img/cover.jpg", "/b/img/cover.jpg" y "/b/img/back.png"
       Entonces la distribución es:
-        | origen               | destino                 |
-        | /a/img/cover.jpg     | assets/images/cover.jpg |
-        | /b/img/cover.jpg     | assets/images/cover-2.jpg |
-        | /b/img/back.png      | assets/images/back.png  |
+        | origen               | destino                      |
+        | /a/img/cover.jpg     | assets/pdf/images/cover.jpg  |
+        | /b/img/cover.jpg     | assets/pdf/images/cover-2.jpg |
+        | /b/img/back.png      | assets/pdf/images/back.png   |
 
     Escenario: Sin procesadas la distribución es vacía y rewrite no toca el .tex
       Cuando distribuyo ninguna imagen procesada
       Entonces la distribución está vacía
       Y reescribir "\includegraphics{original.jpg}" lo deja igual
 
-    Escenario: Rewrite sustituye las rutas absolutas por las de assets/images
+    Escenario: Rewrite sustituye las rutas absolutas por las de assets/pdf/images
       Cuando distribuyo la imagen procesada "/proy/dist/files/assets/images/ensayo-portada-cmyk.jpg"
       Y reescribo el .tex que la referencia dos veces
       Entonces las dos referencias quedan dentro de la carpeta de imágenes

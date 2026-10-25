@@ -5,7 +5,7 @@ import {
   computeProcessTargets,
   imageNamerFor,
   imagePathsMap,
-  processDocumentImages,
+  preprocessDocumentImages,
   resetMagickCache,
   rewriteImagePaths,
   scanInlineImages,
@@ -128,18 +128,18 @@ When('proceso un documento sin ImageMagick', async () => {
   resetMagickCache();
   const espia = spyOn(process.stderr, 'write').mockImplementation(() => true);
   try {
-    await processDocumentImages(
-      [],
-      {},
-      world.root,
-      { w: 100, h: 150, textW: 80 },
-      false,
-      join(world.root, 'out'),
-      imageNamerFor('doc'),
-      undefined,
-      world.pdfxActivo === true,
-      async () => false,
-    );
+    await preprocessDocumentImages({
+      content: '',
+      fm: {},
+      docDir: world.root,
+      pageDimensions: { w: 100, h: 150, textW: 80 },
+      cropActive: false,
+      pdfxActive: world.pdfxActivo === true,
+      outSlug: 'doc',
+      dirs: { pdf: join(world.root, 'out'), web: join(world.root, 'out'), epub: join(world.root, 'out') },
+      wants: { pdf: true, web: false, epub: false },
+      detector: async () => false,
+    });
     world.stderr = espia.mock.calls.map((c) => String(c[0])).join('');
   } finally {
     espia.mockRestore();
@@ -152,18 +152,18 @@ When('proceso dos documentos sin ImageMagick', async () => {
   const espia = spyOn(process.stderr, 'write').mockImplementation(() => true);
   try {
     for (const _ of [1, 2]) {
-      await processDocumentImages(
-        [],
-        {},
-        world.root,
-        { w: 100, h: 150, textW: 80 },
-        false,
-        join(world.root, 'out'),
-        imageNamerFor('doc'),
-        undefined,
-        world.pdfxActivo === true,
-        async () => false,
-      );
+      await preprocessDocumentImages({
+        content: '',
+        fm: {},
+        docDir: world.root,
+        pageDimensions: { w: 100, h: 150, textW: 80 },
+        cropActive: false,
+        pdfxActive: world.pdfxActivo === true,
+        outSlug: 'doc',
+        dirs: { pdf: join(world.root, 'out'), web: join(world.root, 'out'), epub: join(world.root, 'out') },
+        wants: { pdf: true, web: false, epub: false },
+        detector: async () => false,
+      });
     }
     world.stderr = espia.mock.calls.map((c) => String(c[0])).join('');
   } finally {

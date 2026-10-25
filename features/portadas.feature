@@ -120,8 +120,8 @@ Característica: las portadas del PDF
       Y el libro lleva la portada "backCover"
       Y el libro produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-libro.html" dice "portada-front-"
-      Y el archivo "dist/files/un-libro.html" dice "portada-back-"
+      Entonces el archivo "dist/files/un-libro.html" dice "un-libro-frontCover.webp"
+      Y el archivo "dist/files/un-libro.html" dice "un-libro-backCover.webp"
       Y las portadas del HTML van después del título y antes de los formatos
 
     Escenario: El EPUB usa la portada como cover

@@ -93,10 +93,10 @@ When('compilo el proyecto por el CLI', async () => {
 
 Then('la copia de cada imagen vive en el directorio de imágenes de su nivel', async () => {
   const esperadas = [
-    [join('assets', 'images', 'ejemplo-foto.jpg'), true],
+    [join('assets', 'images', 'ejemplo-foto.webp'), true],
     [join('assets', 'img', 'foto.jpg'), false],
     ['foto.jpg', false],
-    [join('sub', 'assets', 'images', 'anexo-grafico.jpg'), true],
+    [join('sub', 'assets', 'images', 'anexo-grafico.webp'), true],
   ] as const;
   for (const [ruta, debeExistir] of esperadas) {
     const hay = await existe(join(world.dist, ruta));
@@ -109,7 +109,7 @@ Then('la copia de cada imagen vive en el directorio de imágenes de su nivel', a
 Then('el formato exportado la referencia desde ese directorio', async () => {
   for (const nombre of ['ejemplo.html', 'ejemplo.md']) {
     const content = await readFile(join(world.dist, nombre), 'utf8');
-    if (!content.includes('assets/images/ejemplo-foto.jpg')) {
+    if (!content.includes('assets/images/ejemplo-foto.webp')) {
       throw new Error(`${nombre} no referencia la imagen desde assets/images`);
     }
   }
@@ -118,10 +118,10 @@ Then('el formato exportado la referencia desde ese directorio', async () => {
 Then('el anexo no sube con dos puntos para llegar a su directorio', async () => {
   for (const nombre of ['anexo.html', 'anexo.md']) {
     const content = await readFile(join(world.dist, 'sub', nombre), 'utf8');
-    if (!content.includes('./assets/images/anexo-grafico.jpg')) {
+    if (!content.includes('./assets/images/anexo-grafico.webp')) {
       throw new Error(`sub/${nombre} no referencia su imagen desde ./assets/images`);
     }
-    if (content.includes('../assets/images/anexo-grafico.jpg')) {
+    if (content.includes('../assets/images/anexo-grafico.webp')) {
       throw new Error(`sub/${nombre} sube con ".." para llegar a su assets: la referencia debe ser relativa a su nivel`);
     }
   }
@@ -130,11 +130,11 @@ Then('el anexo no sube con dos puntos para llegar a su directorio', async () => 
 Then('el markdown exportado apunta a assets en todas las formas', async () => {
   const md = await readFile(join(world.dist, 'ejemplo.md'), 'utf8');
   for (const esperado of [
-    'titleImage: ./assets/images/ejemplo-portada.jpg',
-    '- ./assets/images/ejemplo-editorial.jpg',
-    './assets/images/ejemplo-frontis.jpg',
-    './assets/images/ejemplo-referencia.jpg',
-    'src="./assets/images/ejemplo-crudo.jpg"',
+    'titleImage: ./assets/images/ejemplo-portada.webp',
+    '- ./assets/images/ejemplo-editorial.webp',
+    './assets/images/ejemplo-frontis.webp',
+    './assets/images/ejemplo-referencia.webp',
+    'src="./assets/images/ejemplo-crudo.webp"',
   ]) {
     if (!md.includes(esperado)) throw new Error(`el markdown exportado no trae ${esperado}`);
   }
@@ -147,7 +147,7 @@ Then('el markdown exportado apunta a assets en todas las formas', async () => {
 Then('el mapa de rutas por documento y formato existe', async () => {
   const mapaPath = join(world.dir, '.iteraciones', 'paths', 'manuscrito.md.html.json');
   const mapa = JSON.parse(await readFile(mapaPath, 'utf8')) as Record<string, string>;
-  const destino = './assets/images/ejemplo-foto.jpg';
+  const destino = './assets/images/ejemplo-foto.webp';
   if (mapa['foto.png'] !== destino) throw new Error(`la clave relativa del mapa no apunta a ${destino}: ${String(mapa['foto.png'])}`);
 
   const canonico = await realpath(world.dir);

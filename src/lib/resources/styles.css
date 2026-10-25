@@ -83,8 +83,7 @@
 }
 
 @utility logo-fill {
-  & svg,
-  & img {
+  & svg {
     height: auto;
     width: 100%;
     display: block;
