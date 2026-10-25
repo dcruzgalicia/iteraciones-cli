@@ -1,4 +1,5 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { extname, join, resolve } from 'node:path';
 
 import type { SiteConfig } from '../config/config-schema.js';
@@ -39,7 +40,7 @@ export async function resolvePipelineSetup(
     globalBibliography: plan.bibOptions?.bibliography,
     globalCsl: siteConfig.csl?.trim() ? resolve(ctx.cwd, siteConfig.csl.trim()) : undefined,
     lang: siteConfig.language ?? DEFAULT_SITE_CONFIG.language,
-    logoInline: await loadLogoInline(ctx.cwd, formatCfg?.html?.site?.logo?.trim()),
+    logoInline: await loadLogoInline(ctx.cwd, formatCfg?.html?.site?.logo?.trim(), formatCfg?.html?.site?.logoSize),
   };
 }
 
@@ -52,15 +53,36 @@ const LOGO_MIME: Record<string, string> = {
   '.avif': 'image/avif',
 };
 
-export async function loadLogoInline(cwd: string, logoRel?: string): Promise<string | undefined> {
+/** El ancho en píxeles del logo: el doble del tamaño CSS, para pantallas 2×. */
+function logoPx(size: string | undefined): number {
+  const match = (size ?? '').trim().match(/^(\d+(?:\.\d+)?)px$/);
+  return match ? Math.round(Number(match[1]) * 2) : 200;
+}
+
+/** Reduce el logo raster al tamaño que se muestra, para no incrustar el original. */
+async function resizeLogo(src: string, targetPx: number, out: string): Promise<boolean> {
+  const proc = Bun.spawn(['magick', src, '-resize', `${targetPx}x>`, out], { stdout: 'ignore', stderr: 'ignore' });
+  return (await proc.exited) === 0;
+}
+
+export async function loadLogoInline(cwd: string, logoRel?: string, logoSize?: string): Promise<string | undefined> {
   const logoSrc = logoRel ? join(cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
   try {
     const ext = extname(logoSrc).toLowerCase();
     // Un SVG se incrusta tal cual; una imagen raster va como data URI (el
     // template de pandoc no puede llevar binario suelto).
     if (ext !== '.svg' && LOGO_MIME[ext] !== undefined) {
-      const base64 = Buffer.from(await Bun.file(logoSrc).arrayBuffer()).toString('base64');
-      return `<img src="data:${LOGO_MIME[ext]};base64,${base64}" alt="" class="block h-auto w-full">`;
+      const tmp = join(tmpdir(), `iteraciones-logo-${process.pid}-${Date.now()}.png`);
+      let mime = LOGO_MIME[ext] ?? 'image/png';
+      let bytes: Buffer;
+      try {
+        const resized = await resizeLogo(logoSrc, logoPx(logoSize), tmp);
+        bytes = Buffer.from(await Bun.file(resized ? tmp : logoSrc).arrayBuffer());
+        if (resized) mime = 'image/png';
+      } finally {
+        await rm(tmp, { force: true }).catch(() => {});
+      }
+      return `<img src="data:${mime};base64,${bytes.toString('base64')}" alt="" class="block h-auto w-full">`;
     }
     return await Bun.file(logoSrc).text();
   } catch (err) {

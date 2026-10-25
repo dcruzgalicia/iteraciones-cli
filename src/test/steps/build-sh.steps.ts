@@ -311,10 +311,10 @@ const CHEQUEOS: Record<string, Chequeo> = {
     if (!script.includes('magick ')) falla('no invoca ImageMagick');
   },
   'copia única': async ({ distPath, slug, falla }) => {
-    if (!(await Bun.file(join(distPath, 'assets', 'images', `${slug}-foto.jpg`)).exists())) {
-      falla(`la imagen procesada no está en assets/images como ${slug}-foto.jpg`);
+    if (!(await Bun.file(join(distPath, 'assets', 'images', `${slug}-foto.webp`)).exists())) {
+      falla(`la imagen web no está en assets/images como ${slug}-foto.webp`);
     }
-    if (await Bun.file(join(distPath, `${slug}-foto.jpg`)).exists()) {
+    if (await Bun.file(join(distPath, `${slug}-foto.webp`)).exists()) {
       falla('la imagen procesada no debe quedarse en la raíz de dist (#2450)');
     }
   },
@@ -385,8 +385,8 @@ Then('el archivo de dist existe', async () => {
 
 Then('el archivo de dist contiene la ruta de la imagen procesada', async () => {
   const tex = await readFile(join(world.distPath, 'ensayo.tex'), 'utf8');
-  if (!tex.includes('assets/images/ensayo-foto.jpg')) {
-    throw new Error('el .tex de dist no referencia la imagen procesada desde assets/images');
+  if (!tex.includes('assets/pdf/images/ensayo-foto.jpg')) {
+    throw new Error('el .tex de dist no referencia la imagen procesada desde assets/pdf/images');
   }
 });
 

@@ -202,8 +202,8 @@ Given('el libro produce epub', () => {
 Then('las portadas del HTML van después del título y antes de los formatos', () => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'un-libro.html'), 'utf8');
   const titulo = html.indexOf('<h1');
-  const front = html.indexOf('portada-front-');
-  const back = html.indexOf('portada-back-');
+  const front = html.indexOf('un-libro-frontCover.webp');
+  const back = html.indexOf('un-libro-backCover.webp');
   const formatos = html.indexOf('>Formatos</h2>');
   if (titulo < 0 || front < 0 || back < 0 || formatos < 0) throw new Error('faltan el título, las portadas o los formatos');
   if (!(titulo < front && front < back && back < formatos)) {

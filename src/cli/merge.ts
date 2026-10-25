@@ -1,11 +1,11 @@
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { resolveCollectionFiles } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
-import { relImageMapFor, rewriteImagePaths } from '../builder/image-processor.js';
-import { buildLatexPandocContent, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
+import { preprocessDocumentImages, relImageMapFor, rewriteImagePaths } from '../builder/image-processor.js';
+import { buildLatexPandocContent, mergeConfigImages } from '../builder/latex-composer.js';
 import { detectPageSize } from '../builder/latex-preamble.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
-import { ASSETS_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
+import { ASSETS_IMAGES_DIR, ASSETS_PDF_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import {
   type CollectionEntry,
   collectionBaseContent,
@@ -93,21 +93,35 @@ export async function buildImagesContext(opts: {
   relativePath: string;
   assetsDir: string;
   outSlug: string;
+  format: string;
 }): Promise<MergeContext> {
-  const { cwd, siteConfig, content, fm, filePath, relativePath, assetsDir, outSlug } = opts;
+  const { cwd, siteConfig, content, fm, filePath, relativePath, assetsDir, outSlug, format } = opts;
   const flags = await printFlags(siteConfig, cwd);
   const doc = { filePath, relativePath, frontmatter: fm } as unknown as BuildDocument;
-  const images = await preprocessDocumentImages(
+  const docDir = dirname(filePath);
+  const isPdf = format === 'latex';
+  const isEpub = format === 'epub';
+  const images = await preprocessDocumentImages({
     content,
-    doc,
-    mergeConfigImages(fm, siteConfig.format?.pdf, siteConfig, cwd),
-    flags.pageDimensions,
-    flags.cropActive,
-    flags.pdfxActive,
-    assetsDir,
+    fm: mergeConfigImages(fm, siteConfig.format?.pdf, siteConfig, cwd),
+    docDir,
+    pageDimensions: flags.pageDimensions,
+    cropActive: flags.cropActive,
+    pdfxActive: flags.pdfxActive,
     outSlug,
-  );
-  return { doc, relImageMap: relImageMapFor(images.imageMap), docDir: dirname(filePath) };
+    dirs: {
+      pdf: join(dirname(assetsDir), 'pdf', 'images'),
+      web: assetsDir,
+      epub: join(cwd, '.iteraciones', 'tmp', 'epub-images', outSlug),
+    },
+    wants: { pdf: isPdf, web: !isPdf && !isEpub, epub: isEpub },
+  });
+  const relImageMap = isPdf
+    ? relImageMapFor(images.pdf?.imageMap ?? new Map(), ASSETS_PDF_IMAGES_DIR)
+    : isEpub
+      ? (images.epub?.imageMap ?? new Map())
+      : relImageMapFor(images.web?.imageMap ?? new Map());
+  return { doc, relImageMap, docDir };
 }
 
 async function composeFor(
@@ -161,6 +175,7 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
       relativePath: src.relativePath,
       assetsDir: join(outDir, ASSETS_IMAGES_DIR),
       outSlug,
+      format,
     });
 
     const slugIndex = format === 'html' ? await loadSlugIndex(cwd) : new Map<string, DiscoveryEntry>();

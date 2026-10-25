@@ -11,17 +11,9 @@ import { isInside, posix } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import type { PageDimensions } from './image-processor.js';
-import {
-  COVER_IMAGE_FIELDS,
-  imageNamerFor,
-  processDocumentImages,
-  scanInlineImages,
-  scanTitlePageFieldImages,
-  uniqueName,
-} from './image-processor.js';
+import { COVER_IMAGE_FIELDS, uniqueName } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
-import { ASSETS_IMAGES_DIR } from './output-layout.js';
+import { ASSETS_PDF_IMAGES_DIR } from './output-layout.js';
 import { metadataArgs } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 import { injectXmpMetadataIntoLatex, type PdfXmpMetadata } from './xmpdata.js';
@@ -92,33 +84,6 @@ interface LatexComposerOptions {
 export interface ImagePreprocessResult {
   imageMap: Map<string, string>;
   processedImages: string[];
-}
-
-export async function preprocessDocumentImages(
-  content: string,
-  doc: BuildDocument,
-  fm: Record<string, unknown>,
-  pageDimensions: PageDimensions,
-  cropActive: boolean,
-  pdfxActive: boolean,
-  outputDir: string,
-  outSlug: string,
-): Promise<ImagePreprocessResult> {
-  const docDir = dirname(doc.filePath);
-  const inlineImages = scanInlineImages(content, docDir);
-  const multilineImages = await scanTitlePageFieldImages(fm, docDir, pageDimensions.w);
-  const result = await processDocumentImages(
-    inlineImages,
-    fm,
-    docDir,
-    pageDimensions,
-    cropActive,
-    outputDir,
-    imageNamerFor(outSlug),
-    multilineImages,
-    pdfxActive,
-  );
-  return { imageMap: result.imageMap, processedImages: result.processedFiles };
 }
 
 async function resolveAndPushImage(
@@ -393,7 +358,7 @@ export function buildTexDistribution(processedImages: string[]): Map<string, str
   const map = new Map<string, string>();
   const taken = new Set<string>();
   for (const abs of processedImages) {
-    map.set(abs, `${ASSETS_IMAGES_DIR}/${uniqueName(basename(abs), taken)}`);
+    map.set(abs, `${ASSETS_PDF_IMAGES_DIR}/${uniqueName(basename(abs), taken)}`);
   }
   return map;
 }
@@ -424,7 +389,7 @@ async function distAssetTarget(
   if (!(await Bun.file(abs).exists())) return null;
   const ext = extname(abs).toLowerCase();
   if (IMAGE_EXTS.has(ext)) {
-    const rel = `${ASSETS_IMAGES_DIR}/${basename(abs)}`;
+    const rel = `${ASSETS_PDF_IMAGES_DIR}/${basename(abs)}`;
     return { rel, copy: resolve(texDir, rel) !== resolve(abs) };
   }
   if (ext !== '.bib' || !bundle || !isInside(projectRoot, abs)) return null;

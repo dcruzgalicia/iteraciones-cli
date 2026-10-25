@@ -58,6 +58,7 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
       relativePath: relative(cwd, inputPath),
       assetsDir: join(dirname(output), ASSETS_IMAGES_DIR),
       outSlug: basename(output, '.md'),
+      format: 'markdown',
     });
 
     await writeDistMarkdown({

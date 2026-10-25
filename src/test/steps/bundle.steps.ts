@@ -133,8 +133,8 @@ Then('el .tex apunta al QR con una ruta relativa de assets', () => {
     throw new Error(`no se generó el .tex${world.errorBuild ? `: ${world.errorBuild}` : ''}`);
   }
   const tex = readFileSync(join(salida(), 'ensayo.tex'), 'utf8');
-  if (!/\{assets\/images\/qr-[0-9a-f]+\.jpg\}/.test(tex)) {
-    throw new Error(`el .tex no apunta a assets/images:\n${tex.slice(0, 400)}`);
+  if (!/\{assets\/pdf\/images\/qr-[0-9a-f]+\.jpg\}/.test(tex)) {
+    throw new Error(`el .tex no apunta a assets/pdf/images:\n${tex.slice(0, 400)}`);
   }
 });
 
