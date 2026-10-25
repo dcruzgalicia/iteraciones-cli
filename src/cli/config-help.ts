@@ -30,6 +30,7 @@ iteraciones.config.yaml — todo se pone aquí (un archivo vacío vale todos los
     format.html.site.theme: ${html.site?.theme}                     light | dark
     format.html.site.color: ${html.site?.color}                     ${colores}
     format.html.site.logo: ${html.site?.logo || "''"}
+    format.html.site.logoSize: ${html.site?.logoSize}           tamaño del logo (px, rem, em…)
     format.html.blocks: []            orden de las tarjetas del masonry
                                    (${DEFAULT_HTML_BLOCKS.join(', ')})
     format.html.pageSize: ${html.pageSize}              tarjetas por página en las colecciones

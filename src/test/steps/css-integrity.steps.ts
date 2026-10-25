@@ -35,7 +35,7 @@ function siteConfig(): SiteConfig {
     format: {
       ...DEFAULT_SITE_CONFIG.format,
       html: {
-        site: { title: 'T', description: 'd', logo: '', theme: 'dark', color: 'lime' },
+        site: { title: 'T', description: 'd', logo: '', logoSize: '100px', theme: 'dark', color: 'lime' },
         generate: true,
         pageSize: DEFAULT_HTML_FORMAT.pageSize,
       },
