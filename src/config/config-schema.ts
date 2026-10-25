@@ -79,6 +79,7 @@ const HtmlSiteSchema = z
     title: z.string().default(DEFAULT_HTML_FORMAT.site.title),
     description: z.string().default(DEFAULT_HTML_FORMAT.site.description),
     logo: z.string().default(DEFAULT_HTML_FORMAT.site.logo),
+    logoSize: z.string().optional().default(DEFAULT_HTML_FORMAT.site.logoSize),
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
     color: z.enum(ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.site.color),
     links: z.array(z.object({ name: z.string(), url: z.string() }).strict()).optional(),

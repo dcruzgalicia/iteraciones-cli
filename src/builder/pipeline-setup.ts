@@ -60,7 +60,7 @@ export async function loadLogoInline(cwd: string, logoRel?: string): Promise<str
     // template de pandoc no puede llevar binario suelto).
     if (ext !== '.svg' && LOGO_MIME[ext] !== undefined) {
       const base64 = Buffer.from(await Bun.file(logoSrc).arrayBuffer()).toString('base64');
-      return `<img src="data:${LOGO_MIME[ext]};base64,${base64}" alt="" class="block h-full w-full object-contain">`;
+      return `<img src="data:${LOGO_MIME[ext]};base64,${base64}" alt="" class="block h-auto w-full">`;
     }
     return await Bun.file(logoSrc).text();
   } catch (err) {

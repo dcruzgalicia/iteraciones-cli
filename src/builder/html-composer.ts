@@ -45,6 +45,12 @@ export function htmlResourceFiles(): string[] {
   return [...new Bun.Glob('**/*.html').scanSync({ cwd: HTML_RESOURCES_DIR, onlyFiles: true })].sort();
 }
 
+/** Una longitud CSS segura para el logo; si no lo es, el tamaño por defecto. */
+function logoSizeCss(value: string | undefined): string {
+  const limpio = (value ?? '').trim();
+  return /^\d+(\.\d+)?(px|rem|em|vw|vh|%)$/.test(limpio) ? limpio : '100px';
+}
+
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -90,9 +96,8 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
   cards.push(EXTRAS_CARD);
   cards.push(PAGINATION_CARD);
   cards.push(redes);
-  const logoBlock = logoInline
-    ? `<span class="flex h-[120px] w-[120px] shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
-    : '';
+  const logoSize = logoSizeCss(siteConfig.format?.html?.site?.logoSize);
+  const logoBlock = logoInline ? `<span class="flex shrink-0 text-accent-500 logo-fill" style="width:${logoSize}">${logoInline}</span>` : '';
   return skeleton
     .replace(slot('header'), () => header)
     .replace(slot('metadata'), () => metadata)

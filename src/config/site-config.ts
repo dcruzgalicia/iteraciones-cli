@@ -9,6 +9,7 @@ export const DEFAULT_HTML_FORMAT = {
     title: 'iteraciones',
     description: 'escribir, compartir, re-existir',
     logo: '',
+    logoSize: '100px',
     theme: 'dark' as const,
     color: 'lime' as const,
     links: [] as { name: string; url: string }[],
