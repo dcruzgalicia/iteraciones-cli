@@ -10,9 +10,12 @@ import { LATEXMK_AUX_EXTENSIONS } from './export.js';
 import {
   ALL_OUTPUT_EXTENSIONS,
   ASSETS_CSS_FILE,
+  ASSETS_FAVICON_PNG,
+  ASSETS_FAVICON_SVG,
   ASSETS_FONTS_DIR,
   ASSETS_IMAGES_DIR,
   ASSETS_LOGO_FILE,
+  ASSETS_LOGO_WEBP,
   ASSETS_PDF_IMAGES_DIR,
   FORMAT_OUTPUT_EXTENSIONS,
   LEGACY_ASSETS_IMG_DIR,
@@ -140,7 +143,18 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>)
 }
 
 async function removeHtmlAssets(outputDir: string): Promise<void> {
-  for (const rel of [dirname(ASSETS_CSS_FILE), ASSETS_FONTS_DIR, ASSETS_LOGO_FILE, ASSETS_IMAGES_DIR, 'css', 'fonts', 'logo.svg']) {
+  for (const rel of [
+    dirname(ASSETS_CSS_FILE),
+    ASSETS_FONTS_DIR,
+    ASSETS_LOGO_FILE,
+    ASSETS_LOGO_WEBP,
+    ASSETS_FAVICON_PNG,
+    ASSETS_FAVICON_SVG,
+    ASSETS_IMAGES_DIR,
+    'css',
+    'fonts',
+    'logo.svg',
+  ]) {
     await rm(join(outputDir, rel), { recursive: true, force: true }).catch(() => {});
   }
 }

@@ -68,17 +68,9 @@ export async function documentPipeline(
   const { activeFormats } = plan;
   const pdfOn = activeFormats.pdf;
 
-  const setup = await resolvePipelineSetup(ctx, plan, formatCfg);
+  const setup = await resolvePipelineSetup(ctx, plan);
 
-  const templates = await writeEffectiveTemplates(
-    ctx,
-    plan,
-    activeFormats.html,
-    ctx.siteConfig,
-    setup.bibFiles,
-    effectiveDisabledPreamble,
-    setup.logoInline,
-  );
+  const templates = await writeEffectiveTemplates(ctx, plan, activeFormats.html, ctx.siteConfig, setup.bibFiles, effectiveDisabledPreamble);
 
   const maxSlots = pdfOn ? pdfSlotCount(ctx.concurrency) : 0;
 

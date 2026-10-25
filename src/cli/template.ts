@@ -1,6 +1,6 @@
 import { join, resolve } from 'node:path';
 import { writeIfChanged } from '../builder/pipeline-io.js';
-import { composeTemplate, loadLogoInline, TEMPLATE_KINDS, type TemplateKind, templatePathFor } from '../builder/pipeline-setup.js';
+import { composeTemplate, TEMPLATE_KINDS, type TemplateKind, templatePathFor } from '../builder/pipeline-setup.js';
 import { resolveDisabledPreambleForBuild } from '../builder/preamble-loader.js';
 import { resolveBibOptions } from '../builder/state-bib.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -21,7 +21,6 @@ export async function runTemplate(cwd: string, kind: string, options: { output?:
       siteConfig,
       bibFiles,
       effectiveDisabledPreamble,
-      logoInline: await loadLogoInline(cwd, siteConfig.format?.html?.site?.logo?.trim(), siteConfig.format?.html?.site?.logoSize),
     });
     const output =
       options.output === undefined || options.output === ''

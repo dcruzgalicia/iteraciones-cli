@@ -14,7 +14,7 @@ Característica: los assets de la salida
       Entonces en los assets hay:
         """
         assets/css/styles.css
-        assets/logo.svg
+        assets/images/favicon.svg
         """
       Y en los assets NO hay:
         """
@@ -44,6 +44,25 @@ Característica: los assets de la salida
         """
         @keyframes scroll-reveal
         """
+
+  Regla de negocio: El logo raster vive en assets y el HTML lo referencia
+
+    @requires-magick
+    Escenario: Un logo a color se vuelve WebP y el HTML no lo incrusta
+      Dado que la raíz del proyecto está vacía
+      Y un proyecto con un logo a color y un documento
+      Cuando compilo el sitio con su logo
+      Entonces el build deja el archivo "assets/images/logo.webp"
+      Y el build deja el archivo "assets/images/favicon.png"
+      Y el HTML del documento referencia "src=\"./assets/images/logo.webp\""
+      Y el HTML del documento no incrusta imágenes en base64
+
+    @requires-magick
+    Escenario: Un logo de un solo color se tiñe con el accent
+      Dado que la raíz del proyecto está vacía
+      Y un proyecto con un logo de un color y un documento
+      Cuando compilo el sitio con su logo
+      Entonces el logo webp está teñido con el accent
 
   Regla de negocio: El logo no se reescribe si no cambió
 

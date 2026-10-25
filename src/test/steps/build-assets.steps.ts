@@ -4,6 +4,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { buildAssets } from '../../builder/build-assets.js';
 import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, hasLegacyAssetLayout } from '../../builder/cleanup.js';
 import type { BuildContext, DiscoveryEntry } from '../../builder/types.js';
+import { runBuild } from '../../cli/dispatcher.js';
 import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
@@ -66,20 +67,20 @@ function readCss(): string {
 }
 
 Then('el logo copiado dice {string}', (esperado: string) => {
-  const svg = readFileSync(join(salida(), 'assets', 'logo.svg'), 'utf8');
+  const svg = readFileSync(join(salida(), 'assets', 'images', 'favicon.svg'), 'utf8');
   if (svg !== esperado) throw new Error(`el logo copiado dice ${JSON.stringify(svg)} y debía decir ${esperado}`);
 });
 
 Then('el logo copiado no se ha vuelto a escribir', () => {
   const antes = world.mtimeLogo as number;
-  const ahora = statSync(join(salida(), 'assets', 'logo.svg')).mtimeMs;
+  const ahora = statSync(join(salida(), 'assets', 'images', 'favicon.svg')).mtimeMs;
   if (ahora !== antes) {
     throw new Error(`el logo se reescribió (mtime ${antes} → ${ahora}): eso invalida el CSS sin motivo`);
   }
 });
 
 Then('anoto la fecha del logo copiado', () => {
-  world.mtimeLogo = statSync(join(salida(), 'assets', 'logo.svg')).mtimeMs;
+  world.mtimeLogo = statSync(join(salida(), 'assets', 'images', 'favicon.svg')).mtimeMs;
 });
 
 Given('un documento borrado con slug {string} y estos artefactos:', (slug: string, artefactos: string) => {
@@ -222,4 +223,63 @@ Then('el CSS sí dice:', (lista: string) => {
     .filter(Boolean)
     .filter((t) => !css.includes(t));
   if (faltan.length > 0) throw new Error(`el CSS no dice ${JSON.stringify(faltan)}`);
+});
+
+const CONFIG_LOGO = ['language: es-MX', 'format:', '  html:', '    generate: true', '    site:', '      title: T', '      color: pink'];
+
+function crearLogo(nombre: string, color: string): void {
+  const proc = Bun.spawnSync(['magick', '-size', '120x120', 'xc:none', '-fill', color, '-draw', 'circle 60,60 60,10', join(world.root, nombre)]);
+  if (proc.exitCode !== 0) throw new Error(`magick no pudo crear ${nombre}`);
+}
+
+Given('un proyecto con un logo a color y un documento', () => {
+  // Un degradado tiene muchos colores: no se tiñe, conserva los suyos.
+  const proc = Bun.spawnSync(['magick', '-size', '120x120', 'gradient:red-blue', join(world.root, 'logo.png')]);
+  if (proc.exitCode !== 0) throw new Error('magick no pudo crear el logo');
+  escribirEnProyecto('iteraciones.config.yaml', [...CONFIG_LOGO, '      logo: ./logo.png'].join('\n'));
+  escribirEnProyecto('doc.md', '---\ntitle: Doc\n---\n\nHola.\n');
+});
+
+Given('un proyecto con un logo de un color y un documento', () => {
+  crearLogo('logo.png', 'black');
+  escribirEnProyecto('iteraciones.config.yaml', [...CONFIG_LOGO, '      logo: ./logo.png'].join('\n'));
+  escribirEnProyecto('doc.md', '---\ntitle: Doc\n---\n\nHola.\n');
+});
+
+When('compilo el sitio con su logo', async () => {
+  await runBuild(world.root);
+});
+
+Then('el build deja el archivo {string}', async (relativa: string) => {
+  if (!(await Bun.file(join(salida(), relativa)).exists())) throw new Error(`el build no dejó ${relativa}`);
+});
+
+Then('el HTML del documento referencia {string}', (aguja: string) => {
+  const html = readFileSync(join(salida(), 'doc.html'), 'utf8');
+  if (!html.includes(aguja)) throw new Error(`el HTML del documento no dice ${JSON.stringify(aguja)}`);
+});
+
+Then('el HTML del documento no incrusta imágenes en base64', () => {
+  const html = readFileSync(join(salida(), 'doc.html'), 'utf8');
+  if (html.includes('data:image')) throw new Error('el HTML del documento todavía incrusta imágenes en base64');
+});
+
+Then('el logo webp está teñido con el accent', () => {
+  const proc = Bun.spawnSync([
+    'magick',
+    join(salida(), 'assets', 'images', 'logo.webp'),
+    '-alpha',
+    'off',
+    '-colorspace',
+    'HSL',
+    '-channel',
+    'G',
+    '-separate',
+    '+channel',
+    '-format',
+    '%[fx:mean]',
+    'info:',
+  ]);
+  const saturacion = Number(proc.stdout.toString().trim());
+  if (!(saturacion > 0.05)) throw new Error(`el logo quedó en gris (saturación media ${saturacion}): no se tiñó con el accent`);
 });

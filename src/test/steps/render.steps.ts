@@ -20,7 +20,7 @@ function configConBloques(bloques: string[]): Parameters<typeof composeHtmlTempl
 }
 
 Given('que la plantilla HTML se compone para {string}', async (tipo: string) => {
-  world.plantilla = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, undefined, tipo as TipoDoc);
+  world.plantilla = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, tipo as TipoDoc);
 });
 
 Given('que compongo la plantilla HTML con los bloques {string}', async (bloques: string) => {
