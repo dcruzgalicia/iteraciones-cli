@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
-import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js';
+import { DEFAULT_HTML_BLOCKS, DEFAULT_HTML_FORMAT, type HtmlBlockKey } from '../config/site-config.js';
 import type { LogoAsset } from './build-assets.js';
 
 export const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
@@ -49,7 +49,7 @@ export function htmlResourceFiles(): string[] {
 /** Una longitud CSS segura para el logo; si no lo es, el tamaño por defecto. */
 function logoSizeCss(value: string | undefined): string {
   const limpio = (value ?? '').trim();
-  return /^\d+(\.\d+)?(px|rem|em|vw|vh|%)$/.test(limpio) ? limpio : '100px';
+  return /^\d+(\.\d+)?(px|rem|em|vw|vh|%)$/.test(limpio) ? limpio : DEFAULT_HTML_FORMAT.site.logoSize;
 }
 
 /**

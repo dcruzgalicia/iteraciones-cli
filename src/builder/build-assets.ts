@@ -2,6 +2,7 @@ import { cp, mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/config-schema.js';
+import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import { ACCENT_COLORS, ACCENT_SHADES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
@@ -141,7 +142,7 @@ export type LogoAsset =
 /** El ancho en píxeles del logo: el doble del tamaño CSS, para pantallas 2×. */
 function logoPx(size: string | undefined): number {
   const match = (size ?? '').trim().match(/^(\d+(?:\.\d+)?)px$/);
-  return match ? Math.round(Number(match[1]) * 2) : 200;
+  return Math.round(Number(match?.[1] ?? Number.parseFloat(DEFAULT_HTML_FORMAT.site.logoSize)) * 2);
 }
 
 async function runMagick(args: string[]): Promise<boolean> {
