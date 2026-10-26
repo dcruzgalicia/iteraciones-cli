@@ -125,6 +125,9 @@ export interface HtmlPageVars {
   logoBlock?: string;
   /** La ruta relativa del favicon. */
   favicon?: string;
+
+  /** Las palabras clave del documento, ya unidas por comas para el <meta>. */
+  keywords?: string;
   theme?: string;
   css?: string;
   authorMeta?: string;

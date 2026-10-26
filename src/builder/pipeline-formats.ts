@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
@@ -32,6 +32,7 @@ import {
   rewriteImagePaths,
   scanInlineImages,
 } from './image-processor.js';
+import { keywordHref, keywordListsOf, keywordMembers, keywordSlug, keywordsFromFm, keywordsOf } from './keyword-lists.js';
 import {
   buildTexDistribution,
   composeLatexFinalOutput,
@@ -42,7 +43,14 @@ import {
   removeEmptyToc,
 } from './latex-composer.js';
 import { detectPageSize } from './latex-preamble.js';
-import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, ASSETS_PDF_IMAGES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
+import {
+  ASSETS_CSS_FILE,
+  ASSETS_IMAGES_DIR,
+  ASSETS_PDF_IMAGES_DIR,
+  docProducesFormat,
+  KEYWORDS_DIR,
+  primaryOutputExtension,
+} from './output-layout.js';
 import { formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
 import { type ExportContext, type FormatWorkSets, htmlKindFor, latexKindFor, type RenderContext } from './pipeline-setup.js';
 import { htmlPageFromMarkdown } from './render.js';
@@ -270,6 +278,7 @@ function htmlVars(args: {
     lang,
     theme: htmlConfig?.site?.theme,
     css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
+    keywords: keywordsFromFm(fm).join(', ') || undefined,
     authorMeta: doc.frontmatter.creator.join(', '),
     docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? doc.frontmatter.title : undefined,
     subtitle: doc.frontmatter.subtitle,
@@ -828,6 +837,11 @@ const MEMBER_BADGE_CLASSES =
 
 const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora', collection: 'Colección', list: 'Lista' };
 
+// El chip de un keyword va en gris y sólo con contorno: así no se confunde con
+// el del tipo (acento relleno) ni con el de una colección (acento con contorno).
+const MEMBER_KEYWORD_PILL_CLASSES =
+  'inline-block align-top rounded-full border border-stone-400/60 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-stone-600 dark:border-stone-500/60 dark:text-stone-300';
+
 const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
 
 /**
@@ -893,6 +907,20 @@ export function containersCard(
   ].join('\n');
 }
 
+/** La tarjeta que lista los keywords del documento, cada uno con su lista. */
+export function keywordsCard(keywords: { titulo: string; href: string }[]): string {
+  const items = keywords.map((k) => `- [${k.titulo}](${k.href})`).join('\n');
+  return [
+    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
+    '',
+    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Palabras clave</h2></div>`,
+    '',
+    items,
+    '',
+    '::::',
+  ].join('\n');
+}
+
 /** La tarjeta con los textos donde aparece una creadora. */
 export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string, available?: Set<string>): string {
   const items = textos.map((t) => `- [${t.titulo}](${t.href})`).join('\n');
@@ -918,6 +946,7 @@ async function buildExtrasHtml(args: {
   creatorDocs: CreatorDoc[];
   contenedores: { titulo: string; href: string; type: string | undefined }[];
   textos: { titulo: string; href: string }[];
+  palabrasClave: { titulo: string; href: string }[];
   creatorHrefs: Map<string, string>;
   available?: Set<string>;
   filters: ExportContext['filters'];
@@ -940,6 +969,9 @@ async function buildExtrasHtml(args: {
   if (args.contenedores.some((c) => c.type === 'collection')) {
     partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores, args.dir, args.available), '', '</div>'].join('\n'));
   }
+  if (args.palabrasClave.length > 0) {
+    partes.push([MASONRY_WRAPPER, '', keywordsCard(args.palabrasClave), '', '</div>'].join('\n'));
+  }
   if (partes.length === 0) return '';
 
   const extraArgs = ['--shift-heading-level-by=4'];
@@ -955,6 +987,103 @@ async function buildExtrasHtml(args: {
     env: imagePathsEnv(args.imagePaths),
   });
   return minifyHtml(html);
+}
+
+const KEYWORD_CACHE = 'keyword-lists.json';
+
+async function leerKeywordCache(cwd: string): Promise<string[]> {
+  try {
+    const raw = JSON.parse(await Bun.file(join(cwd, '.iteraciones', KEYWORD_CACHE)).text()) as unknown;
+    return Array.isArray(raw) ? raw.filter((s): s is string => typeof s === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Las listas por keyword: una página en `keywords/` con los documentos que
+ * declaran ese keyword. Las que dejan de existir se borran de la salida.
+ */
+export async function emitKeywordLists(args: {
+  cwd: string;
+  outputDir: string;
+  renderCtx: RenderContext;
+  exportCtx: ExportContext;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+}): Promise<void> {
+  const { cwd, outputDir, renderCtx, exportCtx, discoveryIndex } = args;
+  const { plan, formatCfg } = renderCtx;
+  if (!plan.activeFormats.html) return;
+
+  const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
+  const hrefsCreadores = creatorHrefs(discoveryIndex, KEYWORDS_DIR);
+  const available = availableDefaultListSlugs(discoveryIndex);
+
+  const listas = keywordListsOf(discoveryIndex)
+    .map((lista) => ({ ...lista, miembros: keywordMembers(discoveryIndex, lista.slug) }))
+    .filter((lista) => lista.miembros.length > 0);
+
+  const previas = await leerKeywordCache(cwd);
+  const actuales = new Set(listas.map((l) => l.slug));
+  for (const slug of previas) {
+    if (actuales.has(slug) || htmlOwner(discoveryIndex, KEYWORDS_DIR, slug) !== undefined) continue;
+    await rm(join(outputDir, KEYWORDS_DIR, `${slug}.html`), { force: true }).catch(() => {});
+    await removeExtraHtmlPages(outputDir, KEYWORDS_DIR, slug, 0, discoveryIndex);
+  }
+  await mkdir(join(cwd, '.iteraciones'), { recursive: true });
+  await Bun.write(join(cwd, '.iteraciones', KEYWORD_CACHE), `${JSON.stringify([...actuales].sort())}\n`);
+
+  const entradas = [];
+  for (const lista of listas) {
+    const propias = await readCollectionEntries(lista.miembros, `${KEYWORDS_DIR}/${lista.slug}.md`, [cwd], true);
+    entradas.push({ ...lista, entradas: propias });
+  }
+  const procesadas = await processWebImages(
+    imagenesDeLosFragmentos(
+      entradas.flatMap((l) => l.entradas),
+      cwd,
+    ),
+    join(outputDir, ASSETS_IMAGES_DIR),
+    imageNamerFor('keywords', 'webp'),
+    renderCtx.pdfxActive,
+  );
+
+  for (const { slug, label, miembros, entradas: propias } of entradas) {
+    const relativePath = `${KEYWORDS_DIR}/${slug}.md`;
+    if (htmlOwner(discoveryIndex, KEYWORDS_DIR, slug) !== undefined) {
+      logWarning(`no se escribió la lista de "${label}" porque "${KEYWORDS_DIR}/${slug}.html" es el archivo de ese documento`, 'build');
+      continue;
+    }
+    const memberHrefs = memberHtmlHrefs(relativePath, propias, discoveryIndex);
+    const paginas = collectionCardsPages(
+      propias,
+      memberHrefs,
+      `Contenidos con la palabra clave «${label}».`,
+      pageSize,
+      hrefsCreadores,
+      KEYWORDS_DIR,
+      available,
+      true,
+      discoveryIndex,
+      { path: relativePath, outSlug: slug, keywordSlug: slug },
+    );
+    const doc: BuildDocument = {
+      filePath: join(cwd, KEYWORDS_DIR, `${slug}.md`),
+      relativePath,
+      frontmatter: { title: label, date: '', creator: [], type: 'list', files: miembros },
+    };
+    const outputs: DocumentOutputs = {
+      slug,
+      outSlug: slug,
+      dir: KEYWORDS_DIR,
+      fm: { title: label, type: 'list' },
+      content: '',
+      outBase: (name: string): string => join(outputDir, KEYWORDS_DIR, name),
+    };
+    const imagePaths = await writeListImagePaths(cwd, `${KEYWORDS_DIR}-${slug}`, procesadas.imageMap);
+    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, paginas, hrefsCreadores, '', 'Palabras clave');
+    await removeExtraHtmlPages(outputDir, KEYWORDS_DIR, slug, paginas.length, discoveryIndex);
+  }
 }
 
 /** Las creadoras de cada texto de la colección, sin repetir y en orden alfabético. */
@@ -1022,6 +1151,8 @@ function titleHtmlPara(title: string, href: string | undefined): string {
 interface PageRef {
   path: string;
   outSlug?: string;
+  /** El slug del keyword cuando la página es la lista de ese keyword. */
+  keywordSlug?: string;
 }
 
 function chipsDePertenencia(
@@ -1046,6 +1177,44 @@ function chipsDePertenencia(
   return chips;
 }
 
+/** Los keywords del documento, uno por slug y en orden alfabético, con su lista. */
+function palabrasClaveDe(relativePath: string, dir: string, discoveryIndex: Map<string, DiscoveryEntry>): { titulo: string; href: string }[] {
+  const porSlug = new Map<string, string>();
+  for (const keyword of keywordsOf(discoveryIndex.get(relativePath))) {
+    const slug = keywordSlug(keyword);
+    if (slug === undefined) continue;
+    if (htmlOwner(discoveryIndex, KEYWORDS_DIR, slug) !== undefined) continue;
+    const actual = porSlug.get(slug);
+    if (actual === undefined || keyword.localeCompare(actual, 'es') < 0) porSlug.set(slug, keyword);
+  }
+  return [...porSlug].sort(([, a], [, b]) => a.localeCompare(b, 'es')).map(([slug, label]) => ({ titulo: label, href: keywordHref(dir, slug) }));
+}
+
+/** Los chips de los keywords del miembro, en orden alfabético. */
+function chipsDeKeywords(
+  e: CollectionEntry,
+  dir: string,
+  page: PageRef | undefined,
+  discoveryIndex: Map<string, DiscoveryEntry> | undefined,
+): string[] {
+  const porSlug = new Map<string, string>();
+  for (const keyword of keywordsOf(discoveryIndex?.get(e.file))) {
+    const slug = keywordSlug(keyword);
+    if (slug === undefined) continue;
+    // Si un documento ocupa esa ruta, la lista no existe: mejor no ofrecerla.
+    if (discoveryIndex !== undefined && htmlOwner(discoveryIndex, KEYWORDS_DIR, slug) !== undefined) continue;
+    const actual = porSlug.get(slug);
+    if (actual === undefined || keyword.localeCompare(actual, 'es') < 0) porSlug.set(slug, keyword);
+  }
+  return [...porSlug]
+    .sort(([, a], [, b]) => a.localeCompare(b, 'es'))
+    .map(([slug, label]) => {
+      const titulo = escaparHtml(label);
+      if (page?.keywordSlug === slug) return `<span class="${MEMBER_KEYWORD_PILL_CLASSES}">${titulo}</span>`;
+      return `<a href="${keywordHref(dir, slug)}" class="${MEMBER_KEYWORD_PILL_CLASSES}">${titulo}</a>`;
+    });
+}
+
 function cabeceraDeTarjeta(
   e: CollectionEntry,
   titleHtml: string,
@@ -1063,6 +1232,7 @@ function cabeceraDeTarjeta(
     const chips = [
       chipHtml(typeLabel, e.type, dir, `${PILL_BASE} mt-0 mb-0`, available, currentHref),
       ...chipsDePertenencia(e, dir, page?.path, discoveryIndex),
+      ...chipsDeKeywords(e, dir, page, discoveryIndex),
     ];
     partes.push(
       `<div class="flex items-start justify-between gap-4"><div class="flex flex-wrap items-center gap-2 mb-6">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
@@ -1481,10 +1651,13 @@ async function emitCollectionHtml(
   assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 
   const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', webMap, docDir, true);
+  const esTexto = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
+  const palabrasClave = esTexto ? palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex) : [];
   const extras = await buildExtrasHtml({
     creatorDocs,
     contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
     textos: textosDeLaCreadoraDelDoc(doc, outputs, discoveryIndex),
+    palabrasClave,
     creatorHrefs: hrefsCreadores,
     filters: exportCtx.filters,
     imagePaths,
@@ -1583,6 +1756,7 @@ async function emitCollectionFormats(
       await collectionPandocInput(doc, ctx.cwd, outputs.outSlug, 'epub'),
       imagePaths,
       epubCover,
+      ctx.cwd,
     );
   }
 

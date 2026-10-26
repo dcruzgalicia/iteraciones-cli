@@ -50,23 +50,54 @@ Given('un proyecto con un texto en dos colecciones', () => {
   escribirEnProyecto('otra.md', '---\ntitle: Otra antología\ntype: collection\nfiles:\n  - ./ensayo.md\n---\n\nIntro.\n');
 });
 
+function proyectoConKeywords(config: string): void {
+  escribirEnProyecto('iteraciones.config.yaml', config);
+  escribirEnProyecto('ensayo.md', '---\ntitle: Ensayo\nkeywords:\n  - cuidados\n  - mujeres\n---\n\nCuerpo del ensayo.\n');
+  escribirEnProyecto('otro.md', '---\ntitle: Otro\nkeywords:\n  - cuidados\n---\n\nOtro cuerpo.\n');
+}
+
+Given('un proyecto con textos que comparten keywords', () => {
+  proyectoConKeywords(CONFIG_HTML);
+});
+
+Given('un proyecto con textos y keywords en html y epub', () => {
+  proyectoConKeywords('language: es-MX\nformat:\n  html:\n    generate: true\n  epub:\n    generate: true\n');
+});
+
+Then('el HTML de {string} contiene {string}', (archivo: string, texto: string) => {
+  const html = leer(`dist/files/${archivo}`);
+  if (!html.includes(texto)) throw new Error(`el HTML de ${archivo} no contiene ${JSON.stringify(texto)}`);
+});
+
 Given('un proyecto con un texto en una lista', () => {
   escribirEnProyecto('iteraciones.config.yaml', CONFIG_HTML);
   escribirEnProyecto('ensayo.md', '---\ntitle: Ensayo\n---\n\nCuerpo del ensayo.\n');
   escribirEnProyecto('seleccion.md', '---\ntitle: Selección\ntype: list\n---\n\nElegidos.\n');
 });
 
+/** El chip de una etiqueta: el del tipo va en un h2; los demás, en a/span. */
 function chipDelHtml(archivo: string, etiqueta: string): string {
   const html = leer(`dist/files/${archivo}`);
-  const chips = [...html.matchAll(/<h2[^>]*>[\s\S]*?<\/h2>/g)].map((m) => m[0]);
-  const chip = chips.find((bloque) => bloque.includes(etiqueta));
-  if (chip === undefined) throw new Error(`el HTML de ${archivo} no tiene un chip ${JSON.stringify(etiqueta)}`);
-  return chip;
+  const patron = new RegExp(`<(h2|a|span)\\b[^>]*class="[^"]*rounded-full[^"]*"[^>]*>(?:<a\\b[^>]*>)?${escaparRegex(etiqueta)}(?:</a>)?</\\1>`);
+  const chip = patron.exec(html);
+  if (chip === null) throw new Error(`el HTML de ${archivo} no tiene un chip ${JSON.stringify(etiqueta)}`);
+  return chip[0];
 }
 
 Then('el chip {string} del HTML de {string} no es un enlace', (etiqueta: string, archivo: string) => {
-  if (chipDelHtml(archivo, etiqueta).includes('<a ')) {
+  const chip = chipDelHtml(archivo, etiqueta);
+  if (chip.startsWith('<a') || chip.includes('<a ')) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} es un enlace y no debería`);
+  }
+});
+
+Then('el EPUB {string} declara la clave {string} con el valor {string}', async (archivo: string, clave: string, valor: string) => {
+  const epub = join(world.root, 'dist', 'files', `${archivo}.epub`);
+  const proc = Bun.spawn(['unzip', '-p', epub, 'EPUB/content.opf'], { stdout: 'pipe', stderr: 'pipe' });
+  const [salida, errores, codigo] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  if (codigo !== 0) throw new Error(`unzip falló con ${archivo}.epub: ${errores}`);
+  if (!new RegExp(`<${clave}[^>]*>${escaparRegex(valor)}</${clave}>`).test(salida)) {
+    throw new Error(`el EPUB ${archivo} no declara ${clave}=${JSON.stringify(valor)}`);
   }
 });
 
