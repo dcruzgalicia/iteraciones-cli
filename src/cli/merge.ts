@@ -4,7 +4,7 @@ import { loadSlugIndex } from '../builder/discover.js';
 import { preprocessDocumentImages, relImageMapFor, rewriteImagePaths } from '../builder/image-processor.js';
 import { buildLatexPandocContent, mergeConfigImages } from '../builder/latex-composer.js';
 import { detectPageSize } from '../builder/latex-preamble.js';
-import { aggregateCollectionCreators } from '../builder/orchestrator.js';
+import { aggregateCollectionCreators, postProcessCollections } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR, ASSETS_PDF_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import {
   type CollectionEntry,
@@ -132,6 +132,7 @@ async function composeFor(
   ctx: MergeContext,
   memberHrefs: Map<string, string>,
   creatorHrefs: Map<string, string>,
+  slugIndex: Map<string, DiscoveryEntry>,
 ): Promise<string> {
   if (format === 'latex') {
     const pageNumber = (src.fm.pageNumber ?? siteConfig.format?.pdf?.pageNumber ?? siteConfig.pageNumber) as string | undefined;
@@ -142,7 +143,9 @@ async function composeFor(
     });
   }
 
-  if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text, creatorHrefs);
+  if (format === 'html') {
+    return collectionCardsContent(entries, memberHrefs, src.text, creatorHrefs, dirname(src.relativePath), undefined, slugIndex, src.relativePath);
+  }
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
 
   return format === 'markdown' ? rewriteImagePaths(base, ctx.relImageMap, ctx.docDir) : base;
@@ -179,9 +182,12 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     });
 
     const slugIndex = format === 'html' ? await loadSlugIndex(cwd) : new Map<string, DiscoveryEntry>();
+    // Las tarjetas del listado muestran a qué colecciones pertenece cada texto:
+    // hay que resolver las pertenencias igual que en el build.
+    if (format === 'html') await postProcessCollections(slugIndex, cwd);
     const memberHrefs = format === 'html' ? memberHtmlHrefs(src.relativePath, entries, slugIndex) : new Map<string, string>();
     const hrefsCreadores = format === 'html' ? creatorHrefs(slugIndex, dirname(src.relativePath)) : new Map<string, string>();
-    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs, hrefsCreadores));
+    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs, hrefsCreadores, slugIndex));
     logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');
   } catch (err) {
     fail('merge', err);
