@@ -627,11 +627,12 @@ function collectionCards(
   dir: string,
   available?: Set<string>,
   discoveryIndex?: Map<string, DiscoveryEntry>,
+  pagePath?: string,
 ): string {
   const cards: string[] = [];
   if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
   for (const e of printableEntries(entries).slice(desde, hasta)) {
-    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex));
+    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex, pagePath));
   }
   return cards.join('\n\n');
 }
@@ -644,6 +645,7 @@ export function collectionCardsContent(
   dir = '.',
   available?: Set<string>,
   discoveryIndex?: Map<string, DiscoveryEntry>,
+  pagePath?: string,
 ): string {
   if (entries.length === 0) return content;
   return collectionCards(
@@ -656,6 +658,7 @@ export function collectionCardsContent(
     dir,
     available,
     discoveryIndex,
+    pagePath,
   );
 }
 
@@ -673,6 +676,7 @@ export function collectionCardsPages(
   available?: Set<string>,
   repeatIntro = false,
   discoveryIndex?: Map<string, DiscoveryEntry>,
+  pagePath?: string,
 ): string[] {
   if (entries.length === 0) return [content];
   const imprimibles = printableEntries(entries);
@@ -690,6 +694,7 @@ export function collectionCardsPages(
         dir,
         available,
         discoveryIndex,
+        pagePath,
       ),
     );
   }
@@ -807,6 +812,11 @@ const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 
 // El chip que abre una tarjeta extra deja aire antes del elemento que sigue.
 const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
+
+// El chip de pertenencia sólo lleva contorno: el relleno de acento queda para
+// el chip del tipo, que es el que dice qué es el documento.
+const MEMBER_OUTLINE_PILL_CLASSES =
+  'inline-block align-top rounded-full border border-accent-500/40 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
 
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
@@ -987,6 +997,33 @@ function titleHtmlPara(title: string, href: string | undefined): string {
   return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
 }
 
+/**
+ * Los chips de pertenencia de un miembro: una colección o lista por chip. Si el
+ * contenedor es la página que se está armando, el chip se muestra sin enlace:
+ * sirve para recordar a qué pertenece el texto, no para volver a sí mismo.
+ */
+function chipsDePertenencia(
+  e: CollectionEntry,
+  dir: string,
+  pagePath: string | undefined,
+  discoveryIndex: Map<string, DiscoveryEntry> | undefined,
+): string[] {
+  const contenedores = discoveryIndex?.get(e.file)?.containedBy ?? [];
+  const chips: string[] = [];
+  for (const ruta of contenedores) {
+    const contenedor = discoveryIndex?.get(ruta);
+    if (contenedor?.type !== 'collection' && contenedor?.type !== 'list') continue;
+    const titulo = escaparHtml(contenedor.title || ruta);
+    if (ruta === pagePath) {
+      chips.push(`<span class="${MEMBER_OUTLINE_PILL_CLASSES}">${titulo}</span>`);
+      continue;
+    }
+    const html = posix(join(dirname(ruta), `${htmlSlugFor(ruta, contenedor.slug)}.html`));
+    chips.push(`<a href="${relativeHref(dir, html)}" class="${MEMBER_OUTLINE_PILL_CLASSES}">${titulo}</a>`);
+  }
+  return chips;
+}
+
 function cabeceraDeTarjeta(
   e: CollectionEntry,
   titleHtml: string,
@@ -994,13 +1031,15 @@ function cabeceraDeTarjeta(
   dir: string,
   available?: Set<string>,
   discoveryIndex?: Map<string, DiscoveryEntry>,
+  pagePath?: string,
 ): string[] {
   const tipo = e.type ?? 'file';
   const partes: string[] = [];
   const typeLabel = MEMBER_TYPE_LABEL[tipo];
   if (typeLabel !== undefined) {
+    const chips = [chipHtml(typeLabel, e.type, dir, `${PILL_BASE} mt-0 mb-0`, available), ...chipsDePertenencia(e, dir, pagePath, discoveryIndex)];
     partes.push(
-      `<div class="flex items-start justify-between gap-4">${chipHtml(typeLabel, e.type, dir, MEMBER_PILL_CLASSES, available)}<span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
+      `<div class="flex items-start justify-between gap-4"><div class="flex flex-wrap items-center gap-2 mb-6">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
       '',
     );
   }
@@ -1020,13 +1059,14 @@ function collectionCard(
   dir: string,
   available?: Set<string>,
   discoveryIndex?: Map<string, DiscoveryEntry>,
+  pagePath?: string,
 ): string {
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body);
   const card = [
     `:::: {class="${COLLECTION_CARD_CLASSES}"}`,
     '',
-    ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex),
+    ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, pagePath),
   ];
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
@@ -1409,6 +1449,7 @@ async function emitCollectionHtml(
     available,
     false,
     discoveryIndex,
+    doc.relativePath,
   );
   assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 
@@ -1665,7 +1706,18 @@ export async function emitDefaultLists(args: {
     }
 
     const memberHrefs = memberHtmlHrefs(`${slug}.md`, entradas, discoveryIndex);
-    const paginas = collectionCardsPages(entradas, memberHrefs, description ?? '', pageSize, hrefsCreadores, '.', available, true, discoveryIndex);
+    const paginas = collectionCardsPages(
+      entradas,
+      memberHrefs,
+      description ?? '',
+      pageSize,
+      hrefsCreadores,
+      '.',
+      available,
+      true,
+      discoveryIndex,
+      `${slug}.md`,
+    );
     // La paginación la inserta emitHtmlPage; no debe duplicarse aquí.
     const contenidos = paginas;
 

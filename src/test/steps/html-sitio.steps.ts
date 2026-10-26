@@ -37,6 +37,45 @@ Given('el proyecto produce html y markdown', () => {
   escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nformat:\n  html:\n    generate: true\n  markdown:\n    generate: true\n');
 });
 
+const CONFIG_HTML = 'language: es-MX\nformat:\n  html:\n    generate: true\n';
+
+function escaparRegex(texto: string): string {
+  return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+Given('un proyecto con un texto en dos colecciones', () => {
+  escribirEnProyecto('iteraciones.config.yaml', CONFIG_HTML);
+  escribirEnProyecto('ensayo.md', '---\ntitle: Ensayo\n---\n\nCuerpo del ensayo.\n');
+  escribirEnProyecto('antologia.md', '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./ensayo.md\n---\n\nIntro.\n');
+  escribirEnProyecto('otra.md', '---\ntitle: Otra antología\ntype: collection\nfiles:\n  - ./ensayo.md\n---\n\nIntro.\n');
+});
+
+Given('un proyecto con un texto en una lista', () => {
+  escribirEnProyecto('iteraciones.config.yaml', CONFIG_HTML);
+  escribirEnProyecto('ensayo.md', '---\ntitle: Ensayo\n---\n\nCuerpo del ensayo.\n');
+  escribirEnProyecto('seleccion.md', '---\ntitle: Selección\ntype: list\n---\n\nElegidos.\n');
+});
+
+Then('en el HTML de {string} el chip {string} enlaza a {string}', (archivo: string, etiqueta: string, href: string) => {
+  const html = leer(`dist/files/${archivo}`);
+  const enlace = new RegExp(`<a href="${escaparRegex(href)}" class="[^"]*bg-transparent[^"]*">${escaparRegex(etiqueta)}</a>`);
+  if (!enlace.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no enlaza a ${href} en ${archivo}`);
+});
+
+Then('en el HTML de {string} el chip {string} no es un enlace', (archivo: string, etiqueta: string) => {
+  const html = leer(`dist/files/${archivo}`);
+  const chip = new RegExp(`<span class="[^"]*bg-transparent[^"]*">${escaparRegex(etiqueta)}</span>`);
+  if (!chip.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no aparece sin enlace en ${archivo}`);
+  if (new RegExp(`<a [^>]*>${escaparRegex(etiqueta)}</a>`).test(html)) {
+    throw new Error(`el chip ${JSON.stringify(etiqueta)} es un enlace y no debería`);
+  }
+});
+
+Then('el HTML de {string} no tiene chips de pertenencia', (archivo: string) => {
+  const html = leer(`dist/files/${archivo}`);
+  if (html.includes('bg-transparent')) throw new Error(`${archivo} tiene chips de pertenencia y no debería`);
+});
+
 Then('los enlaces de Formatos abren en otra pestaña', () => {
   const html = leer('dist/files/test-document.html');
   const enlaces = [...html.matchAll(/<a\b[^>]*>(PDF|EPUB|LaTeX|Markdown)<\/a>/g)];
