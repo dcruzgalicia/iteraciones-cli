@@ -1,6 +1,6 @@
 import { copyFile, mkdir } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
-import { stringify } from 'yaml';
+import { parse, stringify } from 'yaml';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
@@ -215,9 +215,22 @@ function prependFrontmatterYaml(content: string, overrides: Record<string, strin
   }
   lines.push('---');
   const yaml = lines.join('\n');
-  const fmEnd = content.indexOf('\n---\n');
+  const fmEnd = content.startsWith('---\n') ? content.indexOf('\n---\n') : -1;
   if (fmEnd >= 0) {
-    return `${content.slice(0, fmEnd + 5)}\n${yaml}${content.slice(fmEnd + 5)}`;
+    // El contenido ya trae frontmatter: los overrides se mezclan con él en vez
+    // de añadir un segundo bloque, que pandoc leería como texto del cuerpo.
+    const original = content.slice(4, fmEnd);
+    let mezclado: Record<string, unknown>;
+    try {
+      const parseado: unknown = parse(original);
+      mezclado = {
+        ...(typeof parseado === 'object' && parseado !== null && !Array.isArray(parseado) ? (parseado as Record<string, unknown>) : {}),
+        ...overrides,
+      };
+    } catch {
+      mezclado = { ...overrides };
+    }
+    return `---\n${stringify(mezclado)}---\n${content.slice(fmEnd + 5)}`;
   }
   return `${yaml}\n${content}`;
 }
