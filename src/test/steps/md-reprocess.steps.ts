@@ -123,12 +123,13 @@ Then('el markdown exportado conserva el heading sin desplazar', async () => {
   if (exported.includes('#####')) throw new Error('el heading llegó desplazado por el shift de pandoc');
 });
 
-Then('la creativa lleva su enlace en el frontmatter y una vez en el cuerpo', async () => {
+Then('la creativa lleva su enlace en el frontmatter y no lo repite en el cuerpo', async () => {
   const creative = await readFile(join(await distFiles(world.dir), 'creativa.md'), 'utf8');
   if (!creative.includes('type: creator')) throw new Error('falta type: creator');
 
   const count = creative.split('https://ejemplo.com').length - 1;
-  if (count !== 2) throw new Error(`esperaba 2 apariciones del enlace (frontmatter + cuerpo) y hubo ${count}`);
+  if (count !== 1) throw new Error(`esperaba 1 aparición del enlace (en el frontmatter) y hubo ${count}`);
+  if (creative.includes('**Enlace**')) throw new Error('el cuerpo repite las redes en negritas');
 });
 
 When('uso dist como proyecto origen y compilo de nuevo', async () => {

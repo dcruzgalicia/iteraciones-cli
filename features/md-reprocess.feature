@@ -12,7 +12,7 @@ Característica: El markdown exportado a dist se puede re-procesar
     Cuando compilo el proyecto
     Entonces el markdown exportado lleva el frontmatter completo
     Y el markdown exportado conserva el heading sin desplazar
-    Y la creativa lleva su enlace en el frontmatter y una vez en el cuerpo
+    Y la creativa lleva su enlace en el frontmatter y no lo repite en el cuerpo
     Cuando uso dist como proyecto origen y compilo de nuevo
     Entonces todas las salidas son idénticas a la primera pasada
 

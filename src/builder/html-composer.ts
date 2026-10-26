@@ -66,17 +66,26 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/**
+ * El chip de pertenencia: contorno de acento, sin relleno. Lo comparten las
+ * colecciones y la tarjeta de redes para decir de quién son los enlaces.
+ */
+export const CHIP_OUTLINE_CLASSES =
+  'inline-block align-top rounded-full border border-accent-500/40 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
+
 /** La tarjeta de «Frecuencias» con los enlaces del proyecto, o vacía si no hay. */
 async function frecuenciasCard(siteConfig: SiteConfig): Promise<string> {
   const links = siteConfig.format?.html?.site?.links ?? [];
   if (links.length === 0) return '';
+  const titulo = siteConfig.format?.html?.site?.title ?? '';
+  const dueno = titulo === '' ? '' : `<span class="${CHIP_OUTLINE_CLASSES}">${escapeHtml(titulo)}</span>`;
   const items = links
     .map(
       (link: { name: string; url: string }) =>
         `<li><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="text-accent-700 no-underline underline-offset-4 transition-colors duration-200 hover:underline hover:decoration-current dark:text-accent-300">${escapeHtml(link.name)}</a></li>`,
     )
     .join('\n          ');
-  return (await loadCard('file', 'card-frecuencias.html')).replace('[[FRECUENCIAS]]', items);
+  return (await loadCard('file', 'card-frecuencias.html')).replace('[[FRECUENCIAS]]', items).replace('[[DUENO]]', dueno);
 }
 
 export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocType = 'file'): Promise<string> {
@@ -96,7 +105,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
   }
   // «Redes» va justo después del header (slot-header) y otra vez antes del
-  // footer.
+  // footer; el chip del dueño dice que son las redes del sitio.
   const redes = await frecuenciasCard(siteConfig);
   header += redes;
   // Las portadas van después de la tarjeta de título y antes de Formatos.

@@ -18,7 +18,7 @@ Given('el sitio declara los enlaces:', (tabla: string) => {
       const [name, url] = linea.split('|').map((parte) => parte.trim());
       return `        - name: ${name}\n          url: ${url}`;
     });
-  escribirEnProyecto('iteraciones.config.yaml', [...CONFIG_BASE, '    site:', '      links:', ...enlaces].join('\n') + '\n');
+  escribirEnProyecto('iteraciones.config.yaml', [...CONFIG_BASE, '    site:', '      title: Test', '      links:', ...enlaces].join('\n') + '\n');
 });
 
 Then('las tarjetas de Redes van después del header y antes del footer', () => {
@@ -31,6 +31,43 @@ Then('las tarjetas de Redes van después del header y antes del footer', () => {
   const [primera, segunda] = frecuencias as [number, number];
   if (!(header < primera && primera < titulo)) throw new Error('la primera Redes no va después del header y antes del título');
   if (!(segunda < footer)) throw new Error('la segunda Redes no va antes del footer');
+});
+
+Then('las tarjetas de Redes llevan el chip del sitio {string}', (titulo: string) => {
+  const html = leer('dist/files/test-document.html');
+  const chips = html.match(new RegExp(`<span class="[^"]*bg-transparent[^"]*">${escaparRegex(titulo)}</span>`, 'g')) ?? [];
+  if (chips.length !== 2) throw new Error(`el chip del sitio aparece ${chips.length} veces y deberían ser 2`);
+});
+
+Given('un proyecto con una creadora con redes', () => {
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    `${CONFIG_HTML}    site:\n      title: Histórikas\n      links:\n        - name: Facebook\n          url: https://facebook.com/h\n`,
+  );
+  escribirEnProyecto(
+    'ana.md',
+    '---\nname: Ana Ruiz\ntype: creator\nlinks:\n  - name: Instagram\n    url: https://instagram.com/ana\n  - name: Blog\n    url: https://ana.example\n---\n\nBio de Ana.\n',
+  );
+  escribirEnProyecto('sin-redes.md', '---\nname: Sin Redes\ntype: creator\n---\n\nBio sin enlaces.\n');
+});
+
+Then('el HTML de {string} tiene la tarjeta de redes de {string}', (archivo: string, dueno: string) => {
+  const html = leer(`dist/files/${archivo}`);
+  const tarjeta = new RegExp(`<h2[^>]*>Redes</h2><span class="[^"]*bg-transparent[^"]*">${escaparRegex(dueno)}</span>`);
+  if (!tarjeta.test(html)) throw new Error(`${archivo} no tiene la tarjeta de redes de ${dueno}`);
+});
+
+Then('el cuerpo de {string} no lleva las redes en negritas', (archivo: string) => {
+  const html = leer(`dist/files/${archivo}`);
+  if (html.includes('<strong>Instagram</strong>') || html.includes('<strong>Facebook</strong>')) {
+    throw new Error(`${archivo} todavía lleva las redes en negritas dentro del cuerpo`);
+  }
+});
+
+Then('el HTML de {string} sólo tiene las redes del sitio', (archivo: string) => {
+  const html = leer(`dist/files/${archivo}`);
+  const tarjetas = html.match(/>Redes</g) ?? [];
+  if (tarjetas.length !== 2) throw new Error(`${archivo} tiene ${tarjetas.length} tarjetas de Redes y deberían ser 2 (las del sitio)`);
 });
 
 Given('el proyecto produce html y markdown', () => {
