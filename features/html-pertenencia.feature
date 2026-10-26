@@ -14,6 +14,12 @@ Característica: los chips de pertenencia en las tarjetas de colecciones y lista
       Entonces en el HTML de "antologia.html" el chip "Otra antología" enlaza a "./otra-antologia.html"
       Y en el HTML de "otra-antologia.html" el chip "Antología" enlaza a "./antologia.html"
 
+    Escenario: El chip de la colección no va subrayado hasta el hover
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un proyecto con un texto en dos colecciones
+      Cuando hago un build del proyecto
+      Entonces el chip "Otra antología" del HTML de "antologia.html" sólo se subraya al pasar el ratón
+
     Escenario: El chip de la colección de la página no es un enlace
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con un texto en dos colecciones

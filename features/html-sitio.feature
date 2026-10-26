@@ -15,6 +15,14 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Y el archivo "dist/files/test-document.html" dice 'target="_blank"'
       Y las tarjetas de Redes van después del header y antes del footer
 
+  Regla de negocio: Los enlaces se subrayan sólo al pasar el ratón
+
+    Escenario: Ningún enlace del sitio va subrayado por defecto
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces ningún enlace del HTML lleva "underline" por defecto
+
   Regla de negocio: La tarjeta de identidad enlaza por separado
 
     Escenario: El logo y el nombre enlazan, la descripción no

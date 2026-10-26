@@ -621,8 +621,8 @@ function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>, tono: 'a
   if (tono === 'plano') return `<a href="${href}">${nombre}</a>`;
   const clases =
     tono === 'gris'
-      ? 'text-stone-600 underline underline-offset-4 dark:text-stone-400'
-      : 'text-accent-700 underline underline-offset-4 dark:text-accent-300';
+      ? 'text-stone-600 no-underline underline-offset-4 hover:underline dark:text-stone-400'
+      : 'text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
   return `<a href="${href}" class="${clases}">${nombre}</a>`;
 }
 
@@ -765,10 +765,10 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
         const titulo = escaparHtml(entrada.title || TITULO_POR_DEFECTO);
         return href === undefined
           ? `<li>${titulo}</li>`
-          : `<li><a href="${href}" class="text-accent-700 underline underline-offset-4 dark:text-accent-300">${titulo}</a></li>`;
+          : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
       })
       .join('');
-    const claseEnlace = 'text-accent-700 underline underline-offset-4 dark:text-accent-300';
+    const claseEnlace = 'text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
     const anterior =
       pagina > 1
         ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina - 1)}.html`)}#indice-pagina-${pagina - 1}" class="${claseEnlace}">← Índice anterior</a>`
@@ -830,7 +830,7 @@ const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 // El chip de pertenencia sólo lleva contorno: el relleno de acento queda para
 // el chip del tipo, que es el que dice qué es el documento.
 const MEMBER_OUTLINE_PILL_CLASSES =
-  'inline-block align-top rounded-full border border-accent-500/40 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
+  'inline-block align-top rounded-full border border-accent-500/40 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
 
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
@@ -840,7 +840,10 @@ const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Cre
 // El chip de un keyword va en gris y sólo con contorno: así no se confunde con
 // el del tipo (acento relleno) ni con el de una colección (acento con contorno).
 const MEMBER_KEYWORD_PILL_CLASSES =
-  'inline-block align-top rounded-full border border-stone-400/60 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-stone-600 dark:border-stone-500/60 dark:text-stone-300';
+  'inline-block align-top rounded-full border border-stone-400/60 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none no-underline text-stone-600 dark:border-stone-500/60 dark:text-stone-300';
+
+// El subrayado es la señal de que el chip es un enlace: sólo al pasar el ratón.
+const CHIP_HOVER_CLASSES = 'transition-colors duration-200 hover:underline';
 
 const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
 
@@ -864,7 +867,8 @@ function chipHtml(
   return `<h2 class="${classes}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
 }
 
-const MEMBER_LINK_CLASSES = 'underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:decoration-current';
+const MEMBER_LINK_CLASSES =
+  'no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current';
 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
 
@@ -1172,7 +1176,7 @@ function chipsDePertenencia(
       continue;
     }
     const html = posix(join(dirname(ruta), `${htmlSlugFor(ruta, contenedor.slug)}.html`));
-    chips.push(`<a href="${relativeHref(dir, html)}" class="${MEMBER_OUTLINE_PILL_CLASSES}">${titulo}</a>`);
+    chips.push(`<a href="${relativeHref(dir, html)}" class="${MEMBER_OUTLINE_PILL_CLASSES} ${CHIP_HOVER_CLASSES}">${titulo}</a>`);
   }
   return chips;
 }
@@ -1211,7 +1215,7 @@ function chipsDeKeywords(
     .map(([slug, label]) => {
       const titulo = escaparHtml(label);
       if (page?.keywordSlug === slug) return `<span class="${MEMBER_KEYWORD_PILL_CLASSES}">${titulo}</span>`;
-      return `<a href="${keywordHref(dir, slug)}" class="${MEMBER_KEYWORD_PILL_CLASSES}">${titulo}</a>`;
+      return `<a href="${keywordHref(dir, slug)}" class="${MEMBER_KEYWORD_PILL_CLASSES} ${CHIP_HOVER_CLASSES}">${titulo}</a>`;
     });
 }
 
