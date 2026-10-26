@@ -26,6 +26,15 @@ Característica: los chips de pertenencia en las tarjetas de colecciones y lista
       Cuando hago un build del proyecto
       Entonces el HTML de "ensayo.html" no tiene chips de pertenencia
 
+  Regla de negocio: Los chips no enlazan a la página en la que estás
+
+    Escenario: En la lista de textos el chip del tipo no es un enlace
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un proyecto con un texto en dos colecciones
+      Cuando hago un build del proyecto
+      Entonces el chip "Texto" del HTML de "texto.html" no es un enlace
+      Y el chip "Texto" del HTML de "antologia.html" enlaza a "./texto.html"
+
   Regla de negocio: Una lista propia también cuenta
 
     Escenario: En un listado, el texto lleva el chip de la lista a la que pertenece

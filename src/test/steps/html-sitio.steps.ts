@@ -56,6 +56,25 @@ Given('un proyecto con un texto en una lista', () => {
   escribirEnProyecto('seleccion.md', '---\ntitle: Selección\ntype: list\n---\n\nElegidos.\n');
 });
 
+function chipDelHtml(archivo: string, etiqueta: string): string {
+  const html = leer(`dist/files/${archivo}`);
+  const chips = [...html.matchAll(/<h2[^>]*>[\s\S]*?<\/h2>/g)].map((m) => m[0]);
+  const chip = chips.find((bloque) => bloque.includes(etiqueta));
+  if (chip === undefined) throw new Error(`el HTML de ${archivo} no tiene un chip ${JSON.stringify(etiqueta)}`);
+  return chip;
+}
+
+Then('el chip {string} del HTML de {string} no es un enlace', (etiqueta: string, archivo: string) => {
+  if (chipDelHtml(archivo, etiqueta).includes('<a ')) {
+    throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} es un enlace y no debería`);
+  }
+});
+
+Then('el chip {string} del HTML de {string} enlaza a {string}', (etiqueta: string, archivo: string, href: string) => {
+  const chip = chipDelHtml(archivo, etiqueta);
+  if (!chip.includes(`href="${href}"`)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no enlaza a ${href}`);
+});
+
 Then('en el HTML de {string} el chip {string} enlaza a {string}', (archivo: string, etiqueta: string, href: string) => {
   const html = leer(`dist/files/${archivo}`);
   const enlace = new RegExp(`<a href="${escaparRegex(href)}" class="[^"]*bg-transparent[^"]*">${escaparRegex(etiqueta)}</a>`);
