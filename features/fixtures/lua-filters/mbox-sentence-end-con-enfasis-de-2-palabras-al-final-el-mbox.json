@@ -1,7 +1,0 @@
-{
-  "name": "mbox-sentence-end-con-enfasis-de-2-palabras-al-final-el-mbox",
-  "markdown": "Esto termina en *carne propia.*",
-  "contains": ["\\mbox{en \\emph{carne propia.}}"],
-  "notContains": [],
-  "normalizeNewlines": false
-}

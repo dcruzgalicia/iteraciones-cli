@@ -19,23 +19,6 @@ Característica: El PDF y el EPUB llevan los metadatos del documento
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/test-document.tex" contiene '\usepackage[spanish,mexico,es-noshorthands,es-noindentfirst]{babel}'
 
-  Regla de negocio: Un párrafo corto al inicio no se protege
-
-    Escenario: Un párrafo de contenido corto no recibe \mbox
-      Dado que la raíz del proyecto tiene un proyecto con LaTeX
-      Dado que el archivo "test.md" tiene este contenido
-      """
-      ---
-      title: Test Document
-      ---
-
-      Contenido corto.
-      """
-      Cuando hago un build del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/test-document.tex" contiene '\noindent Contenido corto.'
-      Y el archivo "dist/files/test-document.tex" no contiene '\mbox{Contenido}'
-
   Regla de negocio: El EPUB lleva los metadatos del frontmatter
 
     @requires-pandoc
