@@ -40,6 +40,31 @@ Característica: los filtros Lua del paquete, por capa
       Cuando resuelvo los grupos de filtros del proyecto
       Entonces el filtro 2 del grupo "latex" es el del proyecto
 
+  Regla de negocio: Un filtro con grupo en la ruta sólo se aplica a ese formato
+
+    Escenario: Un filtro nuevo en filters/latex no llega a HTML ni a semantic
+      Dado que la raíz del proyecto está vacía
+      Y que el proyecto declara el filtro de usuario "filters/latex/06-sentence-end-local.lua"
+      Cuando resuelvo los grupos de filtros del proyecto
+      Entonces el grupo "latex" trae "filters/latex/06-sentence-end-local.lua"
+      Y el grupo "html" no trae "filters/latex/06-sentence-end-local.lua"
+      Y el grupo "semantic" no trae "filters/latex/06-sentence-end-local.lua"
+
+    Escenario: Un filtro nuevo se ordena por el número de su nombre
+      Dado que la raíz del proyecto está vacía
+      Y que el proyecto declara el filtro de usuario "filters/latex/06-sentence-end-local.lua"
+      Cuando resuelvo los grupos de filtros del proyecto
+      Entonces el filtro 6 del grupo "latex" acaba en "latex/06-sentence-end.lua"
+      Y el filtro 7 del grupo "latex" acaba en "filters/latex/06-sentence-end-local.lua"
+      Y el filtro 8 del grupo "latex" acaba en "latex/07-titlepages.lua"
+
+    Escenario: Un filtro declarado con el mismo nombre no se duplica
+      Dado que la raíz del proyecto está vacía
+      Y que el proyecto declara el filtro de usuario "filters/latex/02-dictum.lua"
+      Cuando resuelvo los grupos de filtros del proyecto
+      Entonces el filtro 2 del grupo "latex" es el del proyecto
+      Y el filtro 3 del grupo "latex" acaba en "latex/03-verse.lua"
+
   Regla de negocio: El filtro interno de flags no se expone
 
     Escenario: El filtro de flags está y no es desactivable

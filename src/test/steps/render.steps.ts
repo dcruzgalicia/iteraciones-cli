@@ -135,6 +135,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadFilterGroups, resolveLuaFilters, resolveUserLuaFilters } from '../../builder/filter-resolver.js';
 import { loadSiteConfig } from '../../config/config-loader.js';
+import type { SiteConfig } from '../../config/config-schema.js';
 
 Given('que el proyecto sobrescribe el filtro {string}', (ruta: string) => {
   const destino = join(world.root, ruta);
@@ -162,7 +163,8 @@ When('resuelvo los filtros del paquete por capa', async () => {
 });
 
 When('resuelvo los grupos de filtros del proyecto', async () => {
-  world.grupos = await loadFilterGroups(DEFAULT_SITE_CONFIG, undefined, world.root || undefined);
+  const config: SiteConfig = world.root === '' ? DEFAULT_SITE_CONFIG : await loadSiteConfig(world.root).catch(() => DEFAULT_SITE_CONFIG);
+  world.grupos = await loadFilterGroups(config, config.disabledFilters, world.root || undefined);
 });
 
 When('resuelvo los filtros de usuario del proyecto', async () => {
@@ -226,6 +228,16 @@ Then('el grupo {string} tiene {int} filtros', (grupo: string, cuantos: number) =
 Then('el filtro {int} del grupo {string} acaba en {string}', (cual: number, grupo: string, sufijo: string) => {
   const ruta = ((world.grupos as Record<string, string[]>)[grupo] ?? [])[cual - 1] ?? '';
   if (!ruta.endsWith(sufijo)) throw new Error(`el filtro ${cual} acaba en ${JSON.stringify(ruta)} y debería en ${sufijo}`);
+});
+
+Then('el grupo {string} trae {string}', (grupo: string, sufijo: string) => {
+  const lista = (world.grupos as Record<string, string[]>)[grupo] ?? [];
+  if (!lista.some((ruta) => ruta.endsWith(sufijo))) throw new Error(`el grupo ${grupo} no trae ${sufijo}: ${JSON.stringify(lista)}`);
+});
+
+Then('el grupo {string} no trae {string}', (grupo: string, sufijo: string) => {
+  const lista = (world.grupos as Record<string, string[]>)[grupo] ?? [];
+  if (lista.some((ruta) => ruta.endsWith(sufijo))) throw new Error(`el grupo ${grupo} trae ${sufijo} y no debería`);
 });
 
 Then('el filtro {int} del grupo {string} es el del proyecto', (cual: number, grupo: string) => {

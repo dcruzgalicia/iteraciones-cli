@@ -67,6 +67,31 @@ Given('un proyecto con un filtro de usuario que convierte la clase nota', () => 
   world.useConfig = false;
 });
 
+Given('el filtro declarado con grupo en la configuración del proyecto', async () => {
+  await mkdir(join(world.dir, 'filters', 'latex'), { recursive: true });
+  await writeFile(join(world.dir, 'filters', 'latex', 'nota.lua'), USER_FILTER);
+  await writeFile(join(world.dir, 'iteraciones.config.yaml'), 'luaFilters:\n  - filters/latex/nota.lua\n');
+});
+
+When('convierto con los filtros del proyecto a LaTeX y a HTML', async () => {
+  const siteConfig = await loadSiteConfig(world.dir);
+  const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, world.dir);
+  const latex = [...filters.semantic, ...filters.user, ...filters.latex];
+  const html = [...filters.semantic, ...filters.user, ...filters.flags, ...filters.html];
+  world.latex = await execPandoc({
+    input: DOC,
+    sourcePath: 'test.md',
+    to: 'latex',
+    extraArgs: latex.flatMap((f) => ['--lua-filter', f]),
+  });
+  world.html = await execPandoc({
+    input: DOC,
+    sourcePath: 'test.md',
+    to: 'html5',
+    extraArgs: html.flatMap((f) => ['--lua-filter', f]),
+  });
+});
+
 Given('un proyecto con una copia del filtro de mbox como override', async () => {
   await mkdir(join(world.dir, 'filters', 'latex'), { recursive: true });
   const pkg06 = await Bun.file(join(RESOURCES, 'latex', '06-sentence-end.lua')).text();
@@ -89,6 +114,10 @@ When('convierto el documento con el override y los helpers del paquete por env',
     extraArgs: filters.flatMap((f) => ['--lua-filter', f]),
     env: { ITERACIONES_MBOX_HELPERS: join(RESOURCES, 'latex', 'shared', 'mbox-helpers.lua') },
   });
+});
+
+Then('el HTML no lleva el bloque aside de nota', () => {
+  if (world.html.includes('aside')) throw new Error('el HTML lleva el aside y el filtro sólo era para LaTeX');
 });
 
 Then('el LaTeX lleva la caja de mbox', () => {

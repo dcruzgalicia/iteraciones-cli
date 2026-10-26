@@ -18,7 +18,7 @@ import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanup
 import { resolveCollectionFiles } from './collection-files.js';
 import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
-import { validateDisabledFilters } from './filter-resolver.js';
+import { projectFilterNames, validateDisabledFilters } from './filter-resolver.js';
 import { selectListMembers } from './list-filter.js';
 import { DIST_FILES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
@@ -151,7 +151,7 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
 
 async function resolveEffectiveConfig(cwd: string): Promise<{ siteConfig: SiteConfig; effectiveDisabledPreamble: string[] }> {
   const siteConfig = await loadSiteConfig(cwd);
-  validateDisabledFilters(siteConfig.disabledFilters, join(cwd, 'iteraciones.config.yaml'));
+  validateDisabledFilters(siteConfig.disabledFilters, join(cwd, 'iteraciones.config.yaml'), projectFilterNames(siteConfig.luaFilters));
   const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig));
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
   for (const issue of [...validateConfigRules(siteConfig), ...(await validateConfigFilePaths(cwd, siteConfig))]) {
