@@ -54,9 +54,8 @@ Característica: los filtros Lua del paquete, por capa
       Dado que la raíz del proyecto está vacía
       Y que el proyecto declara el filtro de usuario "filters/latex/06-sentence-end-local.lua"
       Cuando resuelvo los grupos de filtros del proyecto
-      Entonces el filtro 6 del grupo "latex" acaba en "latex/06-sentence-end.lua"
-      Y el filtro 7 del grupo "latex" acaba en "filters/latex/06-sentence-end-local.lua"
-      Y el filtro 8 del grupo "latex" acaba en "latex/07-titlepages.lua"
+      Entonces el filtro 6 del grupo "latex" acaba en "filters/latex/06-sentence-end-local.lua"
+      Y el filtro 7 del grupo "latex" acaba en "latex/07-titlepages.lua"
 
     Escenario: Un filtro declarado con el mismo nombre no se duplica
       Dado que la raíz del proyecto está vacía

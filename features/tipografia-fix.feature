@@ -12,7 +12,7 @@ Característica: la corrección tipográfica del markdown
   Regla de negocio: La búsqueda normaliza el markdown antes de comparar
 
     Escenario: Quita los divs en línea conservando el texto visible
-      Cuando normalizo para buscar "lo vivimos [en carne propia]{.no-mbox}."
+      Cuando normalizo para buscar "lo vivimos [en carne propia]{.text-nowrap}."
       Entonces el texto normalizado es "lo vivimos en carne propia."
 
     Escenario: Quita el énfasis, el código y los enlaces conservando el texto

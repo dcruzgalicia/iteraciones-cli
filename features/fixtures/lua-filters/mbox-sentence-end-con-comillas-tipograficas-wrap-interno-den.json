@@ -1,7 +1,0 @@
-{
-  "name": "mbox-sentence-end-con-comillas-tipograficas-wrap-interno-den",
-  "markdown": "Primera oración de ejemplo. un \"dame tus cosas, métete a bañar mientras caliento la comida, te preparé algo rico y ligero porque casi no has comido, cuéntame, desahógate, descansa\".",
-  "contains": ["\\mbox{cuéntame, desahógate, descansa}"],
-  "notContains": ["\\mbox{un ``dame", "\\mbox{``dame"],
-  "normalizeNewlines": true
-}
