@@ -84,15 +84,6 @@
     text-decoration: underline;
   }
 
-  /* La tipografía del cuerpo subraya los enlaces con más especificidad. */
-  .prose :where(a):not(:where([class~="not-prose"] *)) {
-    text-decoration: none;
-  }
-
-  .prose :where(a):not(:where([class~="not-prose"] *)):hover {
-    text-decoration: underline;
-  }
-
   :focus-visible {
     outline: 2px solid var(--color-accent-700);
     outline-offset: 2px;
@@ -233,4 +224,14 @@
       color: var(--color-stone-300);
     }
   }
+}
+
+/* La tipografía del cuerpo subraya los enlaces y gana a la base, así que la
+   regla va sin capa: en reposo no hay subrayado y en hover sí. */
+.prose :where(a):not(:where([class~="not-prose"] *)) {
+  text-decoration: none;
+}
+
+.prose :where(a):not(:where([class~="not-prose"] *)):hover {
+  text-decoration: underline;
 }
