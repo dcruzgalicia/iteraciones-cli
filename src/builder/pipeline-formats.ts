@@ -926,7 +926,8 @@ export function keywordsCard(keywords: { titulo: string; href: string }[]): stri
 
 /** La tarjeta con las redes de la creadora, con su nombre como dueño. */
 export function creatorLinksCard(nombre: string, links: { name: string; url: string }[]): string {
-  const items = links.map((l) => `- [${l.name}](${l.url})`).join('\n');
+  // Fuera del sitio, igual que las redes del proyecto: se abren aparte.
+  const items = links.map((l) => `- [${l.name}](<${l.url}>){target="_blank" rel="noopener noreferrer"}`).join('\n');
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',

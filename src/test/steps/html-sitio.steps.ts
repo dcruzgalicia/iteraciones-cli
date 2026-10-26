@@ -18,7 +18,8 @@ Given('el sitio declara los enlaces:', (tabla: string) => {
       const [name, url] = linea.split('|').map((parte) => parte.trim());
       return `        - name: ${name}\n          url: ${url}`;
     });
-  escribirEnProyecto('iteraciones.config.yaml', [...CONFIG_BASE, '    site:', '      title: Test', '      links:', ...enlaces].join('\n') + '\n');
+  const yaml = [...CONFIG_BASE, '    site:', '      title: Test', '      links:', ...enlaces].join('\n');
+  escribirEnProyecto('iteraciones.config.yaml', `${yaml}\n`);
 });
 
 Then('las tarjetas de Redes van después del header y antes del footer', () => {
@@ -55,6 +56,17 @@ Then('el HTML de {string} tiene la tarjeta de redes de {string}', (archivo: stri
   const html = leer(`dist/files/${archivo}`);
   const tarjeta = new RegExp(`<h2[^>]*>Redes</h2><span class="[^"]*bg-transparent[^"]*">${escaparRegex(dueno)}</span>`);
   if (!tarjeta.test(html)) throw new Error(`${archivo} no tiene la tarjeta de redes de ${dueno}`);
+});
+
+Then('los enlaces de la tarjeta de redes de {string} abren en otra pestaña', (archivo: string) => {
+  const html = leer(`dist/files/${archivo}`);
+  const tarjeta = /<h2[^>]*>Redes<\/h2><span class="[^"]*bg-transparent[^"]*">[^<]*<\/span>[\s\S]*?<\/ul>/.exec(html)?.[0] ?? '';
+  if (tarjeta === '') throw new Error(`${archivo} no tiene la tarjeta de redes`);
+  const enlaces = [...tarjeta.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
+  if (enlaces.length === 0) throw new Error(`la tarjeta de redes de ${archivo} no tiene enlaces`);
+  for (const enlace of enlaces) {
+    if (!enlace.includes('target="_blank"')) throw new Error(`un enlace de redes de ${archivo} no abre en otra pestaña: ${enlace}`);
+  }
 });
 
 Then('el cuerpo de {string} no lleva las redes en negritas', (archivo: string) => {
@@ -226,7 +238,8 @@ Given('una colección con 25 textos', () => {
 });
 
 Given('el proyecto tiene toc activo', () => {
-  escribirEnProyecto('iteraciones.config.yaml', ['language: es-MX', 'toc: true', ...CONFIG_BASE.slice(1)].join('\n') + '\n');
+  const yaml = ['language: es-MX', 'toc: true', ...CONFIG_BASE.slice(1)].join('\n');
+  escribirEnProyecto('iteraciones.config.yaml', `${yaml}\n`);
 });
 
 function indiceDe(pagina: string, numero: number): string {

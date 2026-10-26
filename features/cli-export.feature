@@ -19,6 +19,28 @@ Característica: El PDF y el EPUB llevan los metadatos del documento
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/test-document.tex" contiene '\usepackage[spanish,mexico,es-noshorthands,es-noindentfirst]{babel}'
 
+  Regla de negocio: Las redes de la creadora no se cuelan en el cuerpo del LaTeX
+
+    @requires-pandoc
+    Escenario: La creadora con redes las lista como texto y sin YAML suelto
+      Dado que la raíz del proyecto tiene un proyecto con LaTeX
+      Y que el archivo "david.md" tiene este contenido
+      """
+      ---
+      name: David Cruz Galicia
+      type: creator
+      links:
+        - name: Facebook
+          url: https://www.facebook.com/david
+      ---
+
+      Bio de David.
+      """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/david-cruz-galicia.tex" contiene '\textbf{Facebook}: https://www.facebook.com/david'
+      Y el archivo "dist/files/david-cruz-galicia.tex" no contiene 'title:'
+
   Regla de negocio: El EPUB lleva los metadatos del frontmatter
 
     @requires-pandoc

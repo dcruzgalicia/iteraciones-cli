@@ -25,6 +25,7 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Entonces el HTML de "ana-ruiz.html" tiene la tarjeta de redes de "Ana Ruiz"
       Y el HTML de "ana-ruiz.html" contiene "https://instagram.com/ana"
       Y el cuerpo de "ana-ruiz.html" no lleva las redes en negritas
+      Y los enlaces de la tarjeta de redes de "ana-ruiz.html" abren en otra pestaña
 
     Escenario: La creadora sin enlaces no tiene tarjeta de redes
       Dado que la raíz del proyecto tiene un proyecto de prueba
