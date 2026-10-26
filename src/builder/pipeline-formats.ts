@@ -627,12 +627,13 @@ function collectionCards(
   dir: string,
   available?: Set<string>,
   discoveryIndex?: Map<string, DiscoveryEntry>,
-  pagePath?: string,
+  page?: PageRef,
+  currentHref?: string,
 ): string {
   const cards: string[] = [];
   if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
   for (const e of printableEntries(entries).slice(desde, hasta)) {
-    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex, pagePath));
+    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex, page, currentHref));
   }
   return cards.join('\n\n');
 }
@@ -645,9 +646,10 @@ export function collectionCardsContent(
   dir = '.',
   available?: Set<string>,
   discoveryIndex?: Map<string, DiscoveryEntry>,
-  pagePath?: string,
+  page?: PageRef,
 ): string {
   if (entries.length === 0) return content;
+  const href = page?.outSlug === undefined ? undefined : relativeHref(dir, `${page.outSlug}.html`);
   return collectionCards(
     entries,
     memberHrefs,
@@ -658,7 +660,8 @@ export function collectionCardsContent(
     dir,
     available,
     discoveryIndex,
-    pagePath,
+    page,
+    href,
   );
 }
 
@@ -676,13 +679,14 @@ export function collectionCardsPages(
   available?: Set<string>,
   repeatIntro = false,
   discoveryIndex?: Map<string, DiscoveryEntry>,
-  pagePath?: string,
+  page?: PageRef,
 ): string[] {
   if (entries.length === 0) return [content];
   const imprimibles = printableEntries(entries);
   const intro = splitFrontmatter(content).body.trim();
   const paginas: string[] = [];
   for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
+    const href = page?.outSlug === undefined ? undefined : relativeHref(dir, `${pageSlug(page.outSlug, paginas.length + 1)}.html`);
     paginas.push(
       collectionCards(
         entries,
@@ -694,7 +698,8 @@ export function collectionCardsPages(
         dir,
         available,
         discoveryIndex,
-        pagePath,
+        page,
+        href,
       ),
     );
   }
@@ -825,12 +830,23 @@ const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Cre
 
 const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
 
-/** El chip de tipo, con enlace a la lista por defecto de ese type. */
-function chipHtml(label: string, type: string | undefined, dir: string, classes = MEMBER_PILL_CLASSES, available?: Set<string>): string {
+/**
+ * El chip de tipo, con enlace a la lista por defecto de ese type. Si esa lista
+ * es la página que se está armando, el chip se queda sin enlace: no tiene
+ * sentido mandar a donde ya estás.
+ */
+function chipHtml(
+  label: string,
+  type: string | undefined,
+  dir: string,
+  classes = MEMBER_PILL_CLASSES,
+  available?: Set<string>,
+  currentHref?: string,
+): string {
   const slug = defaultListSlug(type);
   const href = slug !== undefined && (available === undefined || available.has(slug)) ? defaultListHref(dir, type) : undefined;
   const chip = `<h2 class="${classes}">${label}</h2>`;
-  if (href === undefined) return chip;
+  if (href === undefined || href === currentHref) return chip;
   return `<h2 class="${classes}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
 }
 
@@ -1002,6 +1018,12 @@ function titleHtmlPara(title: string, href: string | undefined): string {
  * contenedor es la página que se está armando, el chip se muestra sin enlace:
  * sirve para recordar a qué pertenece el texto, no para volver a sí mismo.
  */
+/** La página que se está armando: su ruta y, si se sabe, su slug de salida. */
+interface PageRef {
+  path: string;
+  outSlug?: string;
+}
+
 function chipsDePertenencia(
   e: CollectionEntry,
   dir: string,
@@ -1031,13 +1053,17 @@ function cabeceraDeTarjeta(
   dir: string,
   available?: Set<string>,
   discoveryIndex?: Map<string, DiscoveryEntry>,
-  pagePath?: string,
+  page?: PageRef,
+  currentHref?: string,
 ): string[] {
   const tipo = e.type ?? 'file';
   const partes: string[] = [];
   const typeLabel = MEMBER_TYPE_LABEL[tipo];
   if (typeLabel !== undefined) {
-    const chips = [chipHtml(typeLabel, e.type, dir, `${PILL_BASE} mt-0 mb-0`, available), ...chipsDePertenencia(e, dir, pagePath, discoveryIndex)];
+    const chips = [
+      chipHtml(typeLabel, e.type, dir, `${PILL_BASE} mt-0 mb-0`, available, currentHref),
+      ...chipsDePertenencia(e, dir, page?.path, discoveryIndex),
+    ];
     partes.push(
       `<div class="flex items-start justify-between gap-4"><div class="flex flex-wrap items-center gap-2 mb-6">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`,
       '',
@@ -1059,14 +1085,15 @@ function collectionCard(
   dir: string,
   available?: Set<string>,
   discoveryIndex?: Map<string, DiscoveryEntry>,
-  pagePath?: string,
+  page?: PageRef,
+  currentHref?: string,
 ): string {
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body);
   const card = [
     `:::: {class="${COLLECTION_CARD_CLASSES}"}`,
     '',
-    ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, pagePath),
+    ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, page, currentHref),
   ];
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
@@ -1449,7 +1476,7 @@ async function emitCollectionHtml(
     available,
     false,
     discoveryIndex,
-    doc.relativePath,
+    { path: doc.relativePath, outSlug: outputs.outSlug },
   );
   assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 
@@ -1706,18 +1733,10 @@ export async function emitDefaultLists(args: {
     }
 
     const memberHrefs = memberHtmlHrefs(`${slug}.md`, entradas, discoveryIndex);
-    const paginas = collectionCardsPages(
-      entradas,
-      memberHrefs,
-      description ?? '',
-      pageSize,
-      hrefsCreadores,
-      '.',
-      available,
-      true,
-      discoveryIndex,
-      `${slug}.md`,
-    );
+    const paginas = collectionCardsPages(entradas, memberHrefs, description ?? '', pageSize, hrefsCreadores, '.', available, true, discoveryIndex, {
+      path: `${slug}.md`,
+      outSlug: slug,
+    });
     // La paginación la inserta emitHtmlPage; no debe duplicarse aquí.
     const contenidos = paginas;
 

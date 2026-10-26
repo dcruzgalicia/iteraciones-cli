@@ -133,6 +133,7 @@ async function composeFor(
   memberHrefs: Map<string, string>,
   creatorHrefs: Map<string, string>,
   slugIndex: Map<string, DiscoveryEntry>,
+  outSlug: string,
 ): Promise<string> {
   if (format === 'latex') {
     const pageNumber = (src.fm.pageNumber ?? siteConfig.format?.pdf?.pageNumber ?? siteConfig.pageNumber) as string | undefined;
@@ -144,7 +145,10 @@ async function composeFor(
   }
 
   if (format === 'html') {
-    return collectionCardsContent(entries, memberHrefs, src.text, creatorHrefs, dirname(src.relativePath), undefined, slugIndex, src.relativePath);
+    return collectionCardsContent(entries, memberHrefs, src.text, creatorHrefs, dirname(src.relativePath), undefined, slugIndex, {
+      path: src.relativePath,
+      outSlug,
+    });
   }
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
 
@@ -187,7 +191,7 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     if (format === 'html') await postProcessCollections(slugIndex, cwd);
     const memberHrefs = format === 'html' ? memberHtmlHrefs(src.relativePath, entries, slugIndex) : new Map<string, string>();
     const hrefsCreadores = format === 'html' ? creatorHrefs(slugIndex, dirname(src.relativePath)) : new Map<string, string>();
-    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs, hrefsCreadores, slugIndex));
+    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs, hrefsCreadores, slugIndex, outSlug));
     logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');
   } catch (err) {
     fail('merge', err);
