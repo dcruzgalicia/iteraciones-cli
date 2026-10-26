@@ -14,6 +14,23 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Entonces el archivo "dist/files/test-document.html" dice "Redes"
       Y el archivo "dist/files/test-document.html" dice 'target="_blank"'
       Y las tarjetas de Redes van después del header y antes del footer
+      Y las tarjetas de Redes llevan el chip del sitio "Test"
+
+  Regla de negocio: Las redes de la creadora van en su tarjeta
+
+    Escenario: La creadora con enlaces tiene su tarjeta con su nombre
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un proyecto con una creadora con redes
+      Cuando hago un build del proyecto
+      Entonces el HTML de "ana-ruiz.html" tiene la tarjeta de redes de "Ana Ruiz"
+      Y el HTML de "ana-ruiz.html" contiene "https://instagram.com/ana"
+      Y el cuerpo de "ana-ruiz.html" no lleva las redes en negritas
+
+    Escenario: La creadora sin enlaces no tiene tarjeta de redes
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un proyecto con una creadora con redes
+      Cuando hago un build del proyecto
+      Entonces el HTML de "sin-redes.html" sólo tiene las redes del sitio
 
   Regla de negocio: Los enlaces se subrayan sólo al pasar el ratón
 

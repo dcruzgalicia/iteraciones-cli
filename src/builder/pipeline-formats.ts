@@ -19,7 +19,7 @@ import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { type HtmlDocType, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
+import { CHIP_OUTLINE_CLASSES, type HtmlDocType, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
 import {
   type DocumentImages,
   imageNamerFor,
@@ -475,7 +475,9 @@ export async function writeDistMarkdown(p: {
     });
   }
   const base = merge ? collectionBaseContent(p.entries, 'markdown', p.content) : p.content;
-  await convertToMarkdown(rewriteImagePaths(prependLinksMarkdown(base, p.creatorLinks), p.relImageMap, p.docDir), outPath, p.exportDoc, mdFm, merge);
+  // Las redes de la creadora viajan en el frontmatter (`links:`), no repetidas
+  // en el cuerpo: así el markdown re-procesado da el mismo HTML.
+  await convertToMarkdown(rewriteImagePaths(base, p.relImageMap, p.docDir), outPath, p.exportDoc, mdFm, merge);
   recordSupportCommand('post', outPath, ['iteraciones', 'markdown', label, '-o', outPath]);
 }
 
@@ -829,9 +831,6 @@ const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
 // El chip de pertenencia sólo lleva contorno: el relleno de acento queda para
 // el chip del tipo, que es el que dice qué es el documento.
-const MEMBER_OUTLINE_PILL_CLASSES =
-  'inline-block align-top rounded-full border border-accent-500/40 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
-
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
@@ -925,6 +924,20 @@ export function keywordsCard(keywords: { titulo: string; href: string }[]): stri
   ].join('\n');
 }
 
+/** La tarjeta con las redes de la creadora, con su nombre como dueño. */
+export function creatorLinksCard(nombre: string, links: { name: string; url: string }[]): string {
+  const items = links.map((l) => `- [${l.name}](${l.url})`).join('\n');
+  return [
+    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
+    '',
+    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Redes</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(nombre)}</span></div>`,
+    '',
+    items,
+    '',
+    '::::',
+  ].join('\n');
+}
+
 /** La tarjeta con los textos donde aparece una creadora. */
 export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string, available?: Set<string>): string {
   const items = textos.map((t) => `- [${t.titulo}](${t.href})`).join('\n');
@@ -951,6 +964,8 @@ async function buildExtrasHtml(args: {
   contenedores: { titulo: string; href: string; type: string | undefined }[];
   textos: { titulo: string; href: string }[];
   palabrasClave: { titulo: string; href: string }[];
+  redesCreador: { name: string; url: string }[];
+  duenoRedes: string;
   creatorHrefs: Map<string, string>;
   available?: Set<string>;
   filters: ExportContext['filters'];
@@ -975,6 +990,9 @@ async function buildExtrasHtml(args: {
   }
   if (args.palabrasClave.length > 0) {
     partes.push([MASONRY_WRAPPER, '', keywordsCard(args.palabrasClave), '', '</div>'].join('\n'));
+  }
+  if (args.redesCreador.length > 0) {
+    partes.push([MASONRY_WRAPPER, '', creatorLinksCard(args.duenoRedes, args.redesCreador), '', '</div>'].join('\n'));
   }
   if (partes.length === 0) return '';
 
@@ -1172,11 +1190,11 @@ function chipsDePertenencia(
     if (contenedor?.type !== 'collection' && contenedor?.type !== 'list') continue;
     const titulo = escaparHtml(contenedor.title || ruta);
     if (ruta === pagePath) {
-      chips.push(`<span class="${MEMBER_OUTLINE_PILL_CLASSES}">${titulo}</span>`);
+      chips.push(`<span class="${CHIP_OUTLINE_CLASSES}">${titulo}</span>`);
       continue;
     }
     const html = posix(join(dirname(ruta), `${htmlSlugFor(ruta, contenedor.slug)}.html`));
-    chips.push(`<a href="${relativeHref(dir, html)}" class="${MEMBER_OUTLINE_PILL_CLASSES} ${CHIP_HOVER_CLASSES}">${titulo}</a>`);
+    chips.push(`<a href="${relativeHref(dir, html)}" class="${CHIP_OUTLINE_CLASSES} ${CHIP_HOVER_CLASSES}">${titulo}</a>`);
   }
   return chips;
 }
@@ -1657,11 +1675,15 @@ async function emitCollectionHtml(
   const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', webMap, docDir, true);
   const esTexto = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
   const palabrasClave = esTexto ? palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex) : [];
+  const esCreadora = doc.frontmatter.type === 'creator';
+  const duenoRedes = String(outputs.fm.name ?? outputs.fm.title ?? '');
   const extras = await buildExtrasHtml({
     creatorDocs,
     contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
     textos: textosDeLaCreadoraDelDoc(doc, outputs, discoveryIndex),
     palabrasClave,
+    redesCreador: esCreadora ? creatorLinks : [],
+    duenoRedes,
     creatorHrefs: hrefsCreadores,
     filters: exportCtx.filters,
     imagePaths,
@@ -1669,7 +1691,8 @@ async function emitCollectionHtml(
     dir: outputs.dir,
     available,
   });
-  const contenidos = paginas.map((base) => prependLinksMarkdown(base, creatorLinks));
+  // Las redes de la creadora van en su tarjeta, no al inicio del cuerpo.
+  const contenidos = paginas;
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
   const indices = indicesDeColeccion(doc, outputs, collectionEntries, memberHrefs, pageSize, ctx.siteConfig);
 
