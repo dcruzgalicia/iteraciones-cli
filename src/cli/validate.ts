@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { listMarkdownDocuments } from '../builder/discover-files.js';
-import { validateDisabledFilters } from '../builder/filter-resolver.js';
+import { projectFilterNames, validateDisabledFilters } from '../builder/filter-resolver.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
 import {
   dictumWidthWarnings,
@@ -182,7 +182,7 @@ async function collectConfigIssues(
 ): Promise<{ errors: ValidationError[]; warnings: ValidationError[] }> {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
-  validateDisabledFilters(config.disabledFilters, join(cwd, 'iteraciones.config.yaml'));
+  validateDisabledFilters(config.disabledFilters, join(cwd, 'iteraciones.config.yaml'), projectFilterNames(config.luaFilters));
   const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(config));
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
   for (const issue of validatePreambleDependencies(effectiveDisabledPreamble)) {

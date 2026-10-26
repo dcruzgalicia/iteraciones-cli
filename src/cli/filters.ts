@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/filter-resolver.js';
+import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, projectFilterNames, validateDisabledFilters } from '../builder/filter-resolver.js';
 import {
   disableBibliographyWithoutBibFiles,
   getBuiltinPreambleFilterInfos,
@@ -118,7 +118,7 @@ async function emitPreambleBlock(
 export async function listFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
   const stream = process.stdout;
   const config: SiteConfig = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
-  validateDisabledFilters(config.disabledFilters, join(cwd, 'iteraciones.config.yaml'));
+  validateDisabledFilters(config.disabledFilters, join(cwd, 'iteraciones.config.yaml'), projectFilterNames(config.luaFilters));
 
   const bibFiles = await resolveBibOptions(cwd, config)
     .then((r) => r.bibFiles)
@@ -147,5 +147,6 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
     logInfo('Para desactivar uno, agrégalo a la lista `disabledFilters:` en iteraciones.config.yaml.');
   }
   logInfo('Para sobrescribir un filtro, crea `<proyecto>/filters/<grupo>/<nombre>.lua` (p. ej. `filters/latex/02-dictum.lua`).');
+  logInfo('Un filtro propio en `filters/<grupo>/` sólo se aplica a ese formato; el número del nombre fija su orden.');
   await emitPreambleBlock(stream, effectiveDisabledPreamble, options, terminalColumns(stream, options.columns));
 }

@@ -18,6 +18,13 @@ Característica: Los filtros de usuario se aplican y se condicionan por formato
     Cuando compilo el documento por el pipeline
     Entonces el LaTeX lleva la caja de nota
 
+  Escenario: Un filtro con grupo en la ruta sólo se aplica a ese formato
+    Dado un proyecto con un filtro de usuario que convierte la clase nota
+    Y el filtro declarado con grupo en la configuración del proyecto
+    Cuando convierto con los filtros del proyecto a LaTeX y a HTML
+    Entonces el LaTeX lleva la caja de nota
+    Y el HTML no lleva el bloque aside de nota
+
   Escenario: Un override del filtro del paquete en el proyecto no rompe la pasada (#2460)
     Dado un proyecto con una copia del filtro de mbox como override
     Cuando convierto el documento con el override y los helpers del paquete por env
