@@ -18,6 +18,7 @@ import {
   ASSETS_LOGO_WEBP,
   ASSETS_PDF_IMAGES_DIR,
   FORMAT_OUTPUT_EXTENSIONS,
+  KEYWORDS_DIR,
   LEGACY_ASSETS_IMG_DIR,
   PDF_WORK_DIR,
 } from './output-layout.js';
@@ -116,6 +117,11 @@ export async function removeExtraHtmlPages(
 /** Borra las listas por defecto (y sus páginas) de la salida. */
 export async function removeDefaultLists(outputDir: string): Promise<number> {
   let removed = 0;
+  const keywordsDir = join(outputDir, KEYWORDS_DIR);
+  if (await isDir(keywordsDir)) {
+    await rm(keywordsDir, { recursive: true, force: true }).catch(() => {});
+    removed++;
+  }
   for (const lista of DEFAULT_LISTS) {
     const path = join(outputDir, `${lista.slug}.html`);
     if (await exists(path)) {

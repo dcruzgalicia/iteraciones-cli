@@ -10,6 +10,7 @@ import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { cpuConcurrency, exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
+import { keywordsFromFm } from './keyword-lists.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
 import { preparePaths } from './prepare.js';
 import type { BuildDocument } from './types.js';
@@ -62,6 +63,7 @@ export async function convertToEpub(
   inputTarget?: string,
   imagePaths?: string,
   coverImage?: string,
+  cwd?: string,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
@@ -84,6 +86,17 @@ export async function convertToEpub(
       { key: 'date', value: (doc.metadata.dateIso ?? doc.metadata.date) || undefined },
     ]),
   );
+
+  // Los keywords van como `dc:subject` (una etiqueta por palabra). Pandoc sólo
+  // acepta la lista por archivo de metadatos, así que se deja junto al resto de
+  // artefactos del build.
+  const keywords = keywordsFromFm(fm);
+  if (keywords.length > 0 && cwd !== undefined) {
+    const metaPath = join(cwd, '.iteraciones', 'epub', `${doc.relativePath.replace(/[\\/]/g, '-')}.yaml`);
+    await mkdir(dirname(metaPath), { recursive: true });
+    await Bun.write(metaPath, stringify({ subject: keywords }));
+    extraArgs.push('--metadata-file', metaPath);
+  }
 
   await execPandoc({
     input: content,

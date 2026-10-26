@@ -1,3 +1,4 @@
+import { keywordsOf } from './keyword-lists.js';
 import type { DiscoveryEntry } from './types.js';
 
 export interface ListFilter {
@@ -19,13 +20,6 @@ function normaliza(texto: string): string {
 
 function contiene(texto: string, buscado: string): boolean {
   return normaliza(texto).includes(normaliza(buscado));
-}
-
-function keywordsDe(entry: DiscoveryEntry): string[] {
-  const raw = entry.fm?.keywords;
-  if (typeof raw === 'string') return [raw];
-  if (Array.isArray(raw)) return raw.filter((k): k is string => typeof k === 'string');
-  return [];
 }
 
 function fechaUtil(fecha: string | undefined): string | undefined {
@@ -74,7 +68,7 @@ function cumpleFecha(entry: DiscoveryEntry, filtro: ListFilter): boolean {
 
 function cumpleKeyword(entry: DiscoveryEntry, filtro: ListFilter): boolean {
   if (filtro.keyword === undefined) return true;
-  return keywordsDe(entry).some((k) => contiene(k, filtro.keyword as string));
+  return keywordsOf(entry).some((k) => contiene(k, filtro.keyword as string));
 }
 
 function cumplePath(ruta: string, filtro: ListFilter): boolean {
