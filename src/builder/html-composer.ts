@@ -73,7 +73,7 @@ async function frecuenciasCard(siteConfig: SiteConfig): Promise<string> {
   const items = links
     .map(
       (link: { name: string; url: string }) =>
-        `<li><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="text-accent-700 underline underline-offset-4 transition-colors duration-200 hover:decoration-current dark:text-accent-300">${escapeHtml(link.name)}</a></li>`,
+        `<li><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="text-accent-700 no-underline underline-offset-4 transition-colors duration-200 hover:underline hover:decoration-current dark:text-accent-300">${escapeHtml(link.name)}</a></li>`,
     )
     .join('\n          ');
   return (await loadCard('file', 'card-frecuencias.html')).replace('[[FRECUENCIAS]]', items);

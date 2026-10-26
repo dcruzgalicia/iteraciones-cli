@@ -24,6 +24,12 @@ Característica: las palabras clave del proyecto
       Cuando hago un build del proyecto
       Entonces en el HTML de "texto.html" el chip "cuidados" enlaza a "./keywords/cuidados.html"
 
+    Escenario: El chip del keyword no va subrayado hasta el hover
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un proyecto con textos que comparten keywords
+      Cuando hago un build del proyecto
+      Entonces el chip "cuidados" del HTML de "texto.html" sólo se subraya al pasar el ratón
+
     Escenario: En la página del keyword su propio chip no es un enlace
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con textos que comparten keywords

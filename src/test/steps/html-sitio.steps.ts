@@ -101,6 +101,16 @@ Then('el EPUB {string} declara la clave {string} con el valor {string}', async (
   }
 });
 
+Then('el chip {string} del HTML de {string} sólo se subraya al pasar el ratón', (etiqueta: string, archivo: string) => {
+  const chip = chipDelHtml(archivo, etiqueta);
+  if (!/class="[^"]*no-underline/.test(chip)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no lleva no-underline`);
+  if (!/class="[^"]*hover:underline/.test(chip)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no se subraya en hover`);
+  const clases = /class="([^"]*)"/.exec(chip)?.[1] ?? '';
+  if (clases.split(/\s+/).includes('underline')) {
+    throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} está subrayado siempre`);
+  }
+});
+
 Then('el chip {string} del HTML de {string} enlaza a {string}', (etiqueta: string, archivo: string, href: string) => {
   const chip = chipDelHtml(archivo, etiqueta);
   if (!chip.includes(`href="${href}"`)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no enlaza a ${href}`);
@@ -124,6 +134,18 @@ Then('en el HTML de {string} el chip {string} no es un enlace', (archivo: string
 Then('el HTML de {string} no tiene chips de pertenencia', (archivo: string) => {
   const html = leer(`dist/files/${archivo}`);
   if (html.includes('bg-transparent')) throw new Error(`${archivo} tiene chips de pertenencia y no debería`);
+});
+
+Then('ningún enlace del HTML lleva {string} por defecto', (clase: string) => {
+  const archivos = [...new Bun.Glob('dist/files/**/*.html').scanSync({ cwd: world.root })];
+  const culpables: string[] = [];
+  for (const archivo of archivos) {
+    const html = readFileSync(join(world.root, archivo), 'utf8');
+    for (const enlace of html.matchAll(/<a\b[^>]*class="([^"]*)"/g)) {
+      if ((enlace[1] ?? '').split(/\s+/).includes(clase)) culpables.push(archivo);
+    }
+  }
+  if (culpables.length > 0) throw new Error(`enlaces con ${clase} por defecto en: ${[...new Set(culpables)].join(', ')}`);
 });
 
 Then('los enlaces de Formatos abren en otra pestaña', () => {
