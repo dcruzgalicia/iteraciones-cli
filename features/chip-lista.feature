@@ -5,6 +5,15 @@ Característica: El chip de tipo lleva a la lista de ese type
   Quiero que el chip "Texto" me lleve a todos los textos
   Para no buscar uno por uno
 
+  Regla de negocio: La lista de creadoras va siempre por nombre
+
+    Escenario: Se ordenan alfabéticamente aunque la fecha diga otra cosa
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y tres creadoras con fechas: "Zoe Ruíz" en 2026, "Ana García" en 2020 y "Marta López" sin fecha
+      Cuando hago un build del proyecto
+      Entonces la lista "dist/files/creadora.html" ordena a "Ana García, Marta López, Zoe Ruíz"
+
   Regla de negocio: Las listas por defecto
 
     Escenario: El build escribe una lista por type
