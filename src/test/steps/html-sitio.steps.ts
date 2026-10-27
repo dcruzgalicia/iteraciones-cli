@@ -105,6 +105,11 @@ function proyectoConKeywords(config: string): void {
   escribirEnProyecto('otro.md', '---\ntitle: Otro\nkeywords:\n  - cuidados\n---\n\nOtro cuerpo.\n');
 }
 
+Given('un proyecto con un &nbsp; en el texto', () => {
+  escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nformat:\n  html:\n    generate: true\n  markdown:\n    generate: true\n');
+  escribirEnProyecto('ensayo.md', '---\ntitle: Ensayo\n---\n\nUn texto&nbsp;unido y otro\u00a0pegado.\n');
+});
+
 Given('un proyecto con textos que comparten keywords', () => {
   proyectoConKeywords(CONFIG_HTML);
 });

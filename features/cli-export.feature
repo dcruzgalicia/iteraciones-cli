@@ -19,6 +19,22 @@ Característica: El PDF y el EPUB llevan los metadatos del documento
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/test-document.tex" contiene '\usepackage[spanish,mexico,es-noshorthands,es-noindentfirst]{babel}'
 
+  Regla de negocio: Los espacios no separables son cosa del LaTeX
+
+    @requires-pandoc
+    Escenario: En LaTeX el &nbsp; sigue siendo un espacio duro
+      Dado que la raíz del proyecto tiene un proyecto con LaTeX
+      Y que el archivo "test.md" tiene este contenido
+      """
+      ---
+      title: Test Document
+      ---
+
+      Un texto&nbsp;unido.
+      """
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/test-document.tex" contiene "Un texto~unido."
+
   Regla de negocio: Las redes de la creadora no se cuelan en el cuerpo del LaTeX
 
     @requires-pandoc

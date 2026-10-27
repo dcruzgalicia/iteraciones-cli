@@ -7,6 +7,7 @@ import { type LuaFilterGroup, loadFilterGroups, STRIP_TYPOGRAPHIC_FILTER } from 
 import { buildFormatsArgs, buildFormatsFlag, type HtmlDocType, type HtmlPageVars } from './html-composer.js';
 import { postProcessHtml } from './html-postprocess.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
+import { espaciosNormales } from './pipeline-io.js';
 import type { BuildDocument } from './types.js';
 
 interface HtmlPageOptions {
@@ -113,7 +114,8 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   extraArgs.push(...citationCompileArgs(bibOptions?.bibliography, bibOptions?.csl));
 
   const html = await execPandoc({
-    input: content,
+    // En el sitio no hay espacios no separables: son cosa del PDF.
+    input: espaciosNormales(content),
     sourcePath: doc.filePath,
     from: MD_READER,
     to: 'html5',

@@ -51,7 +51,7 @@ import {
   KEYWORDS_DIR,
   primaryOutputExtension,
 } from './output-layout.js';
-import { formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
+import { espaciosNormales, formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
 import { type ExportContext, type FormatWorkSets, htmlKindFor, latexKindFor, type RenderContext } from './pipeline-setup.js';
 import { htmlPageFromMarkdown } from './render.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
@@ -474,7 +474,7 @@ export async function writeDistMarkdown(p: {
       return posix(relative(outDir, memberMarkdownPath(p.memberSlugs, outputDir, f)));
     });
   }
-  const base = merge ? collectionBaseContent(p.entries, 'markdown', p.content) : p.content;
+  const base = espaciosNormales(merge ? collectionBaseContent(p.entries, 'markdown', p.content) : p.content);
   // Las redes de la creadora viajan en el frontmatter (`links:`), no repetidas
   // en el cuerpo: así el markdown re-procesado da el mismo HTML.
   await convertToMarkdown(rewriteImagePaths(base, p.relImageMap, p.docDir), outPath, p.exportDoc, mdFm, merge);
@@ -646,7 +646,7 @@ function collectionCards(
   for (const e of printableEntries(entries).slice(desde, hasta)) {
     cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex, page, currentHref));
   }
-  return cards.join('\n\n');
+  return espaciosNormales(cards.join('\n\n'));
 }
 
 export function collectionCardsContent(
@@ -1544,7 +1544,8 @@ export function collectionBaseContent(
   content: string,
   pageNumber?: string,
 ): string {
-  return collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber) : content;
+  const resuelto = collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber) : content;
+  return format === 'latex' ? resuelto : espaciosNormales(resuelto);
 }
 
 async function collectionPandocInput(
