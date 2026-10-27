@@ -33,6 +33,15 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Cuando hago un build del proyecto
       Entonces el HTML de "sin-redes.html" sólo tiene las redes del sitio
 
+  Regla de negocio: Los espacios no separables son cosa del PDF
+
+    Escenario: En HTML y Markdown el &nbsp; es un espacio normal
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un proyecto con un &nbsp; en el texto
+      Cuando hago un build del proyecto
+      Entonces el HTML de "ensayo.html" contiene "Un texto unido y otro pegado."
+      Y el HTML de "ensayo.md" contiene "Un texto unido y otro pegado."
+
   Regla de negocio: Los enlaces se subrayan sólo al pasar el ratón
 
     Escenario: Ningún enlace del sitio va subrayado por defecto

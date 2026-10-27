@@ -27,7 +27,7 @@ const FUENTE = [
   '',
   '# Capítulo',
   '',
-  'Texto con *énfasis*.',
+  'Texto con *énfasis* y un&nbsp;pegote.',
   '',
 ].join('\n');
 
