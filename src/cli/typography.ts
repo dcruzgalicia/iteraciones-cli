@@ -442,7 +442,75 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypog
 }
 
 export function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): string | undefined {
-  return envuelveEnCuerpo(content, inc) ?? envuelveEnBloquesFrontmatter(content, inc) ?? envuelveEnTitleFrontmatter(content, inc);
+  return (
+    envuelveEnFencedDiv(content, inc) ??
+    envuelveEnCuerpo(content, inc) ??
+    envuelveEnBloquesFrontmatter(content, inc) ??
+    envuelveEnTitleFrontmatter(content, inc)
+  );
+}
+
+const ABRE_FENCE = /^:{3,}\s*\S/;
+const CIERRA_FENCE = /^:{3,}\s*$/;
+
+/**
+ * Un párrafo que ya vive dentro de un fenced div (`shrink`, `stretch`, etc.) no
+ * se puede envolver por fuera: el `runt` se anida para no romper el div que ya
+ * estaba.
+ */
+function envuelveEnFencedDiv(content: string, inc: TypographyIncidence): string | undefined {
+  const wordNorm = normalizaParaBusqueda(inc.text.trim());
+  const { body } = splitFrontmatter(content);
+  const prefijo = content.slice(0, content.length - body.length);
+  const lineas = body.split('\n');
+  const dentro: boolean[] = [];
+  let nivel = 0;
+  for (const linea of lineas) {
+    if (CIERRA_FENCE.test(linea)) nivel = Math.max(0, nivel - 1);
+    dentro.push(nivel > 0);
+    if (ABRE_FENCE.test(linea)) nivel += 1;
+  }
+  const esParrafo = (i: number): boolean => {
+    const linea = lineas[i] ?? '';
+    return dentro[i] === true && !ABRE_FENCE.test(linea) && !CIERRA_FENCE.test(linea) && linea.trim() !== '';
+  };
+  const grupos: { ini: number; fin: number }[] = [];
+  for (let i = 0; i < lineas.length; i++) {
+    if (!esParrafo(i)) continue;
+    let ini = i;
+    while (ini - 1 >= 0 && esParrafo(ini - 1)) ini--;
+    let fin = i;
+    while (fin + 1 < lineas.length && esParrafo(fin + 1)) fin++;
+    grupos.push({ ini, fin });
+    i = fin;
+  }
+  const textoDe = (g: { ini: number; fin: number }): string => lineas.slice(g.ini, g.fin + 1).join('\n');
+  const candidatos = grupos.filter((g) => normalizaParaBusqueda(textoDe(g)).includes(wordNorm));
+  if (candidatos.length === 0) return undefined;
+  let elegido = candidatos[0] as { ini: number; fin: number };
+  const prev = (inc as unknown as { prev?: string }).prev;
+  if (candidatos.length > 1 && prev) {
+    const prevWords = normalizaParaBusqueda(prev).split(/\s+/).filter(Boolean);
+    const marca = (prevWords.length >= 2 ? prevWords.slice(-2) : prevWords).join(' ');
+    const conMarca = candidatos.filter((g) => normalizaParaBusqueda(textoDe(g)).includes(marca));
+    if (conMarca.length === 1) elegido = conMarca[0] as { ini: number; fin: number };
+  }
+  // Ya envuelto: el párrafo viene justo después de un div con runt.
+  const anterior = (lineas[elegido.ini - 1] ?? '').trim();
+  if (ABRE_FENCE.test(anterior) && /\brunt[ \t]*=/.test(anterior)) return undefined;
+  // Un div de QR no se toca: su contenido es la imagen.
+  for (let j = elegido.ini - 1; j >= 0; j--) {
+    const linea = lineas[j] ?? '';
+    if (CIERRA_FENCE.test(linea)) break;
+    if (ABRE_FENCE.test(linea)) {
+      if (/\bqr[ \t]*=/.test(linea)) return undefined;
+      break;
+    }
+  }
+  const { ini, fin } = elegido;
+  const indent = (lineas[ini] as string).match(/^[ \t]*/)?.[0] ?? '';
+  const nuevas = [...lineas.slice(0, ini), `${indent}::: {runt=2}`, ...lineas.slice(ini, fin + 1), `${indent}:::`, ...lineas.slice(fin + 1)];
+  return prefijo + nuevas.join('\n');
 }
 
 function envuelveEnCuerpo(content: string, inc: TypographyIncidence): string | undefined {

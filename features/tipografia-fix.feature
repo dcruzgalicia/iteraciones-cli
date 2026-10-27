@@ -19,6 +19,44 @@ Característica: la corrección tipográfica del markdown
       Cuando normalizo para buscar "**negrita** *cursiva* `código` [texto](url)"
       Entonces el texto normalizado es "negrita cursiva código texto"
 
+  Regla de negocio: Dentro de un fenced div el runt se anida
+
+    Escenario: Un párrafo dentro de un shrink lleva el runt adentro
+      Cuando envuelvo el párrafo contenedor de la incidencia "proyecto.":
+        """
+        ::: {shrink=20}
+        Gracias, Miranda, por el prólogo con el que acuerpas este libro. A
+        todas las que hicieron comunidad alrededor de este proyecto.
+        :::
+        """
+      Entonces el markdown queda:
+        """
+        ::: {shrink=20}
+        ::: {runt=2}
+        Gracias, Miranda, por el prólogo con el que acuerpas este libro. A
+        todas las que hicieron comunidad alrededor de este proyecto.
+        :::
+        :::
+        """
+      Cuando vuelvo a envolver el párrafo contenedor de la incidencia "proyecto."
+      Entonces no hay párrafo que envolver
+
+    Escenario: Un párrafo dentro de un stretch también se anida
+      Cuando envuelvo el párrafo contenedor de la incidencia "texto.":
+        """
+        ::: {stretch=1.5}
+        Un párrafo suelto que termina con esta palabra del texto.
+        :::
+        """
+      Entonces el markdown queda:
+        """
+        ::: {stretch=1.5}
+        ::: {runt=2}
+        Un párrafo suelto que termina con esta palabra del texto.
+        :::
+        :::
+        """
+
   Regla de negocio: Una palabra suelta se envuelve con runt=2 dentro de su contenedor
 
     Escenario: Envuelve el párrafo dentro de un atributo de bloque del frontmatter
