@@ -8,6 +8,22 @@ Given('una creadora llamada {string}', (nombre: string) => {
   escribirEnProyecto('ana-garcia.md', `---\ntype: creator\nname: ${nombre}\n---\n\nBio de ${nombre}.\n`);
 });
 
+Given('tres creadoras con fechas: {string} en 2026, {string} en 2020 y {string} sin fecha', (reciente: string, vieja: string, sinFecha: string) => {
+  const creadora = (nombre: string, extra: string): string => `---\ntype: creator\nname: ${nombre}\n${extra}---\n\nBio de ${nombre}.\n`;
+  escribirEnProyecto('zoe.md', creadora(reciente, 'date: 2026-03-01\n'));
+  escribirEnProyecto('ana.md', creadora(vieja, 'date: 2020-01-01\n'));
+  escribirEnProyecto('marta.md', creadora(sinFecha, ''));
+});
+
+Then('la lista {string} ordena a {string}', (archivo: string, nombres: string) => {
+  const html = readFileSync(join(world.root, archivo), 'utf8');
+  const leidos = [...html.matchAll(/<h3[^>]*>(?:<a[^>]*>)?([^<]+)/g)].map((m) => (m[1] ?? '').trim());
+  const esperados = nombres.split(',').map((n) => n.trim());
+  if (JSON.stringify(leidos) !== JSON.stringify(esperados)) {
+    throw new Error(`la lista ordena ${JSON.stringify(leidos)} y debería ${JSON.stringify(esperados)}`);
+  }
+});
+
 Given('un texto de {string}', (nombre: string) => {
   escribirEnProyecto('texto.md', `---\ntitle: Un texto\ncreator: ${nombre}\n---\n\nCuerpo del texto.\n`);
 });

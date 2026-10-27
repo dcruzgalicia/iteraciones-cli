@@ -1871,6 +1871,11 @@ function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
 /** Las listas por defecto se ordenan de lo más reciente a lo más antiguo. */
 function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
   const rutas = [...discoveryIndex.entries()].filter(([, entry]) => type === 'all' || tipoDe(entry) === type).map(([ruta]) => ruta);
+  // Las creadoras van siempre por nombre, sin importar la fecha.
+  if (type === 'creator') {
+    const nombre = (ruta: string): string => discoveryIndex.get(ruta)?.title ?? ruta;
+    return rutas.sort((a, b) => nombre(a).localeCompare(nombre(b), 'es') || a.localeCompare(b));
+  }
   return rutas.sort((a, b) => {
     const diferencia = fechaOrdenable(discoveryIndex.get(b)) - fechaOrdenable(discoveryIndex.get(a));
     return diferencia !== 0 ? diferencia : a.localeCompare(b);
