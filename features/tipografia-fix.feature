@@ -571,7 +571,7 @@ Característica: la corrección tipográfica del markdown
 
   Regla de negocio: El informe ordena las incidencias igual que las correcciones
 
-    Escenario: Ordena last-letter, puntuación y first-letter
+    Escenario: Ordena last-letter, first-letter y puntuación
       Dado que pdftotext devuelve:
         """
         Ana teje bufandas
@@ -585,9 +585,9 @@ Característica: la corrección tipográfica del markdown
       Entonces las incidencias son:
         """
         repeated-last-letter ;; pág 1 ;; líneas 4-5 ;; s ;; 4: Carla canta coplas || 5: Carlos corta cebras
-        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: Beto come pan, || 3: Beto corta cedros,
         repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; b ;; 2: Beto come pan, || 3: Beto corta cedros,
         repeated-first-letter ;; pág 1 ;; líneas 4-5 ;; c ;; 4: Carla canta coplas || 5: Carlos corta cebras
+        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: Beto come pan, || 3: Beto corta cedros,
         """
 
   Regla de negocio: --exceptions ignora lo que ya está aceptado

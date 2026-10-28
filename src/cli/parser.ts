@@ -333,7 +333,7 @@ Ejemplos:
     .command('typography [paths...]')
     .description('detecta en los PDF líneas de una sola palabra y pares de líneas consecutivas terminadas en puntuación')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
-    .option('--pages <rango>', 'sólo esas páginas del PDF: 3 (esa sola) o 3-80 (el rango, las dos puntas dentro)')
+    .option('--pages <páginas>', 'sólo esas páginas del PDF: 3 (esa sola), 3-80 (el rango) o una lista: 3,7,10-12')
     .option(
       '--min-line-width <porcentaje>',
       'porcentaje del ancho medio por debajo del cual una línea se considera corta en repeated-last-letter y consecutive-punctuation (por defecto: 75)',
@@ -369,6 +369,7 @@ Ejemplos:
   iteraciones typography dist/files/libro.pdf           revisa uno
   iteraciones typography dist/files/libro.pdf --pages 3 sólo la página 3
   iteraciones typography --pages 3-80                   sólo esas páginas
+  iteraciones typography --pages 3,7,10-12              sólo esas páginas, sueltas o en tramos
   iteraciones typography --min-line-width 90            sube el umbral: sólo cuentan las líneas largas
   iteraciones typography --min-lines 2 --min-letters 1   el comportamiento anterior, más hallazgos
   iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra

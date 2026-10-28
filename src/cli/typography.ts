@@ -31,25 +31,34 @@ interface RangoPaginas {
 
 const RANGO_PAGINAS = /^(\d+)(?:\s*-\s*(\d+))?$/;
 
-function interpretaPaginas(spec: string): RangoPaginas {
-  const limpio = spec.trim();
-  const encontrado = RANGO_PAGINAS.exec(limpio);
-  if (encontrado === null) {
-    if (/^\d+\s*-\s*$/.test(limpio)) {
-      throw new BuildError(`--pages "${spec}" no tiene página final: escribe 11 para una sola página, o 11-20 para un rango`);
+/** Acepta `6`, `6-13` y una lista: `6,7,10,20` o `6-8,10,20-22`. */
+function interpretaPaginas(spec: string): RangoPaginas[] {
+  const tramos: RangoPaginas[] = [];
+  for (const parte of spec.split(',').map((p) => p.trim())) {
+    if (parte === '') {
+      throw new BuildError(`--pages "${spec}" tiene un hueco: separa las páginas con coma, sin dejar una vacía (3,7 o 6-8,10)`);
     }
-    throw new BuildError(`--pages "${spec}" no se entiende: escribe 3 para una sola página, o 3-80 para un rango (las dos puntas dentro)`);
+    const encontrado = RANGO_PAGINAS.exec(parte);
+    if (encontrado === null) {
+      if (/^\d+\s*-\s*$/.test(parte)) {
+        throw new BuildError(
+          `--pages "${parte}" no tiene página final: escribe ${parte.replace(/\s*-\s*$/, '')} para una sola página, o 11-20 para un rango`,
+        );
+      }
+      throw new BuildError(`--pages "${parte}" no se entiende: escribe 3, 3-80 o una lista como 3,7,10 (las dos puntas dentro)`);
+    }
+    const desde = Number(encontrado[1]);
+    const hasta = encontrado[2] === undefined ? desde : Number(encontrado[2]);
+    if (desde < 1) throw new BuildError(`la página ${desde} no existe: las páginas empiezan en 1`);
+    if (hasta < desde) {
+      throw new BuildError(`el rango ${desde}-${hasta} va al revés: la página final no puede ser anterior a la inicial`);
+    }
+    if (hasta === desde && encontrado[2] !== undefined) {
+      throw new BuildError(`el rango ${desde}-${hasta} no es un rango: para una sola página escribe ${desde}`);
+    }
+    tramos.push({ desde, hasta });
   }
-  const desde = Number(encontrado[1]);
-  const hasta = encontrado[2] === undefined ? desde : Number(encontrado[2]);
-  if (desde < 1) throw new BuildError(`la página ${desde} no existe: las páginas empiezan en 1`);
-  if (hasta < desde) {
-    throw new BuildError(`el rango ${desde}-${hasta} va al revés: la página final no puede ser anterior a la inicial`);
-  }
-  if (hasta === desde && encontrado[2] !== undefined) {
-    throw new BuildError(`el rango ${desde}-${hasta} no es un rango: para una sola página escribe ${desde}`);
-  }
-  return { desde, hasta };
+  return tramos;
 }
 
 function interpretaReglas(spec: string): string[] {
@@ -122,10 +131,9 @@ function reportIncidencias(
 }
 
 function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
-  const rango = options.pages === undefined ? undefined : interpretaPaginas(options.pages);
+  const paginas = options.pages === undefined ? undefined : interpretaPaginas(options.pages);
   return {
-    primeraPagina: rango?.desde,
-    ultimaPagina: rango?.hasta,
+    paginas,
     porcentajeCorta: options.minLineWidth === undefined ? 75 : interpretaPorcentaje(options.minLineWidth, '--min-line-width'),
     reglas: options.rules === undefined ? TYPOGRAPHY_RULES : interpretaReglas(options.rules),
     lineasMinimas: options.minLines === undefined ? 3 : interpretaEntero(options.minLines, '--min-lines', 2),
