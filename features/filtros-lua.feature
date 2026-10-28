@@ -21,8 +21,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | convierte-dentro-de-una-lista-en-vspace-antes-se-imprimia-li |
         | convierte-div-center-y-div-flushright |
         | convierte-div-dictum-con-autor |
+        | dictum-con-shrink-adentro |
         | convierte-div-dictum-sin-autor |
-        | dictum-con-lista-emite-el-macro-antes-del-bloque |
+        | dictum-con-lista-usa-el-entorno |
         | convierte-div-verse-sin-vspace-externo |
         | verse-en-tex-solo-separte-la-linea-con-dos-espacios |
         | convierte-en-vspace-baselineskip |
