@@ -113,11 +113,6 @@ function singleWordLines(pages: string[][]): SingleWordLine[] {
 
 const TERMINALS = new Set(['.', ',', ';', ':', '?', '!', '…', '-', '–', '—', ')', ']', '}', '"', "'", '»', '”', '’']);
 
-function endsWithPunctuation(line: string): boolean {
-  const last = line.trimEnd().at(-1);
-  return last !== undefined && TERMINALS.has(last);
-}
-
 function modaDe(anchos: number[]): number | undefined {
   const cuenta = new Map<number, number>();
   for (const ancho of anchos) cuenta.set(ancho, (cuenta.get(ancho) ?? 0) + 1);
@@ -183,7 +178,7 @@ function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: s
         encontradas.push({
           page: indicePagina + 1,
           lineas: lineasPagina.slice(desde, desde + lineas).map((text, k) => ({ line: desde + k + 1, text })),
-          total: fin - desde,
+          total: lineas,
           continuacion: lineasPagina[desde + lineas],
         });
       }
@@ -191,22 +186,6 @@ function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: s
     }
   }
   return encontradas;
-}
-
-function colapsaVentanas<T extends TypographyIncidence>(incidencias: readonly T[]): T[] {
-  const vistas = new Set<string>();
-  const resultado: T[] = [];
-  for (const incidencia of incidencias) {
-    if (incidencia.type === 'single-word-line') {
-      resultado.push(incidencia);
-      continue;
-    }
-    const clave = `${incidencia.type}:${incidencia.page}:${incidencia.line + incidencia.total - 1}`;
-    if (vistas.has(clave)) continue;
-    vistas.add(clave);
-    resultado.push(incidencia);
-  }
-  return resultado;
 }
 
 function sinAcentos(texto: string): string {
@@ -224,15 +203,31 @@ function sinAcentos(texto: string): string {
   );
 }
 
+/**
+ * Las primeras `cuantas` letras, sin contar los signos de apertura: «¿Y…» y
+ * «Y…» empiezan igual, y «a-» cuenta como «a».
+ */
 function letraInicial(linea: string, cuantas: number): string | undefined {
-  const inicio = sinAcentos(linea).trimStart().slice(0, cuantas);
-  return inicio.length === cuantas && /^[a-zñ]+$/.test(inicio) ? inicio : undefined;
+  const inicio = sinAcentos(linea)
+    .trimStart()
+    .replace(/^[^a-zñ]+/, '')
+    .slice(0, cuantas);
+  return /^[a-zñ]+$/.test(inicio) ? inicio : undefined;
 }
 
+/** Las últimas `cuantas` letras, sin contar los signos del final. */
 function letraFinal(linea: string, cuantas: number): string | undefined {
-  const t = sinAcentos(linea).trimEnd();
-  const fin = t.slice(-cuantas);
-  return fin.length === cuantas && /^[a-zñ]+$/.test(fin) ? fin : undefined;
+  const texto = sinAcentos(linea)
+    .trimEnd()
+    .replace(/[^a-zñ]+$/, '');
+  if (texto === '') return undefined;
+  return texto.slice(-cuantas);
+}
+
+/** El signo con el que termina la línea, si termina en signo. */
+function marcaFinal(linea: string): string | undefined {
+  const marca = linea.trimEnd().at(-1);
+  return marca !== undefined && TERMINALS.has(marca) ? marca : undefined;
 }
 
 function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number, letras: number, anchoMinimo = 0): RepeatedLetter[] {
@@ -257,7 +252,11 @@ function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', linea
 }
 
 function consecutivePunctuationRuns(pages: string[][], lineas: number, anchoMinimo: number): ConsecutivePunctuation[] {
-  const clave = (linea: string): string | undefined => (linea.trimEnd().length >= anchoMinimo && endsWithPunctuation(linea) ? 'p' : undefined);
+  // Sólo cuenta el mismo signo: «…o.» y «…a-» no son una repetición.
+  const clave = (linea: string): string | undefined => {
+    if (linea.trimEnd().length < anchoMinimo) return undefined;
+    return marcaFinal(linea);
+  };
   const hallados: ConsecutivePunctuation[] = [];
   for (const tirada of tiradasCoincidentes(pages, lineas, clave)) {
     const primera = tirada.lineas[0] as LineaCoincidencia;
@@ -467,7 +466,7 @@ function paginasDeTramos(tramos: readonly { desde: number; hasta: number }[]): n
 }
 
 export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
-  const { porcentajeCorta = 75, lineasMinimas = 3, letrasMinimas = 2, excepciones = [] } = opciones;
+  const { porcentajeCorta = 75, lineasMinimas = 2, letrasMinimas = 2, excepciones = [] } = opciones;
   const pedidas = new Set(opciones.reglas ?? TYPOGRAPHY_RULES);
   const pages = splitPages(stdout);
   const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
@@ -481,9 +480,7 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
   ];
   const vivas = excepciones.length === 0 ? halladas : filtraExcepciones(halladas, opciones.archivo ?? '', excepciones);
   const dentro = filtroDePaginas(opciones, pages.length);
-  return colapsaVentanas(vivas)
-    .filter((incidencia) => dentro(incidencia.page))
-    .sort(porPaginaYRegla);
+  return vivas.filter((incidencia) => dentro(incidencia.page)).sort(porPaginaYRegla);
 }
 
 export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {}): Promise<TypographyIncidence[]> {

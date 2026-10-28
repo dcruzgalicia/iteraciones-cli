@@ -18,7 +18,6 @@ export interface TypographyOptions {
   pages?: string;
   minLineWidth?: string;
   rules?: string;
-  minLines?: string;
   minLetters?: string;
   exceptions?: string;
   fix?: boolean;
@@ -136,7 +135,6 @@ function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
     paginas,
     porcentajeCorta: options.minLineWidth === undefined ? 75 : interpretaPorcentaje(options.minLineWidth, '--min-line-width'),
     reglas: options.rules === undefined ? TYPOGRAPHY_RULES : interpretaReglas(options.rules),
-    lineasMinimas: options.minLines === undefined ? 3 : interpretaEntero(options.minLines, '--min-lines', 2),
     letrasMinimas: options.minLetters === undefined ? 2 : interpretaEntero(options.minLetters, '--min-letters', 1),
   };
 }

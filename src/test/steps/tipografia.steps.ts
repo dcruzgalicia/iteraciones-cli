@@ -54,12 +54,8 @@ When('escaneo el texto de pdftotext buscando {string} sin el filtro de línea co
     .map(describe);
 });
 
-When('escaneo el texto de pdftotext con {int} lineas y {int} letras', (lineas: number, letras: number) => {
-  world.incidencias = analyzeText(world.textoPdftotext, {
-    porcentajeCorta: 0,
-    lineasMinimas: lineas,
-    letrasMinimas: letras,
-  }).map(describe);
+When('escaneo el texto de pdftotext con {int} letras', (letras: number) => {
+  world.incidencias = analyzeText(world.textoPdftotext, { porcentajeCorta: 0, letrasMinimas: letras }).map(describe);
 });
 
 When('escaneo el texto de pdftotext buscando {string}', (reglas: string) => {
