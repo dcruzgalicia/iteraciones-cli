@@ -341,10 +341,7 @@ const FULL_PAGE_COVER_FIELDS = ['startpaper', 'frontCover', 'backCover'];
 function warnMissingMagick(pdfxActive: boolean): void {
   if (!warnedMissingMagick) {
     warnedMissingMagick = true;
-    logWarning(
-      'ImageMagick no disponible; las imágenes no se preprocesaron' + (pdfxActive ? '; pueden fallar la certificación PDF/X' : ''),
-      'images',
-    );
+    logWarning(`ImageMagick no disponible; las imágenes no se preprocesaron${pdfxActive ? '; pueden fallar la certificación PDF/X' : ''}`, 'images');
   }
 }
 
@@ -410,6 +407,9 @@ function geometryFor(source: ImageSource, profile: ImageProfile, targets: Proces
 }
 
 function grayscaleFor(source: ImageSource, profile: ImageProfile): boolean {
+  // El membrete va siempre en gris, también en los perfiles de color: es una
+  // imagen de imprenta y no debe depender del formato que la procese.
+  if (source.field === LETTERHEAD_FIELD) return true;
   if (!profile.grayscale) return false;
   if (profile.coverColor && source.cover && (source.field === 'frontCover' || source.field === 'backCover')) return false;
   return true;

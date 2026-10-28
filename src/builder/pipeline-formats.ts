@@ -375,8 +375,26 @@ export type CollectionEntry = {
   type: string | undefined;
   lineLength: number | undefined;
   pages: number | undefined;
+
+  /** Las imágenes del membrete, ya resueltas contra el directorio del archivo. */
+  letterhead?: string[];
   body: string;
 };
+
+/** Lee el primero de los candidatos que exista y devuelve su directorio. */
+async function readEntryText(candidates: string[], collectionPath: string, file: string): Promise<{ text: string; dir: string }> {
+  for (const candidate of candidates) {
+    try {
+      return { text: await Bun.file(candidate).text(), dir: dirname(candidate) };
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT') {
+        throw new BuildError(`collection "${collectionPath}": no se pudo leer "${candidate}": ${(err as Error).message}`);
+      }
+    }
+  }
+  throw new BuildError(`collection "${collectionPath}": archivo configurado en files no encontrado: "${file}" (probado: ${candidates.join(', ')})`);
+}
 
 export async function readCollectionEntries(
   files: string[],
@@ -387,24 +405,9 @@ export async function readCollectionEntries(
   const entries: CollectionEntry[] = [];
   for (const [indice, file] of files.entries()) {
     const candidates = [...new Set(bases.map((base) => join(base, file)))];
-    let text: string | undefined;
-    for (const candidate of candidates) {
-      try {
-        text = await Bun.file(candidate).text();
-        break;
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code !== 'ENOENT') {
-          throw new BuildError(`collection "${collectionPath}": no se pudo leer "${candidate}": ${(err as Error).message}`);
-        }
-      }
-    }
-    if (text === undefined) {
-      throw new BuildError(
-        `collection "${collectionPath}": archivo configurado en files no encontrado: "${file}" (probado: ${candidates.join(', ')})`,
-      );
-    }
+    const { text, dir } = await readEntryText(candidates, collectionPath, file);
     const parsed = parseFileFrontmatter(text, file);
+    parsed.letterhead = parsed.letterhead.map((p) => (isAbsolute(p) ? p : resolve(dir, p)));
 
     const rootRelative = posix(file).replace(/^\.\//, '');
     if (incluirSinCuerpo || parsed.body.trim()) entries.push({ file: rootRelative, posicion: indice + 1, ...parsed });
@@ -511,15 +514,19 @@ function entryHeadings(e: CollectionEntry): { creator: string; title: string } {
   };
 }
 
-function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean): string[] {
+function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean, membrete: string[] = []): string[] {
   const parts: string[] = [];
   if (e.type === 'intervention') {
     parts.push(interventionSectionRaw(e.lineLength));
+    // El \chapter de arriba ya saltó de página: encender el membrete antes
+    // pintaría también la página anterior, que se envía al hacer el salto.
+    if (membrete.length > 0) parts.push(`\\letterheadsetup{${membrete.join(',')}}`);
     parts.push('\\thispagestyle{empty}');
     parts.push(e.body.trim());
     if (e.pages && e.pages > 0) {
       parts.push('\\thispagestyle{empty}\n\\null\\newpage\n'.repeat(e.pages).trim());
     }
+    if (membrete.length > 0) parts.push('\\letterheadclear');
   } else {
     const { creator, title } = entryHeadings(e);
     parts.push(`\\chapter{${creator}}`);
@@ -537,13 +544,19 @@ function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean): strin
   return parts;
 }
 
-function buildCollectionSectionsLatex(entries: CollectionEntry[], pageNumber?: string): string {
+function buildCollectionSectionsLatex(entries: CollectionEntry[], pageNumber?: string, imageMap?: Map<string, string>): string {
   const isHeader = pageNumber?.startsWith('header-') ?? false;
   const parts: string[] = [];
   for (const e of entries) {
-    parts.push(...buildCollectionEntryLatex(e, isHeader));
+    const membrete = e.type === 'intervention' ? (e.letterhead ?? []).map((p) => imageMap?.get(p) ?? p) : [];
+    parts.push(...buildCollectionEntryLatex(e, isHeader, membrete));
   }
   return parts.join('\n\n');
+}
+
+/** Las imágenes de membrete de las interventions de una colección. */
+function collectionLetterheadFiles(entries: CollectionEntry[]): string[] {
+  return entries.flatMap((e) => (e.type === 'intervention' ? (e.letterhead ?? []) : []));
 }
 
 type Heading = readonly [string, string];
@@ -1352,8 +1365,9 @@ function resolveCollectionContent(
   fallback: string,
   pageNumber?: string,
   merge = false,
+  imageMap?: Map<string, string>,
 ): string {
-  if (format === 'latex') return buildCollectionSectionsLatex(collectionEntries, pageNumber);
+  if (format === 'latex') return buildCollectionSectionsLatex(collectionEntries, pageNumber, imageMap);
   if (format === 'html') {
     const printable = printableEntries(collectionEntries);
     return printable.length === 0 ? fallback : buildCollectionSectionsHtml(printable);
@@ -1591,8 +1605,9 @@ export function collectionBaseContent(
   content: string,
   pageNumber?: string,
   merge = false,
+  imageMap?: Map<string, string>,
 ): string {
-  const resuelto = collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber, merge) : content;
+  const resuelto = collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber, merge, imageMap) : content;
   return format === 'latex' ? resuelto : espaciosNormales(resuelto);
 }
 
@@ -1669,9 +1684,14 @@ async function preprocessDocImages(
 ): Promise<DocumentImages> {
   const { ctx, plan, formatCfg } = renderCtx;
   const active = plan.activeFormats;
+  const fmBase = mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd);
+  // La colección junta las interventions: sus imágenes de membrete también se
+  // procesan aquí para que el PDF las pueda usar. En un texto suelto manda su
+  // propio frontmatter.
+  const membreteColeccion = collectionLetterheadFiles(collectionEntries);
   return preprocessDocumentImages({
     content: [collectionScanContent(collectionEntries, content), ...creatorDocs.map((c) => c.body)].join('\n\n'),
-    fm: mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
+    fm: membreteColeccion.length > 0 ? { ...fmBase, letterhead: membreteColeccion } : fmBase,
     docDir: dirname(doc.filePath),
     pageDimensions: renderCtx.pageDimensions ?? detectPageSize([]),
     cropActive: renderCtx.cropActive,
@@ -1787,7 +1807,7 @@ async function emitCollectionFormats(
     docProducesFormat(doc.frontmatter.type, 'latex')
   ) {
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
-    const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
+    const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber, undefined, pdfImages.imageMap);
     const docsAutoras = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : creatorDocs;
     const authorsBlock = await buildAuthorsLatex(docsAutoras, doc.filePath, exportCtx.filters, esFile, nombresCreadoras.length);
     await emitLatexAndQueuePdf(

@@ -138,15 +138,20 @@
 % Membrete de las interventions: una imagen por página, al pie de la caja de
 % texto y pegada al borde exterior (impar: derecha; par: izquierda). Si hay
 % menos imágenes que páginas, la lista se repite desde el principio.
+\newif\ifletterheadactive
 \newcounter{letterheadpage}
 \newcounter{letterheadtotal}
+% El hook se registra una sola vez y sólo dibuja mientras el membrete está
+% activo: en una colección hay que apagarlo al terminar cada intervention.
+\AddToShipoutPictureFG{\ifletterheadactive\@letterheadpage\fi}
 \newcommand{\letterheadsetup}[1]{%
   \def\@letterheadlist{#1}%
   \setcounter{letterheadtotal}{0}%
   \@for\@letterheaditem:=\@letterheadlist\do{\stepcounter{letterheadtotal}}%
   \setcounter{letterheadpage}{0}%
-  \AddToShipoutPictureFG{\@letterheadpage}%
+  \letterheadactivetrue
 }
+\newcommand{\letterheadclear}{\letterheadactivefalse}
 \newcommand{\@letterheadpage}{%
   \stepcounter{letterheadpage}%
   \begingroup

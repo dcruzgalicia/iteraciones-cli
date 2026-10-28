@@ -137,7 +137,7 @@ async function composeFor(
 ): Promise<string> {
   if (format === 'latex') {
     const pageNumber = (src.fm.pageNumber ?? siteConfig.format?.pdf?.pageNumber ?? siteConfig.pageNumber) as string | undefined;
-    return buildLatexPandocContent(collectionBaseContent(entries, 'latex', src.text, pageNumber), ctx.doc, {
+    return buildLatexPandocContent(collectionBaseContent(entries, 'latex', src.text, pageNumber, undefined, ctx.relImageMap), ctx.doc, {
       fm: src.fm,
       formatCfg: siteConfig.format?.pdf,
       siteConfig,
@@ -177,7 +177,11 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
       cwd,
       siteConfig,
       content: collectionScanContent(entries, src.text),
-      fm: src.fm,
+      // El membrete de las interventions también se procesa en el merge.
+      fm: {
+        ...src.fm,
+        letterhead: entries.flatMap((e) => (e.type === 'intervention' ? (e.letterhead ?? []) : [])),
+      },
       filePath: src.inputPath,
       relativePath: src.relativePath,
       assetsDir: join(outDir, ASSETS_IMAGES_DIR),
