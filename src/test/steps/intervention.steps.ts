@@ -288,6 +288,16 @@ Then('la página {int} lleva el membrete a la {word} y abajo', (pagina: number, 
   }
 });
 
+Then('el membrete de cada página mide {int} cm de alto', (cm: number) => {
+  const lista = world.membrete as Membrete[];
+  const esperado = (cm / 2.54) * 150;
+  for (const [i, m] of lista.entries()) {
+    if (Math.abs(m.h - esperado) > 8) {
+      throw new Error(`el membrete de la página ${i + 1} mide ${m.h}px de alto y debía medir ${Math.round(esperado)}px`);
+    }
+  }
+});
+
 Then('la página {int} repite la imagen de la página {int}', (una: number, otra: number) => {
   const a = membreteDe(una);
   const b = membreteDe(otra);

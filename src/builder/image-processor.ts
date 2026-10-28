@@ -160,9 +160,9 @@ function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | 
 
 export const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper', 'frontCover', 'backCover'] as const;
 
-/** Las imágenes de membrete van a 3 cm de ancho, con la altura que pidan. */
+/** Las imágenes de membrete van a 3 cm de alto, con el ancho que pidan. */
 export const LETTERHEAD_FIELD = 'letterhead';
-export const LETTERHEAD_WIDTH_MM = 30;
+export const LETTERHEAD_HEIGHT_MM = 30;
 const IMAGE_FIELDS = [...COVER_IMAGE_FIELDS, LETTERHEAD_FIELD] as const;
 
 const MULTILINE_IMAGE_FIELDS = [
@@ -323,6 +323,7 @@ export interface ImageSource {
   cover: boolean;
   field?: string;
   widthMm?: number;
+  heightMm?: number;
 }
 
 export interface ProcessedImages {
@@ -364,7 +365,7 @@ export async function collectImageSources(content: string, fm: Record<string, un
     for (const value of fmStringList(fm[field]) ?? []) {
       const absPath = isAbsolute(value) ? value : resolve(docDir, value);
       if (!(await Bun.file(absPath).exists())) continue;
-      push(membrete ? { absPath, kind: 'title', cover: false, field, widthMm: LETTERHEAD_WIDTH_MM } : { absPath, kind: 'cover', cover, field });
+      push(membrete ? { absPath, kind: 'title', cover: false, field, heightMm: LETTERHEAD_HEIGHT_MM } : { absPath, kind: 'cover', cover, field });
     }
   }
 
@@ -402,6 +403,7 @@ function geometryFor(source: ImageSource, profile: ImageProfile, targets: Proces
     const h = mmToPx(targets.startpaperH);
     return { resize: `${w}x${h}^`, extent: `${w}x${h}` };
   }
+  if (source.heightMm !== undefined) return { resize: `x${mmToPx(source.heightMm)}>` };
   if (source.kind === 'title' && source.widthMm !== undefined) return { resize: `${mmToPx(source.widthMm)}>` };
   return { resize: `${mmToPx(targets.targetW)}x${mmToPx(targets.targetH)}>` };
 }

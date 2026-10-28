@@ -164,9 +164,9 @@
       \ifnum\@tempcntb=\@tempcnta \xdef\@letterheadchosen{\@letterheaditem}\fi
     }%
     \ifodd\value{page}%
-      \AtTextLowerLeft{\put(\textwidth,0){\makebox[0pt][r]{\includegraphics[width=3cm]{\@letterheadchosen}}}}%
+      \AtTextLowerLeft{\put(\textwidth,0){\makebox[0pt][r]{\includegraphics[height=3cm]{\@letterheadchosen}}}}%
     \else
-      \AtTextLowerLeft{\put(0,0){\makebox[0pt][l]{\includegraphics[width=3cm]{\@letterheadchosen}}}}%
+      \AtTextLowerLeft{\put(0,0){\makebox[0pt][l]{\includegraphics[height=3cm]{\@letterheadchosen}}}}%
     \fi
   \endgroup
 }
