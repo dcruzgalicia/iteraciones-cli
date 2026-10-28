@@ -209,21 +209,29 @@ function colapsaVentanas<T extends TypographyIncidence>(incidencias: readonly T[
 }
 
 function sinAcentos(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
+  return (
+    texto
+      // Sólo se quitan los acentos de las vocales: la ñ es una letra propia y
+      // una línea que empieza con «ño» no repite la «n» de «no».
+      .replace(/[áàäâã]/gi, 'a')
+      .replace(/[éèëê]/gi, 'e')
+      .replace(/[íìïî]/gi, 'i')
+      .replace(/[óòöôõ]/gi, 'o')
+      .replace(/[úùüû]/gi, 'u')
+      .replace(/ç/gi, 'c')
+      .toLowerCase()
+  );
 }
 
 function letraInicial(linea: string, cuantas: number): string | undefined {
   const inicio = sinAcentos(linea).trimStart().slice(0, cuantas);
-  return inicio.length === cuantas && /^[a-z]+$/.test(inicio) ? inicio : undefined;
+  return inicio.length === cuantas && /^[a-zñ]+$/.test(inicio) ? inicio : undefined;
 }
 
 function letraFinal(linea: string, cuantas: number): string | undefined {
   const t = sinAcentos(linea).trimEnd();
   const fin = t.slice(-cuantas);
-  return fin.length === cuantas && /^[a-z]+$/.test(fin) ? fin : undefined;
+  return fin.length === cuantas && /^[a-zñ]+$/.test(fin) ? fin : undefined;
 }
 
 function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number, letras: number, anchoMinimo = 0): RepeatedLetter[] {
