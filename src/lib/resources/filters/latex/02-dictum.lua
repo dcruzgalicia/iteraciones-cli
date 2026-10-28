@@ -88,6 +88,24 @@ local function process_dictum(div, width)
     end
   end
 
+  -- Un bloque con párrafos dentro (un shrink, por ejemplo) no cabe en el
+  -- argumento del macro: se usa el entorno, que aguanta bloques.
+  local solo_parrafos = true
+  for _, block in ipairs(quote_blocks) do
+    if block.t ~= 'Para' then
+      solo_parrafos = false
+      break
+    end
+  end
+  if #quote_blocks > 0 and not solo_parrafos then
+    local inicio = pandoc.RawBlock('latex', '\\begin{dictumbloque}[' .. author_latex .. ']{' .. width .. '}')
+    local fin = pandoc.RawBlock('latex', '\\end{dictumbloque}')
+    local result = { inicio }
+    for _, block in ipairs(quote_blocks) do table.insert(result, block) end
+    table.insert(result, fin)
+    return result
+  end
+
   local opening = '\\dictum'
   if author_latex ~= '' then
     opening = opening .. '[' .. author_latex .. ']'

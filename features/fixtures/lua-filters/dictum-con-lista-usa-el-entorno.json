@@ -1,0 +1,7 @@
+{
+  "name": "dictum-con-lista-usa-el-entorno",
+  "markdown": "::: {.dictum}\n- primer item\n- segundo item\n:::\n",
+  "contains": ["\\begin{dictumbloque}[]{0.5}", "\\begin{itemize}", "\\end{dictumbloque}"],
+  "notContains": ["\\dictum{"],
+  "normalizeNewlines": false
+}

@@ -1,0 +1,8 @@
+{
+  "name": "dictum-con-shrink-adentro",
+  "markdown": "::: {.dictum width=0.7}\n:::{shrink=10}\nTexto de la cita.\n:::\n::: {.author}\nAutora\n:::\n:::\n",
+  "contains": ["\\begin{dictumbloque}[Autora]{0.7}", "\\textls[-10]{Texto de la cita.}", "\\end{dictumbloque}"],
+  "notContains": ["\\dictum[Autora]{"],
+  "normalizeNewlines": true,
+  "filters": ["02-dictum", "14-shrink"]
+}

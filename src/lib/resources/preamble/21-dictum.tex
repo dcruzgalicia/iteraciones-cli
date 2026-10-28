@@ -44,4 +44,41 @@
     \endlist
   \endgroup
 }
+% La misma cita, pero para contenido con bloques dentro (un shrink, por
+% ejemplo): el macro pide el texto como argumento y un bloque con párrafos no
+% cabe ahí.
+\newenvironment{dictumbloque}[2][]{%
+  \par
+  \@nobreakfalse
+  \begingroup
+    \def\dictumautor{#1}%
+    \ifx\relax#2\relax\else\renewcommand{\dictumwidth}{#2\textwidth}\fi
+    \list{}{%
+      \itemsep=\z@
+      \parsep=\z@
+      \partopsep=\z@
+      \topsep=2\baselineskip
+      \raggeddictum
+      \listparindent=\z@
+      \itemindent=\z@
+    }%
+    \item\relax
+    \@dictumfont
+    \raggeddictumtext
+}{%
+    \edef\@tempa{\dictumautor}%
+    \ifx\@tempa\@empty
+    \else
+      {%
+        \raggeddictumtext
+        \dictumrule
+      }%
+      \raggeddictumauthor
+      \@dictumauthorfont
+      \dictumauthorformat{\dictumautor}%
+      \strut\par
+    \fi
+    \endlist
+  \endgroup
+}
 \makeatother
