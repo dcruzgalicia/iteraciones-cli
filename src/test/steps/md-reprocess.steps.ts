@@ -90,6 +90,63 @@ Given('una colección con merge {word}', async (merge: string) => {
   );
 });
 
+Given('una colección con autora, colaboradora e intervención', async () => {
+  const conMerge = [...CONFIG.split('\n'), '    merge: true'].join('\n');
+  await Bun.write(join(world.dir, 'iteraciones.config.yaml'), `${conMerge}\n`);
+  await Bun.write(
+    join(world.dir, 'libro.md'),
+    [
+      '---',
+      'title: Libro',
+      'slug: libro',
+      'type: collection',
+      'collectionCreator: Ana Ruiz',
+      'files:',
+      '  - ensayo.md',
+      '  - 99-intervencion.md',
+      '---',
+      '',
+      'Intro del libro.',
+    ].join('\n'),
+  );
+  await Bun.write(
+    join(world.dir, 'ensayo.md'),
+    [
+      '---',
+      'title: Ensayo',
+      'slug: ensayo',
+      'creator:',
+      '  - Ana Ruiz',
+      '---',
+      '',
+      '# Capítulo',
+      '',
+      'Texto del capítulo.',
+      '',
+      '## Sección',
+      '',
+      'Más texto.',
+    ].join('\n'),
+  );
+  await Bun.write(join(world.dir, '99-intervencion.md'), ['---', 'title: Intervención', 'type: intervention', '---', '', '# No debe ir'].join('\n'));
+  await Bun.write(join(world.dir, 'ana-ruiz.md'), ['---', 'name: Ana Ruiz', 'type: creator', '---', '', 'Bio de Ana.'].join('\n'));
+});
+
+Then('el markdown de la colección dice {string}', async (texto: string) => {
+  const md = await readFile(join(await distFiles(world.dir), 'libro.md'), 'utf8');
+  if (!md.includes(texto)) throw new Error(`el markdown de la colección no dice ${JSON.stringify(texto)}:\n${md.slice(0, 800)}`);
+});
+
+Then('el markdown de la colección no dice {string}', async (texto: string) => {
+  const md = await readFile(join(await distFiles(world.dir), 'libro.md'), 'utf8');
+  if (md.includes(texto)) throw new Error(`el markdown de la colección sí dice ${JSON.stringify(texto)}`);
+});
+
+Then('el markdown individual conserva el nivel {string}', async (texto: string) => {
+  const md = await readFile(join(await distFiles(world.dir), 'ensayo.md'), 'utf8');
+  if (!md.includes(texto)) throw new Error(`el markdown individual no conserva ${JSON.stringify(texto)}:\n${md.slice(0, 400)}`);
+});
+
 When('compilo el proyecto', async () => {
   process.exitCode = 0;
   await runBuild(world.dir);

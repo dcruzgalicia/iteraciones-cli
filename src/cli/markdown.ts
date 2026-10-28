@@ -7,8 +7,15 @@ import { rewriteFmImagePaths } from '../builder/image-processor.js';
 
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR } from '../builder/output-layout.js';
-import { collectionBaseContent, getCreatorLinks, memberSlugMap, readCollectionEntries, writeDistMarkdown } from '../builder/pipeline-formats.js';
-import type { BuildDocument } from '../builder/types.js';
+import {
+  collectionBaseContent,
+  getCreatorLinks,
+  memberSlugMap,
+  readCollectionEntries,
+  resolveCollectionCreatorDocs,
+  writeDistMarkdown,
+} from '../builder/pipeline-formats.js';
+import type { BuildDocument, DiscoveryEntry } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
@@ -47,7 +54,10 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     if (fm.type === 'collection') fm.creator = await aggregateCollectionCreators({ files: rootFiles }, cwd);
     const entries = rootFiles.length > 0 ? await readCollectionEntries(rootFiles, relativePath, [cwd, join(cwd, dir)]) : [];
 
-    const memberSlugs = rootFiles.length > 0 ? memberSlugMap(rootFiles, await loadSlugIndex(cwd)) : undefined;
+    const slugIndex = rootFiles.length > 0 ? await loadSlugIndex(cwd) : new Map<string, DiscoveryEntry>();
+    const memberSlugs = rootFiles.length > 0 ? memberSlugMap(rootFiles, slugIndex) : undefined;
+    const doc = { filePath: inputPath, relativePath: relative(cwd, inputPath), frontmatter: fm } as unknown as BuildDocument;
+    const autoras = fm.type === 'collection' ? await resolveCollectionCreatorDocs(doc, slugIndex, cwd, fm) : [];
 
     const { relImageMap, docDir } = await buildImagesContext({
       cwd,
@@ -80,6 +90,7 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
       memberSlugs,
       merge: fm.type === 'collection' && siteConfig.format?.markdown?.merge === true,
       entries,
+      autoras,
     });
     logSuccess(`${input} → ${options.output}`, 'markdown');
   } catch (err) {
