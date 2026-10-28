@@ -2,7 +2,8 @@ import { BuildError } from './errors.js';
 import { plural } from './plural.js';
 import { exec, ProcessSpawnError, type RunResult } from './run.js';
 
-export const TYPOGRAPHY_RULES = ['single-word-line', 'consecutive-punctuation', 'repeated-first-letter', 'repeated-last-letter'] as const;
+/** El orden manda: detección, corrección y reportes van en esta secuencia. */
+export const TYPOGRAPHY_RULES = ['single-word-line', 'repeated-last-letter', 'repeated-first-letter', 'consecutive-punctuation'] as const;
 
 interface Incidence {
   page: number;
@@ -413,6 +414,9 @@ function excepcionCoincide(archivo: string, incidencia: TypographyIncidence, exc
 export interface OpcionesAnalisis {
   primeraPagina?: number;
   ultimaPagina?: number;
+
+  /** Páginas pedidas, en tramos. Manda sobre el rango. */
+  paginas?: readonly { desde: number; hasta: number }[];
   porcentajeCorta?: number;
   reglas?: readonly string[];
   lineasMinimas?: number;
@@ -421,22 +425,65 @@ export interface OpcionesAnalisis {
   archivo?: string;
 }
 
+/** Avisa si alguna página pedida no existe en el PDF. */
+function validaPaginasPedidas(pdfPath: string, opciones: OpcionesAnalisis, total: number): void {
+  const desde = opciones.primeraPagina;
+  if (desde !== undefined && desde > total) {
+    const pedido =
+      opciones.ultimaPagina === undefined || opciones.ultimaPagina === desde ? `la página ${desde}` : `el rango ${desde}-${opciones.ultimaPagina}`;
+    throw new BuildError(`${pedido} se sale del PDF "${pdfPath}": el documento tiene ${plural(total, 'página')}`);
+  }
+  for (const tramo of opciones.paginas ?? []) {
+    if (tramo.hasta <= total) continue;
+    const pedido = tramo.hasta === tramo.desde ? `la página ${tramo.desde}` : `el rango ${tramo.desde}-${tramo.hasta}`;
+    throw new BuildError(`${pedido} se sale del PDF "${pdfPath}": el documento tiene ${plural(total, 'página')}`);
+  }
+}
+
+const ORDEN_REGLA = new Map(TYPOGRAPHY_RULES.map((regla, indice) => [regla, indice]));
+
+/** El informe va por página y, dentro de cada página, en el orden de las reglas. */
+function porPaginaYRegla(a: TypographyIncidence, b: TypographyIncidence): number {
+  return a.page - b.page || (ORDEN_REGLA.get(a.type) ?? 99) - (ORDEN_REGLA.get(b.type) ?? 99) || a.line - b.line;
+}
+
+/** Qué páginas entran: la lista pedida o el rango de siempre. */
+function filtroDePaginas(opciones: OpcionesAnalisis, total: number): (pagina: number) => boolean {
+  if (opciones.paginas !== undefined) {
+    const pedidas = new Set(paginasDeTramos(opciones.paginas));
+    return (pagina: number): boolean => pedidas.has(pagina);
+  }
+  const desde = opciones.primeraPagina ?? 1;
+  const hasta = opciones.ultimaPagina ?? total;
+  return (pagina: number): boolean => pagina >= desde && pagina <= hasta;
+}
+
+function paginasDeTramos(tramos: readonly { desde: number; hasta: number }[]): number[] {
+  const paginas: number[] = [];
+  for (const tramo of tramos) {
+    for (let pagina = tramo.desde; pagina <= tramo.hasta; pagina++) paginas.push(pagina);
+  }
+  return paginas;
+}
+
 export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
-  const { primeraPagina = 1, ultimaPagina, porcentajeCorta = 75, lineasMinimas = 3, letrasMinimas = 2, excepciones = [] } = opciones;
+  const { porcentajeCorta = 75, lineasMinimas = 3, letrasMinimas = 2, excepciones = [] } = opciones;
   const pedidas = new Set(opciones.reglas ?? TYPOGRAPHY_RULES);
   const pages = splitPages(stdout);
   const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
   const halladas: TypographyIncidence[] = [
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
     ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
-    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas, ancho) : []),
     // El arranque de una línea importa aunque sea la última del párrafo (y por
     // eso corta): siempre se comparan todas, sin umbral de ancho.
     ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas, letrasMinimas, 0) : []),
+    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas, ancho) : []),
   ];
   const vivas = excepciones.length === 0 ? halladas : filtraExcepciones(halladas, opciones.archivo ?? '', excepciones);
-  const hasta = ultimaPagina ?? pages.length;
-  return colapsaVentanas(vivas).filter((incidencia) => incidencia.page >= primeraPagina && incidencia.page <= hasta);
+  const dentro = filtroDePaginas(opciones, pages.length);
+  return colapsaVentanas(vivas)
+    .filter((incidencia) => dentro(incidencia.page))
+    .sort(porPaginaYRegla);
 }
 
 export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {}): Promise<TypographyIncidence[]> {
@@ -453,14 +500,6 @@ export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {
     const motivo = result.stderr.trim().split('\n').pop() ?? 'error desconocido';
     throw new BuildError(`pdftotext no pudo leer "${pdfPath}": ${motivo}`);
   }
-  const desde = opciones.primeraPagina;
-  if (desde !== undefined) {
-    const total = splitPages(result.stdout).length;
-    if (desde > total) {
-      const pedido =
-        opciones.ultimaPagina === undefined || opciones.ultimaPagina === desde ? `la página ${desde}` : `el rango ${desde}-${opciones.ultimaPagina}`;
-      throw new BuildError(`${pedido} se sale del PDF "${pdfPath}": el documento tiene ${plural(total, 'página')}`);
-    }
-  }
+  validaPaginasPedidas(pdfPath, opciones, splitPages(result.stdout).length);
   return analyzeText(result.stdout, opciones);
 }

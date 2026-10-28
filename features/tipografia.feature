@@ -1143,7 +1143,7 @@ Característica: el analizador tipográfico de los PDF
       Cuando parseo el comando "typography --rules mbox dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y el error dice "no existe la regla \"mbox\""
-      Y el error dice "single-word-line, consecutive-punctuation, repeated-first-letter, repeated-last-letter"
+      Y el error dice "single-word-line, repeated-last-letter, repeated-first-letter, consecutive-punctuation"
 
     Escenario: Una lista sin reglas lo dice
       Dado que la raíz del proyecto está vacía
@@ -1211,6 +1211,57 @@ Característica: el analizador tipográfico de los PDF
       Y la salida dice "2 incidencias"
       Y la salida dice "pág 2  línea 1  single-word-line  Adios"
       Y la salida dice "pág 3  línea 1  single-word-line  Bien"
+
+    Escenario: Una lista de páginas revisa sólo esas
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        uno
+        \f
+        dos
+        \f
+        tres
+        \f
+        cuatro
+        \f
+        """
+      Cuando parseo el comando "typography --pages 2,4" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 2  línea 1  single-word-line"
+      Y la salida dice "pág 4  línea 1  single-word-line"
+      Y la salida no dice "pág 1  línea 1"
+      Y la salida no dice "pág 3  línea 1"
+
+    Escenario: La lista mezcla páginas sueltas y rangos
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        uno
+        \f
+        dos
+        \f
+        tres
+        \f
+        cuatro
+        \f
+        """
+      Cuando parseo el comando "typography --pages 1-2,4" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 1  línea 1  single-word-line"
+      Y la salida dice "pág 2  línea 1  single-word-line"
+      Y la salida dice "pág 4  línea 1  single-word-line"
+      Y la salida no dice "pág 3  línea 1"
+
+    Escenario: Una lista con un hueco lo dice
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        una linea con palabras de sobra
+        \f
+        """
+      Cuando parseo el comando "typography --pages 3,,4 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "tiene un hueco"
 
     Escenario: Un rango al revés lo dice
       Dado que la raíz del proyecto está vacía
