@@ -294,7 +294,7 @@ Característica: el analizador tipográfico de los PDF
         | ”     |
         | ’     |
 
-    Escenario: Lo que cuenta es el último carácter, no la última palabra
+    Escenario: Signos distintos no arman par
       Dado que pdftotext devuelve:
         """
         termina en punto.
@@ -302,10 +302,7 @@ Característica: el analizador tipográfico de los PDF
         \f
         """
       Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
-      Entonces las incidencias son:
-        """
-        consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: termina en punto. || 2: termina en coma,
-        """
+      Entonces no hay incidencias
 
     Escenario: Los puntos sueltos de \ldots cuentan como un punto
       Dado que pdftotext devuelve:
@@ -318,7 +315,7 @@ Característica: el analizador tipográfico de los PDF
       Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
-        consecutive-punctuation ;; pág 1 ;; líneas 1-2 de 3 ;; 1: uno dos, || 2: tres . . .
+        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: tres . . . || 3: cuatro . . .
         """
 
     Escenario: Los puntos sueltos no arman par con una línea que no termina en signo
@@ -353,7 +350,7 @@ Característica: el analizador tipográfico de los PDF
       Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces no hay incidencias
 
-    Escenario: Tres líneas seguidas son un solo hallazgo, no dos pares
+    Escenario: Tres líneas seguidas son dos pares
       Dado que pdftotext devuelve:
         """
         uno dos.
@@ -364,7 +361,8 @@ Característica: el analizador tipográfico de los PDF
       Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
-        consecutive-punctuation ;; pág 1 ;; líneas 1-2 de 3 ;; 1: uno dos. || 2: tres cuatro.
+        consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: uno dos. || 2: tres cuatro.
+        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: tres cuatro. || 3: cinco seis.
         """
 
   Regla de negocio: Una línea de una sola palabra también juega en el par
@@ -512,22 +510,22 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y el error dice "Instala poppler"
 
-  Regla de negocio: El comando usa la ventana de tres por defecto
+  Regla de negocio: El comando usa siempre la ventana de dos
 
-    Escenario: Dos renglones puntuados no bastan para el comando
+    Escenario: Dos renglones con el mismo signo ya son hallazgo
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
         Una linea de referencia larga del documento para la medida
         una linea con muchas palabras aqui.
         a si mismas.
-        \\f
+        \f
         """
       Cuando parseo el comando "typography --rules consecutive-punctuation --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y la salida dice "sin incidencias"
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 1  líneas 2-3  consecutive-punctuation"
 
-    Escenario: Con tres sí, y bajando la ventana vuelven los dos
+    Escenario: Una tirada larga muestra todos los pares
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
@@ -535,24 +533,12 @@ Característica: el analizador tipográfico de los PDF
         una linea con muchas palabras aqui.
         a si mismas.
         y estas dos tambien.
-        \\f
+        \f
         """
       Cuando parseo el comando "typography --rules consecutive-punctuation --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y la salida dice "pág 1  líneas 2-4  consecutive-punctuation"
-
-    Escenario: Con ventana de dos los dos renglones vuelven a salir
-      Dado que la raíz del proyecto está vacía
-      Y el PDF "dist/files/libro.pdf" con estas páginas:
-        """
-        Una linea de referencia larga del documento para la medida
-        una linea con muchas palabras aqui.
-        a si mismas.
-        \\f
-        """
-      Cuando parseo el comando "typography --rules consecutive-punctuation --min-line-width 0 --min-lines 2 dist/files/libro.pdf" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 1  líneas 2-3  consecutive-punctuation"
+      Y la salida dice "pág 1  líneas 3-4  consecutive-punctuation"
 
   Regla de negocio: El informe dice la regla, la página, la línea y el texto
 
@@ -565,7 +551,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro.
         \f
         """
-      Cuando parseo el comando "typography --rules consecutive-punctuation --min-lines 2 --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules consecutive-punctuation --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "dist/files/libro.pdf · 1 incidencia"
       Y la salida dice "pág 1  líneas 2-3  consecutive-punctuation"
@@ -678,7 +664,7 @@ Característica: el analizador tipográfico de los PDF
       Cuando escaneo el texto de pdftotext sin el filtro de línea corta
       Entonces no hay incidencias
 
-    Escenario: Lo que no es letra se salta
+    Escenario: Los signos de apertura no cuentan para la letra
       Dado que pdftotext devuelve:
         """
         © De la edición, María de los Ángeles
@@ -686,7 +672,10 @@ Característica: el analizador tipográfico de los PDF
         \f
         """
       Cuando escaneo el texto de pdftotext sin el filtro de línea corta
-      Entonces no hay incidencias
+      Entonces las incidencias son:
+        """
+        repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; d ;; 1: © De la edición, María de los Ángeles || 2: Diseño y formación editorial
+        """
 
     Escenario: Una línea de puros números no tiene letra
       Dado que pdftotext devuelve:
@@ -828,7 +817,7 @@ Característica: el analizador tipográfico de los PDF
         Esta es una linea de referencia del documento para(setear) la medid.
         \f
         """
-      Cuando parseo el comando "typography --rules consecutive-punctuation --min-lines 2 --min-letters 1 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules consecutive-punctuation --min-letters 1 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 1  líneas 4-5  consecutive-punctuation"
 
@@ -844,7 +833,7 @@ Característica: el analizador tipográfico de los PDF
         Zybra linea es mas corta que la de arriba y se queda a.
         \f
         """
-      Cuando parseo el comando "typography --rules consecutive-punctuation --min-lines 2 --min-letters 1 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules consecutive-punctuation --min-letters 1 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 1  líneas 5-6  consecutive-punctuation"
 
@@ -860,7 +849,7 @@ Característica: el analizador tipográfico de los PDF
         Zybra linea es mas corta que la de arriba y se queda a.
         \f
         """
-      Cuando parseo el comando "typography --min-lines 2 --min-letters 1 dist/files/libro.pdf --min-line-width 100" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --min-letters 1 dist/files/libro.pdf --min-line-width 100" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin incidencias en 1 PDF"
 
@@ -876,7 +865,7 @@ Característica: el analizador tipográfico de los PDF
         Beta tiene una longitud media y tambien cierra con puntuacion.
         \f
         """
-      Cuando parseo el comando "typography --min-lines 2 --min-letters 1 dist/files/libro.pdf --min-line-width 90" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --min-letters 1 dist/files/libro.pdf --min-line-width 90" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin incidencias en 1 PDF"
 
@@ -889,9 +878,10 @@ Característica: el analizador tipográfico de los PDF
         Otra linea con muchas palabras tambien.
         \f
         """
-      Cuando parseo el comando "typography --rules consecutive-punctuation --min-lines 2 --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules consecutive-punctuation --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y la salida dice "pág 1  líneas 1-2 de 3  consecutive-punctuation"
+      Y la salida dice "pág 1  líneas 1-2  consecutive-punctuation"
+      Y la salida dice "pág 1  líneas 2-3  consecutive-punctuation"
 
     Escenario: Un porcentaje que no es un porcentaje lo dice
       Dado que la raíz del proyecto está vacía
@@ -930,7 +920,8 @@ Característica: el analizador tipográfico de los PDF
         """
       Cuando parseo el comando "typography --rules repeated-first-letter --min-line-width 0 --min-letters 1 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y la salida dice "pág 1  líneas 2-4  repeated-first-letter"
+      Y la salida dice "pág 1  líneas 2-3  repeated-first-letter"
+      Y la salida dice "pág 1  líneas 3-4  repeated-first-letter"
 
     Escenario: El ancho mínimo no aparta la primera letra
       Dado que la raíz del proyecto está vacía
@@ -942,9 +933,10 @@ Característica: el analizador tipográfico de los PDF
         zeta
         \f
         """
-      Cuando parseo el comando "typography --rules repeated-first-letter --min-lines 3 --min-letters 2 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules repeated-first-letter --min-letters 2 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y la salida dice "pág 1  líneas 2-4  repeated-first-letter"
+      Y la salida dice "pág 1  líneas 2-3  repeated-first-letter"
+      Y la salida dice "pág 1  líneas 3-4  repeated-first-letter"
 
     Escenario: El ancho mínimo sí aparta la última letra
       Dado que la raíz del proyecto está vacía
@@ -956,7 +948,7 @@ Característica: el analizador tipográfico de los PDF
         zeta
         \f
         """
-      Cuando parseo el comando "typography --rules repeated-last-letter --min-lines 3 --min-letters 2 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules repeated-last-letter --min-letters 2 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin incidencias"
 
@@ -970,9 +962,10 @@ Característica: el analizador tipográfico de los PDF
         zeta
         \f
         """
-      Cuando parseo el comando "typography --rules repeated-last-letter --min-lines 3 --min-letters 2 --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules repeated-last-letter --min-letters 2 --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y la salida dice "pág 1  líneas 2-4  repeated-last-letter"
+      Y la salida dice "pág 1  líneas 2-3  repeated-last-letter"
+      Y la salida dice "pág 1  líneas 3-4  repeated-last-letter"
 
     Escenario: El informe de letras dice cuántas líneas son
       Dado que la raíz del proyecto está vacía
@@ -985,30 +978,20 @@ Característica: el analizador tipográfico de los PDF
         """
       Cuando parseo el comando "typography --rules repeated-first-letter --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y la salida dice "pág 1  líneas 1-3  repeated-first-letter"
-      Y la salida dice "las 3 empiezan por 'es'"
+      Y la salida dice "pág 1  líneas 1-2  repeated-first-letter"
+      Y la salida dice "pág 1  líneas 2-3  repeated-first-letter"
+      Y la salida dice "las 2 empiezan por 'es'"
 
-    Escenario: Una ventana de menos de dos líneas lo dice
+    Escenario: La ventana ya no se puede cambiar
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
         Una linea con muchas palabras aqui
-        \\f
+        \f
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --min-lines 1" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --min-lines 3" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y el error dice "--min-lines \"1\" no es un entero de 2 en adelante"
-
-    Escenario: Una ventana que no es un número lo dice
-      Dado que la raíz del proyecto está vacía
-      Y el PDF "dist/files/libro.pdf" con estas páginas:
-        """
-        Una linea con muchas palabras aqui
-        \\f
-        """
-      Cuando parseo el comando "typography dist/files/libro.pdf --min-lines dos" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 1
-      Y el error dice "--min-lines \"dos\" no es un entero de 2 en adelante"
+      Y el error dice "opción desconocida '--min-lines'"
 
     Escenario: Cero letras lo dice
       Dado que la raíz del proyecto está vacía
@@ -1021,34 +1004,34 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y el error dice "--min-letters \"0\" no es un entero de 1 en adelante"
 
-  Regla de negocio: La ventana por defecto son tres líneas
+  Regla de negocio: La ventana son siempre dos líneas
 
-    Escenario: Dos líneas seguidas ya no son hallazgo por defecto
+    Escenario: Dos líneas seguidas con el mismo signo son hallazgo
       Dado que pdftotext devuelve:
         """
         una linea larga con muchas palabras de verdad y punto.
-        otra linea larga con muchas palabras tambien. y coma,
+        otra linea larga con muchas palabras tambien y punto.
         una tercera linea larga con palabras de verdad y nada
         \f
         """
-      Cuando escaneo el texto de pdftotext con 3 lineas y 1 letras
-      Entonces no hay incidencias
+      Cuando escaneo el texto de pdftotext con 1 letras
+      Entonces las incidencias son:
+        """
+        repeated-last-letter ;; pág 1 ;; líneas 1-2 ;; o ;; 1: una linea larga con muchas palabras de verdad y punto. || 2: otra linea larga con muchas palabras tambien y punto.
+        consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: una linea larga con muchas palabras de verdad y punto. || 2: otra linea larga con muchas palabras tambien y punto.
+        """
 
-    Escenario: Tres líneas seguidas sí son hallazgo
+    Escenario: Signos distintos no son repetición
       Dado que pdftotext devuelve:
         """
         una linea larga con muchas palabras de verdad y punto.
-        otra linea larga con muchas palabras tambien. y coma,
-        una tercera linea larga con palabras de verdad y punto.
+        otra linea larga con muchas palabras tambien y coma,
         \f
         """
-      Cuando escaneo el texto de pdftotext con 3 lineas y 1 letras
-      Entonces las incidencias son:
-        """
-        consecutive-punctuation ;; pág 1 ;; líneas 1-3 ;; 1: una linea larga con muchas palabras de verdad y punto. || 2: otra linea larga con muchas palabras tambien. y coma, || 3: una tercera linea larga con palabras de verdad y punto.
-        """
+      Cuando escaneo el texto de pdftotext con 1 letras
+      Entonces no hay incidencias
 
-    Escenario: Una tirada más larga que la ventana cuenta una vez
+    Escenario: Una tirada larga muestra todos los pares
       Dado que pdftotext devuelve:
         """
         uno dos.
@@ -1057,26 +1040,27 @@ Característica: el analizador tipográfico de los PDF
         siete ocho.
         \f
         """
-      Cuando escaneo el texto de pdftotext con 2 lineas y 1 letras
+      Cuando escaneo el texto de pdftotext con 1 letras
       Entonces las incidencias son:
         """
-        consecutive-punctuation ;; pág 1 ;; líneas 1-2 de 4 ;; 1: uno dos. || 2: tres cuatro.
+        consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: uno dos. || 2: tres cuatro.
+        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: tres cuatro. || 3: cinco seis.
+        consecutive-punctuation ;; pág 1 ;; líneas 3-4 ;; 3: cinco seis. || 4: siete ocho.
         """
 
     Escenario: La ventana no salta de página
       Dado que pdftotext devuelve:
         """
-        primera linea larga con palabras y punto
+        primera linea larga con palabras y punto.
         \f
         \f
-        segunda linea larga con palabras y punto
-        tercera linea larga con palabras y punto
+        segunda linea larga con palabras y punto.
         \f
         """
-      Cuando escaneo el texto de pdftotext con 3 lineas y 1 letras
+      Cuando escaneo el texto de pdftotext con 1 letras
       Entonces no hay incidencias
 
-    Escenario: Con dos letras hacen falta tres que empiecen igual
+    Escenario: Tres líneas que empiezan igual dan dos pares
       Dado que pdftotext devuelve:
         """
         zeta del uno
@@ -1084,10 +1068,11 @@ Característica: el analizador tipográfico de los PDF
         zeta del tres
         \f
         """
-      Cuando escaneo el texto de pdftotext con 3 lineas y 2 letras
+      Cuando escaneo el texto de pdftotext con 2 letras
       Entonces las incidencias son:
         """
-        repeated-first-letter ;; pág 1 ;; líneas 1-3 ;; ze ;; 1: zeta del uno || 2: zeta del dos || 3: zeta del tres
+        repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; ze ;; 1: zeta del uno || 2: zeta del dos
+        repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; ze ;; 2: zeta del dos || 3: zeta del tres
         """
 
     Escenario: Con dos letras dos palabras que sólo comparten la inicial ya no salen
@@ -1098,7 +1083,44 @@ Característica: el analizador tipográfico de los PDF
         zufre del tres
         \f
         """
-      Cuando escaneo el texto de pdftotext con 3 lineas y 2 letras
+      Cuando escaneo el texto de pdftotext con 2 letras
+      Entonces no hay incidencias
+
+    Escenario: Un signo pegado a una letra cuenta como la misma letra
+      Dado que pdftotext devuelve:
+        """
+        algo termina a-
+        otra cosa a-
+        \f
+        """
+      Cuando escaneo el texto de pdftotext con 1 letras
+      Entonces las incidencias son:
+        """
+        repeated-last-letter ;; pág 1 ;; líneas 1-2 ;; a ;; 1: algo termina a- || 2: otra cosa a-
+        consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: algo termina a- || 2: otra cosa a-
+        """
+
+    Escenario: Los acentos no cambian la letra
+      Dado que pdftotext devuelve:
+        """
+        algo termina á
+        otra cosa a
+        \f
+        """
+      Cuando escaneo el texto de pdftotext con 1 letras
+      Entonces las incidencias son:
+        """
+        repeated-last-letter ;; pág 1 ;; líneas 1-2 ;; a ;; 1: algo termina á || 2: otra cosa a
+        """
+
+    Escenario: La ñ no es la n
+      Dado que pdftotext devuelve:
+        """
+        algo termina ñ
+        otra cosa n
+        \f
+        """
+      Cuando escaneo el texto de pdftotext con 1 letras
       Entonces no hay incidencias
 
   Regla de negocio: Se puede pedir sólo algunas reglas
@@ -1128,7 +1150,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro.
         \f
         """
-      Cuando parseo el comando "typography --min-lines 2 --min-letters 1 --rules single-word-line,consecutive-punctuation --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --min-letters 1 --rules single-word-line,consecutive-punctuation --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "2 incidencias"
       Y la salida dice "consecutive-punctuation"
@@ -1167,7 +1189,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro.
         \f
         """
-      Cuando parseo el comando "typography --min-lines 2 --min-letters 1 --rules repeated-first-letter --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --min-letters 1 --rules repeated-first-letter --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "1 incidencia"
       Y la salida dice "repeated-first-letter"
@@ -1383,7 +1405,7 @@ Característica: el analizador tipográfico de los PDF
         otra linea corta que cierra.
         \f
         """
-      Cuando parseo el comando "typography --rules consecutive-punctuation --min-lines 2 --pages 2 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules consecutive-punctuation --pages 2 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin incidencias en 1 PDF"
 
@@ -1402,7 +1424,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro.
         \f
         """
-      Cuando parseo el comando "typography --min-lines 2 --min-letters 1 --json --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --min-letters 1 --json --min-line-width 0" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y el JSON del typography es:
         """
@@ -1417,6 +1439,6 @@ Característica: el analizador tipográfico de los PDF
         Otra linea con bastante texto
         \f
         """
-      Cuando parseo el comando "typography --min-lines 2 --min-letters 1 --json --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --min-letters 1 --json --min-line-width 0" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el JSON del typography declara que todo está bien

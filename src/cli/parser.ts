@@ -340,7 +340,6 @@ Ejemplos:
     )
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
-    .option('--min-lines <n>', 'líneas consecutivas que tienen que coincidir (por defecto: 3, mínimo 2)')
     .option('--min-letters <n>', 'caracteres del borde que se comparan (por defecto: 2, mínimo 1)')
     .option('--fix', 'corrige los hallazgos aplicando cambios mínimos a los Markdown de origen (requiere un repositorio git)')
     .option('--exceptions <path>', 'archivo de excepciones de texto (por defecto: .typography-exceptions), ignoran casos exactos')
@@ -371,7 +370,7 @@ Ejemplos:
   iteraciones typography --pages 3-80                   sólo esas páginas
   iteraciones typography --pages 3,7,10-12              sólo esas páginas, sueltas o en tramos
   iteraciones typography --min-line-width 90            sube el umbral: sólo cuentan las líneas largas
-  iteraciones typography --min-lines 2 --min-letters 1   el comportamiento anterior, más hallazgos
+  iteraciones typography --min-letters 1                compara una sola letra del borde
   iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra
   iteraciones typography --rules repeated-first-letter,repeated-last-letter   sólo las letras
   iteraciones typography --json                         imprime el resultado como JSON
