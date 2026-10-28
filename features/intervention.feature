@@ -118,6 +118,14 @@ Característica: el tipo `intervention`
       Y la página 4 lleva el membrete a la izquierda y abajo
       Y la página 4 repite la imagen de la página 1
 
+    Escenario: El membrete también sale en el PDF de la colección
+      Dado que la raíz del proyecto está vacía
+      Y una colección con una intervention con membrete
+      Cuando compilo el proyecto con PDF
+      Entonces el .tex de la colección enciende el membrete con "antologia-i1" y "antologia-i2"
+      Y el membrete se enciende después del salto de página de la intervention
+      Y el .tex de la colección apaga el membrete después de la intervention
+
   Regla de negocio: Una colección sólo de interventions no se puede construir (#2485)
 
     Escenario: El build falla y avisa, y no publica la página

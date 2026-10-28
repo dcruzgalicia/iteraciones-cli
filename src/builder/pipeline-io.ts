@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { applyCreatorTitle, parseFrontmatterRecord, splitFrontmatter } from '../lib/frontmatter.js';
+import { fmStringList } from '../lib/frontmatter-fields.js';
 import type { BuildMetadata } from './build-planner.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { docProducesFormat, primaryOutputExtension } from './output-layout.js';
@@ -99,10 +100,13 @@ export function parseFileFrontmatter(
   type: string | undefined;
   lineLength: number | undefined;
   pages: number | undefined;
+  letterhead: string[];
   body: string;
 } {
   const { yaml, body } = splitFrontmatter(content);
-  if (!yaml) return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, body };
+  if (!yaml) {
+    return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, letterhead: [], body };
+  }
   const parsed = parseFrontmatterRecord(yaml, label);
   applyCreatorTitle(parsed);
   return {
@@ -112,6 +116,7 @@ export function parseFileFrontmatter(
     type: typeof parsed.type === 'string' ? parsed.type : undefined,
     lineLength: typeof parsed.lineLength === 'number' ? parsed.lineLength : undefined,
     pages: typeof parsed.pages === 'number' ? parsed.pages : undefined,
+    letterhead: fmStringList(parsed.letterhead) ?? [],
     body,
   };
 }

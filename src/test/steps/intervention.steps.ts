@@ -157,6 +157,61 @@ Given('una intervention con membrete de {int} imágenes y {int} páginas', (cuan
   );
 });
 
+Given('una colección con una intervention con membrete', () => {
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    ['language: es-MX', 'format:', '  latex:', '    generate: true', '  pdf:', '    generate: true'].join('\n'),
+  );
+  escribirEnProyecto(
+    'coleccion.md',
+    ['---', 'title: Antología', 'type: collection', 'files:', '  - doc.md', '  - regla.md', '---', '', 'Intro.', ''].join('\n'),
+  );
+  escribirEnProyecto('doc.md', ['---', 'title: Documento', 'creator:', '  - Autora A', '---', '', 'Contenido de doc.', ''].join('\n'));
+  mkdirSync(join(world.root, 'img'), { recursive: true });
+  for (const [i, tam] of [
+    ['i1', '120x80'],
+    ['i2', '80x120'],
+  ] as const) {
+    const creada = Bun.spawnSync(['magick', '-size', tam, 'xc:black', join(world.root, 'img', `${i}.png`)]);
+    if (creada.exitCode !== 0) throw new Error('magick no pudo crear la imagen de membrete');
+  }
+  escribirEnProyecto(
+    'regla.md',
+    ['---', 'type: intervention', 'pages: 1', 'letterhead:', '  - img/i1.png', '  - img/i2.png', '---', '', 'regla de imprenta', ''].join('\n'),
+  );
+});
+
+Then('el .tex de la colección enciende el membrete con {string} y {string}', (a: string, b: string) => {
+  const tex = readFileSync(join(world.root, 'dist', 'files', 'antologia.tex'), 'utf8');
+  const llamada = /\\letterheadsetup\{([^}]*)\}/.exec(tex)?.[1] ?? '';
+  const partes = llamada.split(',').map((p) => basename(p));
+  const esperadas = [a, b].map((n) => `${n}.jpg`);
+  if (partes.length !== esperadas.length || !esperadas.every((n, i) => partes[i] === n)) {
+    throw new Error(`el membrete de la colección va como ${JSON.stringify(partes)} y esperaba ${JSON.stringify(esperadas)}`);
+  }
+});
+
+Then('el membrete se enciende después del salto de página de la intervention', () => {
+  const tex = readFileSync(join(world.root, 'dist', 'files', 'antologia.tex'), 'utf8');
+  const cuerpo = tex.slice(tex.indexOf('\\begin{document}'));
+  const capitulo = cuerpo.indexOf('\\chapter{\\rule');
+  const enciende = cuerpo.indexOf('\\letterheadsetup{');
+  if (capitulo < 0 || enciende < 0 || enciende < capitulo) {
+    throw new Error(`el membrete se enciende antes del salto de página: capítulo en ${capitulo}, setup en ${enciende}`);
+  }
+});
+
+Then('el .tex de la colección apaga el membrete después de la intervention', () => {
+  const tex = readFileSync(join(world.root, 'dist', 'files', 'antologia.tex'), 'utf8');
+  // Sólo el cuerpo: en el preamble están las definiciones de los comandos.
+  const cuerpo = tex.slice(tex.indexOf('\\begin{document}'));
+  const enciende = cuerpo.indexOf('\\letterheadsetup{');
+  const apaga = cuerpo.indexOf('\\letterheadclear');
+  if (enciende < 0 || apaga < 0 || apaga < enciende) {
+    throw new Error(`el membrete no se apaga: setup en ${enciende}, clear en ${apaga}`);
+  }
+});
+
 When('compilo el proyecto con PDF', async () => {
   await capture(() => build(world.root, {}));
 });
