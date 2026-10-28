@@ -450,6 +450,9 @@ export async function writeDistMarkdown(p: {
 
   merge: boolean;
   entries: CollectionEntry[];
+
+  /** Las creadoras de la colección, para la sección de colaboradoras. */
+  autoras?: CreatorDoc[];
 }): Promise<void> {
   const { label, outPath, outputDir, rootFiles, merge } = p;
   const mdFm: Record<string, unknown> = { ...p.fm };
@@ -474,7 +477,13 @@ export async function writeDistMarkdown(p: {
       return posix(relative(outDir, memberMarkdownPath(p.memberSlugs, outputDir, f)));
     });
   }
-  const base = espaciosNormales(merge ? collectionBaseContent(p.entries, 'markdown', p.content) : p.content);
+  const autoras = merge ? (p.autoras ?? []) : [];
+  const seccionAutoras = buildAuthorsMarkdown(autoras);
+  const base = espaciosNormales(
+    merge
+      ? [collectionBaseContent(p.entries, 'markdown', p.content, undefined, true), seccionAutoras].filter((t) => t !== '').join('\n\n')
+      : p.content,
+  );
   // Las redes de la creadora viajan en el frontmatter (`links:`), no repetidas
   // en el cuerpo: así el markdown re-procesado da el mismo HTML.
   await convertToMarkdown(rewriteImagePaths(base, p.relImageMap, p.docDir), outPath, p.exportDoc, mdFm, merge);
@@ -551,14 +560,14 @@ const MARKDOWN_HEADINGS: Headings = [
   ['#### ', ''],
 ];
 
-function buildCollectionSections(entries: CollectionEntry[], headings: Headings): string {
+function buildCollectionSections(entries: CollectionEntry[], headings: Headings, salto = 0): string {
   const parts: string[] = [];
   for (const e of entries) {
     const { creator, title } = entryHeadings(e);
     parts.push(`${headings[0][0]}${creator}${headings[0][1]}`);
     parts.push(`${headings[1][0]}${title}${headings[1][1]}`);
     if (e.subtitle) parts.push(`${headings[2][0]}${e.subtitle}${headings[2][1]}`);
-    parts.push(e.body.trim());
+    parts.push(salto === 0 ? e.body.trim() : desplazaEncabezados(e.body.trim(), salto));
   }
   return parts.join('\n\n');
 }
@@ -1296,8 +1305,45 @@ function collectionCard(
   return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
 }
 
-function buildCollectionSectionsMarkdown(entries: CollectionEntry[]): string {
-  return buildCollectionSections(entries, MARKDOWN_HEADINGS);
+/** Baja los encabezados del cuerpo para que no compitan con los del merge. */
+function desplazaEncabezados(body: string, salto: number): string {
+  let dentroDeCodigo = false;
+  return body
+    .split('\n')
+    .map((linea) => {
+      if (/^\s*(```|~~~)/.test(linea)) {
+        dentroDeCodigo = !dentroDeCodigo;
+        return linea;
+      }
+      if (dentroDeCodigo) return linea;
+      const encontrado = /^(#{1,6})(\s)/.exec(linea);
+      const marcas = encontrado?.[1];
+      if (marcas === undefined) return linea;
+      const nivel = Math.min(6, marcas.length + salto);
+      return `${'#'.repeat(nivel)}${linea.slice(marcas.length)}`;
+    })
+    .join('\n');
+}
+
+/**
+ * El merge de una collection: cada texto con su autora y su título, sin las
+ * interventions (no tienen contenido que leer) y con los encabezados del cuerpo
+ * bajados, para que el `#` de la colección mande.
+ */
+function buildCollectionSectionsMarkdown(entries: CollectionEntry[], merge: boolean): string {
+  return buildCollectionSections(merge ? printableEntries(entries) : entries, MARKDOWN_HEADINGS, merge ? 4 : 0);
+}
+
+/** La sección de autoras y colaboradoras del markdown mergeado. */
+function buildAuthorsMarkdown(authoras: CreatorDoc[]): string {
+  if (authoras.length === 0) return '';
+  const partes: string[] = ['# Autoras y colaboradoras'];
+  for (const autora of authoras) {
+    partes.push(`##### ${autora.name}`);
+    if (autora.links.length > 0) partes.push(autora.links.map((l) => `**${l.name}**: ${l.url}`).join('\n'));
+    partes.push(autora.body.trim());
+  }
+  return partes.join('\n\n');
 }
 
 function resolveCollectionContent(
@@ -1305,13 +1351,14 @@ function resolveCollectionContent(
   format: 'latex' | 'html' | 'markdown',
   fallback: string,
   pageNumber?: string,
+  merge = false,
 ): string {
   if (format === 'latex') return buildCollectionSectionsLatex(collectionEntries, pageNumber);
   if (format === 'html') {
     const printable = printableEntries(collectionEntries);
     return printable.length === 0 ? fallback : buildCollectionSectionsHtml(printable);
   }
-  return buildCollectionSectionsMarkdown(collectionEntries);
+  return buildCollectionSectionsMarkdown(collectionEntries, merge);
 }
 
 function buildOutputs(
@@ -1543,8 +1590,9 @@ export function collectionBaseContent(
   format: 'latex' | 'html' | 'markdown',
   content: string,
   pageNumber?: string,
+  merge = false,
 ): string {
-  const resuelto = collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber) : content;
+  const resuelto = collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber, merge) : content;
   return format === 'latex' ? resuelto : espaciosNormales(resuelto);
 }
 
@@ -1825,6 +1873,7 @@ async function emitCollectionMarkdown(
   const outPath = outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`);
   const isCollection = doc.frontmatter.type === 'collection';
   const rootFiles = isCollection ? (doc.frontmatter.files ?? []) : undefined;
+  const autoras = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : [];
 
   await writeDistMarkdown({
     label: doc.relativePath,
@@ -1840,6 +1889,7 @@ async function emitCollectionMarkdown(
     memberSlugs: rootFiles === undefined ? undefined : memberSlugMap(rootFiles, discoveryIndex),
     merge: isCollection && formatCfg?.markdown?.merge === true,
     entries: collectionEntries,
+    autoras,
   });
 }
 

@@ -16,6 +16,19 @@ Característica: El markdown exportado a dist se puede re-procesar
     Cuando uso dist como proyecto origen y compilo de nuevo
     Entonces todas las salidas son idénticas a la primera pasada
 
+  Regla de negocio: Con merge también entra la sección de colaboradoras
+
+    Escenario: El merge trae autoras, sin interventions y con los niveles bajados
+      Dado un proyecto con salida en HTML y Markdown
+      Y una colección con autora, colaboradora e intervención
+      Cuando compilo el proyecto
+      Entonces el markdown de la colección dice "# Autoras y colaboradoras"
+      Y el markdown de la colección dice "##### Ana Ruiz"
+      Y el markdown de la colección dice "###### Sección"
+      Y el markdown de la colección dice "##### Capítulo"
+      Y el markdown de la colección no dice "No debe ir"
+      Y el markdown individual conserva el nivel "# Capítulo"
+
   Regla de negocio: `merge` es la única palanca que pierde información
 
     Esquema del escenario: Merge decide si la salida conserva su estructura
