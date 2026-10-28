@@ -116,6 +116,7 @@ Característica: el tipo `intervention`
       Y la página 2 lleva el membrete a la izquierda y abajo
       Y la página 3 lleva el membrete a la derecha y abajo
       Y la página 4 lleva el membrete a la izquierda y abajo
+      Y el membrete de cada página mide 3 cm de alto
       Y la página 4 repite la imagen de la página 1
 
     Escenario: El membrete también sale en el PDF de la colección
