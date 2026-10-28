@@ -20,6 +20,9 @@ function nuevoMundo() {
 
     salidas: { build: 0, validate: 0 } as { build: number; validate: number },
 
+    /** Cajas del membrete de las interventions, una por página. */
+    membrete: [] as { x: number; w: number; h: number; abajo: number }[],
+
     latex: '',
 
     bibliografia: '',

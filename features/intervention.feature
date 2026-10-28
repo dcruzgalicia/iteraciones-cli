@@ -99,6 +99,25 @@ Característica: el tipo `intervention`
       Cuando compongo el cuerpo de la colección para "markdown"
       Entonces el cuerpo incluye "regla de imprenta"
 
+  Regla de negocio: El membrete pone una imagen por página, del lado exterior
+
+    Escenario: El .tex recibe las imágenes en el orden del frontmatter
+      Dado que la raíz del proyecto está vacía
+      Y una intervention con membrete de 3 imágenes y 4 páginas
+      Cuando compilo el proyecto con PDF
+      Entonces el .tex de la intervention llama al membrete con "regla-i1", "regla-i2" y "regla-i3"
+
+    Escenario: Tres imágenes llenan cuatro páginas y se repite la primera
+      Dado que la raíz del proyecto está vacía
+      Y una intervention con membrete de 3 imágenes y 4 páginas
+      Cuando compilo el proyecto con PDF
+      Y mido el membrete de cada página
+      Entonces la página 1 lleva el membrete a la derecha y abajo
+      Y la página 2 lleva el membrete a la izquierda y abajo
+      Y la página 3 lleva el membrete a la derecha y abajo
+      Y la página 4 lleva el membrete a la izquierda y abajo
+      Y la página 4 repite la imagen de la página 1
+
   Regla de negocio: Una colección sólo de interventions no se puede construir (#2485)
 
     Escenario: El build falla y avisa, y no publica la página
