@@ -631,6 +631,29 @@ Característica: el analizador tipográfico de los PDF
         repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; j ;; 1: Jardín pequeña || 2: jardín grande
         """
 
+    Escenario: La ñ no es la n: una línea que empieza con ñ no repite una n
+      Dado que pdftotext devuelve:
+        """
+        No fue mi culpa que alguien haya elegido hacerme da-
+        ño. No fue mi culpa que alguien decidiera tratarme mal. No fue
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "repeated-first-letter"
+      Entonces no hay incidencias
+
+    Escenario: Dos líneas que empiezan con ñ sí se repiten
+      Dado que pdftotext devuelve:
+        """
+        ñandú grande y hermoso
+        ñoño parece el texto
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "repeated-first-letter"
+      Entonces las incidencias son:
+        """
+        repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; ñ ;; 1: ñandú grande y hermoso || 2: ñoño parece el texto
+        """
+
     Escenario: Letras distintas no son hallazgo
       Dado que pdftotext devuelve:
         """
