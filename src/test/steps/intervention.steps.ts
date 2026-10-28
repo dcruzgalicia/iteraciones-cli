@@ -1,11 +1,12 @@
 import { spyOn } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
+import { build } from '../../builder/orchestrator.js';
 import { collectionBaseContent, collectionCardsContent } from '../../builder/pipeline-formats.js';
 import { loadPreambleFilters } from '../../builder/preamble-loader.js';
 import { validateFrontmatterFields } from '../../builder/project-validator.js';
-import { escribirEnProyecto, world } from './cli-world.steps.ts';
+import { capture, escribirEnProyecto, world } from './cli-world.steps.ts';
 
 When('valido el frontmatter:', (fm: string) => {
   const errores = validateFrontmatterFields(JSON.parse(fm) as Record<string, unknown>);
@@ -130,6 +131,114 @@ Given('un proyecto cuya colección sólo incluye interventions', () => {
   );
   escribirEnProyecto('coleccion.md', ['---', 'title: Antología', 'type: collection', 'files:', '  - regla.md', '---', '', 'Intro.', ''].join('\n'));
   escribirEnProyecto('regla.md', ['---', 'title: Regla', 'type: intervention', '---', '', 'regla de imprenta', ''].join('\n'));
+});
+
+Given('una intervention con membrete de {int} imágenes y {int} páginas', (cuantas: number, paginas: number) => {
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    ['language: es-MX', 'format:', '  latex:', '    generate: true', '  pdf:', '    generate: true'].join('\n'),
+  );
+  const tam = [
+    [120, 80],
+    [80, 120],
+    [120, 40],
+  ] as const;
+  const rutas: string[] = [];
+  for (let i = 1; i <= cuantas; i++) {
+    const [w, h] = tam[(i - 1) % tam.length] ?? tam[0];
+    mkdirSync(join(world.root, 'img'), { recursive: true });
+    const creada = Bun.spawnSync(['magick', '-size', `${w}x${h}`, 'xc:black', join(world.root, 'img', `i${i}.png`)]);
+    if (creada.exitCode !== 0) throw new Error('magick no pudo crear la imagen de membrete');
+    rutas.push(`  - img/i${i}.png`);
+  }
+  escribirEnProyecto(
+    'regla.md',
+    ['---', 'type: intervention', `pages: ${paginas}`, 'letterhead:', ...rutas, '---', '', 'Escribe tu propio texto.', ''].join('\n'),
+  );
+});
+
+When('compilo el proyecto con PDF', async () => {
+  await capture(() => build(world.root, {}));
+});
+
+Then('el .tex de la intervention llama al membrete con {string}, {string} y {string}', (a: string, b: string, c: string) => {
+  const tex = readFileSync(join(world.root, 'dist', 'files', 'regla.tex'), 'utf8');
+  const llamada = /\\letterheadsetup\{([^}]*)\}/.exec(tex)?.[1] ?? '';
+  const partes = llamada.split(',').map((p) => basename(p));
+  const esperadas = [a, b, c].map((n) => `${n}.jpg`);
+  if (partes.length !== esperadas.length || !esperadas.every((n, i) => partes[i] === n)) {
+    throw new Error(`el membrete va como ${JSON.stringify(partes)} y esperaba ${JSON.stringify(esperadas)}`);
+  }
+});
+
+/** La caja de la imagen de membrete: va en la banda inferior de la hoja. */
+interface Membrete {
+  x: number;
+  w: number;
+  h: number;
+  abajo: number;
+}
+
+function mideMembrete(archivo: string): Membrete {
+  const tam = Bun.spawnSync(['magick', 'identify', '-format', '%wx%h', archivo]).stdout.toString();
+  const [ancho, alto] = tam.split('x').map(Number) as [number, number];
+  const banda = 320;
+  const caja = Bun.spawnSync([
+    'magick',
+    archivo,
+    '-crop',
+    `${ancho}x${banda}+0+${alto - banda}`,
+    '+repage',
+    '-threshold',
+    '90%',
+    '-format',
+    '%@',
+    'info:',
+  ]).stdout.toString();
+  const m = /(\d+)x(\d+)\+(\d+)\+(\d+)/.exec(caja);
+  if (m === null) throw new Error(`no encontré el membrete en ${archivo}: ${JSON.stringify(caja)}`);
+  const [, w, h, x, y] = m;
+  return { x: Number(x), w: Number(w), h: Number(h), abajo: alto - banda + Number(y) + Number(h) };
+}
+
+When('mido el membrete de cada página', () => {
+  const pdf = join(world.root, 'dist', 'files', 'regla.pdf');
+  const tmp = join(world.root, 'paginas');
+  mkdirSync(tmp, { recursive: true });
+  const proc = Bun.spawnSync(['pdftoppm', '-r', '150', '-png', pdf, join(tmp, 'p')]);
+  if (proc.exitCode !== 0) throw new Error(`pdftoppm falló: ${proc.stderr.toString()}`);
+  const paginas = readdirSync(tmp)
+    .filter((f) => f.endsWith('.png'))
+    .sort();
+  world.membrete = paginas.map((f) => mideMembrete(join(tmp, f)));
+});
+
+function membreteDe(pagina: number): Membrete {
+  const lista = world.membrete as Membrete[];
+  const medida = lista[pagina - 1];
+  if (medida === undefined) throw new Error(`no hay membrete medido en la página ${pagina}`);
+  return medida;
+}
+
+Then('la página {int} lleva el membrete a la {word} y abajo', (pagina: number, lado: string) => {
+  const m = membreteDe(pagina);
+  const derecha = m.x + m.w;
+  const borde = lado === 'derecha' ? derecha : m.x;
+  // Carta a 150 dpi: márgenes de 2.54 cm = 150 px.
+  if (Math.abs(borde - (lado === 'derecha' ? 1125 : 150)) > 12) {
+    throw new Error(`el membrete de la página ${pagina} queda en x=${borde} y debía quedar a la ${lado}`);
+  }
+  if (Math.abs(m.abajo - 1500) > 12) {
+    throw new Error(`el membrete de la página ${pagina} termina en y=${m.abajo} y debía terminar en el pie de la caja (1500)`);
+  }
+});
+
+Then('la página {int} repite la imagen de la página {int}', (una: number, otra: number) => {
+  const a = membreteDe(una);
+  const b = membreteDe(otra);
+  if (Math.abs(a.h - b.h) > 2 || Math.abs(a.w - b.w) > 2) {
+    throw new Error(`la página ${una} (${a.w}x${a.h}) y la ${otra} (${b.w}x${b.h}) no llevan la misma imagen`);
+  }
 });
 
 When('construyo el proyecto capturando stderr', async () => {

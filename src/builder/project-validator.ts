@@ -62,6 +62,7 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'links',
   'pages',
   'lineLength',
+  'letterhead',
 ];
 
 export const LIST_FILTER_KEYS = ['type', 'creator', 'date', 'keyword', 'path'] as const;

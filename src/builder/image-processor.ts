@@ -160,6 +160,11 @@ function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | 
 
 export const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper', 'frontCover', 'backCover'] as const;
 
+/** Las imágenes de membrete van a 3 cm de ancho, con la altura que pidan. */
+export const LETTERHEAD_FIELD = 'letterhead';
+export const LETTERHEAD_WIDTH_MM = 30;
+const IMAGE_FIELDS = [...COVER_IMAGE_FIELDS, LETTERHEAD_FIELD] as const;
+
 const MULTILINE_IMAGE_FIELDS = [
   'lowertitleback',
   'uppertitleback',
@@ -288,7 +293,7 @@ export function imagePathsMap(imageMap: Map<string, string>, docDir: string, rel
 export function rewriteFmImagePaths(fm: Record<string, unknown>, imageMap: Map<string, string>, docDir: string): Record<string, unknown> {
   if (imageMap.size === 0) return fm;
   const out: Record<string, unknown> = { ...fm };
-  for (const field of [...COVER_IMAGE_FIELDS, ...MULTILINE_IMAGE_FIELDS]) {
+  for (const field of [...IMAGE_FIELDS, ...MULTILINE_IMAGE_FIELDS]) {
     const value = out[field];
     if (typeof value === 'string') out[field] = rewriteImagePaths(value, imageMap, docDir);
     else if (Array.isArray(value)) out[field] = value.map((v) => (typeof v === 'string' ? rewriteImagePaths(v, imageMap, docDir) : v));
@@ -356,12 +361,13 @@ export async function collectImageSources(content: string, fm: Record<string, un
     sources.push(source);
   };
 
-  for (const field of COVER_IMAGE_FIELDS) {
+  for (const field of IMAGE_FIELDS) {
     const cover = FULL_PAGE_COVER_FIELDS.includes(field);
+    const membrete = field === LETTERHEAD_FIELD;
     for (const value of fmStringList(fm[field]) ?? []) {
       const absPath = isAbsolute(value) ? value : resolve(docDir, value);
       if (!(await Bun.file(absPath).exists())) continue;
-      push({ absPath, kind: 'cover', cover, field });
+      push(membrete ? { absPath, kind: 'title', cover: false, field, widthMm: LETTERHEAD_WIDTH_MM } : { absPath, kind: 'cover', cover, field });
     }
   }
 

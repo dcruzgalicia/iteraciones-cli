@@ -180,6 +180,9 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
     lines.push(`\\addbibresource{${escapeLatexPath(bib)}}`);
   }
   lines.push('\\begin{document}');
+  lines.push('$if(letterhead)$');
+  lines.push('\\letterheadsetup{$for(letterhead)$$letterhead$$sep$,$endfor$}');
+  lines.push('$endif$');
   lines.push('$if(extratitle)$');
   lines.push('\\extratitle{$extratitle$}');
   lines.push('$endif$');

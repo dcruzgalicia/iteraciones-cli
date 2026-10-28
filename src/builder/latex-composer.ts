@@ -92,12 +92,13 @@ async function resolveAndPushImage(
   value: string,
   doc: BuildDocument,
   imageMap: Map<string, string>,
+  flag: 'metadata' | 'variable' = 'metadata',
 ): Promise<void> {
   const imagePath = isAbsolute(value) ? value : resolve(dirname(doc.filePath), value);
   if (!(await Bun.file(imagePath).exists())) {
     throw new BuildError(`${field} no encontrado: "${imagePath}" (resuelto desde "${value}")`);
   }
-  extraArgs.push(`--metadata=${field}:${imageMap.get(imagePath) ?? imagePath}`);
+  extraArgs.push(`--${flag}=${field}:${imageMap.get(imagePath) ?? imagePath}`);
 }
 
 function toAbsoluteImagePaths(value: string | string[], cwd: string): string | string[] {
@@ -145,6 +146,16 @@ async function pushCoverImageMetadata(
       : [];
   for (const value of pubImages) {
     await resolveAndPushImage(extraArgs, 'publisherImage', value, doc, imageMap);
+  }
+
+  // El membrete sólo tiene sentido en las interventions: una imagen por
+  // página, al pie y del lado exterior de la caja de texto. Va como variable
+  // de plantilla y no como metadato: pandoc escapa los guiones bajos de las
+  // rutas en los metadatos y el archivo se vuelve ilegible para LaTeX.
+  if (doc.frontmatter.type === 'intervention') {
+    for (const value of fmStringList(fm.letterhead) ?? []) {
+      await resolveAndPushImage(extraArgs, 'letterhead', value, doc, imageMap, 'variable');
+    }
   }
 }
 
