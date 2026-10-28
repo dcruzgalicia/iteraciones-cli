@@ -631,6 +631,20 @@ Característica: el analizador tipográfico de los PDF
         repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; j ;; 1: Jardín pequeña || 2: jardín grande
         """
 
+    Escenario: La primera letra se compara aunque la última línea sea corta
+      Dado que pdftotext devuelve:
+        """
+        Una línea larga de referencia que ocupa todo el ancho de la página
+        sobrevivido en este sistema que violenta tanto
+        sobrevivido en este mundo
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "repeated-first-letter"
+      Entonces las incidencias son:
+        """
+        repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; s ;; 2: sobrevivido en este sistema que violenta tanto || 3: sobrevivido en este mundo
+        """
+
     Escenario: La ñ no es la n: una línea que empieza con ñ no repite una n
       Dado que pdftotext devuelve:
         """
@@ -918,7 +932,7 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 1  líneas 2-4  repeated-first-letter"
 
-    Escenario: El ancho mínimo también aparta las reglas de letras
+    Escenario: El ancho mínimo no aparta la primera letra
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
@@ -926,13 +940,27 @@ Característica: el analizador tipográfico de los PDF
         zeta
         zeta
         zeta
-        \\f
+        \f
         """
       Cuando parseo el comando "typography --rules repeated-first-letter --min-lines 3 --min-letters 2 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 1  líneas 2-4  repeated-first-letter"
+
+    Escenario: El ancho mínimo sí aparta la última letra
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea de referencia del documento para medir el ancho
+        zeta
+        zeta
+        zeta
+        \f
+        """
+      Cuando parseo el comando "typography --rules repeated-last-letter --min-lines 3 --min-letters 2 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin incidencias"
 
-    Escenario: Bajando el ancho mínimo esas tres sí salen
+    Escenario: Bajando el ancho mínimo la última letra sí sale
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
@@ -940,11 +968,11 @@ Característica: el analizador tipográfico de los PDF
         zeta
         zeta
         zeta
-        \\f
+        \f
         """
-      Cuando parseo el comando "typography --rules repeated-first-letter --min-lines 3 --min-letters 2 --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --rules repeated-last-letter --min-lines 3 --min-letters 2 --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y la salida dice "pág 1  líneas 2-4  repeated-first-letter"
+      Y la salida dice "pág 1  líneas 2-4  repeated-last-letter"
 
     Escenario: El informe de letras dice cuántas líneas son
       Dado que la raíz del proyecto está vacía

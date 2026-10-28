@@ -430,7 +430,9 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
     ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
     ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas, ancho) : []),
-    ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas, letrasMinimas, ancho) : []),
+    // El arranque de una línea importa aunque sea la última del párrafo (y por
+    // eso corta): siempre se comparan todas, sin umbral de ancho.
+    ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas, letrasMinimas, 0) : []),
   ];
   const vivas = excepciones.length === 0 ? halladas : filtraExcepciones(halladas, opciones.archivo ?? '', excepciones);
   const hasta = ultimaPagina ?? pages.length;

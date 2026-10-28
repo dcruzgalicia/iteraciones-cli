@@ -336,7 +336,7 @@ Ejemplos:
     .option('--pages <rango>', 'sólo esas páginas del PDF: 3 (esa sola) o 3-80 (el rango, las dos puntas dentro)')
     .option(
       '--min-line-width <porcentaje>',
-      'porcentaje del ancho medio del documento por debajo del cual una línea se considera corta (por defecto: 75)',
+      'porcentaje del ancho medio por debajo del cual una línea se considera corta en repeated-last-letter y consecutive-punctuation (por defecto: 75)',
     )
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
