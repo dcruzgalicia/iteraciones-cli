@@ -338,7 +338,8 @@ Ejemplos:
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
     .option('--fix', 'corrige los hallazgos aplicando cambios mínimos a los Markdown de origen (requiere un repositorio git)')
     .option('--exceptions <path>', 'archivo de excepciones de texto (por defecto: .typography-exceptions), ignoran casos exactos')
-    .option('-i, --ignore <números>', 'guarda esas incidencias del informe como excepciones: 1,5,6 o all')
+    .option('-i, --ignore [números]', 'guarda esas incidencias del informe como excepciones: 1,5,6 (sin números, todas)')
+    .option('--only <números>', 'con --fix, corrige sólo esas incidencias del informe: 1,5,6 o all')
     .addHelpText(
       'after',
       `
@@ -367,7 +368,8 @@ Ejemplos:
   iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra
   iteraciones typography --rules repeated-first-letter,repeated-last-letter   sólo las letras
   iteraciones typography --ignore 1,5,6                 guarda esas incidencias como excepciones
-  iteraciones typography --ignore all                   guarda todas las del informe
+  iteraciones typography --ignore                       guarda todas las del informe
+  iteraciones typography --fix --only 1,5,6             corrige sólo esas incidencias
   iteraciones typography --json                         imprime el resultado como JSON
 
 El informe da siempre la página del PDF, no el folio impreso, que puede venir en romanos o
