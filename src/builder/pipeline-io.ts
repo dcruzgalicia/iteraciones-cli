@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { applyCreatorTitle, parseFrontmatterRecord, splitFrontmatter } from '../lib/frontmatter.js';
-import { fmStringList } from '../lib/frontmatter-fields.js';
+import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import type { BuildMetadata } from './build-planner.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { docProducesFormat, primaryOutputExtension } from './output-layout.js';
@@ -101,11 +101,22 @@ export function parseFileFrontmatter(
   lineLength: number | undefined;
   pages: number | undefined;
   letterhead: string[];
+  image: string | undefined;
   body: string;
 } {
   const { yaml, body } = splitFrontmatter(content);
   if (!yaml) {
-    return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, letterhead: [], body };
+    return {
+      title: '',
+      creator: [],
+      subtitle: undefined,
+      type: undefined,
+      lineLength: undefined,
+      pages: undefined,
+      letterhead: [],
+      image: undefined,
+      body,
+    };
   }
   const parsed = parseFrontmatterRecord(yaml, label);
   applyCreatorTitle(parsed);
@@ -117,6 +128,7 @@ export function parseFileFrontmatter(
     lineLength: typeof parsed.lineLength === 'number' ? parsed.lineLength : undefined,
     pages: typeof parsed.pages === 'number' ? parsed.pages : undefined,
     letterhead: fmStringList(parsed.letterhead) ?? [],
+    image: fmTrimmedString(parsed.image),
     body,
   };
 }
