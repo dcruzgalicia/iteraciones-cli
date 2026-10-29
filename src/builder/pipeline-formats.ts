@@ -820,11 +820,11 @@ export function paginationNav(outSlug: string, pagina: number, total: number): s
 
 // `mt-0 mb-6` y `m-0`: el prose de la página mete márgenes a figure e img, y
 // esos márgenes quedarían dentro del enlace (área clickeable de más).
-const CARD_IMAGE_CLASSES = 'mt-0 mb-6 flex h-[150px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl';
-const CARD_IMAGE_IMG_CLASSES = 'm-0 block h-full w-full object-cover';
+const CARD_IMAGE_CLASSES = 'mt-0! mb-6! flex h-[150px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl';
+const CARD_IMAGE_IMG_CLASSES = 'm-0! block h-full w-full object-cover';
 const CARD_IMAGE_LINK_CLASSES = 'block h-full w-full rounded-tr-xl rounded-bl-xl';
 const PORTRAIT_WRAPPER_CLASSES = 'mb-6 flex justify-center';
-const PORTRAIT_CLASSES = 'm-0 block rounded-full object-cover';
+const PORTRAIT_CLASSES = 'm-0! block rounded-full object-cover';
 const PORTRAIT_LINK_CLASSES = 'block overflow-hidden rounded-full [clip-path:circle(50%)]';
 
 const IMAGEN_MD_RE = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?/;
