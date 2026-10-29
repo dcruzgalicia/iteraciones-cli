@@ -30,8 +30,7 @@ export interface TypographyOptions {
   rules?: string;
   exceptions?: string;
   ignore?: string | boolean;
-  only?: string;
-  fix?: boolean;
+  fix?: string | boolean;
 }
 
 interface RangoPaginas {
@@ -86,15 +85,11 @@ function interpretaReglas(spec: string): string[] {
   return pedidas;
 }
 
-/** `1,5,6` o `all`: las incidencias elegidas del informe. */
+/** `3,5`: las incidencias elegidas del informe. */
 function seleccionaIncidencias(spec: string, total: number, opcion: string): number[] {
-  const limpio = spec.trim().toLowerCase();
-  if (limpio === 'all' || limpio === 'todas' || limpio === 'todos') {
-    return Array.from({ length: total }, (_, indice) => indice + 1);
-  }
   const partes = spec.split(',').map((parte) => parte.trim());
   if (partes.some((parte) => parte === '')) {
-    throw new BuildError(`${opcion} "${spec}" tiene un hueco: separa los números con coma (1,5,6) o usa all`);
+    throw new BuildError(`${opcion} "${spec}" tiene un hueco: separa los números con coma (3,5)`);
   }
   const numeros = partes.map((parte) => {
     const numero = Number(parte);
@@ -175,28 +170,28 @@ function cargarExcepciones(cwd: string, options: TypographyOptions, crear = fals
   return contenido === undefined ? [] : parseaExcepciones(contenido);
 }
 
-/** `1,5,6` o `all`, lo que entiende --ignore; cualquier otra cosa es una ruta. */
+/** `3,5`, lo que entienden --fix y --ignore; cualquier otra cosa es una ruta. */
 function esSeleccion(spec: string): boolean {
-  return /^(all|todas|todos)$/i.test(spec.trim()) || /^\d+(\s*,\s*\d+)*$/.test(spec.trim());
+  return /^\d+(\s*,\s*\d+)*$/.test(spec.trim());
 }
 
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
-    // `--ignore` sin números es `all`; si el valor no es una selección, es una
-    // ruta que commander se comió al pasar el argumento opcional.
-    if (typeof options.ignore === 'string' && !esSeleccion(options.ignore)) {
-      args.unshift(options.ignore);
-      options.ignore = true;
-    }
-    if (options.only !== undefined && options.fix !== true) {
-      throw new BuildError('--only necesita --fix: primero mira el informe, luego corrige los números que elijas');
+    // Sin números es todo; si el valor no es una selección, es una ruta que
+    // commander se comió al pasar el argumento opcional.
+    for (const opcion of ['ignore', 'fix'] as const) {
+      const valor = options[opcion];
+      if (typeof valor === 'string' && !esSeleccion(valor)) {
+        args.unshift(valor);
+        options[opcion] = true;
+      }
     }
     const analisis = opcionesDeAnalisis(options);
     const outputDir = resolve(cwd, options.output ?? DIST_FILES_DIR);
     const targets = args.length > 0 ? args.map((path) => resolve(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${relativeLabel(cwd, outputDir)}`);
 
-    if (options.fix) {
+    if (options.fix !== undefined && options.fix !== false) {
       const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, sinUnion, exactMiss, porPdf } = await arreglaTypografia(
         cwd,
         targets,
@@ -247,8 +242,8 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
 
     if (options.ignore !== undefined) {
       const planas = files.flatMap((file) => file.incidences.map((incidencia) => ({ pdf: file.pdf, incidencia })));
-      const spec = typeof options.ignore === 'string' ? options.ignore : 'all';
-      const numeros = seleccionaIncidencias(spec, planas.length, '--ignore');
+      const numeros =
+        typeof options.ignore === 'string' ? seleccionaIncidencias(options.ignore, planas.length, '--ignore') : planas.map((_, indice) => indice + 1);
       if (numeros.length === 0) {
         logSuccess('sin incidencias que guardar', 'typography');
         return;
@@ -287,7 +282,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
       return;
     }
     reportIncidencias(cwd, files);
-    logInfo('Para guardar una excepción: iteraciones typography --ignore 1,5,6 (o --ignore all)', 'typography');
+    logInfo('Para guardar una excepción: iteraciones typography --ignore 3,5 (sin números, todas)', 'typography');
     process.exitCode = 1;
     logError(`${plural(total, 'incidencia')} en ${plural(files.length, 'PDF')}`, 'typography');
   } catch (err) {
@@ -954,10 +949,10 @@ async function arreglaTypografia(
     porPdf.set(pdf, { incidences, estado: new Map<TypographyIncidence, MotivoIncidencia>() });
   }
 
-  // `--only` elige por el número que trae el informe, igual que `--ignore`.
-  if (options.only !== undefined) {
+  // Con números, `--fix` elige por el número que trae el informe, igual que `--ignore`.
+  if (typeof options.fix === 'string') {
     const planas = [...porPdf.values()].flatMap((resultado) => resultado.incidences);
-    const numeros = seleccionaIncidencias(options.only, planas.length, '--only');
+    const numeros = seleccionaIncidencias(options.fix, planas.length, '--fix');
     const elegidas = new Set(numeros.map((numero) => planas[numero - 1]));
     for (const [pdf, resultado] of porPdf) {
       const filtradas = resultado.incidences.filter((incidencia) => elegidas.has(incidencia));
