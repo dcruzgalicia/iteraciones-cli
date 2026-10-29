@@ -726,6 +726,16 @@ Característica: el analizador tipográfico de los PDF
         repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; d ;; 1: © De la edición, María de los Ángeles || 2: Diseño y formación editorial
         """
 
+    Escenario: Una línea que empieza con un número no tiene letra
+      Dado que pdftotext devuelve:
+        """
+        a consolarme. Con el tiempo dejó de pasar, pero a la edad de
+        8 años mi mente colapsó de otra manera. Empecé a creer que el
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "repeated-first-letter"
+      Entonces no hay incidencias
+
     Escenario: Una línea de puros números no tiene letra
       Dado que pdftotext devuelve:
         """

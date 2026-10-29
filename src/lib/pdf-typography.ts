@@ -225,9 +225,11 @@ function sinAcentos(texto: string): string {
  * igual, y «a-» cuenta como «a».
  */
 function letraInicial(linea: string): string | undefined {
-  const inicio = sinAcentos(linea)
-    .trimStart()
-    .replace(/^[^a-zñ]+/, '');
+  const texto = sinAcentos(linea).trimStart();
+  // Un número al principio no se salta: la línea empieza por un número, no por
+  // la letra que viene después («8 años» no empieza por «a»).
+  if (/^\d/.test(texto)) return undefined;
+  const inicio = texto.replace(/^[^a-zñ]+/, '');
   return /^[a-zñ]$/.test(inicio.slice(0, 1)) ? inicio.slice(0, 1) : undefined;
 }
 
