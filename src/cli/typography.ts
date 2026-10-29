@@ -16,9 +16,7 @@ export interface TypographyOptions {
   output?: string;
   json?: boolean;
   pages?: string;
-  minLineWidth?: string;
   rules?: string;
-  minLetters?: string;
   exceptions?: string;
   fix?: boolean;
 }
@@ -75,22 +73,6 @@ function interpretaReglas(spec: string): string[] {
   return pedidas;
 }
 
-function interpretaEntero(valor: string, opcion: string, minimo: number): number {
-  const numero = Number(valor);
-  if (!Number.isInteger(numero) || numero < minimo) {
-    throw new BuildError(`${opcion} "${valor}" no es un entero de ${minimo} en adelante`);
-  }
-  return numero;
-}
-
-function interpretaPorcentaje(valor: string, opcion: string): number {
-  const numero = Number(valor);
-  if (!Number.isInteger(numero) || numero < 0 || numero > 100) {
-    throw new BuildError(`${opcion} "${valor}" no es un porcentaje entero entre 0 y 100`);
-  }
-  return numero;
-}
-
 function formatea(incidencia: TypographyIncidence): string {
   const texto = incidencia.text.trimEnd();
   if (incidencia.type === 'single-word-line') {
@@ -133,9 +115,7 @@ function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
   const paginas = options.pages === undefined ? undefined : interpretaPaginas(options.pages);
   return {
     paginas,
-    porcentajeCorta: options.minLineWidth === undefined ? 75 : interpretaPorcentaje(options.minLineWidth, '--min-line-width'),
     reglas: options.rules === undefined ? TYPOGRAPHY_RULES : interpretaReglas(options.rules),
-    letrasMinimas: options.minLetters === undefined ? 2 : interpretaEntero(options.minLetters, '--min-letters', 1),
   };
 }
 

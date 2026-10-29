@@ -43,24 +43,9 @@ When('escaneo el texto de pdftotext', () => {
   world.incidencias = analyzeText(world.textoPdftotext).map(describe);
 });
 
-When('escaneo el texto de pdftotext sin el filtro de línea corta', () => {
-  world.incidencias = analyzeText(world.textoPdftotext, { porcentajeCorta: 0, lineasMinimas: 2, letrasMinimas: 1 }).map(describe);
-});
-
-When('escaneo el texto de pdftotext buscando {string} sin el filtro de línea corta', (reglas: string) => {
-  const pedidas = reglas.split(',').map((r) => r.trim());
-  world.incidencias = analyzeText(world.textoPdftotext, { porcentajeCorta: 0, lineasMinimas: 2, letrasMinimas: 1 })
-    .filter((incidencia) => pedidas.includes(incidencia.type))
-    .map(describe);
-});
-
-When('escaneo el texto de pdftotext con {int} letras', (letras: number) => {
-  world.incidencias = analyzeText(world.textoPdftotext, { porcentajeCorta: 0, letrasMinimas: letras }).map(describe);
-});
-
 When('escaneo el texto de pdftotext buscando {string}', (reglas: string) => {
   const pedidas = reglas.split(',').map((r) => r.trim());
-  world.incidencias = analyzeText(world.textoPdftotext, { lineasMinimas: 2, letrasMinimas: 1 })
+  world.incidencias = analyzeText(world.textoPdftotext)
     .filter((incidencia) => pedidas.includes(incidencia.type))
     .map(describe);
 });
@@ -71,24 +56,20 @@ Given('el PDF {string} con estas páginas:', (nombre: string, texto: string) => 
 });
 
 When('escaneo el PDF {string}', async (nombre: string) => {
-  await escaneaPdf(nombre, 75);
+  await escaneaPdf(nombre);
 });
 
 When('escaneo el PDF {string} buscando {string}', async (nombre: string, reglas: string) => {
   const pedidas = reglas.split(',').map((r) => r.trim());
-  await escaneaPdf(nombre, 0, pedidas);
+  await escaneaPdf(nombre, pedidas);
 });
 
-async function escaneaPdf(nombre: string, porcentajeCorta: number, reglas?: string[]): Promise<void> {
+async function escaneaPdf(nombre: string, reglas?: string[]): Promise<void> {
   world.incidencias = [];
   world.errMensaje = '';
   world.errClase = '';
   try {
-    const halladas = await analyzePdf(join(world.root, nombre), {
-      porcentajeCorta,
-      lineasMinimas: 2,
-      letrasMinimas: 1,
-    });
+    const halladas = await analyzePdf(join(world.root, nombre));
     world.incidencias = (reglas ? halladas.filter((i) => reglas.includes(i.type)) : halladas).map(describe);
   } catch (err) {
     world.errMensaje = err instanceof Error ? err.message : String(err);
