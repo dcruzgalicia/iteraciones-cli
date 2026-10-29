@@ -110,6 +110,8 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   header += redes;
   // Las portadas van después de la tarjeta de título y antes de Formatos.
   cards.unshift(await loadCard('file', 'card-portadas.html'));
+  // El retrato de una creadora es su propia tarjeta, después de la del nombre.
+  if (type === 'creator') cards.unshift(await loadCard('file', 'card-retrato.html'));
   // Las tarjetas de creadoras y de colecciones, y el nav de paginación, van
   // después de todo lo demás y antes del footer: son tarjetas del masonry, no
   // parte de la del texto.
@@ -156,6 +158,8 @@ export interface HtmlPageVars {
   contentChip?: string;
   frontCover?: string;
   backCover?: string;
+  creatorImage?: string;
+  creatorImageAlt?: string;
   indiceColeccion?: string;
 
   /** Las tarjetas de creadoras y de colecciones, ya en HTML. */

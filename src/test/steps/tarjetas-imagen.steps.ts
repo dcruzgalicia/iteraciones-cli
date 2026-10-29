@@ -15,6 +15,14 @@ Given('un texto en {string} que empieza con la imagen {string}', (dir: string, a
   escribirEnProyecto(`${dir}/tres-libros.md`, `---\ntitle: Tres libros\n---\n\n![Mapa](${archivo})\n\nPrimer párrafo del texto.\n`);
 });
 
+Given('un texto de {string} en {string} que empieza con la imagen {string}', (nombre: string, dir: string, archivo: string) => {
+  crearImagen(`${dir}/${archivo}`);
+  escribirEnProyecto(
+    `${dir}/tres-libros.md`,
+    `---\ntitle: Tres libros\ncreator: ${nombre}\n---\n\n![Mapa](${archivo})\n\nPrimer párrafo del texto.\n`,
+  );
+});
+
 Given('una colección en {string} que incluye {string}', (dir: string, archivo: string) => {
   const ruta = posix(relative(dir, archivo));
   escribirEnProyecto(`${dir}/antologia.md`, `---\ntitle: Antología\ntype: collection\nfiles:\n  - ./${ruta}\n---\n\nIntro.\n`);
