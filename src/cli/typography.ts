@@ -1,8 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { slugify } from '../builder/discover.js';
 import { listMarkdownDocuments } from '../builder/discover-files.js';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
+import { PKG_PREAMBLE_DIR } from '../builder/preamble-loader.js';
 import { BuildError } from '../lib/errors.js';
 import { readFrontmatter, splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logError, logInfo, logSuccess, writeJson } from '../lib/logger.js';
@@ -10,7 +12,9 @@ import { relativeLabel } from '../lib/paths.js';
 import {
   agregaExcepcionesAlTexto,
   analyzePdf,
+  nombreCortado,
   type OpcionesAnalisis,
+  palabraSinCorte,
   parseaExcepciones,
   TYPOGRAPHY_RULES,
   type TypographyIncidence,
@@ -107,6 +111,9 @@ function formatea(incidencia: TypographyIncidence): string {
   const texto = incidencia.text.trimEnd();
   if (incidencia.type === 'single-word-line') {
     return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${texto}`;
+  }
+  if (incidencia.type === 'hyphenated-proper-noun') {
+    return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${nombreCortado(incidencia)}`;
   }
   const lineas = incidencia.lineas;
   const numeros = lineas.map((l) => l.line);
@@ -337,6 +344,42 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
   return [...out];
 }
 
+const ARCHIVO_HIFENACION = '15-hyphenation-rules.tex';
+
+function escapaRegex(texto: string): string {
+  return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Agrega la palabra a `preamble/15-hyphenation-rules.tex`, creándolo si el
+ * proyecto no lo tiene. Al crearlo se parte del archivo del paquete para no
+ * perder las reglas que ya traía.
+ */
+async function agregaHifenacion(cwd: string, palabra: string): Promise<void> {
+  if (palabra === '') return;
+  const dir = join(cwd, 'preamble');
+  const ruta = join(dir, ARCHIVO_HIFENACION);
+  let contenido: string;
+  if (await Bun.file(ruta).exists()) {
+    contenido = await Bun.file(ruta).text();
+  } else {
+    const base = join(PKG_PREAMBLE_DIR, ARCHIVO_HIFENACION);
+    contenido = (await Bun.file(base).exists()) ? await Bun.file(base).text() : '\\hyphenation{\n}\n';
+  }
+  if (new RegExp(`^\\s*${escapaRegex(palabra)}\\s*$`, 'm').test(contenido)) return;
+  const abre = contenido.indexOf('\\hyphenation{');
+  const cierra = abre < 0 ? -1 : contenido.indexOf('}', abre);
+  let nuevo: string;
+  if (abre >= 0 && cierra > abre) {
+    const antes = contenido.slice(0, cierra).replace(/\s+$/, '');
+    nuevo = `${antes}\n  ${palabra}\n${contenido.slice(cierra)}`;
+  } else {
+    nuevo = `${contenido.replace(/\s+$/, '')}\n\n\\hyphenation{\n  ${palabra}\n}\n`;
+  }
+  await mkdir(dir, { recursive: true });
+  await Bun.write(ruta, nuevo);
+}
+
 function sinComillasTipograficas(texto: string): string {
   return texto.replace(/[“”„‟«»]/g, '"').replace(/[‘’‚]/g, "'");
 }
@@ -442,6 +485,7 @@ export type ObjetivoTypography = { aguja: string; posterior: boolean };
 
 export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypography[] {
   if (inc.type === 'single-word-line') return [{ aguja: inc.text.trim() as string, posterior: false }];
+  if (inc.type === 'hyphenated-proper-noun') return [];
   const lineas = inc.lineas;
   const textoDe = (i: number): string => (lineas[i] as { text: string } | undefined)?.text.trim() ?? '';
   const tokens = (texto: string): string[] => texto.split(/\s+/u).filter(Boolean);
@@ -811,6 +855,7 @@ function ngramasBusqueda(texto: string): string[] {
 }
 
 function cadenasDeBusqueda(inc: TypographyIncidence): string[] {
+  if (inc.type === 'hyphenated-proper-noun') return [];
   if (inc.type === 'single-word-line') {
     const fiesta = new Set<string>();
     const palabra = normalizaParaBusqueda(inc.text);
@@ -893,11 +938,22 @@ async function arreglaTypografia(
 
     const estado = new Map<TypographyIncidence, MotivoIncidencia>();
     porPdf.set(pdf, { incidences, estado });
+
+    // Los nombres cortados no se corrigen en el Markdown: van al preamble.
+    const cortadas = incidences.filter((inc) => inc.type === 'hyphenated-proper-noun');
+    for (const inc of cortadas) {
+      await agregaHifenacion(cwd, palabraSinCorte(inc));
+      estado.set(inc, 'corregido');
+      corregidos++;
+    }
+    const resto = incidences.filter((inc) => inc.type !== 'hyphenated-proper-noun');
+    if (resto.length === 0) continue;
+
     const fuentes = await candidatosDeFuente(cwd, pdf);
     if (fuentes.length === 0) {
-      for (const inc of incidences) estado.set(inc, 'no encontrado');
-      sinAplicar += incidences.length;
-      noEncontradas += incidences.length;
+      for (const inc of resto) estado.set(inc, 'no encontrado');
+      sinAplicar += resto.length;
+      noEncontradas += resto.length;
       continue;
     }
 
@@ -911,7 +967,7 @@ async function arreglaTypografia(
       } catch {}
     }
 
-    for (const inc of incidences) {
+    for (const inc of resto) {
       const objetivos = objetivosParaIncidencia(inc);
       const objetivo = objetivos[0] ?? '';
       if (!objetivo) {

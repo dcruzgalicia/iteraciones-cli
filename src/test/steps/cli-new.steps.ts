@@ -86,6 +86,12 @@ Then('el archivo {string} tiene la clave {string}', async (nombre: string, clave
   }
 });
 
+Then('el archivo {string} contiene {int} veces {string}', async (nombre: string, veces: number, texto: string) => {
+  const contenido = await archivo(nombre);
+  const cuenta = contenido.split(texto).length - 1;
+  if (cuenta !== veces) throw new Error(`${nombre} contiene ${texto} ${cuenta} veces y debería contenerlo ${veces}`);
+});
+
 Then('el archivo {string} contiene {string}', async (nombre: string, texto: string) => {
   if (!(await archivo(nombre)).includes(texto)) {
     throw new Error(`${nombre} no contiene ${JSON.stringify(texto)}`);

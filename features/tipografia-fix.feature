@@ -780,6 +780,40 @@ Característica: la corrección tipográfica del markdown
       Y la salida dice "1 incidencia"
       Y la salida dice "pág 1  líneas 3-4  repeated-last-letter"
 
+  Regla de negocio: --fix manda los nombres cortados a la hiphenación
+
+    Escenario: Crea el preamble del proyecto con la palabra completa
+      Dado que la raíz del proyecto está vacía
+      Y que la raíz del proyecto es un repositorio git
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Georgina Paola Grande-
+        Arriola escribió este texto.
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --rules hyphenated-proper-noun --fix" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "hyphenated-proper-noun  Grande-Arriola  corregido"
+      Y la salida dice "1 corregidas de 1"
+      Y el archivo "preamble/15-hyphenation-rules.tex" contiene "GrandeArriola"
+      Y el archivo "preamble/15-hyphenation-rules.tex" contiene "Cronos"
+
+    Escenario: Si el proyecto ya tiene el archivo, agrega ahí sin repetir
+      Dado que la raíz del proyecto está vacía
+      Y que la raíz del proyecto es un repositorio git
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Georgina Paola Grande-
+        Arriola escribió este texto.
+        \f
+        """
+      Y que el archivo "preamble/15-hyphenation-rules.tex" tiene el contenido "\hyphenation{\n  García\n}\n"
+      Cuando parseo el comando "typography dist/files/libro.pdf --rules hyphenated-proper-noun --fix" sobre la raíz del proyecto
+      Y parseo el comando "typography dist/files/libro.pdf --rules hyphenated-proper-noun --fix" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "preamble/15-hyphenation-rules.tex" contiene "García"
+      Y el archivo "preamble/15-hyphenation-rules.tex" contiene 1 veces "GrandeArriola"
+
   Regla de negocio: --fix corrige los markdown de origen
 
     Escenario: Corrige la unión de dos líneas y lo reporta

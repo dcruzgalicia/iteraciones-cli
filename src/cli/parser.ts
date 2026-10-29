@@ -331,7 +331,7 @@ Ejemplos:
 
   program
     .command('typography [paths...]')
-    .description('detecta en los PDF líneas de una sola palabra y pares de líneas consecutivas terminadas en puntuación')
+    .description('detecta en los PDF líneas de una sola palabra, líneas consecutivas que coinciden y nombres propios cortados por el guion')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
     .option('--pages <páginas>', 'sólo esas páginas del PDF: 3 (esa sola), 3-80 (el rango) o una lista: 3,7,10-12')
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
@@ -351,6 +351,7 @@ Reglas:
   consecutive-punctuation   varias líneas seguidas que todas terminan en el mismo signo de puntuación
   repeated-first-letter     varias líneas seguidas que empiezan por la misma letra
   repeated-last-letter      varias líneas seguidas que terminan por la misma letra
+  hyphenated-proper-noun    un nombre propio partido por el guion al final de la línea
 
 El número de línea reinicia en cada página. Una línea vacía y el final de página cortan la
 consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.

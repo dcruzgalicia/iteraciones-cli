@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { analyzePdf, analyzeText, splitPages, type TypographyIncidence } from '../../lib/pdf-typography.js';
+import { analyzePdf, analyzeText, nombreCortado, splitPages, type TypographyIncidence } from '../../lib/pdf-typography.js';
 import { pdfDePaginas } from '../helpers/pdf.ts';
 import { escribirEnProyecto, jsonSalida, world } from './cli-world.steps.ts';
 
@@ -15,6 +15,9 @@ function salidaPdftotext(texto: string): string {
 function describe(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'single-word-line') {
     return `single-word-line ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${incidencia.text.trim()}`;
+  }
+  if (incidencia.type === 'hyphenated-proper-noun') {
+    return `hyphenated-proper-noun ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${nombreCortado(incidencia)}`;
   }
   const numeros = incidencia.lineas.map((l) => l.line);
   const rango = `líneas ${numeros[0]}-${numeros.at(-1)}${incidencia.total > incidencia.lineas.length ? ` de ${incidencia.total}` : ''}`;

@@ -194,7 +194,9 @@ Given(
 
 Given('la incidencia tiene la continuación {string}', (continuacion: string) => {
   const incidencia = estado.incidencia;
-  if (incidencia === undefined || incidencia.type === 'single-word-line') throw new Error('la incidencia no admite continuación');
+  if (incidencia === undefined || incidencia.type === 'single-word-line' || incidencia.type === 'hyphenated-proper-noun') {
+    throw new Error('la incidencia no admite continuación');
+  }
   estado.incidencia = { ...incidencia, continuacion };
 });
 

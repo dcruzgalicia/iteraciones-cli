@@ -576,6 +576,55 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y el error dice "no hay PDFs en dist/files"
 
+  Regla de negocio: Los nombres propios cortados por el guion se reportan
+
+    Escenario: Un nombre propio partido al final de la línea
+      Dado que pdftotext devuelve:
+        """
+        Georgina Paola Grande-
+        Arriola escribió este texto.
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "hyphenated-proper-noun"
+      Entonces las incidencias son:
+        """
+        hyphenated-proper-noun ;; pág 1 ;; línea 1 ;; Grande-Arriola
+        """
+
+    Escenario: Una palabra en minúscula cortada no es un nombre propio
+      Dado que pdftotext devuelve:
+        """
+        y esto termina en-
+        algo que sigue.
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "hyphenated-proper-noun"
+      Entonces no hay incidencias
+
+    Escenario: Una mayúscula que no termina en guion no es un corte
+      Dado que pdftotext devuelve:
+        """
+        Georgina Paola Grande
+        Arriola escribió este texto.
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "hyphenated-proper-noun"
+      Entonces no hay incidencias
+
+    Escenario: Un nombre cortado al final de la página no tiene continuación
+      Dado que pdftotext devuelve:
+        """
+        Georgina Paola Grande-
+        \f
+        Arriola escribió este texto.
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "hyphenated-proper-noun"
+      Entonces las incidencias son:
+        """
+        hyphenated-proper-noun ;; pág 1 ;; línea 1 ;; Grande-
+        """
+
   Regla de negocio: Dos líneas seguidas con la misma letra
 
     Escenario: Dos líneas que empiezan con la misma letra

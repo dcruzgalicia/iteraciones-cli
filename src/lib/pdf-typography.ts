@@ -3,7 +3,13 @@ import { plural } from './plural.js';
 import { exec, ProcessSpawnError, type RunResult } from './run.js';
 
 /** El orden manda: detección, corrección y reportes van en esta secuencia. */
-export const TYPOGRAPHY_RULES = ['single-word-line', 'repeated-last-letter', 'repeated-first-letter', 'consecutive-punctuation'] as const;
+export const TYPOGRAPHY_RULES = [
+  'single-word-line',
+  'repeated-last-letter',
+  'repeated-first-letter',
+  'consecutive-punctuation',
+  'hyphenated-proper-noun',
+] as const;
 
 interface Incidence {
   page: number;
@@ -32,7 +38,28 @@ interface RepeatedLetter extends Incidence {
   continuacion?: string;
 }
 
-export type TypographyIncidence = SingleWordLine | ConsecutivePunctuation | RepeatedLetter;
+/** Un nombre propio partido por el guion de corte al final de la línea. */
+export interface HyphenatedProperNoun extends Incidence {
+  type: 'hyphenated-proper-noun';
+
+  /** El trozo de la palabra, sin el guion del corte. */
+  word: string;
+
+  /** El trozo con el que sigue en la línea de abajo, sin guion. */
+  continuation?: string;
+}
+
+/** El nombre tal como se lee: los dos trozos con el guion del corte. */
+export function nombreCortado(incidencia: HyphenatedProperNoun): string {
+  return `${incidencia.word}-${incidencia.continuation ?? ''}`;
+}
+
+/** La palabra completa, sin el guion del corte. */
+export function palabraSinCorte(incidencia: HyphenatedProperNoun): string {
+  return `${incidencia.word}${incidencia.continuation ?? ''}`;
+}
+
+export type TypographyIncidence = SingleWordLine | ConsecutivePunctuation | RepeatedLetter | HyphenatedProperNoun;
 
 const PAGE_BREAK = '\f';
 
@@ -112,6 +139,33 @@ function singleWordLines(pages: string[][]): SingleWordLine[] {
 }
 
 const TERMINALS = new Set(['.', ',', ';', ':', '?', '!', '…', '-', '–', '—', ')', ']', '}', '"', "'", '»', '”', '’']);
+
+const ABRE_SIGNO = /^[¿¡«"'([\u2018\u201C]*/;
+const NOMBRE_CORTADO = /^[A-ZÁÉÍÓÚÜÑ][\p{L}\p{M}'’]*[-]$/u;
+
+function hyphenatedProperNouns(pages: string[][]): HyphenatedProperNoun[] {
+  const hits: HyphenatedProperNoun[] = [];
+  for (const [indicePagina, lineas] of pages.entries()) {
+    for (const [indice, linea] of lineas.entries()) {
+      const palabras = linea.trim().split(/\s+/).filter(Boolean);
+      const ultima = palabras.at(-1);
+      if (ultima === undefined) continue;
+      const sinSignos = ultima.replace(ABRE_SIGNO, '');
+      if (!NOMBRE_CORTADO.test(sinSignos)) continue;
+      const siguiente = (lineas[indice + 1] ?? '').trim().split(/\s+/).filter(Boolean)[0];
+      const continuation = siguiente?.replace(/-$/, '');
+      hits.push({
+        type: 'hyphenated-proper-noun',
+        page: indicePagina + 1,
+        line: indice + 1,
+        text: linea,
+        word: sinSignos.replace(/-$/, ''),
+        continuation: continuation === '' ? undefined : continuation,
+      });
+    }
+  }
+  return hits;
+}
 
 interface LineaCoincidencia {
   line: number;
@@ -286,6 +340,9 @@ export function formateaExcepcion(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'single-word-line') {
     return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${incidencia.text.trim()}`;
   }
+  if (incidencia.type === 'hyphenated-proper-noun') {
+    return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${nombreCortado(incidencia)}`;
+  }
   const lineas = incidencia.lineas;
   const desde = lineas[0]?.line ?? incidencia.line;
   const hasta = lineas.at(-1)?.line ?? desde;
@@ -394,8 +451,9 @@ function excepcionCoincide(archivo: string, incidencia: TypographyIncidence, exc
     if (excepcion.file !== archivo || excepcion.type !== incidencia.type || excepcion.page !== incidencia.page) {
       return false;
     }
-    if (incidencia.type === 'single-word-line') {
-      return excepcion.lines.length === 1 && excepcion.lines[0]?.line === incidencia.line && excepcion.lines[0]?.text === incidencia.text.trim();
+    if (incidencia.type === 'single-word-line' || incidencia.type === 'hyphenated-proper-noun') {
+      const texto = incidencia.type === 'single-word-line' ? incidencia.text.trim() : nombreCortado(incidencia);
+      return excepcion.lines.length === 1 && excepcion.lines[0]?.line === incidencia.line && excepcion.lines[0]?.text === texto;
     }
     return (
       excepcion.startLine === incidencia.line &&
@@ -472,6 +530,7 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
     ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas) : []),
     ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas) : []),
     ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas) : []),
+    ...(pedidas.has('hyphenated-proper-noun') ? hyphenatedProperNouns(pages) : []),
   ];
   const vivas = excepciones.length === 0 ? halladas : filtraExcepciones(halladas, opciones.archivo ?? '', excepciones);
   const dentro = filtroDePaginas(opciones, pages.length);
