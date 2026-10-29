@@ -225,20 +225,22 @@ function sinAcentos(texto: string): string {
  * igual, y «a-» cuenta como «a».
  */
 function letraInicial(linea: string): string | undefined {
-  const texto = sinAcentos(linea).trimStart();
-  // Un número al principio no se salta: la línea empieza por un número, no por
-  // la letra que viene después («8 años» no empieza por «a»).
-  if (/^\d/.test(texto)) return undefined;
-  const inicio = texto.replace(/^[^a-zñ]+/, '');
-  return /^[a-zñ]$/.test(inicio.slice(0, 1)) ? inicio.slice(0, 1) : undefined;
+  // Los signos de apertura se saltan, pero un número no: «8 años» y «(8 años»
+  // empiezan por un número, no por la letra que viene después.
+  const inicio = sinAcentos(linea)
+    .trimStart()
+    .replace(/^[^a-zñ0-9]+/, '');
+  return /^[a-zñ]/.test(inicio) ? inicio.slice(0, 1) : undefined;
 }
 
 /** La última letra, sin contar los signos del final. */
 function letraFinal(linea: string): string | undefined {
-  const texto = sinAcentos(linea)
-    .trimEnd()
-    .replace(/[^a-zñ]+$/, '');
-  return texto === '' ? undefined : texto.slice(-1);
+  const texto = sinAcentos(linea).trimEnd();
+  // Un número al final no se salta: la línea termina en un número, no en la
+  // letra que viene antes («Ficción (2023).» no termina en «n»).
+  if (/\d[^\p{L}\p{N}]*$/u.test(texto)) return undefined;
+  const letras = texto.replace(/[^a-zñ]+$/, '');
+  return letras === '' ? undefined : letras.slice(-1);
 }
 
 /** El signo con el que termina la línea, si termina en signo. */
