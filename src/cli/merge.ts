@@ -145,10 +145,17 @@ async function composeFor(
   }
 
   if (format === 'html') {
-    return collectionCardsContent(entries, memberHrefs, src.text, creatorHrefs, dirname(src.relativePath), undefined, slugIndex, {
-      path: src.relativePath,
-      outSlug,
-    });
+    return collectionCardsContent(
+      entries,
+      memberHrefs,
+      src.text,
+      creatorHrefs,
+      dirname(src.relativePath),
+      undefined,
+      slugIndex,
+      { path: src.relativePath, outSlug },
+      ctx.relImageMap,
+    );
   }
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
 

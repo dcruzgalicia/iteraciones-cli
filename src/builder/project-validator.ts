@@ -63,6 +63,7 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'pages',
   'lineLength',
   'letterhead',
+  'image',
 ];
 
 export const LIST_FILTER_KEYS = ['type', 'creator', 'date', 'keyword', 'path'] as const;
@@ -73,7 +74,7 @@ const LIST_TYPES = ['file', 'collection', 'creator', 'list'] as const;
 
 const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const STRING_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date'];
+const STRING_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date', 'image'];
 
 const DATE_ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 

@@ -182,8 +182,8 @@ export function scanInlineImages(content: string, docDir: string): string[] {
   const paths: string[] = [];
   const push = (raw: string | undefined): void => {
     const imgPath = raw?.replace(/^<|>$/g, '');
-    if (!imgPath || isAbsolute(imgPath) || imgPath.startsWith('http') || imgPath.startsWith('data:')) return;
-    paths.push(resolve(docDir, imgPath));
+    if (!imgPath || imgPath.startsWith('http') || imgPath.startsWith('data:')) return;
+    paths.push(isAbsolute(imgPath) ? imgPath : resolve(docDir, imgPath));
   };
   for (const match of content.matchAll(MD_IMAGE_RE)) push(match[2]);
 
@@ -346,19 +346,8 @@ function warnMissingMagick(pdfxActive: boolean): void {
   }
 }
 
-/**
- * Reúne todas las imágenes del documento, sin repetir y en orden de prioridad
- * (guardas, después páginas de título, después cuerpo).
- */
-export async function collectImageSources(content: string, fm: Record<string, unknown>, docDir: string, pageWidthmm: number): Promise<ImageSource[]> {
-  const sources: ImageSource[] = [];
-  const seen = new Set<string>();
-  const push = (source: ImageSource): void => {
-    if (seen.has(source.absPath)) return;
-    seen.add(source.absPath);
-    sources.push(source);
-  };
-
+/** Las imágenes declaradas en los campos del frontmatter (guardas, membrete…). */
+async function collectFieldSources(fm: Record<string, unknown>, docDir: string, push: (source: ImageSource) => void): Promise<void> {
   for (const field of IMAGE_FIELDS) {
     const cover = FULL_PAGE_COVER_FIELDS.includes(field);
     const membrete = field === LETTERHEAD_FIELD;
@@ -368,12 +357,37 @@ export async function collectImageSources(content: string, fm: Record<string, un
       push(membrete ? { absPath, kind: 'title', cover: false, field, heightMm: LETTERHEAD_HEIGHT_MM } : { absPath, kind: 'cover', cover, field });
     }
   }
+}
+
+/**
+ * Reúne todas las imágenes del documento, sin repetir y en orden de prioridad
+ * (guardas, después páginas de título, después cuerpo).
+ */
+export async function collectImageSources(
+  content: string,
+  fm: Record<string, unknown>,
+  docDir: string,
+  pageWidthmm: number,
+  extraImages: readonly string[] = [],
+): Promise<ImageSource[]> {
+  const sources: ImageSource[] = [];
+  const seen = new Set<string>();
+  const push = (source: ImageSource): void => {
+    if (seen.has(source.absPath)) return;
+    seen.add(source.absPath);
+    sources.push(source);
+  };
+
+  await collectFieldSources(fm, docDir, push);
 
   for (const img of await scanTitlePageFieldImages(fm, docDir, pageWidthmm)) {
     push({ absPath: img.absPath, kind: 'title', cover: false, widthMm: img.widthMm });
   }
 
   for (const absPath of scanInlineImages(content, docDir)) push({ absPath, kind: 'inline', cover: false });
+  for (const absPath of extraImages) {
+    if (await Bun.file(absPath).exists()) push({ absPath, kind: 'inline', cover: false });
+  }
   return sources;
 }
 
@@ -453,6 +467,9 @@ interface PreprocessArgs {
   outSlug: string;
   dirs: { pdf: string; web: string; epub: string };
   wants: { pdf: boolean; web: boolean; epub: boolean };
+
+  /** Imágenes que no están en el cuerpo (tarjetas de una colección). */
+  extraImages?: readonly string[];
   detector?: () => Promise<boolean>;
 }
 
@@ -466,7 +483,7 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
     warnMissingMagick(args.pdfxActive);
     return {};
   }
-  const sources = await collectImageSources(args.content, args.fm, args.docDir, args.pageDimensions.w);
+  const sources = await collectImageSources(args.content, args.fm, args.docDir, args.pageDimensions.w, args.extraImages);
   const targets = computeProcessTargets(args.pageDimensions, args.cropActive);
   const coverColor = args.fm.coverColor === true;
   const result: DocumentImages = {};
