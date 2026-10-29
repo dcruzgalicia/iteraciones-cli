@@ -178,7 +178,7 @@ When('compogo las páginas de la colección con {int} por página', (pageSize: n
   const entradas = coleccion(world.miembros);
   const hrefs = memberHtmlHrefs(world.rutaColeccion, entradas, indiceDeSlugs());
   world.paginas = collectionCardsPages(entradas, hrefs, world.cuerpoColeccion, pageSize);
-  world.navs = world.paginas.map((_, indice) => paginationNav(world.rutaColeccion, 'antologia', indice + 1, world.paginas.length));
+  world.navs = world.paginas.map((_, indice) => paginationNav('antologia', indice + 1, world.paginas.length));
 });
 
 When('escaneo las imágenes de la collection', () => {
@@ -276,6 +276,16 @@ Then('la página {int} no dice {string}', (pagina: number, texto: string) => {
   }
 });
 
+function navDePaginacion(html: string): string {
+  return /<nav class="[^"]*\bfixed\b[^"]*\bbottom-6\b[^"]*">[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
+}
+
+Then('el nav de {string} no dice {string}', async (relativa: string, texto: string) => {
+  const nav = navDePaginacion(await Bun.file(join(world.root, relativa)).text());
+  if (nav === '') throw new Error(`${relativa} no tiene nav de paginación`);
+  if (nav.includes(texto)) throw new Error(`el nav de ${relativa} dice ${JSON.stringify(texto)} y no debería: ${nav}`);
+});
+
 Then('el nav de la página {int} dice {string}', (pagina: number, texto: string) => {
   const nav = (world.navs as string[])[pagina - 1] ?? '';
   if (!nav.includes(texto)) {
@@ -311,6 +321,15 @@ Given('una colección con {int} miembros', (cuantos: number) => {
     files.push(`  - ./doc-${i}.md`);
   }
   escribirEnProyecto('antologia.md', `---\ntitle: Antología\ntype: collection\nfiles:\n${files.join('\n')}\n---\n`);
+});
+
+Given('una colección en {string} con {int} miembros', (dir: string, cuantos: number) => {
+  const files: string[] = [];
+  for (let i = 1; i <= cuantos; i++) {
+    escribirEnProyecto(`${dir}/doc-${i}.md`, `---\ntitle: Documento ${i}\n---\n\nContenido ${i}.\n`);
+    files.push(`  - ./doc-${i}.md`);
+  }
+  escribirEnProyecto(`${dir}/antologia.md`, `---\ntitle: Antología\ntype: collection\nfiles:\n${files.join('\n')}\n---\n`);
 });
 
 Given('el proyecto pagina de {int} tarjetas', (porPagina: number) => {

@@ -331,7 +331,7 @@ export async function emitHtmlPage(
   for (const [indice, contenido] of contenidos.entries()) {
     const slugPagina = indice === 0 ? outSlug : `${outSlug}-${indice + 1}`;
     const htmlPath = outBase(`${slugPagina}${primaryOutputExtension('html')}`);
-    const pagination = paginationNav(dir, outSlug, indice + 1, contenidos.length);
+    const pagination = paginationNav(outSlug, indice + 1, contenidos.length);
     const html = await htmlPageFromMarkdown(contenido, doc, {
       cwd,
       inputTarget: await collectionPandocInput(doc, cwd, outSlug, 'html'),
@@ -682,7 +682,8 @@ export function collectionCardsContent(
   page?: PageRef,
 ): string {
   if (entries.length === 0) return content;
-  const href = page?.outSlug === undefined ? undefined : relativeHref(dir, `${page.outSlug}.html`);
+  // Las páginas de la colección son hermanas, aunque vivan en un subdirectorio.
+  const href = page?.outSlug === undefined ? undefined : `./${page.outSlug}.html`;
   return collectionCards(
     entries,
     memberHrefs,
@@ -719,7 +720,8 @@ export function collectionCardsPages(
   const intro = splitFrontmatter(content).body.trim();
   const paginas: string[] = [];
   for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
-    const href = page?.outSlug === undefined ? undefined : relativeHref(dir, `${pageSlug(page.outSlug, paginas.length + 1)}.html`);
+    // Igual que el nav: las páginas son hermanas, no están en la raíz.
+    const href = page?.outSlug === undefined ? undefined : `./${pageSlug(page.outSlug, paginas.length + 1)}.html`;
     paginas.push(
       collectionCards(
         entries,
@@ -760,10 +762,12 @@ function pageSlug(outSlug: string, pagina: number): string {
  * anterior a su izquierda y el siguiente a su derecha. Se esconden hasta que
  * el scroll llega al final de la página.
  */
-export function paginationNav(dir: string, outSlug: string, pagina: number, total: number): string {
+export function paginationNav(outSlug: string, pagina: number, total: number): string {
   if (total <= 1) return '';
+  // Las páginas paginadas son hermanas: viven en el mismo directorio que la
+  // primera, aunque la colección esté en un subdirectorio.
   const enlace = (n: number, texto: string, posicion: string): string =>
-    `<a href="${relativeHref(dir, `${pageSlug(outSlug, n)}.html`)}" class="${PAGINATION_BUTTON_CLASSES} fixed bottom-6 left-1/2 ${posicion}" aria-label="${texto}">${texto}</a>`;
+    `<a href="./${pageSlug(outSlug, n)}.html" class="${PAGINATION_BUTTON_CLASSES} fixed bottom-6 left-1/2 ${posicion}" aria-label="${texto}">${texto}</a>`;
   const anterior = pagina > 1 ? enlace(pagina - 1, '← Anterior', '-translate-x-[calc(100%_+_2rem)]') : '';
   const siguiente = pagina < total ? enlace(pagina + 1, 'Siguiente →', 'translate-x-[2rem]') : '';
   return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}${siguiente}</nav>`;
@@ -777,7 +781,7 @@ function escaparHtml(texto: string): string {
  * La tarjeta de índice de una colección, una por página: lista los textos de
  * esa página y enlaza con los índices de la página anterior y la siguiente.
  */
-function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, string>, dir: string, outSlug: string, pageSize: number): string[] {
+function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, string>, outSlug: string, pageSize: number): string[] {
   const imprimibles = printableEntries(entries);
   const total = Math.ceil(imprimibles.length / pageSize);
   const indices: string[] = [];
@@ -794,12 +798,10 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
       .join('');
     const claseEnlace = 'text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
     const anterior =
-      pagina > 1
-        ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina - 1)}.html`)}#indice-pagina-${pagina - 1}" class="${claseEnlace}">← Índice anterior</a>`
-        : '';
+      pagina > 1 ? `<a href="./${pageSlug(outSlug, pagina - 1)}.html#indice-pagina-${pagina - 1}" class="${claseEnlace}">← Índice anterior</a>` : '';
     const siguiente =
       pagina < total
-        ? `<a href="${relativeHref(dir, `${pageSlug(outSlug, pagina + 1)}.html`)}#indice-pagina-${pagina + 1}" class="${claseEnlace}">Índice siguiente →</a>`
+        ? `<a href="./${pageSlug(outSlug, pagina + 1)}.html#indice-pagina-${pagina + 1}" class="${claseEnlace}">Índice siguiente →</a>`
         : '';
     indices.push(
       `<div class="break-inside-avoid pb-6" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-800 dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,
@@ -818,7 +820,7 @@ function indicesDeColeccion(
 ): string[] {
   const tocActivo = typeof outputs.fm.toc === 'boolean' ? outputs.fm.toc : siteConfig.toc;
   if (doc.frontmatter.type !== 'collection' || !tocActivo) return [];
-  return collectionIndices(entries, memberHrefs, outputs.dir, outputs.outSlug, pageSize);
+  return collectionIndices(entries, memberHrefs, outputs.outSlug, pageSize);
 }
 
 function assertPaginasLibres(relativePath: string, dir: string, outSlug: string, total: number, discoveryIndex: Map<string, DiscoveryEntry>): void {
