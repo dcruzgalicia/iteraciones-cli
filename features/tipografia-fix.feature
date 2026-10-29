@@ -636,7 +636,7 @@ Característica: la corrección tipográfica del markdown
       Entonces el comando termina con el código de salida 0
       Y la salida dice "2 excepciones en .typography-exceptions"
 
-    Escenario: all guarda todo y el informe queda limpio
+    Escenario: Sin números guarda todo y el informe queda limpio
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
@@ -645,7 +645,7 @@ Característica: la corrección tipográfica del markdown
         cinco seis.
         \f
         """
-      Cuando parseo el comando "typography --ignore all dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --ignore dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "2 excepciones en .typography-exceptions"
       Y parseo el comando "typography dist/files/libro.pdf" sobre la raíz del proyecto
@@ -793,7 +793,7 @@ Característica: la corrección tipográfica del markdown
       Y la salida dice "1 incidencia"
       Y la salida dice "pág 1  líneas 3-4  repeated-last-letter"
 
-  Regla de negocio: --only corrige nada más las incidencias elegidas
+  Regla de negocio: Con números, --fix corrige nada más las incidencias elegidas
 
     Escenario: Corrige la incidencia elegida y deja las demás
       Dado que la raíz del proyecto está vacía
@@ -813,18 +813,12 @@ Característica: la corrección tipográfica del markdown
         ---
         Volvi a la casa de mis padres un martes de enero. Y me quede pensando en las tardes con las cosas que pasan en las casas y las que se quedan en las palabras.
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --rules repeated-last-letter --fix --only 2" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --rules repeated-last-letter --fix 2" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "1 corregidas de 1"
       Y el archivo "libro.md" contiene 1 veces "&nbsp;"
 
-    Escenario: --only sin --fix lo dice
-      Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "typography --only 1" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 1
-      Y el error dice "--only necesita --fix"
-
-    Escenario: --only con un número que no existe lo dice
+    Escenario: --fix con un número que no existe lo dice
       Dado que la raíz del proyecto está vacía
       Y que la raíz del proyecto es un repositorio git
       Y el PDF "dist/files/libro.pdf" con estas páginas:
@@ -833,7 +827,7 @@ Característica: la corrección tipográfica del markdown
         tres cuatro.
         \f
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --fix --only 9" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --fix 9" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y el error dice "no existe la incidencia 9"
 
