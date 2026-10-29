@@ -736,6 +736,16 @@ Característica: el analizador tipográfico de los PDF
       Cuando escaneo el texto de pdftotext buscando "repeated-first-letter"
       Entonces no hay incidencias
 
+    Escenario: Un número entre paréntesis tampoco es una letra inicial
+      Dado que pdftotext devuelve:
+        """
+        a consolarme. Con el tiempo dejó de pasar, pero a la edad de
+        (8 años) mi mente colapsó de otra manera.
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "repeated-first-letter"
+      Entonces no hay incidencias
+
     Escenario: Una línea de puros números no tiene letra
       Dado que pdftotext devuelve:
         """
@@ -983,6 +993,16 @@ Característica: el analizador tipográfico de los PDF
         repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; z ;; 1: zeta del uno || 2: zorro del dos
         repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; z ;; 2: zorro del dos || 3: zufre del tres
         """
+
+    Escenario: Una línea que termina con un número no tiene letra final
+      Dado que pdftotext devuelve:
+        """
+        Ficción (2023).
+        Mi tesis de maestría sobre las mujeres en
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "repeated-last-letter"
+      Entonces no hay incidencias
 
     Escenario: Un signo pegado a una letra cuenta como la misma letra
       Dado que pdftotext devuelve:
