@@ -581,7 +581,7 @@ Característica: la corrección tipográfica del markdown
         Carlos corta cebras
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext
       Entonces las incidencias son:
         """
         repeated-last-letter ;; pág 1 ;; líneas 3-4 ;; s ;; 3: Beto corta cedros, || 4: Carla canta coplas
@@ -606,7 +606,7 @@ Característica: la corrección tipográfica del markdown
         dist/files/libro.pdf · 1 incidencia
           pág 1  línea 2  single-word-line  Hola
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules single-word-line --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules single-word-line" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin incidencias en 1 PDF"
 
@@ -629,7 +629,7 @@ Característica: la corrección tipográfica del markdown
         dist/files/otro.pdf
           pág 3  línea 1  single-word-line  Otro
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules repeated-last-letter --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules repeated-last-letter" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin incidencias en 1 PDF"
 
@@ -646,7 +646,7 @@ Característica: la corrección tipográfica del markdown
         dist/files/libro.pdf
           pág 1  línea 2  single-word-line  Hola.
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules single-word-line --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules single-word-line" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "single-word-line  Hola"
       Y el error dice "1 incidencia en 1 PDF"
@@ -668,7 +668,7 @@ Característica: la corrección tipográfica del markdown
                  1  uno dos.
                  2  tres cuatro.
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules consecutive-punctuation --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules consecutive-punctuation" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "2 incidencias"
       Y la salida dice "pág 1  líneas 2-3  consecutive-punctuation"
@@ -695,7 +695,7 @@ Característica: la corrección tipográfica del markdown
                  2  de enero. Y me quede pensando en las tardes
                  3  con las cosas que pasan en las casas
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules repeated-last-letter --min-letters 1 --min-line-width 0" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --exceptions excepciones.txt --rules repeated-last-letter" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "1 incidencia"
       Y la salida dice "pág 1  líneas 3-4  repeated-last-letter"
@@ -718,7 +718,7 @@ Característica: la corrección tipográfica del markdown
         ---
         Volvi a la casa de mis padres un martes de enero. Y me quede pensando en las tardes.
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --rules repeated-last-letter --min-letters 1 --min-line-width 0 --fix" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --rules repeated-last-letter --fix" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "repeated-last-letter  corregido"
       Y la salida dice "1 corregidas de 1"
@@ -757,7 +757,7 @@ Característica: la corrección tipográfica del markdown
         ---
         Volvi a la casa de mis padres un martes de enero. Y me quede pensando en las tardes con las cosas que pasan en las casas y las que se quedan en las palabras.
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf --rules repeated-last-letter --min-letters 1 --min-line-width 0 --fix" sobre la raíz del proyecto
+      Cuando parseo el comando "typography dist/files/libro.pdf --rules repeated-last-letter --fix" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "repeated-last-letter  corregido"
       Y el archivo "perez-y-soto.md" contiene "un martes&nbsp;de enero"

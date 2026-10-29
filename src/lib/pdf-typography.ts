@@ -113,43 +113,6 @@ function singleWordLines(pages: string[][]): SingleWordLine[] {
 
 const TERMINALS = new Set(['.', ',', ';', ':', '?', '!', '…', '-', '–', '—', ')', ']', '}', '"', "'", '»', '”', '’']);
 
-function modaDe(anchos: number[]): number | undefined {
-  const cuenta = new Map<number, number>();
-  for (const ancho of anchos) cuenta.set(ancho, (cuenta.get(ancho) ?? 0) + 1);
-  let masFrecuente: number | undefined;
-  let maxVeces = 1;
-  for (const [ancho, veces] of cuenta) {
-    if (veces < 2) continue;
-    if (veces > maxVeces || (veces === maxVeces && (masFrecuente === undefined || ancho > masFrecuente))) {
-      masFrecuente = ancho;
-      maxVeces = veces;
-    }
-  }
-  return masFrecuente;
-}
-
-function anchoDeReferencia(pages: string[][]): number {
-  const anchos: number[] = [];
-  for (const pagina of pages) {
-    for (const linea of pagina) {
-      const ancho = linea.trimEnd().length;
-      if (ancho > 0) anchos.push(ancho);
-    }
-  }
-  if (anchos.length === 0) return 0;
-
-  let total = 0;
-  for (const ancho of anchos) total += ancho;
-  const promedio = total / anchos.length;
-
-  const ordenados = [...anchos].sort((a, b) => a - b);
-  const medio = Math.floor(ordenados.length / 2);
-  const mediana = ordenados.length % 2 === 1 ? (ordenados[medio] as number) : ((ordenados[medio - 1] as number) + (ordenados[medio] as number)) / 2;
-
-  const moda = modaDe(anchos);
-  return Math.max(promedio, mediana, moda ?? 0);
-}
-
 interface LineaCoincidencia {
   line: number;
   text: string;
@@ -204,24 +167,22 @@ function sinAcentos(texto: string): string {
 }
 
 /**
- * Las primeras `cuantas` letras, sin contar los signos de apertura: «¿Y…» y
- * «Y…» empiezan igual, y «a-» cuenta como «a».
+ * La primera letra, sin contar los signos de apertura: «¿Y…» y «Y…» empiezan
+ * igual, y «a-» cuenta como «a».
  */
-function letraInicial(linea: string, cuantas: number): string | undefined {
+function letraInicial(linea: string): string | undefined {
   const inicio = sinAcentos(linea)
     .trimStart()
-    .replace(/^[^a-zñ]+/, '')
-    .slice(0, cuantas);
-  return /^[a-zñ]+$/.test(inicio) ? inicio : undefined;
+    .replace(/^[^a-zñ]+/, '');
+  return /^[a-zñ]$/.test(inicio.slice(0, 1)) ? inicio.slice(0, 1) : undefined;
 }
 
-/** Las últimas `cuantas` letras, sin contar los signos del final. */
-function letraFinal(linea: string, cuantas: number): string | undefined {
+/** La última letra, sin contar los signos del final. */
+function letraFinal(linea: string): string | undefined {
   const texto = sinAcentos(linea)
     .trimEnd()
     .replace(/[^a-zñ]+$/, '');
-  if (texto === '') return undefined;
-  return texto.slice(-cuantas);
+  return texto === '' ? undefined : texto.slice(-1);
 }
 
 /** El signo con el que termina la línea, si termina en signo. */
@@ -230,19 +191,18 @@ function marcaFinal(linea: string): string | undefined {
   return marca !== undefined && TERMINALS.has(marca) ? marca : undefined;
 }
 
-function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number, letras: number, anchoMinimo = 0): RepeatedLetter[] {
-  const de = (linea: string): string | undefined => (posicion === 'first' ? letraInicial(linea, letras) : letraFinal(linea, letras));
-  const conAncho = (linea: string): string | undefined => (linea.trimEnd().length >= anchoMinimo ? de(linea) : undefined);
+function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number): RepeatedLetter[] {
+  const de = (linea: string): string | undefined => (posicion === 'first' ? letraInicial(linea) : letraFinal(linea));
   const tipo = posicion === 'first' ? 'repeated-first-letter' : 'repeated-last-letter';
   const hallados: RepeatedLetter[] = [];
-  for (const tirada of tiradasCoincidentes(pages, lineas, conAncho)) {
+  for (const tirada of tiradasCoincidentes(pages, lineas, de)) {
     const primera = tirada.lineas[0] as LineaCoincidencia;
     hallados.push({
       type: tipo,
       page: tirada.page,
       line: primera.line,
       text: primera.text,
-      letter: conAncho(primera.text) ?? '',
+      letter: de(primera.text) ?? '',
       lineas: tirada.lineas,
       total: tirada.total,
       continuacion: tirada.continuacion,
@@ -251,12 +211,9 @@ function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', linea
   return hallados;
 }
 
-function consecutivePunctuationRuns(pages: string[][], lineas: number, anchoMinimo: number): ConsecutivePunctuation[] {
+function consecutivePunctuationRuns(pages: string[][], lineas: number): ConsecutivePunctuation[] {
   // Sólo cuenta el mismo signo: «…o.» y «…a-» no son una repetición.
-  const clave = (linea: string): string | undefined => {
-    if (linea.trimEnd().length < anchoMinimo) return undefined;
-    return marcaFinal(linea);
-  };
+  const clave = (linea: string): string | undefined => marcaFinal(linea);
   const hallados: ConsecutivePunctuation[] = [];
   for (const tirada of tiradasCoincidentes(pages, lineas, clave)) {
     const primera = tirada.lineas[0] as LineaCoincidencia;
@@ -416,10 +373,8 @@ export interface OpcionesAnalisis {
 
   /** Páginas pedidas, en tramos. Manda sobre el rango. */
   paginas?: readonly { desde: number; hasta: number }[];
-  porcentajeCorta?: number;
   reglas?: readonly string[];
   lineasMinimas?: number;
-  letrasMinimas?: number;
   excepciones?: readonly ExcepcionTipografia[];
   archivo?: string;
 }
@@ -466,17 +421,16 @@ function paginasDeTramos(tramos: readonly { desde: number; hasta: number }[]): n
 }
 
 export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
-  const { porcentajeCorta = 75, lineasMinimas = 2, letrasMinimas = 2, excepciones = [] } = opciones;
+  const { lineasMinimas = 2, excepciones = [] } = opciones;
   const pedidas = new Set(opciones.reglas ?? TYPOGRAPHY_RULES);
   const pages = splitPages(stdout);
-  const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
+  // Todas las líneas se comparan, sin importar su longitud: lo que no encaje se
+  // descarta con `.typography-exceptions`.
   const halladas: TypographyIncidence[] = [
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
-    ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
-    // El arranque de una línea importa aunque sea la última del párrafo (y por
-    // eso corta): siempre se comparan todas, sin umbral de ancho.
-    ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas, letrasMinimas, 0) : []),
-    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas, ancho) : []),
+    ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas) : []),
+    ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas) : []),
+    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas) : []),
   ];
   const vivas = excepciones.length === 0 ? halladas : filtraExcepciones(halladas, opciones.archivo ?? '', excepciones);
   const dentro = filtroDePaginas(opciones, pages.length);

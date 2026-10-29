@@ -334,13 +334,8 @@ Ejemplos:
     .description('detecta en los PDF líneas de una sola palabra y pares de líneas consecutivas terminadas en puntuación')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
     .option('--pages <páginas>', 'sólo esas páginas del PDF: 3 (esa sola), 3-80 (el rango) o una lista: 3,7,10-12')
-    .option(
-      '--min-line-width <porcentaje>',
-      'porcentaje del ancho medio por debajo del cual una línea se considera corta en repeated-last-letter y consecutive-punctuation (por defecto: 75)',
-    )
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
-    .option('--min-letters <n>', 'caracteres del borde que se comparan (por defecto: 2, mínimo 1)')
     .option('--fix', 'corrige los hallazgos aplicando cambios mínimos a los Markdown de origen (requiere un repositorio git)')
     .option('--exceptions <path>', 'archivo de excepciones de texto (por defecto: .typography-exceptions), ignoran casos exactos')
     .addHelpText(
@@ -352,16 +347,14 @@ en CI.
 
 Reglas:
   single-word-line          una línea no vacía con exactamente una palabra
-  consecutive-punctuation   varias líneas seguidas que todas terminan en un signo de puntuación
-  repeated-first-letter     varias líneas seguidas que empiezan por los mismos caracteres
-  repeated-last-letter      varias líneas seguidas que terminan por los mismos caracteres
+  consecutive-punctuation   varias líneas seguidas que todas terminan en el mismo signo de puntuación
+  repeated-first-letter     varias líneas seguidas que empiezan por la misma letra
+  repeated-last-letter      varias líneas seguidas que terminan por la misma letra
 
 El número de línea reinicia en cada página. Una línea vacía y el final de página cortan la
 consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.
-Y una tirada cuenta una vez: seis renglones seguidos que cumplen salen como un hallazgo, no como
-cuatro ventanas solapadas. Cuando la tirada es más larga que la ventana que se enseña, el informe
-dice cuántas había en total. Si la ventana que se enseña está en las excepciones, el informe enseña
-la siguiente de la tirada: ignorar un hallazgo no esconde los que le siguen.
+Todas las líneas se comparan, sin importar su longitud: los casos que no quieras ver se guardan
+en el archivo de excepciones.
 
 Ejemplos:
   iteraciones typography                                revisa los PDF de dist/files
@@ -369,8 +362,6 @@ Ejemplos:
   iteraciones typography dist/files/libro.pdf --pages 3 sólo la página 3
   iteraciones typography --pages 3-80                   sólo esas páginas
   iteraciones typography --pages 3,7,10-12              sólo esas páginas, sueltas o en tramos
-  iteraciones typography --min-line-width 90            sube el umbral: sólo cuentan las líneas largas
-  iteraciones typography --min-letters 1                compara una sola letra del borde
   iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra
   iteraciones typography --rules repeated-first-letter,repeated-last-letter   sólo las letras
   iteraciones typography --json                         imprime el resultado como JSON
