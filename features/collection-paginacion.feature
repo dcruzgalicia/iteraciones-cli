@@ -97,6 +97,20 @@ Característica: La paginación de las colecciones
       Cuando compogo las páginas de la colección con 10 por página
       Entonces el nav de la página 1 está vacío
 
+  Regla de negocio: Una colección en un subdirectorio enlaza a sus hermanas
+
+    Escenario: El nav de una colección en convocatorias/ no sube de nivel
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y una colección en "convocatorias" con 5 miembros
+      Y el proyecto pagina de 2 tarjetas
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/convocatorias/antologia.html" existe
+      Y el archivo "dist/files/convocatorias/antologia-2.html" existe
+      Y el archivo "dist/files/convocatorias/antologia.html" dice "./antologia-2.html"
+      Y el archivo "dist/files/convocatorias/antologia-2.html" dice "./antologia.html"
+      Y el nav de "dist/files/convocatorias/antologia-2.html" no dice "../"
+
   Regla de negocio: Los archivos se llaman por página
 
     Escenario: La primera página conserva el nombre y las demás se numeran
