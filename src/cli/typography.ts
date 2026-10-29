@@ -29,7 +29,8 @@ export interface TypographyOptions {
   pages?: string;
   rules?: string;
   exceptions?: string;
-  ignore?: string;
+  ignore?: string | boolean;
+  only?: string;
   fix?: boolean;
 }
 
@@ -85,19 +86,19 @@ function interpretaReglas(spec: string): string[] {
   return pedidas;
 }
 
-/** `1,5,6` o `all`: las incidencias que se guardan como excepción. */
-function interpretaIgnorar(spec: string, total: number): number[] {
+/** `1,5,6` o `all`: las incidencias elegidas del informe. */
+function seleccionaIncidencias(spec: string, total: number, opcion: string): number[] {
   const limpio = spec.trim().toLowerCase();
   if (limpio === 'all' || limpio === 'todas' || limpio === 'todos') {
     return Array.from({ length: total }, (_, indice) => indice + 1);
   }
   const partes = spec.split(',').map((parte) => parte.trim());
   if (partes.some((parte) => parte === '')) {
-    throw new BuildError(`--ignore "${spec}" tiene un hueco: separa los números con coma (1,5,6) o usa all`);
+    throw new BuildError(`${opcion} "${spec}" tiene un hueco: separa los números con coma (1,5,6) o usa all`);
   }
   const numeros = partes.map((parte) => {
     const numero = Number(parte);
-    if (!Number.isInteger(numero)) throw new BuildError(`--ignore "${parte}" no es un número de incidencia`);
+    if (!Number.isInteger(numero)) throw new BuildError(`${opcion} "${parte}" no es un número de incidencia`);
     return numero;
   });
   const fuera = numeros.find((numero) => numero < 1 || numero > total);
@@ -174,8 +175,22 @@ function cargarExcepciones(cwd: string, options: TypographyOptions, crear = fals
   return contenido === undefined ? [] : parseaExcepciones(contenido);
 }
 
+/** `1,5,6` o `all`, lo que entiende --ignore; cualquier otra cosa es una ruta. */
+function esSeleccion(spec: string): boolean {
+  return /^(all|todas|todos)$/i.test(spec.trim()) || /^\d+(\s*,\s*\d+)*$/.test(spec.trim());
+}
+
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
+    // `--ignore` sin números es `all`; si el valor no es una selección, es una
+    // ruta que commander se comió al pasar el argumento opcional.
+    if (typeof options.ignore === 'string' && !esSeleccion(options.ignore)) {
+      args.unshift(options.ignore);
+      options.ignore = true;
+    }
+    if (options.only !== undefined && options.fix !== true) {
+      throw new BuildError('--only necesita --fix: primero mira el informe, luego corrige los números que elijas');
+    }
     const analisis = opcionesDeAnalisis(options);
     const outputDir = resolve(cwd, options.output ?? DIST_FILES_DIR);
     const targets = args.length > 0 ? args.map((path) => resolve(cwd, path)) : await listPdfFiles(outputDir);
@@ -232,7 +247,8 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
 
     if (options.ignore !== undefined) {
       const planas = files.flatMap((file) => file.incidences.map((incidencia) => ({ pdf: file.pdf, incidencia })));
-      const numeros = interpretaIgnorar(options.ignore, planas.length);
+      const spec = typeof options.ignore === 'string' ? options.ignore : 'all';
+      const numeros = seleccionaIncidencias(spec, planas.length, '--ignore');
       if (numeros.length === 0) {
         logSuccess('sin incidencias que guardar', 'typography');
         return;
@@ -935,10 +951,22 @@ async function arreglaTypografia(
   for (const pdf of targets) {
     const incidences = await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) });
     if (incidences.length === 0) continue;
+    porPdf.set(pdf, { incidences, estado: new Map<TypographyIncidence, MotivoIncidencia>() });
+  }
 
-    const estado = new Map<TypographyIncidence, MotivoIncidencia>();
-    porPdf.set(pdf, { incidences, estado });
+  // `--only` elige por el número que trae el informe, igual que `--ignore`.
+  if (options.only !== undefined) {
+    const planas = [...porPdf.values()].flatMap((resultado) => resultado.incidences);
+    const numeros = seleccionaIncidencias(options.only, planas.length, '--only');
+    const elegidas = new Set(numeros.map((numero) => planas[numero - 1]));
+    for (const [pdf, resultado] of porPdf) {
+      const filtradas = resultado.incidences.filter((incidencia) => elegidas.has(incidencia));
+      if (filtradas.length === 0) porPdf.delete(pdf);
+      else resultado.incidences = filtradas;
+    }
+  }
 
+  for (const [pdf, { incidences, estado }] of porPdf) {
     // Los nombres cortados no se corrigen en el Markdown: van al preamble.
     const cortadas = incidences.filter((inc) => inc.type === 'hyphenated-proper-noun');
     for (const inc of cortadas) {
