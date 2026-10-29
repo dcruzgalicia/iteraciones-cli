@@ -338,6 +338,7 @@ Ejemplos:
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
     .option('--fix', 'corrige los hallazgos aplicando cambios mínimos a los Markdown de origen (requiere un repositorio git)')
     .option('--exceptions <path>', 'archivo de excepciones de texto (por defecto: .typography-exceptions), ignoran casos exactos')
+    .option('-i, --ignore <números>', 'guarda esas incidencias del informe como excepciones: 1,5,6 o all')
     .addHelpText(
       'after',
       `
@@ -354,7 +355,7 @@ Reglas:
 El número de línea reinicia en cada página. Una línea vacía y el final de página cortan la
 consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.
 Todas las líneas se comparan, sin importar su longitud: los casos que no quieras ver se guardan
-en el archivo de excepciones.
+en el archivo de excepciones con --ignore, usando el número que trae el informe (o all).
 
 Ejemplos:
   iteraciones typography                                revisa los PDF de dist/files
@@ -364,6 +365,8 @@ Ejemplos:
   iteraciones typography --pages 3,7,10-12              sólo esas páginas, sueltas o en tramos
   iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra
   iteraciones typography --rules repeated-first-letter,repeated-last-letter   sólo las letras
+  iteraciones typography --ignore 1,5,6                 guarda esas incidencias como excepciones
+  iteraciones typography --ignore all                   guarda todas las del informe
   iteraciones typography --json                         imprime el resultado como JSON
 
 El informe da siempre la página del PDF, no el folio impreso, que puede venir en romanos o

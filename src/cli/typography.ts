@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { slugify } from '../builder/discover.js';
 import { listMarkdownDocuments } from '../builder/discover-files.js';
@@ -7,7 +7,14 @@ import { BuildError } from '../lib/errors.js';
 import { readFrontmatter, splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logError, logInfo, logSuccess, writeJson } from '../lib/logger.js';
 import { relativeLabel } from '../lib/paths.js';
-import { analyzePdf, type OpcionesAnalisis, parseaExcepciones, TYPOGRAPHY_RULES, type TypographyIncidence } from '../lib/pdf-typography.js';
+import {
+  agregaExcepcionesAlTexto,
+  analyzePdf,
+  type OpcionesAnalisis,
+  parseaExcepciones,
+  TYPOGRAPHY_RULES,
+  type TypographyIncidence,
+} from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency, type RunResult } from '../lib/run.js';
 import { listPdfFiles } from '../lib/visual-diff.js';
@@ -18,6 +25,7 @@ export interface TypographyOptions {
   pages?: string;
   rules?: string;
   exceptions?: string;
+  ignore?: string;
   fix?: boolean;
 }
 
@@ -73,6 +81,28 @@ function interpretaReglas(spec: string): string[] {
   return pedidas;
 }
 
+/** `1,5,6` o `all`: las incidencias que se guardan como excepción. */
+function interpretaIgnorar(spec: string, total: number): number[] {
+  const limpio = spec.trim().toLowerCase();
+  if (limpio === 'all' || limpio === 'todas' || limpio === 'todos') {
+    return Array.from({ length: total }, (_, indice) => indice + 1);
+  }
+  const partes = spec.split(',').map((parte) => parte.trim());
+  if (partes.some((parte) => parte === '')) {
+    throw new BuildError(`--ignore "${spec}" tiene un hueco: separa los números con coma (1,5,6) o usa all`);
+  }
+  const numeros = partes.map((parte) => {
+    const numero = Number(parte);
+    if (!Number.isInteger(numero)) throw new BuildError(`--ignore "${parte}" no es un número de incidencia`);
+    return numero;
+  });
+  const fuera = numeros.find((numero) => numero < 1 || numero > total);
+  if (fuera !== undefined) {
+    throw new BuildError(`no existe la incidencia ${fuera}: el informe tiene ${plural(total, 'incidencia')}`);
+  }
+  return [...new Set(numeros)];
+}
+
 function formatea(incidencia: TypographyIncidence): string {
   const texto = incidencia.text.trimEnd();
   if (incidencia.type === 'single-word-line') {
@@ -98,11 +128,14 @@ function reportIncidencias(
   entradas: { pdf: string; incidences: TypographyIncidence[]; motivo?: (incidencia: TypographyIncidence) => string | undefined }[],
 ): void {
   const lineas: string[] = [];
+  let numero = 0;
   for (const { pdf, incidences, motivo } of entradas) {
     if (incidences.length === 0) continue;
     lineas.push(`${relativeLabel(cwd, pdf)} · ${plural(incidences.length, 'incidencia')}`);
     for (const incidencia of incidences) {
+      numero += 1;
       const partes = formatea(incidencia).split('\n');
+      partes[0] = `  #${numero}  ${(partes[0] as string).slice(2)}`;
       const porque = motivo?.(incidencia);
       if (porque) partes[0] = `${partes[0]}  ${porque}`;
       lineas.push(partes.join('\n'));
@@ -119,7 +152,7 @@ function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
   };
 }
 
-function cargarExcepciones(cwd: string, options: TypographyOptions): ReturnType<typeof parseaExcepciones> {
+function cargarExcepciones(cwd: string, options: TypographyOptions, crear = false): ReturnType<typeof parseaExcepciones> {
   const ruta = resolve(cwd, options.exceptions ?? '.typography-exceptions');
   let contenido: string | undefined;
   try {
@@ -127,7 +160,7 @@ function cargarExcepciones(cwd: string, options: TypographyOptions): ReturnType<
   } catch (err) {
     const codigo = (err as NodeJS.ErrnoException).code;
     if (codigo !== 'ENOENT') throw err;
-    if (options.exceptions !== undefined) {
+    if (options.exceptions !== undefined && !crear) {
       throw new BuildError(`no existe el archivo de excepciones ${relativeLabel(cwd, ruta)}`);
     }
   }
@@ -183,12 +216,38 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
       return;
     }
 
-    const excepciones = cargarExcepciones(cwd, options);
+    const excepciones = cargarExcepciones(cwd, options, options.ignore !== undefined);
 
     const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
       pdf,
       incidences: await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) }),
     }));
+
+    if (options.ignore !== undefined) {
+      const planas = files.flatMap((file) => file.incidences.map((incidencia) => ({ pdf: file.pdf, incidencia })));
+      const numeros = interpretaIgnorar(options.ignore, planas.length);
+      if (numeros.length === 0) {
+        logSuccess('sin incidencias que guardar', 'typography');
+        return;
+      }
+      const ruta = resolve(cwd, options.exceptions ?? '.typography-exceptions');
+      let texto = '';
+      try {
+        texto = readFileSync(ruta, 'utf8');
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      }
+      for (const pdf of new Set(numeros.map((numero) => (planas[numero - 1] as { pdf: string }).pdf))) {
+        const archivo = relativeLabel(cwd, pdf);
+        const elegidas = numeros.map((numero) => planas[numero - 1] as { pdf: string; incidencia: TypographyIncidence });
+        const delPdf = elegidas.filter((elegida) => elegida.pdf === pdf).map((elegida) => elegida.incidencia);
+        texto = agregaExcepcionesAlTexto(texto, archivo, delPdf);
+      }
+      writeFileSync(ruta, texto);
+      logSuccess(`${plural(numeros.length, 'excepción', 'excepciones')} en ${relativeLabel(cwd, ruta)}`, 'typography');
+      return;
+    }
+
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 
     if (options.json) {
@@ -205,6 +264,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
       return;
     }
     reportIncidencias(cwd, files);
+    logInfo('Para guardar una excepción: iteraciones typography --ignore 1,5,6 (o --ignore all)', 'typography');
     process.exitCode = 1;
     logError(`${plural(total, 'incidencia')} en ${plural(files.length, 'PDF')}`, 'typography');
   } catch (err) {

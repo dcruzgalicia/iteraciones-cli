@@ -591,6 +591,86 @@ Característica: la corrección tipográfica del markdown
         consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: Beto come pan, || 3: Beto corta cedros,
         """
 
+  Regla de negocio: --ignore guarda incidencias del informe como excepciones
+
+    Escenario: Guarda la incidencia elegida en un archivo nuevo
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        uno dos.
+        tres cuatro.
+        cinco seis.
+        \f
+        """
+      Cuando parseo el comando "typography --ignore 1 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "1 excepción en .typography-exceptions"
+      Y el archivo ".typography-exceptions" contiene "dist/files/libro.pdf"
+      Y el archivo ".typography-exceptions" contiene "pág 1  líneas 1-2  consecutive-punctuation"
+
+    Escenario: Al volver a correrlo la incidencia guardada ya no sale y se numera desde uno
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        uno dos.
+        tres cuatro.
+        cinco seis.
+        \f
+        """
+      Cuando parseo el comando "typography --ignore 1 dist/files/libro.pdf" sobre la raíz del proyecto
+      Y parseo el comando "typography dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "#1  pág 1  líneas 2-3  consecutive-punctuation"
+      Y el error dice "1 incidencia en 1 PDF"
+
+    Escenario: all guarda todo y el informe queda limpio
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        uno dos.
+        tres cuatro.
+        cinco seis.
+        \f
+        """
+      Cuando parseo el comando "typography --ignore all dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "2 excepciones en .typography-exceptions"
+      Y parseo el comando "typography dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin incidencias en 1 PDF"
+
+    Escenario: Lo agrega al final del grupo del PDF y respeta los otros grupos
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        uno dos.
+        tres cuatro.
+        \f
+        """
+      Y que el archivo "excepciones.txt" tiene este contenido
+        """
+        dist/files/otro.pdf
+          pág 2  línea 1  single-word-line  Hola.
+
+        """
+      Cuando parseo el comando "typography --ignore 1 --exceptions excepciones.txt dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "excepciones.txt" contiene "dist/files/otro.pdf"
+      Y el archivo "excepciones.txt" contiene "dist/files/libro.pdf"
+      Y el archivo "excepciones.txt" contiene "pág 1  líneas 1-2  consecutive-punctuation"
+
+    Escenario: Un número que no existe lo dice
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        uno dos.
+        tres cuatro.
+        \f
+        """
+      Cuando parseo el comando "typography --ignore 9 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "no existe la incidencia 9"
+
   Regla de negocio: --exceptions ignora lo que ya está aceptado
 
     Escenario: Filtra la incidencia con la cabecera tal como la imprime el informe

@@ -281,6 +281,47 @@ export function parseaExcepciones(texto: string): ExcepcionTipografia[] {
   return excepciones;
 }
 
+/** El bloque de texto de una incidencia, con el formato que lee el parser. */
+export function formateaExcepcion(incidencia: TypographyIncidence): string {
+  if (incidencia.type === 'single-word-line') {
+    return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${incidencia.text.trim()}`;
+  }
+  const lineas = incidencia.lineas;
+  const desde = lineas[0]?.line ?? incidencia.line;
+  const hasta = lineas.at(-1)?.line ?? desde;
+  const partes = [`  pág ${incidencia.page}  líneas ${desde}-${hasta}  ${incidencia.type}`];
+  for (const linea of lineas) partes.push(`         ${linea.line}  ${linea.text.trimEnd()}`);
+  if (incidencia.type === 'repeated-first-letter' || incidencia.type === 'repeated-last-letter') {
+    const donde = incidencia.type === 'repeated-first-letter' ? 'empiezan' : 'terminan';
+    const letra = JSON.stringify(incidencia.letter).replace(/"/g, "'");
+    partes.push(`         las ${lineas.length} ${donde} por ${letra}`);
+  }
+  return partes.join('\n');
+}
+
+/**
+ * Agrega las incidencias al final del grupo del archivo en el texto de
+ * excepciones. Si el grupo no existe, lo crea al final del archivo.
+ */
+export function agregaExcepcionesAlTexto(texto: string, archivo: string, incidencias: readonly TypographyIncidence[]): string {
+  if (incidencias.length === 0) return texto;
+  const bloques = incidencias.map(formateaExcepcion);
+  const lineas = texto.trim() === '' ? [] : texto.trimEnd().split('\n');
+  const cabecera = lineas.findIndex((linea) => /^\S/.test(linea) && normalizaCabeceraArchivo(linea.trim()) === archivo);
+  if (cabecera < 0) {
+    const separacion = lineas.length > 0 ? [''] : [];
+    return [...lineas, ...separacion, archivo, ...bloques].join('\n') + '\n';
+  }
+  let fin = cabecera + 1;
+  while (fin < lineas.length && !/^\S/.test(lineas[fin] as string)) fin++;
+  let ultimo = fin - 1;
+  while (ultimo > cabecera && (lineas[ultimo] as string).trim() === '') ultimo--;
+  const antes = lineas.slice(0, ultimo + 1);
+  const despues = lineas.slice(fin);
+  const separacion = despues.length > 0 ? [''] : [];
+  return [...antes, ...bloques, ...separacion, ...despues].join('\n') + '\n';
+}
+
 function parseaBloqueExcepcion(archivo: string, lines: string[]): ExcepcionTipografia | undefined {
   if (!archivo || lines.length === 0) return undefined;
   const unica = parseaExcepcionUnica(lines[0] ?? '', archivo);
