@@ -23,9 +23,9 @@ Característica: la imagen de cabecera de las tarjetas
       Y un texto en "autoras/historikas" que empieza con la imagen "Mapa.png"
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/texto.html" pone "assets/images/lista-Mapa" antes que "Tres libros"
-      Y el archivo "dist/files/texto.html" dice "h-[100px]"
+      Y el archivo "dist/files/texto.html" dice "h-[150px] w-full"
       Y el archivo "dist/files/texto.html" dice "rounded-tr-xl rounded-bl-xl"
-      Y el archivo "dist/files/texto.html" dice "object-cover"
+      Y el archivo "dist/files/texto.html" dice "h-full w-full object-cover"
 
     Escenario: En una colección en subdirectorio la ruta se resuelve desde la página
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -36,6 +36,15 @@ Característica: la imagen de cabecera de las tarjetas
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/convocatorias/antologia.html" dice "assets/images/antologia-Mapa"
       Y el archivo "dist/files/convocatorias/antologia.html" no dice "imagenes/Mapa.png"
+
+    Escenario: La imagen del texto enlaza a la biografía de su autora
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y una creadora llamada "Ana García" con retrato "ana.jpg"
+      Y un texto de "Ana García" en "autoras/historikas" que empieza con la imagen "Mapa.png"
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/texto.html" dice "<a href=\"./ana-garcia.html\" class=\"block h-full w-full\">"
+      Y el archivo "dist/files/texto.html" pone "<a href=\"./ana-garcia.html\" class=\"block h-full w-full\">" antes que "assets/images/lista-Mapa"
 
     Escenario: Un texto sin imágenes no lleva figura
       Dado que la raíz del proyecto tiene un proyecto de prueba

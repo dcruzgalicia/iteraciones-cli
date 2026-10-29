@@ -16,7 +16,8 @@ Característica: el retrato de la creadora en sus tarjetas
       Y el archivo "dist/files/creadora.html" dice "assets/images/lista-ana"
       Y el archivo "dist/files/creadora.html" dice "width:150px;height:150px"
       Y el archivo "dist/files/creadora.html" dice "rounded-full object-cover"
-      Y el archivo "dist/files/creadora.html" pone "Retrato de Ana García" antes que "Ana García"
+      Y el archivo "dist/files/creadora.html" dice "<a href=\"./ana-garcia.html\" aria-label=\"Ver la biografía de Ana García\">"
+      Y el archivo "dist/files/creadora.html" pone "Retrato de Ana García" antes que ">Ana García</a>"
 
     Escenario: La tarjeta de autora de un texto también lleva el retrato
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -26,6 +27,17 @@ Característica: el retrato de la creadora en sus tarjetas
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Retrato de Ana García"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" pone "Retrato de Ana García" antes que "class=\"text-center text-xl uppercase tracking-wide\""
+
+    Escenario: La página de la creadora muestra el retrato como tarjeta propia
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y una creadora llamada "Ana García" con retrato "ana.jpg"
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/ana-garcia.html" dice "Retrato de Ana García"
+      Y el archivo "dist/files/ana-garcia.html" dice "assets/images/ana-garcia-ana"
+      Y el archivo "dist/files/ana-garcia.html" dice "rounded-tr-2xl rounded-bl-2xl"
+      Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "assets/images/ana-garcia-ana"
 
     Escenario: Sin retrato la tarjeta sigue igual
       Dado que la raíz del proyecto tiene un proyecto de prueba

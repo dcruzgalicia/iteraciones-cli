@@ -260,12 +260,27 @@ function htmlVars(args: {
   available?: Set<string>;
   docChip?: string;
   covers?: { front?: string; back?: string };
+  creatorImage?: string;
   indiceColeccion?: string;
   creatorHrefs: Map<string, string>;
   extras: string;
   pagination: string;
 }): HtmlPageVars {
-  const { doc, outputs, renderCtx, formats, hasHomePage, available, docChip, covers, indiceColeccion, creatorHrefs, extras, pagination } = args;
+  const {
+    doc,
+    outputs,
+    renderCtx,
+    formats,
+    hasHomePage,
+    available,
+    docChip,
+    covers,
+    creatorImage,
+    indiceColeccion,
+    creatorHrefs,
+    extras,
+    pagination,
+  } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
@@ -296,6 +311,8 @@ function htmlVars(args: {
     contentChip: contentChipPara(doc.frontmatter.type),
     frontCover: covers?.front,
     backCover: covers?.back,
+    creatorImage,
+    creatorImageAlt: creatorImage === undefined ? undefined : `Retrato de ${titulo}`,
     indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
@@ -316,6 +333,7 @@ export async function emitHtmlPage(
   docChipOverride?: string,
   covers?: { front?: string; back?: string },
   indices?: string[],
+  creatorImage?: string,
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -348,6 +366,7 @@ export async function emitHtmlPage(
         available,
         docChip: docChipOverride,
         covers,
+        creatorImage,
         indiceColeccion: indices?.[indice],
         creatorHrefs,
         extras,
@@ -799,8 +818,8 @@ export function paginationNav(outSlug: string, pagina: number, total: number): s
   return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}${siguiente}</nav>`;
 }
 
-const CARD_IMAGE_CLASSES = 'mb-6 flex h-[100px] items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl';
-const CARD_IMAGE_IMG_CLASSES = 'h-full w-auto max-w-full object-cover';
+const CARD_IMAGE_CLASSES = 'mb-6 flex h-[150px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl';
+const CARD_IMAGE_IMG_CLASSES = 'h-full w-full object-cover';
 const PORTRAIT_WRAPPER_CLASSES = 'mb-6 flex justify-center';
 const PORTRAIT_CLASSES = 'rounded-full object-cover';
 
@@ -831,12 +850,16 @@ export function hrefsDeImagenes(imageMap: Map<string, string>, outputDir: string
   return hrefs;
 }
 
-function figuraDeTarjeta(href: string): string {
-  return `<figure class="${CARD_IMAGE_CLASSES}"><img src="${href}" alt="" class="${CARD_IMAGE_IMG_CLASSES}"></figure>`;
+function figuraDeTarjeta(href: string, enlace?: string): string {
+  const img = `<img src="${href}" alt="" class="${CARD_IMAGE_IMG_CLASSES}">`;
+  const dentro = enlace === undefined ? img : `<a href="${enlace}" class="block h-full w-full">${img}</a>`;
+  return `<figure class="${CARD_IMAGE_CLASSES}">${dentro}</figure>`;
 }
 
-function retratoDeCreadora(href: string, nombre: string): string {
-  return `<div class="${PORTRAIT_WRAPPER_CLASSES}"><img src="${href}" alt="Retrato de ${escaparHtml(nombre)}" class="${PORTRAIT_CLASSES}" style="width:150px;height:150px"></div>`;
+function retratoDeCreadora(href: string, nombre: string, enlace?: string): string {
+  const img = `<img src="${href}" alt="Retrato de ${escaparHtml(nombre)}" class="${PORTRAIT_CLASSES}" style="width:150px;height:150px">`;
+  const dentro = enlace === undefined ? img : `<a href="${enlace}" aria-label="Ver la biografía de ${escaparHtml(nombre)}">${img}</a>`;
+  return `<div class="${PORTRAIT_WRAPPER_CLASSES}">${dentro}</div>`;
 }
 
 function escaparHtml(texto: string): string {
@@ -970,12 +993,13 @@ export function creatorCard(
   imagenes?: Map<string, string>,
 ): string {
   const retrato = doc.image === undefined ? undefined : imagenes?.get(doc.image);
+  const perfil = creatorHrefs.get(doc.name);
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
     chipHtml('Creadora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
     '',
-    ...(retrato === undefined ? [] : [retratoDeCreadora(retrato, doc.name), '']),
+    ...(retrato === undefined ? [] : [retratoDeCreadora(retrato, doc.name, perfil), '']),
     `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
     '',
     doc.body.trim(),
@@ -1356,13 +1380,23 @@ function chipsDeCabecera(
   return `<div class="flex items-start justify-between gap-4"><div class="flex flex-wrap items-center gap-2 mb-6">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`;
 }
 
-function imagenDeCabecera(e: CollectionEntry, tipo: string, imagenes?: Map<string, string>): string | undefined {
+function imagenDeCabecera(
+  e: CollectionEntry,
+  tipo: string,
+  imagenes: Map<string, string> | undefined,
+  creatorHrefs: Map<string, string>,
+  discoveryIndex: Map<string, DiscoveryEntry> | undefined,
+  href: string | undefined,
+): string | undefined {
   const src = tipo === 'creator' ? e.image : primeraImagenDelCuerpo(e.body);
   if (src === undefined) return undefined;
   const abs = isAbsolute(src) ? src : resolve(e.dirAbs ?? '.', src);
-  const href = imagenes?.get(abs);
-  if (href === undefined) return undefined;
-  return tipo === 'creator' ? retratoDeCreadora(href, e.title || TITULO_POR_DEFECTO) : figuraDeTarjeta(href);
+  const imagen = imagenes?.get(abs);
+  if (imagen === undefined) return undefined;
+  if (tipo === 'creator') return retratoDeCreadora(imagen, e.title || TITULO_POR_DEFECTO, href);
+  // La imagen del texto lleva a la biografía de su autora, como el nombre.
+  const primera = creadoresDeTarjeta(e, discoveryIndex).nombres?.[0];
+  return figuraDeTarjeta(imagen, primera === undefined ? undefined : creatorHrefs.get(primera));
 }
 
 function cabeceraDeTarjeta(
@@ -1375,12 +1409,13 @@ function cabeceraDeTarjeta(
   page?: PageRef,
   currentHref?: string,
   imagenes?: Map<string, string>,
+  href?: string,
 ): string[] {
   const tipo = e.type ?? 'file';
   const partes: string[] = [];
   const chips = chipsDeCabecera(e, dir, available, discoveryIndex, page, currentHref);
   if (chips !== '') partes.push(chips, '');
-  const imagen = imagenDeCabecera(e, tipo, imagenes);
+  const imagen = imagenDeCabecera(e, tipo, imagenes, creatorHrefs, discoveryIndex, href);
   if (imagen !== undefined) partes.push(imagen, '');
   if (tipo === 'collection') return [...partes, ...partesDeColeccion(e, titleHtml, creatorHrefs, discoveryIndex)];
   const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
@@ -1407,7 +1442,7 @@ function collectionCard(
   const card = [
     `:::: {class="${COLLECTION_CARD_CLASSES}"}`,
     '',
-    ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes),
+    ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, href),
   ];
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
@@ -1822,7 +1857,10 @@ async function preprocessDocImages(
     },
     wants: { pdf: active.latex || active.pdf, web: active.html || active.epub || active.markdown, epub: active.epub },
     // Las imágenes de las tarjetas de una colección no viven en su cuerpo.
-    extraImages: collectionEntries.length > 0 ? imagenesDeLasTarjetas(collectionEntries, ctx.cwd) : [],
+    extraImages: [
+      ...(collectionEntries.length > 0 ? imagenesDeLasTarjetas(collectionEntries, ctx.cwd) : []),
+      ...(doc.frontmatter.type === 'creator' ? retratoDeLaPagina(outputs.fm, dirname(doc.filePath)) : []),
+    ],
   });
 }
 
@@ -1888,7 +1926,21 @@ async function emitCollectionHtml(
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
   const indices = indicesDeColeccion(doc, outputs, collectionEntries, memberHrefs, pageSize, ctx.siteConfig);
 
-  await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, extras, undefined, covers, indices);
+  await emitHtmlPage(
+    doc,
+    outputs,
+    renderCtx,
+    exportCtx,
+    discoveryIndex,
+    imagePaths,
+    contenidos,
+    hrefsCreadores,
+    extras,
+    undefined,
+    covers,
+    indices,
+    retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir),
+  );
   await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 }
 
@@ -2072,6 +2124,28 @@ function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: str
     const diferencia = fechaOrdenable(discoveryIndex.get(b)) - fechaOrdenable(discoveryIndex.get(a));
     return diferencia !== 0 ? diferencia : a.localeCompare(b);
   });
+}
+
+/** El retrato declarado en el frontmatter de una creadora, ya resuelto. */
+function retratoDeLaPagina(fm: Record<string, unknown>, docDir: string): string[] {
+  const retrato = fmTrimmedString(fm.image);
+  if (retrato === undefined) return [];
+  return [isAbsolute(retrato) ? retrato : resolve(docDir, retrato)];
+}
+
+function retratoDePaginaHref(
+  fm: Record<string, unknown>,
+  webMap: Map<string, string>,
+  docDir: string,
+  outputDir: string,
+  dir: string,
+): string | undefined {
+  const raw = fmTrimmedString(fm.image);
+  if (raw === undefined) return undefined;
+  const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
+  const processed = webMap.get(abs);
+  if (processed === undefined || processed === abs) return undefined;
+  return `./${posix(relative(join(outputDir, dir), processed))}`;
 }
 
 function imagenesDeLasTarjetas(entradas: CollectionEntry[], cwd: string): string[] {
