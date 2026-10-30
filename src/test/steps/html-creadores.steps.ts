@@ -151,13 +151,6 @@ Then('el chip {string} enlaza a {string}', (chip: string, destino: string) => {
   }
 });
 
-Then('la página de la creadora lleva la tarjeta de textos', () => {
-  const html = readFileSync(join(world.root, 'dist', 'files', 'ana-garcia.html'), 'utf8');
-  if (!html.includes('>Textos</a>')) {
-    throw new Error('la página de la creadora no lleva la tarjeta de textos');
-  }
-});
-
 Then('la página de la creadora no lleva la tarjeta de textos', () => {
   const archivo = join(world.root, 'dist', 'files', 'ana-garcia.html');
   if (!existsSync(archivo)) return;
