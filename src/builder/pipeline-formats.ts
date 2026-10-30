@@ -1058,8 +1058,9 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
   return [
     '<div class="break-inside-avoid pb-6">',
     `<div class="${EXTRA_CARD_CLASSES}">`,
-    `<div class="mb-2 flex items-center gap-2">${iconos}</div>`,
-    `<p class="m-0 text-xs leading-relaxed">${TEXTO_LICENCIA}</p>`,
+    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
+    `<div class="flex items-center gap-2">${iconos}</div>`,
+    `<p class="mt-2 mb-0 text-xs leading-relaxed">${TEXTO_LICENCIA}</p>`,
     '</div>',
     '</div>',
   ].join('');
