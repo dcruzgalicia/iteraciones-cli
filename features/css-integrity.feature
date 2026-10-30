@@ -15,6 +15,11 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
     Entonces el CSS incluye las clases del HTML y el acento configurado
     Y el CSS purga lo que el HTML ya no usa y no inventa lo que no menciona
 
+  Escenario: Las tarjetas mezclan el acento en el fondo
+    Dado un proyecto cuyo HTML trae "<div class=\"tarjeta\">x</div>"
+    Cuando compilo el CSS con acento "lime"
+    Entonces el CSS mezcla el acento en el fondo de las tarjetas
+
   Escenario: El borde de acento se resalta al pasar el ratón en todas las tarjetas
     Dado un proyecto cuyo HTML trae "<div class=\"tarjeta ring-1\">x</div>"
     Cuando compilo el CSS con acento "lime"

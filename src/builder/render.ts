@@ -46,6 +46,10 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   if (vars.backCover) args.push(`--variable=back-cover:${vars.backCover}`);
   if (vars.creatorImage) args.push(`--variable=creator-image:${vars.creatorImage}`);
   if (vars.creatorImageAlt) args.push(`--variable=creator-image-alt:${vars.creatorImageAlt}`);
+  if (vars.license) args.push(`--variable=license:${vars.license}`);
+  if (vars.menu) args.push(`--variable=menu:${vars.menu}`);
+  if (vars.announcementsTop) args.push(`--variable=announcements-top:${vars.announcementsTop}`);
+  if (vars.announcementsBottom) args.push(`--variable=announcements-bottom:${vars.announcementsBottom}`);
   if (vars.indiceColeccion) args.push(`--variable=indice-coleccion:${vars.indiceColeccion}`);
   if (vars.extras) args.push(`--variable=extras:${vars.extras}`);
   if (vars.pagination) args.push(`--variable=pagination:${vars.pagination}`);

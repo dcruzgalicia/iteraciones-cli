@@ -83,6 +83,7 @@ const HtmlSiteSchema = z
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
     color: z.enum(ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.site.color),
     links: z.array(z.object({ name: z.string(), url: z.string() }).strict()).optional(),
+    license: z.string().optional(),
   })
   .strict();
 

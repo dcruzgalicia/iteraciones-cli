@@ -21,7 +21,7 @@ interface IngestedFrontmatter {
   date: string | undefined;
   creator: string[];
   manualSlug: string | undefined;
-  type: 'file' | 'collection' | 'creator' | 'intervention' | 'list' | undefined;
+  type: 'file' | 'collection' | 'creator' | 'intervention' | 'list' | 'menu' | 'announcement' | undefined;
   files: string[] | undefined;
   fm: Record<string, unknown> | undefined;
 }
@@ -39,7 +39,13 @@ function normalizeFrontmatterRecord(record: Record<string, unknown>, relativePat
     }
   }
   const type =
-    record.type === 'file' || record.type === 'collection' || record.type === 'creator' || record.type === 'intervention' || record.type === 'list'
+    record.type === 'file' ||
+    record.type === 'collection' ||
+    record.type === 'creator' ||
+    record.type === 'intervention' ||
+    record.type === 'list' ||
+    record.type === 'menu' ||
+    record.type === 'announcement'
       ? record.type
       : undefined;
   const files = Array.isArray(record.files) && record.files.every((f) => typeof f === 'string') ? (record.files as string[]) : undefined;

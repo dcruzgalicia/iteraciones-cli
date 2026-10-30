@@ -122,6 +122,12 @@ Then('el CSS incluye las clases del HTML y el acento configurado', () => {
   }
 });
 
+Then('el CSS mezcla el acento en el fondo de las tarjetas', () => {
+  if (!/color-mix\(in oklab, var\(--color-accent-500\) 4%/.test(world.css)) {
+    throw new Error('el fondo de .tarjeta no mezcla el acento');
+  }
+});
+
 Then('el CSS lleva el acento {string}', (accent: string) => {
   if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new Error(`la paleta ${accent} no existe`);
   const referencia = `--color-accent-500:var(--color-${accent}-500)`;

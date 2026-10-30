@@ -117,7 +117,7 @@ async function validateParsedYaml(
   if (await validateCollectionFiles(cwd, entry, result as Record<string, unknown>, errors)) fmError = true;
 
   const type = (result as Record<string, unknown>).type;
-  if (!body.trim() && !fmError && type !== 'collection' && type !== 'intervention') {
+  if (!body.trim() && !fmError && type !== 'collection' && type !== 'intervention' && type !== 'menu') {
     errors.push({ file: entry, message: 'no tiene contenido después del frontmatter; agrega un body para proceder con el build' });
     fmError = true;
   }
