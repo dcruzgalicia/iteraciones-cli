@@ -179,7 +179,7 @@ Ejemplos:
 
   program
     .command('assets')
-    .description('copia al directorio de salida las fuentes del paquete y el logo que referencia el HTML')
+    .description('copia al directorio de salida las fuentes del paquete y el logo, y empaqueta el JS del sitio')
     .requiredOption('-o, --output <path>', 'directorio de salida')
     .addHelpText(
       'after',

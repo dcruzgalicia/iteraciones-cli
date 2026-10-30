@@ -141,6 +141,7 @@ export interface HtmlPageVars {
   keywords?: string;
   theme?: string;
   css?: string;
+  js?: string;
   authorMeta?: string;
   docTitle?: string;
   subtitle?: string;

@@ -14,6 +14,11 @@ export const KEYWORDS_DIR = 'keywords';
 
 export const ASSETS_CSS_FILE = 'assets/css/styles.css';
 
+/** El único JS del sitio: el masonry ya empaquetado. */
+export const ASSETS_JS_DIR = 'assets/js';
+
+export const ASSETS_JS_FILE = 'assets/js/site.js';
+
 export const ASSETS_FONTS_DIR = 'assets/fonts';
 
 /** El logo raster ya convertido: el HTML lo referencia en vez de incrustarlo. */

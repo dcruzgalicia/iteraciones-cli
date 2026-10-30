@@ -46,6 +46,7 @@ import { detectPageSize } from './latex-preamble.js';
 import {
   ASSETS_CSS_FILE,
   ASSETS_IMAGES_DIR,
+  ASSETS_JS_FILE,
   ASSETS_PDF_IMAGES_DIR,
   docProducesFormat,
   KEYWORDS_DIR,
@@ -293,6 +294,7 @@ function htmlVars(args: {
     lang,
     theme: htmlConfig?.site?.theme,
     css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
+    js: ctx.needsCss ? relativeHref(dir, ASSETS_JS_FILE) : undefined,
     keywords: keywordsFromFm(fm).join(', ') || undefined,
     authorMeta: doc.frontmatter.creator.join(', '),
     docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? doc.frontmatter.title : undefined,

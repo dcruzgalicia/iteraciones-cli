@@ -8,12 +8,13 @@ import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
-import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_FAVICON_SVG, ASSETS_LOGO_WEBP } from './output-layout.js';
+import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_FAVICON_SVG, ASSETS_JS_DIR, ASSETS_LOGO_WEBP } from './output-layout.js';
 import { hashGlobbedFiles } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
+const SITE_JS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'site.js');
 
 export async function resolveTailwindBin(): Promise<string> {
   try {
@@ -27,6 +28,20 @@ export async function resolveTailwindBin(): Promise<string> {
     }
   } catch {}
   throw new BuildError(`no se encontró el binario de Tailwind CSS (@tailwindcss/cli). Verifica que el paquete esté instalado (bun install).`);
+}
+
+/** Empaqueta el JS del sitio (masonry-layout) en un solo archivo. */
+export async function bundleSiteJs(outputDir: string): Promise<void> {
+  const result = await Bun.build({
+    entrypoints: [SITE_JS_SRC],
+    outdir: join(outputDir, ASSETS_JS_DIR),
+    target: 'browser',
+    format: 'iife',
+    minify: true,
+  });
+  if (!result.success) {
+    throw new BuildError(`no se pudo empaquetar el JavaScript del sitio:\n${result.logs.map((log) => String(log)).join('\n')}`);
+  }
 }
 
 export async function compileTailwindCss(outputDir: string, accent: string, projectRoot: string): Promise<void> {
@@ -96,6 +111,7 @@ export async function buildAssets(
   prevCssFileCache?: CssFileCache,
 ): Promise<{ cssHash: string; cssFileCache: CssFileCache }> {
   await copyStaticAssets(outputDir, cwd, siteConfig);
+  await bundleSiteJs(outputDir);
   recordSupportCommand('resources', outputDir, ['iteraciones', 'assets', '-o', outputDir]);
   const { hash: cssHash, cache: cssFileCache } = await computeCssHash(outputDir, siteConfig, prevCssFileCache);
   const cssExists = await Bun.file(join(outputDir, ASSETS_CSS_FILE)).exists();

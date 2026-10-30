@@ -82,6 +82,7 @@ function buildHtmlMetadataArgs(
       { key: 'home-href', value: vars.homeHref },
       { key: 'theme', value: theme },
       { key: 'css', value: css },
+      { key: 'js', value: vars.js },
       { key: 'keywords', value: vars.keywords },
       { key: 'author-meta', value: vars.authorMeta },
     ]),

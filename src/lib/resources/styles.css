@@ -235,3 +235,42 @@
 .prose :where(a):not(:where([class~="not-prose"] *)):hover {
   text-decoration: underline;
 }
+
+/* Masonry horizontal (masonry-layout): el JS agrega `.masonry-ready` y coloca
+   las tarjetas de izquierda a derecha; el ancho de cada una lo fija el sizer.
+   Sin JS, las tarjetas quedan apiladas a todo lo ancho. */
+[data-grid="masonry"] {
+  position: relative;
+}
+
+[data-grid-sizer],
+[data-gutter-sizer] {
+  display: block;
+}
+
+[data-grid="masonry"][data-masonry-ready] > div,
+[data-grid="masonry"][data-masonry-ready] [data-grid-sizer] {
+  width: 100%;
+}
+
+[data-gutter-sizer] {
+  width: 0;
+}
+
+@media (min-width: 768px) {
+  [data-grid="masonry"][data-masonry-ready] > div,
+  [data-grid="masonry"][data-masonry-ready] [data-grid-sizer] {
+    width: 49%;
+  }
+
+  [data-gutter-sizer] {
+    width: 2%;
+  }
+}
+
+@media (min-width: 1536px) {
+  [data-grid="masonry"][data-masonry-ready] > div,
+  [data-grid="masonry"][data-masonry-ready] [data-grid-sizer] {
+    width: 32%;
+  }
+}
