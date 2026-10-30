@@ -151,6 +151,17 @@ Then('el chip {string} enlaza a {string}', (chip: string, destino: string) => {
   }
 });
 
+Then('las tarjetas de {string} son hermanas de la bio', (archivo: string) => {
+  const html = readFileSync(join(world.root, archivo), 'utf8');
+  const inicio = html.indexOf('id="card-document"');
+  if (inicio < 0) throw new Error(`${archivo} no tiene tarjeta de bio`);
+  const cierre = html.indexOf('</article></div>', inicio);
+  if (cierre < 0) throw new Error(`${archivo} no cierra la tarjeta de bio`);
+  const primeraTarjeta = html.indexOf('tarjeta-fragmento', inicio);
+  if (primeraTarjeta < 0) throw new Error(`${archivo} no tiene tarjetas de textos o colecciones`);
+  if (primeraTarjeta < cierre) throw new Error(`${archivo} mete las tarjetas dentro de la bio`);
+});
+
 Then('la página de la creadora no lleva la tarjeta de textos', () => {
   const archivo = join(world.root, 'dist', 'files', 'ana-garcia.html');
   if (!existsSync(archivo)) return;
