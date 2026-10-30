@@ -13,7 +13,7 @@ Característica: el masonry horizontal del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/assets/js/site.js" existe
-      Y el archivo "dist/files/index.html" dice "<script src=\"./assets/js/site.js\" defer>"
+      Y el archivo "dist/files/index.html" dice "<script src=\"./assets/js/site.js\">"
       Y el archivo "dist/files/index.html" dice "<div data-grid=\"masonry\""
       Y el archivo "dist/files/index.html" dice "data-grid-sizer"
       Y el archivo "dist/files/index.html" dice "data-gutter-sizer"
@@ -34,4 +34,4 @@ Característica: el masonry horizontal del sitio
       Y una colección en "convocatorias" con 1 miembros
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/convocatorias/antologia.html" dice "<script src=\"./../assets/js/site.js\" defer>"
+      Y el archivo "dist/files/convocatorias/antologia.html" dice "<script src=\"./../assets/js/site.js\">"

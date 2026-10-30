@@ -25,5 +25,9 @@ function iniciaMasonry() {
   }
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciaMasonry);
+// El script va al final del <body>, sin defer: el contenedor ya existe y el
+// masonry se coloca antes del primer pintado, sin el parpadeo de las tarjetas
+// apiladas a todo lo ancho.
+if (document.querySelector('[data-grid="masonry"]') !== null) iniciaMasonry();
+else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciaMasonry);
 else iniciaMasonry();
