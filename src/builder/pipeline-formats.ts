@@ -354,7 +354,7 @@ export async function emitHtmlPage(
   imagePaths?: string,
   paginas?: string[],
   creatorHrefs: Map<string, string> = new Map(),
-  extras = '',
+  extras: string | string[] = '',
   docChipOverride?: string,
   covers?: { front?: string; back?: string },
   indices?: string[],
@@ -375,6 +375,7 @@ export async function emitHtmlPage(
     doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' || doc.frontmatter.type === 'list' ? doc.frontmatter.type : 'file';
   const contenidos = paginas ?? [content];
   for (const [indice, contenido] of contenidos.entries()) {
+    const extraPagina = Array.isArray(extras) ? (extras[indice] ?? '') : extras;
     const slugPagina = indice === 0 ? outSlug : `${outSlug}-${indice + 1}`;
     const htmlPath = outBase(`${slugPagina}${primaryOutputExtension('html')}`);
     const pagination = paginationNav(outSlug, indice + 1, contenidos.length);
@@ -400,7 +401,7 @@ export async function emitHtmlPage(
         announcementsBottom,
         indiceColeccion: indices?.[indice],
         creatorHrefs,
-        extras,
+        extras: extraPagina,
         pagination,
       }),
       siteConfig: ctx.siteConfig,
@@ -1322,6 +1323,7 @@ export function creatorLinksCard(nombre: string, links: { name: string; url: str
  * cuerpo del documento quedarían dentro de su tarjeta.
  */
 async function buildExtrasHtml(args: {
+  tarjetas?: string;
   creatorDocs: CreatorDoc[];
   contenedores: { titulo: string; href: string; type: string | undefined }[];
   palabrasClave: { titulo: string; href: string }[];
@@ -1336,6 +1338,9 @@ async function buildExtrasHtml(args: {
   dir: string;
 }): Promise<string> {
   const partes: string[] = [];
+  // Las tarjetas de textos y colecciones de una autora van primero, ya en
+  // celdas del masonry independientes.
+  if (args.tarjetas !== undefined && args.tarjetas !== '') partes.push(args.tarjetas);
   // Cada tarjeta va en su propia celda del masonry, con su separación.
   for (const doc of args.creatorDocs) {
     partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs, args.available, args.imagenes), '', '</div>'].join('\n'));
@@ -2141,6 +2146,35 @@ async function preprocessDocImages(
   });
 }
 
+/** Las páginas de una autora: la bio sola y las tarjetas aparte. */
+function paginasDeLaPagina(args: Parameters<typeof paginasDeDocumento>[0]): { paginas: string[]; tarjetasPaginas: string[] } {
+  if (args.doc.frontmatter.type !== 'creator') return { paginas: paginasDeDocumento(args), tarjetasPaginas: [] };
+  if (args.entradas.length === 0) return { paginas: [args.pageContent], tarjetasPaginas: [] };
+  const tarjetasPaginas = collectionCardsPages(
+    args.entradas,
+    args.memberHrefs,
+    '',
+    args.pageSize,
+    args.creatorHrefs,
+    args.dir,
+    args.available,
+    false,
+    args.discoveryIndex,
+    { path: args.doc.relativePath, outSlug: args.outSlug },
+    args.imagenes,
+  );
+  return { paginas: [args.pageContent, ...tarjetasPaginas.slice(1).map(() => '')], tarjetasPaginas };
+}
+
+/** Los extras de cada página: las tarjetas de la autora, o los de siempre. */
+async function extrasDeLaPagina(
+  comunes: Omit<Parameters<typeof buildExtrasHtml>[0], 'tarjetas'>,
+  tarjetasPaginas: string[],
+): Promise<string | string[]> {
+  if (tarjetasPaginas.length === 0) return buildExtrasHtml(comunes);
+  return Promise.all(tarjetasPaginas.map((tarjetas) => buildExtrasHtml({ ...comunes, tarjetas })));
+}
+
 /** Las páginas de un documento: la bio y las tarjetas, o las tarjetas solas. */
 function paginasDeDocumento(args: {
   doc: BuildDocument;
@@ -2155,12 +2189,11 @@ function paginasDeDocumento(args: {
   discoveryIndex: Map<string, DiscoveryEntry>;
   imagenes: Map<string, string>;
 }): string[] {
-  const esCreadora = args.doc.frontmatter.type === 'creator';
   if (args.entradas.length === 0) return [args.pageContent];
-  const paginas = collectionCardsPages(
+  return collectionCardsPages(
     args.entradas,
     args.memberHrefs,
-    esCreadora ? '' : args.pageContent,
+    args.pageContent,
     args.pageSize,
     args.creatorHrefs,
     args.dir,
@@ -2170,11 +2203,6 @@ function paginasDeDocumento(args: {
     { path: args.doc.relativePath, outSlug: args.outSlug },
     args.imagenes,
   );
-  if (esCreadora) {
-    const bio = splitFrontmatter(args.pageContent).body.trim();
-    if (bio !== '') paginas[0] = `${bio}\n\n${paginas[0] ?? ''}`;
-  }
-  return paginas;
 }
 
 async function emitCollectionHtml(
@@ -2207,7 +2235,9 @@ async function emitCollectionHtml(
   const pageContent = esMenu
     ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlaces, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
     : content;
-  const paginas = paginasDeDocumento({
+  const imagenes = hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir);
+  const esCreadora = doc.frontmatter.type === 'creator';
+  const { paginas, tarjetasPaginas } = paginasDeLaPagina({
     doc,
     outSlug: outputs.outSlug,
     entradas: entradasTarjetas,
@@ -2218,12 +2248,11 @@ async function emitCollectionHtml(
     dir: outputs.dir,
     available,
     discoveryIndex,
-    imagenes: hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir),
+    imagenes,
   });
   assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 
   const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', webMap, docDir, true);
-  const imagenes = hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir);
   const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
     discoveryIndex,
     cwd: ctx.cwd,
@@ -2240,9 +2269,8 @@ async function emitCollectionHtml(
   });
   const esTexto = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
   const palabrasClave = esTexto ? palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex) : [];
-  const esCreadora = doc.frontmatter.type === 'creator';
   const duenoRedes = String(outputs.fm.name ?? outputs.fm.title ?? '');
-  const extras = await buildExtrasHtml({
+  const extrasComunes = {
     creatorDocs,
     contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
     palabrasClave,
@@ -2255,7 +2283,8 @@ async function emitCollectionHtml(
     sourcePath: doc.filePath,
     dir: outputs.dir,
     available,
-  });
+  };
+  const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas);
   // Las redes de la creadora van en su tarjeta, no al inicio del cuerpo.
   const contenidos = paginas;
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
