@@ -72,7 +72,7 @@ function htmlMetadataField(
 
 function docChipLabel(type: string | undefined): string {
   if (type === 'collection') return 'Colección';
-  if (type === 'creator') return 'Creadora';
+  if (type === 'creator') return 'Colaboradora';
   if (type === 'list') return 'Lista';
   if (type === 'menu') return 'Menú';
   if (type === 'announcement') return 'Anuncio';
@@ -985,7 +985,13 @@ const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
-const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora', collection: 'Colección', list: 'Lista' };
+const MEMBER_TYPE_LABEL: Record<string, string> = {
+  file: 'Texto',
+  creator: 'Colaboradora',
+  collection: 'Colección',
+  list: 'Lista',
+  announcement: 'Anuncio',
+};
 
 // El chip de un keyword va en gris y sólo con contorno: así no se confunde con
 // el del tipo (acento relleno) ni con el de una colección (acento con contorno).
@@ -1019,6 +1025,20 @@ function chipHtml(
 
 const MEMBER_LINK_CLASSES =
   'no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current';
+
+// El CTA de las tarjetas y el «Ver más» del menú comparten el mismo botón:
+// pill con el acento, para que no divergan con el tiempo.
+const CARD_CTA_CLASSES =
+  'inline-flex items-center gap-2 rounded-full bg-accent-600 px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors duration-200 hover:bg-accent-700 hover:text-white hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-accent-400 dark:text-stone-950 dark:hover:bg-accent-300';
+
+/** El texto del CTA según lo que hay al otro lado. */
+function ctaDeTarjeta(type: string | undefined): string {
+  if (type === 'collection') return 'Ver colección completa';
+  if (type === 'creator') return 'Ver página de la creadora';
+  if (type === 'list') return 'Ver lista completa';
+  if (type === 'announcement') return 'Leer anuncio';
+  return 'Leer texto completo';
+}
 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
 
@@ -1057,7 +1077,7 @@ export function creatorCard(
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
+    chipHtml('Colaboradora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
     '',
     ...(retrato === undefined ? [] : [retratoDeCreadora(retrato, doc.name, perfil), '']),
     `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
@@ -1149,9 +1169,7 @@ function menuCardHtml(links: EnlaceMenu[], dir: string, siteTitle: string): stri
     .map((enlace) => `<li>${enlaceDeMenuHtml(enlace, dir)}</li>`)
     .join('');
   const mas =
-    links.length > 3
-      ? `<p class="mt-4 text-center"><a href="${relativeHref(dir, 'menu.html')}" class="${MEMBER_LINK_CLASSES}">Ver más →</a></p>`
-      : '';
+    links.length > 3 ? `<p class="mt-4 text-center"><a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Ver más →</a></p>` : '';
   return [
     '<div class="break-inside-avoid pb-6">',
     `<div class="${EXTRA_CARD_CLASSES}">`,
@@ -1219,17 +1237,23 @@ async function anunciosDeLaPagina(args: {
   available?: Set<string>;
   creatorHrefs: Map<string, string>;
   imagenes: Map<string, string>;
+  outputDir: string;
+  announcementImages?: Map<string, string>;
   filters: ExportContext['filters'];
   imagePaths?: string;
   sourcePath: string;
 }): Promise<{ top: string; bottom: string }> {
   const anuncios = (await readAnuncios(args.discoveryIndex, args.cwd)).filter((entry) => posix(entry.file).replace(/^\.\//, '') !== args.docPath);
+  const imagenes = new Map([
+    ...(args.announcementImages === undefined ? [] : hrefsDeImagenes(args.announcementImages, args.outputDir, args.dir)),
+    ...args.imagenes,
+  ]);
   const comunes = {
     discoveryIndex: args.discoveryIndex,
     dir: args.dir,
     available: args.available,
     creatorHrefs: args.creatorHrefs,
-    imagenes: args.imagenes,
+    imagenes,
     filters: args.filters,
     imagePaths: args.imagePaths,
     sourcePath: args.sourcePath,
@@ -1237,6 +1261,24 @@ async function anunciosDeLaPagina(args: {
   const top = await renderAnuncios({ ...comunes, entries: anuncios.filter((entry) => placementDe(entry, args.discoveryIndex) === 'top') });
   const bottom = await renderAnuncios({ ...comunes, entries: anuncios.filter((entry) => placementDe(entry, args.discoveryIndex) === 'bottom') });
   return { top, bottom };
+}
+
+/** Procesa una sola vez las imágenes de cabecera de los anuncios. */
+export async function preparaImagenesDeAnuncios(args: {
+  cwd: string;
+  outputDir: string;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  pdfxActive: boolean;
+}): Promise<Map<string, string>> {
+  const anuncios = await readAnuncios(args.discoveryIndex, args.cwd);
+  if (anuncios.length === 0) return new Map();
+  const procesadas = await processWebImages(
+    imagenesDeLasTarjetas(anuncios, args.cwd),
+    join(args.outputDir, ASSETS_IMAGES_DIR),
+    imageNamerFor('anuncio', 'webp'),
+    args.pdfxActive,
+  );
+  return procesadas.imageMap;
 }
 
 /** Los anuncios del sitio, ordenados por fecha descendente. */
@@ -1447,6 +1489,8 @@ export async function emitKeywordLists(args: {
       available,
       creatorHrefs: hrefsCreadores,
       imagenes: hrefsDeImagenes(procesadas.imageMap, outputDir, KEYWORDS_DIR),
+      outputDir,
+      announcementImages: renderCtx.announcementImages,
       filters: exportCtx.filters,
       imagePaths,
       sourcePath: doc.filePath,
@@ -1686,7 +1730,7 @@ function collectionCard(
   ];
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
-    card.push('', `<p class="text-center mt-4"><a href="${href}" class="${MEMBER_LINK_CLASSES}">Leer el texto completo →</a></p>`);
+    card.push('', `<p class="text-center mt-4"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
   }
   card.push('', '::::');
   return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
@@ -2157,6 +2201,8 @@ async function emitCollectionHtml(
     available,
     creatorHrefs: hrefsCreadores,
     imagenes,
+    outputDir: ctx.outputDir,
+    announcementImages: renderCtx.announcementImages,
     filters: exportCtx.filters,
     imagePaths,
     sourcePath: doc.filePath,
@@ -2523,6 +2569,8 @@ export async function emitDefaultLists(args: {
       available,
       creatorHrefs: hrefsCreadores,
       imagenes: hrefsDeImagenes(procesadas.imageMap, outputDir, '.'),
+      outputDir,
+      announcementImages: renderCtx.announcementImages,
       filters: exportCtx.filters,
       imagePaths,
       sourcePath: doc.filePath,

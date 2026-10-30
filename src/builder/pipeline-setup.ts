@@ -190,6 +190,8 @@ export interface RenderContext {
   pdfxActive: boolean;
   cropActive: boolean;
   pageDimensions: { w: number; h: number; textW: number } | undefined;
+  /** Las imágenes de los anuncios, procesadas una vez por build. */
+  announcementImages?: Map<string, string>;
 }
 
 export interface ExportContext extends EffectiveTemplates {
