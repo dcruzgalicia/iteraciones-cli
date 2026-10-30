@@ -123,8 +123,8 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   cards.push(EXTRAS_CARD);
   cards.push(PAGINATION_CARD);
   cards.push('$if(announcements-bottom)$$announcements-bottom$$endif$');
-  cards.push(redes);
   cards.push('$if(license)$$license$$endif$');
+  cards.push(redes);
   // `$logo-block$` queda como variable de pandoc: el bloque depende del nivel
   // de la página y lo resuelve el build, página por página.
   return skeleton

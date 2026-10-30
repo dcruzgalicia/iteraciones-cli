@@ -29,6 +29,36 @@ Característica: la tarjeta de licencia del sitio
       Y el archivo "dist/files/assets/images/nc.svg" existe
       Y el archivo "dist/files/assets/images/nd.svg" existe
 
+    Escenario: La licencia va después de las palabras clave y antes de la segunda Redes
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        format:
+          html:
+            generate: true
+            site:
+              title: Historikas
+              license: CC-BY-NC-ND-4.0
+              links:
+                - name: Facebook
+                  url: https://facebook.com/x
+        """
+      Y que el archivo "un-texto.md" tiene este contenido
+        """
+        ---
+        title: Un texto
+        keywords:
+          - memoria
+        ---
+
+        Cuerpo del texto.
+        """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/un-texto.html" pone "Palabras clave" antes que "Algunos derechos reservados."
+      Y la licencia de "dist/files/un-texto.html" va antes de la segunda Redes
+
     Escenario: Los iconos se referencian desde cada página
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y que el archivo "iteraciones.config.yaml" tiene este contenido
@@ -44,7 +74,7 @@ Característica: la tarjeta de licencia del sitio
       Y una colección en "convocatorias" con 1 miembros
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/convocatorias/antologia.html" dice "src=\"./../assets/images/cc.svg\""
-      Y el archivo "dist/files/convocatorias/antologia.html" dice "width:15pt"
+      Y el archivo "dist/files/convocatorias/antologia.html" dice "width:26.25pt"
 
     Escenario: Sin licencia no hay tarjeta
       Dado que la raíz del proyecto tiene un proyecto de prueba

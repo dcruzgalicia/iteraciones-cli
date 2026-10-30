@@ -1053,12 +1053,12 @@ const TEXTO_LICENCIA =
 function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
   if (siteConfig.format?.html?.site?.license !== LICENCIA_CC_BY_NC_ND) return undefined;
   const iconos = ['cc', 'by', 'nc', 'nd']
-    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block" style="width:15pt">`)
+    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block" style="width:26.25pt">`)
     .join('');
   return [
     '<div class="break-inside-avoid pb-6">',
     `<div class="${EXTRA_CARD_CLASSES}">`,
-    `<div class="mb-4 flex items-center gap-2">${iconos}</div>`,
+    `<div class="mb-2 flex items-center gap-2">${iconos}</div>`,
     `<p class="m-0 text-xs leading-relaxed">${TEXTO_LICENCIA}</p>`,
     '</div>',
     '</div>',
