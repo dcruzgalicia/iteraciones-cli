@@ -120,18 +120,19 @@ Característica: Las tarjetas que van al final de la página de un texto
       Cuando hago un build del proyecto
       Entonces el nombre de la creadora en la biografía es un enlace
 
-  Regla de negocio: La página de la creadora lista sus textos
+  Regla de negocio: La página de la creadora muestra sus textos en tarjetas
 
-    Escenario: La creadora ve los textos en los que aparece
+    Escenario: La creadora ve una tarjeta por cada texto donde aparece
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y una creadora llamada "Ana García"
       Y un texto de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces la página de la creadora lleva la tarjeta de textos
+      Entonces el archivo "dist/files/ana-garcia.html" no dice ">Textos<"
       Y el archivo "dist/files/ana-garcia.html" dice "href=\"./un-texto-por-ana-garcia.html\""
+      Y el archivo "dist/files/ana-garcia.html" dice "Leer texto completo →"
 
-    Escenario: Un texto no lleva la tarjeta de textos
+    Escenario: Sin página de creadora no hay tarjeta de textos
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
       Y el proyecto produce html
