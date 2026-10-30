@@ -22,6 +22,9 @@ Característica: la tarjeta de licencia del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice "Algunos derechos reservados."
+      Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
+      Y el archivo "dist/files/index.html" no dice "mb-2 flex items-center gap-2"
+      Y el archivo "dist/files/index.html" dice "mt-2 mb-0 text-xs leading-relaxed"
       Y el archivo "dist/files/index.html" dice "brindar un enlace a la&nbsp;licencia"
       Y el archivo "dist/files/index.html" pone "Algunos derechos reservados." antes que "card-identity-footer"
       Y el archivo "dist/files/assets/images/cc.svg" existe
