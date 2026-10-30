@@ -1053,7 +1053,7 @@ const TEXTO_LICENCIA =
 function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
   if (siteConfig.format?.html?.site?.license !== LICENCIA_CC_BY_NC_ND) return undefined;
   const iconos = ['cc', 'by', 'nc', 'nd']
-    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block my-4!" style="width:26.25pt">`)
+    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block my-0!" style="width:26.25pt">`)
     .join('');
   return [
     '<div class="break-inside-avoid pb-6">',
