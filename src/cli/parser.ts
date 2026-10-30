@@ -337,6 +337,7 @@ Ejemplos:
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
     .option('--fix [números]', 'corrige todo, o sólo esas incidencias: 3,5 (requiere un repositorio git)')
+    .option('--clean [números]', 'limpia el párrafo de esas incidencias: 3,5 (sin números, todos)')
     .option('--exceptions <path>', 'archivo de excepciones de texto (por defecto: .typography-exceptions), ignoran casos exactos')
     .option('-i, --ignore [números]', 'guarda esas incidencias del informe como excepciones: 3,5 (sin números, todas)')
     .addHelpText(
@@ -369,6 +370,8 @@ Ejemplos:
   iteraciones typography --ignore 3,5                   guarda esas incidencias como excepciones
   iteraciones typography --ignore                       guarda todas las del informe
   iteraciones typography --fix 3,5                      corrige sólo esas incidencias
+  iteraciones typography --clean 3,5                    limpia el párrafo de esas incidencias
+  iteraciones typography --clean                        limpia el párrafo de todas
   iteraciones typography --json                         imprime el resultado como JSON
 
 El informe da siempre la página del PDF, no el folio impreso, que puede venir en romanos o
