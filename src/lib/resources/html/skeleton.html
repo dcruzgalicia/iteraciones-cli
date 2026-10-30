@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="$lang$" data-theme="$theme$">
+<html lang="$lang$" data-theme="$theme$" class="h-dvh">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,9 +9,9 @@
   $if(favicon)$$favicon$$endif$
   $if(keywords)$<meta name="keywords" content="$keywords$">$endif$
 </head>
-<body id="top" class="font-sans antialiased text-lg text-stone-900 dark:text-stone-100 bg-stone-200 dark:bg-stone-900 bg-paper-grid">
+<body id="top" class="h-full overflow-hidden font-sans antialiased text-lg text-stone-900 dark:text-stone-100 bg-stone-200 dark:bg-stone-900 bg-paper-grid">
 
-  <main class="lg:container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-4 sm:gap-6 px-2 sm:px-4 lg:px-8 pt-6 sm:pt-8 pb-20 sm:pb-24">
+  <main class="h-full overflow-x-auto overflow-y-hidden columns-1 md:columns-2 2xl:columns-3 gap-x-4 sm:gap-x-6 [column-fill:auto] px-2 sm:px-4 lg:px-8 pt-6 pb-6">
 <div id="slot-header"></div>
 <div id="slot-metadata"></div>
 <div id="slot-cards"></div>

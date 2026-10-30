@@ -61,6 +61,6 @@ Característica: la plantilla HTML que se entrega a pandoc
       Entonces el masonry trae "id=\"card-identity\""
       Y el masonry trae "id=\"card-identity-footer\""
       Y el masonry trae "$doc-chip$"
-      Y la plantilla dice "<main class=\"lg:container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-4"
+      Y la plantilla dice "<main class=\"h-full overflow-x-auto overflow-y-hidden columns-1 md:columns-2 2xl:columns-3 gap-x-4"
       Y la plantilla dice "<div id=\"card-identity\" class=\"break-inside-avoid pb-6\">"
       Y la plantilla dice "<div id=\"card-identity-footer\" class=\"break-inside-avoid\">"
