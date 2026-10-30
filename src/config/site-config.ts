@@ -15,7 +15,7 @@ export const DEFAULT_HTML_FORMAT = {
     links: [] as { name: string; url: string }[],
   },
   generate: true,
-  pageSize: 20,
+  pageSize: 10,
 };
 
 export const DEFAULT_LATEX_FORMAT = {

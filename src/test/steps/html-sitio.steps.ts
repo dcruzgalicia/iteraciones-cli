@@ -234,8 +234,8 @@ Then('la descripción no es un enlace', () => {
   }
 });
 
-Given('una colección con 25 textos', () => {
-  const files = Array.from({ length: 25 }, (_, i) => `texto-${i + 1}.md`);
+Given('una colección con {int} textos', (cuantos: number) => {
+  const files = Array.from({ length: cuantos }, (_, i) => `texto-${i + 1}.md`);
   escribirEnProyecto('antologia.md', `---\ntitle: Antología\ntype: collection\nfiles:\n${files.map((f) => `  - ${f}`).join('\n')}\n---\n\nIntro.\n`);
   for (const [i, file] of files.entries()) {
     escribirEnProyecto(file, `---\ntitle: Texto ${i + 1}\ndate: 2026-01-${String(i + 1).padStart(2, '0')}\n---\n\nCuerpo.\n`);
