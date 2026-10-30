@@ -74,6 +74,8 @@ function docChipLabel(type: string | undefined): string {
   if (type === 'collection') return 'Colección';
   if (type === 'creator') return 'Creadora';
   if (type === 'list') return 'Lista';
+  if (type === 'menu') return 'Menú';
+  if (type === 'announcement') return 'Anuncio';
   if (type === 'all') return 'Publicaciones';
   return 'Texto';
 }
@@ -251,6 +253,22 @@ function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | u
   };
 }
 
+/** Las tarjetas site-wide que dependen de la página: menú, anuncios y licencia. */
+function tarjetasDeSitio(args: {
+  siteConfig: SiteConfig;
+  dir: string;
+  menu?: string;
+  announcementsTop?: string;
+  announcementsBottom?: string;
+}): Pick<HtmlPageVars, 'license' | 'menu' | 'announcementsTop' | 'announcementsBottom'> {
+  return {
+    license: licenciaHtml(args.siteConfig, args.dir),
+    menu: args.menu,
+    announcementsTop: args.announcementsTop === '' ? undefined : args.announcementsTop,
+    announcementsBottom: args.announcementsBottom === '' ? undefined : args.announcementsBottom,
+  };
+}
+
 function htmlVars(args: {
   doc: BuildDocument;
   outputs: DocumentOutputs;
@@ -261,6 +279,9 @@ function htmlVars(args: {
   docChip?: string;
   covers?: { front?: string; back?: string };
   creatorImage?: string;
+  menu?: string;
+  announcementsTop?: string;
+  announcementsBottom?: string;
   indiceColeccion?: string;
   creatorHrefs: Map<string, string>;
   extras: string;
@@ -276,6 +297,9 @@ function htmlVars(args: {
     docChip,
     covers,
     creatorImage,
+    menu,
+    announcementsTop,
+    announcementsBottom,
     indiceColeccion,
     creatorHrefs,
     extras,
@@ -313,6 +337,7 @@ function htmlVars(args: {
     backCover: covers?.back,
     creatorImage,
     creatorImageAlt: creatorImage === undefined ? undefined : `Retrato de ${titulo}`,
+    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menu, announcementsTop, announcementsBottom }),
     indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
@@ -334,6 +359,9 @@ export async function emitHtmlPage(
   covers?: { front?: string; back?: string },
   indices?: string[],
   creatorImage?: string,
+  menu?: string,
+  announcementsTop?: string,
+  announcementsBottom?: string,
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -367,6 +395,9 @@ export async function emitHtmlPage(
         docChip: docChipOverride,
         covers,
         creatorImage,
+        menu,
+        announcementsTop,
+        announcementsBottom,
         indiceColeccion: indices?.[indice],
         creatorHrefs,
         extras,
@@ -991,6 +1022,28 @@ const MEMBER_LINK_CLASSES =
 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
 
+/** La licencia CC que el sitio sabe pintar (iconos y texto). */
+const LICENCIA_CC_BY_NC_ND = 'CC-BY-NC-ND-4.0';
+
+const TEXTO_LICENCIA =
+  'Algunos derechos reservados. Esta obra está bajo una Licencia Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional. Usted es libre de compartir, copiar y redistribuir el material en cualquier medio o formato, pero debe dar crédito de manera adecuada, brindar un enlace a la&nbsp;licencia e indicar si se han realizado cambios. No puede hacer uso de esta obra con propósitos comerciales, ni remezclar, transformar o crear obras derivadas, ni distribuir el material modificado.';
+
+/** La tarjeta de licencia, site-wide, antes del footer. */
+function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
+  if (siteConfig.format?.html?.site?.license !== LICENCIA_CC_BY_NC_ND) return undefined;
+  const iconos = ['cc', 'by', 'nc', 'nd']
+    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block" style="width:15pt">`)
+    .join('');
+  return [
+    '<div class="break-inside-avoid pb-6">',
+    `<div class="${EXTRA_CARD_CLASSES}">`,
+    `<div class="mb-4 flex items-center gap-2">${iconos}</div>`,
+    `<p class="m-0 text-xs leading-relaxed">${TEXTO_LICENCIA}</p>`,
+    '</div>',
+    '</div>',
+  ].join('');
+}
+
 /** La tarjeta con la biografía de una creadora. */
 export function creatorCard(
   doc: CreatorDoc,
@@ -1051,6 +1104,157 @@ export function keywordsCard(keywords: { titulo: string; href: string }[]): stri
     '',
     '::::',
   ].join('\n');
+}
+
+interface EnlaceMenu {
+  name: string;
+  url: string;
+}
+
+/** Los enlaces del único `type: menu` del proyecto. */
+function enlacesDelMenu(discoveryIndex: Map<string, DiscoveryEntry>): EnlaceMenu[] {
+  const menus = [...discoveryIndex.entries()].filter(([, entry]) => entry.type === 'menu');
+  if (menus.length > 1) {
+    throw new BuildError(`solo puede haber un "type: menu"; hay ${menus.length}: ${menus.map(([ruta]) => `"${ruta}"`).join(', ')}`);
+  }
+  const links = menus[0]?.[1].fm?.links;
+  if (!Array.isArray(links)) return [];
+  return links.flatMap((link) => {
+    if (typeof link !== 'object' || link === null) return [];
+    const { name, url } = link as Record<string, unknown>;
+    return typeof name === 'string' && typeof url === 'string' ? [{ name, url }] : [];
+  });
+}
+
+function esEnlaceExterno(url: string): boolean {
+  return /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(url);
+}
+
+/** Un enlace del menú, con la ruta relativa a la página que lo pinta. */
+function hrefDeMenu(url: string, dir: string): string {
+  if (esEnlaceExterno(url) || /^(?:mailto|tel):/i.test(url) || url.startsWith('#')) return url;
+  return relativeHref(dir, url.replace(/^\.?\//, ''));
+}
+
+function enlaceDeMenuHtml(enlace: EnlaceMenu, dir: string): string {
+  const attrs = esEnlaceExterno(enlace.url) ? ' target="_blank" rel="noopener noreferrer"' : '';
+  return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MEMBER_LINK_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
+}
+
+/** La tarjeta del menú: los primeros 3 enlaces y «Ver más» si hay más. */
+function menuCardHtml(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
+  if (links.length === 0) return undefined;
+  const items = links
+    .slice(0, 3)
+    .map((enlace) => `<li>${enlaceDeMenuHtml(enlace, dir)}</li>`)
+    .join('');
+  const mas =
+    links.length > 3
+      ? `<p class="mt-4 text-center"><a href="${relativeHref(dir, 'menu.html')}" class="${MEMBER_LINK_CLASSES}">Ver más →</a></p>`
+      : '';
+  return [
+    '<div class="break-inside-avoid pb-6">',
+    `<div class="${EXTRA_CARD_CLASSES}">`,
+    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span></div>`,
+    `<ul class="m-0 list-disc space-y-2 ps-6">${items}</ul>`,
+    mas,
+    '</div>',
+    '</div>',
+  ].join('');
+}
+
+/** Las tarjetas de los anuncios, en HTML, para los slots del sitio. */
+async function renderAnuncios(args: {
+  entries: CollectionEntry[];
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  dir: string;
+  available?: Set<string>;
+  creatorHrefs: Map<string, string>;
+  imagenes: Map<string, string>;
+  filters: ExportContext['filters'];
+  imagePaths?: string;
+  sourcePath: string;
+}): Promise<string> {
+  const cards = args.entries
+    .map((entry) => {
+      const destino = args.discoveryIndex.get(entry.file);
+      if (destino?.slug === undefined) return '';
+      const rel = posix(join(dirname(entry.file), `${htmlSlugFor(entry.file, destino.slug)}.html`));
+      return collectionCard(
+        entry,
+        relativeHref(args.dir, rel),
+        args.creatorHrefs,
+        args.dir,
+        args.available,
+        args.discoveryIndex,
+        undefined,
+        undefined,
+        args.imagenes,
+      );
+    })
+    .filter((card) => card !== '')
+    .join('\n\n');
+  if (cards === '') return '';
+  const extraArgs: string[] = [];
+  for (const filter of [...args.filters.semantic, ...args.filters.user, ...args.filters.flags, ...args.filters.html]) {
+    extraArgs.push('--lua-filter', filter);
+  }
+  const html = await execPandoc({
+    input: cards,
+    sourcePath: args.sourcePath,
+    from: MD_READER,
+    to: 'html5',
+    extraArgs,
+    env: imagePathsEnv(args.imagePaths),
+  });
+  return minifyHtml(html);
+}
+
+/** Las tarjetas de anuncios que van en los slots de una página. */
+async function anunciosDeLaPagina(args: {
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  cwd: string;
+  dir: string;
+  docPath?: string;
+  available?: Set<string>;
+  creatorHrefs: Map<string, string>;
+  imagenes: Map<string, string>;
+  filters: ExportContext['filters'];
+  imagePaths?: string;
+  sourcePath: string;
+}): Promise<{ top: string; bottom: string }> {
+  const anuncios = (await readAnuncios(args.discoveryIndex, args.cwd)).filter((entry) => posix(entry.file).replace(/^\.\//, '') !== args.docPath);
+  const comunes = {
+    discoveryIndex: args.discoveryIndex,
+    dir: args.dir,
+    available: args.available,
+    creatorHrefs: args.creatorHrefs,
+    imagenes: args.imagenes,
+    filters: args.filters,
+    imagePaths: args.imagePaths,
+    sourcePath: args.sourcePath,
+  };
+  const top = await renderAnuncios({ ...comunes, entries: anuncios.filter((entry) => placementDe(entry, args.discoveryIndex) === 'top') });
+  const bottom = await renderAnuncios({ ...comunes, entries: anuncios.filter((entry) => placementDe(entry, args.discoveryIndex) === 'bottom') });
+  return { top, bottom };
+}
+
+/** Los anuncios del sitio, ordenados por fecha descendente. */
+async function readAnuncios(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<CollectionEntry[]> {
+  const rutas = [...discoveryIndex.entries()].filter(([, entry]) => entry.type === 'announcement').map(([ruta]) => ruta);
+  if (rutas.length === 0) return [];
+  const entries = await readCollectionEntries(rutas, 'anuncios.md', [cwd], true);
+  return entries.sort((a, b) => fechaOrdenable(discoveryIndex.get(b.file)) - fechaOrdenable(discoveryIndex.get(a.file)));
+}
+
+/** El cuerpo de `menu.html`: todos los enlaces, en markdown. */
+function menuPageMarkdown(links: EnlaceMenu[], dir: string): string {
+  return links
+    .map((enlace) => {
+      const attrs = esEnlaceExterno(enlace.url) ? '{target="_blank" rel="noopener noreferrer"}' : '';
+      return `- [${enlace.name}](${hrefDeMenu(enlace.url, dir)})${attrs}`;
+    })
+    .join('\n');
 }
 
 /** La tarjeta con las redes de la creadora, con su nombre como dueño. */
@@ -1235,7 +1439,36 @@ export async function emitKeywordLists(args: {
       outBase: (name: string): string => join(outputDir, KEYWORDS_DIR, name),
     };
     const imagePaths = await writeListImagePaths(cwd, `${KEYWORDS_DIR}-${slug}`, procesadas.imageMap);
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, paginas, hrefsCreadores, '', 'Palabras clave');
+    const menu = menuCardHtml(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
+    const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
+      discoveryIndex,
+      cwd,
+      dir: KEYWORDS_DIR,
+      available,
+      creatorHrefs: hrefsCreadores,
+      imagenes: hrefsDeImagenes(procesadas.imageMap, outputDir, KEYWORDS_DIR),
+      filters: exportCtx.filters,
+      imagePaths,
+      sourcePath: doc.filePath,
+    });
+    await emitHtmlPage(
+      doc,
+      outputs,
+      renderCtx,
+      exportCtx,
+      discoveryIndex,
+      imagePaths,
+      paginas,
+      hrefsCreadores,
+      '',
+      'Palabras clave',
+      undefined,
+      undefined,
+      undefined,
+      menu,
+      anunciosTop,
+      anunciosBottom,
+    );
     await removeExtraHtmlPages(outputDir, KEYWORDS_DIR, slug, paginas.length, discoveryIndex);
   }
 }
@@ -1893,10 +2126,16 @@ async function emitCollectionHtml(
   const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
   const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
   const available = availableDefaultListSlugs(discoveryIndex);
+  const esMenu = doc.frontmatter.type === 'menu';
+  const enlaces = enlacesDelMenu(discoveryIndex);
+  const menu = esMenu ? undefined : menuCardHtml(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
+  const pageContent = esMenu
+    ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlaces, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
+    : content;
   const paginas = collectionCardsPages(
     collectionEntries,
     memberHrefs,
-    content,
+    pageContent,
     pageSize,
     hrefsCreadores,
     outputs.dir,
@@ -1909,6 +2148,19 @@ async function emitCollectionHtml(
   assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 
   const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', webMap, docDir, true);
+  const imagenes = hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir);
+  const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
+    discoveryIndex,
+    cwd: ctx.cwd,
+    dir: outputs.dir,
+    docPath: doc.relativePath,
+    available,
+    creatorHrefs: hrefsCreadores,
+    imagenes,
+    filters: exportCtx.filters,
+    imagePaths,
+    sourcePath: doc.filePath,
+  });
   const esTexto = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
   const palabrasClave = esTexto ? palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex) : [];
   const esCreadora = doc.frontmatter.type === 'creator';
@@ -1923,7 +2175,7 @@ async function emitCollectionHtml(
     creatorHrefs: hrefsCreadores,
     filters: exportCtx.filters,
     imagePaths,
-    imagenes: hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir),
+    imagenes,
     sourcePath: doc.filePath,
     dir: outputs.dir,
     available,
@@ -1947,6 +2199,9 @@ async function emitCollectionHtml(
     covers,
     indices,
     retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir),
+    menu,
+    anunciosTop,
+    anunciosBottom,
   );
   await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 }
@@ -2111,6 +2366,10 @@ function tipoDe(entry: DiscoveryEntry): string {
 }
 
 /** La fecha del `date` del frontmatter o, si no existe, la última modificación del archivo. */
+function placementDe(entry: CollectionEntry, discoveryIndex: Map<string, DiscoveryEntry>): 'top' | 'bottom' {
+  return discoveryIndex.get(entry.file)?.fm?.placement === 'bottom' ? 'bottom' : 'top';
+}
+
 function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
   if (entry?.date !== undefined) {
     const fecha = Date.parse(entry.date);
@@ -2121,7 +2380,9 @@ function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
 
 /** Las listas por defecto se ordenan de lo más reciente a lo más antiguo. */
 function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
-  const rutas = [...discoveryIndex.entries()].filter(([, entry]) => type === 'all' || tipoDe(entry) === type).map(([ruta]) => ruta);
+  const rutas = [...discoveryIndex.entries()]
+    .filter(([, entry]) => (type === 'all' ? tipoDe(entry) !== 'menu' && tipoDe(entry) !== 'announcement' : tipoDe(entry) === type))
+    .map(([ruta]) => ruta);
   // Las creadoras van siempre por nombre, sin importar la fecha.
   if (type === 'creator') {
     const nombre = (ruta: string): string => discoveryIndex.get(ruta)?.title ?? ruta;
@@ -2254,7 +2515,36 @@ export async function emitDefaultLists(args: {
     };
 
     const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, '', 'Lista');
+    const menu = menuCardHtml(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
+    const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
+      discoveryIndex,
+      cwd,
+      dir: '.',
+      available,
+      creatorHrefs: hrefsCreadores,
+      imagenes: hrefsDeImagenes(procesadas.imageMap, outputDir, '.'),
+      filters: exportCtx.filters,
+      imagePaths,
+      sourcePath: doc.filePath,
+    });
+    await emitHtmlPage(
+      doc,
+      outputs,
+      renderCtx,
+      exportCtx,
+      discoveryIndex,
+      imagePaths,
+      contenidos,
+      hrefsCreadores,
+      '',
+      'Lista',
+      undefined,
+      undefined,
+      undefined,
+      menu,
+      anunciosTop,
+      anunciosBottom,
+    );
   }
 }
 
@@ -2282,7 +2572,8 @@ export async function processDocumentFormats(
 
   const entry = discoveryIndex.get(doc.relativePath);
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
-  const outSlug = htmlSlugFor(doc.relativePath, slug);
+  // El menú del sitio vive siempre en menu.html.
+  const outSlug = doc.frontmatter.type === 'menu' ? 'menu' : htmlSlugFor(doc.relativePath, slug);
   const dir = dirname(doc.relativePath);
 
   const isCollection = doc.frontmatter.type === 'collection';

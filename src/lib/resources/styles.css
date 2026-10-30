@@ -26,7 +26,7 @@
    y las marcas de esquina. La comparten todas las tarjetas del sitio, así que
    el color vive aquí y no repetido en cada plantilla. */
 @utility tarjeta {
-  background-color: color-mix(in srgb, var(--color-stone-50) 82%, transparent);
+  background-color: color-mix(in oklab, var(--color-accent-500) 4%, color-mix(in srgb, var(--color-stone-50) 82%, transparent));
   border-color: color-mix(in srgb, var(--color-stone-300) 90%, transparent);
 
   /* El borde de acento al pasar el ratón: vale para todas las tarjetas. */
@@ -35,7 +35,7 @@
   }
 
   &:where([data-theme="dark"], [data-theme="dark"] *) {
-    background-color: color-mix(in srgb, var(--color-stone-700) 70%, transparent);
+    background-color: color-mix(in oklab, var(--color-accent-500) 6%, color-mix(in srgb, var(--color-stone-700) 70%, transparent));
     border-color: color-mix(in srgb, var(--color-stone-600) 40%, transparent);
   }
 

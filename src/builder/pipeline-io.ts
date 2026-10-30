@@ -54,7 +54,11 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
     throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
   }
   const { yaml, body } = splitFrontmatter(content);
-  const sinCuerpo = doc.frontmatter.type !== 'collection' && doc.frontmatter.type !== 'intervention' && doc.frontmatter.type !== 'list';
+  const sinCuerpo =
+    doc.frontmatter.type !== 'collection' &&
+    doc.frontmatter.type !== 'intervention' &&
+    doc.frontmatter.type !== 'list' &&
+    doc.frontmatter.type !== 'menu';
   if (!body.trim() && sinCuerpo) {
     throw new BuildError(
       yaml !== undefined

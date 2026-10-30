@@ -8,12 +8,14 @@ import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
-import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_FAVICON_SVG, ASSETS_LOGO_WEBP } from './output-layout.js';
+import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_FAVICON_SVG, ASSETS_IMAGES_DIR, ASSETS_LOGO_WEBP } from './output-layout.js';
 import { hashGlobbedFiles } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
+const LICENSE_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'license');
+const LICENSE_ICONS = ['cc', 'by', 'nc', 'nd'];
 
 export async function resolveTailwindBin(): Promise<string> {
   try {
@@ -262,6 +264,15 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
   return { kind: 'inline', html: `<img src="data:${mime};base64,${base64}" alt="" class="block h-auto w-full">` };
 }
 
+/** Copia los iconos de la licencia CC cuando el sitio declara una. */
+async function copyLicenseIcons(outputDir: string, siteConfig: SiteConfig): Promise<void> {
+  if (siteConfig.format?.html?.site?.license === undefined) return;
+  for (const nombre of LICENSE_ICONS) {
+    await copyIfChanged(join(LICENSE_DIR, `${nombre}.svg`), join(outputDir, ASSETS_IMAGES_DIR, `${nombre}.svg`));
+  }
+}
+
 export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
   await writeLogoAssets(cwd, outputDir, siteConfig);
+  await copyLicenseIcons(outputDir, siteConfig);
 }

@@ -64,6 +64,7 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'lineLength',
   'letterhead',
   'image',
+  'placement',
 ];
 
 export const LIST_FILTER_KEYS = ['type', 'creator', 'date', 'keyword', 'path'] as const;
@@ -250,6 +251,31 @@ function validateListFilter(filter: unknown): ValidationIssue[] {
   return issues;
 }
 
+function validateMenuType(parsed: Record<string, unknown>): ValidationIssue[] {
+  if (parsed.links === undefined) return [];
+  const links = parsed.links;
+  if (!Array.isArray(links)) {
+    return [{ severity: 'error', message: 'frontmatter: "links" debe ser una lista de enlaces con "name" y "url"' }];
+  }
+  const invalidos = links.filter(
+    (l) =>
+      typeof l !== 'object' ||
+      l === null ||
+      typeof (l as Record<string, unknown>).name !== 'string' ||
+      typeof (l as Record<string, unknown>).url !== 'string',
+  );
+  if (invalidos.length > 0) {
+    return [{ severity: 'error', message: 'frontmatter: cada enlace de "links" necesita "name" y "url" de texto' }];
+  }
+  return [];
+}
+
+function validateAnnouncementType(parsed: Record<string, unknown>): ValidationIssue[] {
+  const placement = parsed.placement;
+  if (placement === undefined || placement === 'top' || placement === 'bottom') return [];
+  return [{ severity: 'warning', message: `frontmatter: "placement" debe ser "top" o "bottom"; se usa "top"` }];
+}
+
 function validateListType(parsed: Record<string, unknown>): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   if (parsed.filter !== undefined) issues.push(...validateListFilter(parsed.filter));
@@ -266,13 +292,16 @@ function validateListType(parsed: Record<string, unknown>): ValidationIssue[] {
 function validateTypeField(parsed: Record<string, unknown>): ValidationIssue[] {
   const type = parsed.type;
   if (type === undefined) return [];
-  if (type !== 'file' && type !== 'collection' && type !== 'creator' && type !== 'intervention' && type !== 'list') {
-    return [{ severity: 'error', message: 'frontmatter: "type" debe ser "file", "collection", "creator", "intervention" o "list"' }];
+  const tipos = ['file', 'collection', 'creator', 'intervention', 'list', 'menu', 'announcement'];
+  if (!tipos.includes(String(type))) {
+    return [{ severity: 'error', message: `frontmatter: "type" debe ser ${tipos.map((t) => `"${t}"`).join(', ')}` }];
   }
   if (type === 'collection') return validateCollectionType(parsed);
   if (type === 'creator') return validateCreatorType(parsed);
   if (type === 'intervention') return validateInterventionType(parsed);
   if (type === 'list') return validateListType(parsed);
+  if (type === 'menu') return validateMenuType(parsed);
+  if (type === 'announcement') return validateAnnouncementType(parsed);
   return [];
 }
 

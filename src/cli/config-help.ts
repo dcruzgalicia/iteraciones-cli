@@ -34,6 +34,7 @@ iteraciones.config.yaml — todo se pone aquí (un archivo vacío vale todos los
     format.html.blocks: []            orden de las tarjetas del masonry
                                    (${DEFAULT_HTML_BLOCKS.join(', ')})
     format.html.pageSize: ${html.pageSize}              tarjetas por página en las colecciones
+    format.html.site.license: ${html.site.license ?? '(sin licencia)'}   licencia CC del sitio: CC-BY-NC-ND-4.0
 
   format.latex.generate: ${d.format.latex.generate}               .tex
   format.pdf.generate: ${d.format.pdf.generate}                   PDF (necesita LaTeX)
