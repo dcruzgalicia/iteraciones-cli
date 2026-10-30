@@ -235,3 +235,30 @@
 .prose :where(a):not(:where([class~="not-prose"] *)):hover {
   text-decoration: underline;
 }
+
+/* Grid lanes (masonry nativo, CSS Grid 3): las tarjetas se reparten en
+   columnas y se apilan sin dejar huecos. Donde el navegador no lo soporta
+   se mantienen las columnas nativas de siempre, para no perder el masonry. */
+[data-grid="lanes"] {
+  display: grid-lanes;
+  align-items: start;
+}
+
+@supports not (display: grid-lanes) {
+  [data-grid="lanes"] {
+    display: block;
+    columns: 1;
+  }
+
+  @media (min-width: 768px) {
+    [data-grid="lanes"] {
+      columns: 2;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    [data-grid="lanes"] {
+      columns: 3;
+    }
+  }
+}
