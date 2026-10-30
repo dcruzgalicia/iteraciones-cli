@@ -22,6 +22,16 @@
   }
 }
 
+/* El fondo del sitio: un papel muy claro teñido del acento. Lleva menos tinte
+   que las tarjetas para que éstas se lean como una superficie aparte. */
+@utility bg-paper {
+  background-color: color-mix(in oklab, var(--color-accent-500) 2%, #fff);
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    background-color: color-mix(in oklab, var(--color-accent-500) 4%, var(--color-stone-950));
+  }
+}
+
 /* La superficie de las tarjetas: papel claro sobre el fondo, con su borde fino
    y las marcas de esquina. La comparten todas las tarjetas del sitio, así que
    el color vive aquí y no repetido en cada plantilla. */

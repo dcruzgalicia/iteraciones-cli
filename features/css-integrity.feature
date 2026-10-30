@@ -20,6 +20,11 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
     Cuando compilo el CSS con acento "lime"
     Entonces el CSS mezcla el acento en el fondo de las tarjetas
 
+  Escenario: El fondo del sitio deriva del acento y no es gris
+    Cuando leo el esqueleto y el styles.css del proyecto
+    Entonces el esqueleto usa el fondo del sitio teñido del acento
+    Y el CSS mezcla el acento en el fondo del sitio
+
   Escenario: El borde de acento se resalta al pasar el ratón en todas las tarjetas
     Dado un proyecto cuyo HTML trae "<div class=\"tarjeta ring-1\">x</div>"
     Cuando compilo el CSS con acento "lime"
