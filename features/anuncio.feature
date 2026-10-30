@@ -87,6 +87,29 @@ Característica: los anuncios del sitio
       Y la salida dice "placement"
       Y el archivo "dist/files/index.html" dice "Anuncio raro"
 
+    Escenario: La tarjeta trae la imagen de cabecera
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y que el archivo "foto.png" es un PNG de 1 por 1
+      Y que el archivo "anuncio.md" tiene este contenido
+        """
+        ---
+        type: announcement
+        title: Tercera convocatoria
+        date: 2026-09-11
+        creator: Histórikas
+        placement: top
+        ---
+
+        ![](./foto.png)
+
+        Este es el anuncio.
+        """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/index.html" dice "anuncio-foto.webp"
+      Y el archivo "dist/files/assets/images/anuncio-foto.webp" existe
+
     Escenario: Sin anuncios el sitio no cambia
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html

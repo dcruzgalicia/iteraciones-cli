@@ -107,8 +107,8 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y un texto de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces la tarjeta de las colecciones lleva el chip "Creadora"
-      Y el chip "Creadora" enlaza a "./creadora.html"
+      Entonces la tarjeta de las colecciones lleva el chip "Colaboradora"
+      Y el chip "Colaboradora" enlaza a "./creadora.html"
 
   Regla de negocio: El nombre de la creadora lleva a su página
 

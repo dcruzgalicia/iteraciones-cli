@@ -51,7 +51,7 @@ Característica: la tarjeta de cada miembro de una colección
       Y el HTML dice "<h2 class=\"text-center text-base\"><span class=\"whitespace-nowrap\">Autora A</span></h2>"
       Y el título de la tarjeta del miembro es un enlace
       Y el HTML dice "Contenido de doc."
-      Y el HTML dice "Leer el texto completo →"
+      Y el HTML dice "Leer texto completo →"
 
     Escenario: El enlace cubre la tarjeta entera y su línea va centrada
       Dado que la colección tiene 1 miembros
@@ -88,7 +88,7 @@ Característica: la tarjeta de cada miembro de una colección
       """
       """
       Cuando compogo las tarjetas de la página HTML
-      Entonces el HTML no dice "Leer el texto completo"
+      Entonces el HTML no dice "Leer texto completo"
       Y el HTML dice "Contenido de doc."
 
     Escenario: Una colección sin miembros devuelve su cuerpo propio
@@ -100,13 +100,13 @@ Característica: la tarjeta de cada miembro de una colección
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML es "cuerpo propio"
 
-    Escenario: El enlace de texto se conserva
+    Escenario: El botón del CTA se conserva
       Dado que la colección tiene 1 miembros
       Y que la colección tiene el cuerpo propio:
       """
       """
       Cuando compogo las tarjetas de la página HTML
-      Entonces el HTML dice "Leer el texto completo →"
+      Entonces el HTML dice "Leer texto completo →"
       Y el HTML dice "href=\"./documento-por-autora-a.html\""
 
   Regla de negocio: El enlace de la creadora va en negro
