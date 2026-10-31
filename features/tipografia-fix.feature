@@ -849,6 +849,20 @@ Característica: la corrección tipográfica del markdown
       Y el archivo "preamble/15-hyphenation-rules.tex" contiene "GrandeArriola"
       Y el archivo "preamble/15-hyphenation-rules.tex" contiene "Cronos"
 
+    Escenario: La puntuación que arrastra la línea no entra en la hiphenación
+      Dado que la raíz del proyecto está vacía
+      Y que la raíz del proyecto es un repositorio git
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Georgina Paola Grande-
+        Arriola, escribió este texto.
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --rules hyphenated-proper-noun --fix" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "preamble/15-hyphenation-rules.tex" contiene "GrandeArriola"
+      Y el archivo "preamble/15-hyphenation-rules.tex" no contiene "GrandeArriola,"
+
     Escenario: Si el proyecto ya tiene el archivo, agrega ahí sin repetir
       Dado que la raíz del proyecto está vacía
       Y que la raíz del proyecto es un repositorio git
