@@ -377,8 +377,8 @@ Característica: el analizador tipográfico de los PDF
       Cuando escaneo el texto de pdftotext buscando "single-word-line,consecutive-punctuation"
       Entonces las incidencias son:
         """
-        single-word-line ;; pág 1 ;; línea 2 ;; Tres.
         consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: uno dos. || 2: Tres.
+        single-word-line ;; pág 1 ;; línea 2 ;; Tres.
         """
 
   Regla de negocio: El final de página corta la consecutividad
@@ -973,8 +973,8 @@ Característica: el analizador tipográfico de los PDF
       Cuando escaneo el texto de pdftotext
       Entonces las incidencias son:
         """
-        repeated-last-letter ;; pág 1 ;; líneas 2-3 ;; s ;; 2: zeta del dos || 3: zeta del tres
         repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; z ;; 1: zeta del uno || 2: zeta del dos
+        repeated-last-letter ;; pág 1 ;; líneas 2-3 ;; s ;; 2: zeta del dos || 3: zeta del tres
         repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; z ;; 2: zeta del dos || 3: zeta del tres
         """
 
@@ -989,8 +989,8 @@ Característica: el analizador tipográfico de los PDF
       Cuando escaneo el texto de pdftotext
       Entonces las incidencias son:
         """
-        repeated-last-letter ;; pág 1 ;; líneas 2-3 ;; s ;; 2: zorro del dos || 3: zufre del tres
         repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; z ;; 1: zeta del uno || 2: zorro del dos
+        repeated-last-letter ;; pág 1 ;; líneas 2-3 ;; s ;; 2: zorro del dos || 3: zufre del tres
         repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; z ;; 2: zorro del dos || 3: zufre del tres
         """
 

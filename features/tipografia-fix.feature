@@ -584,11 +584,11 @@ Característica: la corrección tipográfica del markdown
       Cuando escaneo el texto de pdftotext
       Entonces las incidencias son:
         """
+        repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; b ;; 2: Beto come pan, || 3: Beto corta cedros,
+        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: Beto come pan, || 3: Beto corta cedros,
         repeated-last-letter ;; pág 1 ;; líneas 3-4 ;; s ;; 3: Beto corta cedros, || 4: Carla canta coplas
         repeated-last-letter ;; pág 1 ;; líneas 4-5 ;; s ;; 4: Carla canta coplas || 5: Carlos corta cebras
-        repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; b ;; 2: Beto come pan, || 3: Beto corta cedros,
         repeated-first-letter ;; pág 1 ;; líneas 4-5 ;; c ;; 4: Carla canta coplas || 5: Carlos corta cebras
-        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: Beto come pan, || 3: Beto corta cedros,
         """
 
   Regla de negocio: --ignore guarda incidencias del informe como excepciones
