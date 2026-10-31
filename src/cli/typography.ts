@@ -391,7 +391,10 @@ function escapaRegex(texto: string): string {
  * perder las reglas que ya traía.
  */
 async function agregaHifenacion(cwd: string, palabra: string): Promise<void> {
-  if (palabra === '') return;
+  // \hyphenation sólo acepta letras: la puntuación que arrastra la línea del
+  // PDF (una coma, un punto) rompe LaTeX con "Not a letter".
+  const limpia = palabra.replace(/[^\p{L}]/gu, '');
+  if (limpia === '') return;
   const dir = join(cwd, 'preamble');
   const ruta = join(dir, ARCHIVO_HIFENACION);
   let contenido: string;
@@ -401,15 +404,15 @@ async function agregaHifenacion(cwd: string, palabra: string): Promise<void> {
     const base = join(PKG_PREAMBLE_DIR, ARCHIVO_HIFENACION);
     contenido = (await Bun.file(base).exists()) ? await Bun.file(base).text() : '\\hyphenation{\n}\n';
   }
-  if (new RegExp(`^\\s*${escapaRegex(palabra)}\\s*$`, 'm').test(contenido)) return;
+  if (new RegExp(`^\\s*${escapaRegex(limpia)}\\s*$`, 'm').test(contenido)) return;
   const abre = contenido.indexOf('\\hyphenation{');
   const cierra = abre < 0 ? -1 : contenido.indexOf('}', abre);
   let nuevo: string;
   if (abre >= 0 && cierra > abre) {
     const antes = contenido.slice(0, cierra).replace(/\s+$/, '');
-    nuevo = `${antes}\n  ${palabra}\n${contenido.slice(cierra)}`;
+    nuevo = `${antes}\n  ${limpia}\n${contenido.slice(cierra)}`;
   } else {
-    nuevo = `${contenido.replace(/\s+$/, '')}\n\n\\hyphenation{\n  ${palabra}\n}\n`;
+    nuevo = `${contenido.replace(/\s+$/, '')}\n\n\\hyphenation{\n  ${limpia}\n}\n`;
   }
   await mkdir(dir, { recursive: true });
   await Bun.write(ruta, nuevo);
