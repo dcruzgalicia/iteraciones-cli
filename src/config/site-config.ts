@@ -13,9 +13,10 @@ export const DEFAULT_HTML_FORMAT = {
     theme: 'dark' as const,
     color: 'lime' as const,
     links: [] as { name: string; url: string }[],
+    license: undefined as string | undefined,
   },
   generate: true,
-  pageSize: 20,
+  pageSize: 10,
 };
 
 export const DEFAULT_LATEX_FORMAT = {

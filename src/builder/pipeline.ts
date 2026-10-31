@@ -8,7 +8,7 @@ import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { generateCoverImages } from './export.js';
 import { PDF_WORK_BASE } from './output-layout.js';
 import { createPdfConsumer } from './pdf-pool.js';
-import { emitDefaultLists, emitKeywordLists, processDocumentFormats } from './pipeline-formats.js';
+import { emitDefaultLists, emitKeywordLists, preparaImagenesDeAnuncios, processDocumentFormats } from './pipeline-formats.js';
 import {
   buildPoolContexts,
   type ExportContext,
@@ -86,6 +86,15 @@ export async function documentPipeline(
   }
 
   const { renderCtx, exportCtx, formatWorkSets } = await buildPoolContexts(ctx, plan, work, formatCfg, setup, templates, pdfConsumer.pdfJobs);
+
+  if (activeFormats.html) {
+    renderCtx.announcementImages = await preparaImagenesDeAnuncios({
+      cwd: ctx.cwd,
+      outputDir: ctx.outputDir,
+      discoveryIndex,
+      pdfxActive: renderCtx.pdfxActive,
+    });
+  }
 
   const { processed } = await runLightFormatsPool(progress, ctx, {
     work,

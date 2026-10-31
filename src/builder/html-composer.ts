@@ -9,13 +9,15 @@ export function slot(nombre: string): string {
   return `<div id="slot-${nombre}"></div>`;
 }
 
-export type HtmlDocType = 'file' | 'collection' | 'creator' | 'list';
+export type HtmlDocType = 'file' | 'collection' | 'creator' | 'list' | 'menu' | 'announcement';
 
 const CARD_DIRS: Record<HtmlDocType, string> = {
   file: 'file',
   collection: 'collection',
   creator: 'file',
   list: 'collection',
+  menu: 'file',
+  announcement: 'file',
 };
 
 export async function loadCard(type: HtmlDocType, name: string): Promise<string> {
@@ -105,9 +107,12 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
   }
   // «Redes» va justo después del header (slot-header) y otra vez antes del
-  // footer; el chip del dueño dice que son las redes del sitio.
+  // footer; el chip del dueño dice que son las redes del sitio. El menú va
+  // entre la tarjeta de identidad y la primera Redes.
   const redes = await frecuenciasCard(siteConfig);
+  header += '$if(menu)$$menu$$endif$';
   header += redes;
+  header += '$if(announcements-top)$$announcements-top$$endif$';
   // Las portadas van después de la tarjeta de título y antes de Formatos.
   cards.unshift(await loadCard('file', 'card-portadas.html'));
   // El retrato de una creadora es su propia tarjeta, después de la del nombre.
@@ -117,6 +122,8 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   // parte de la del texto.
   cards.push(EXTRAS_CARD);
   cards.push(PAGINATION_CARD);
+  cards.push('$if(announcements-bottom)$$announcements-bottom$$endif$');
+  cards.push('$if(license)$$license$$endif$');
   cards.push(redes);
   // `$logo-block$` queda como variable de pandoc: el bloque depende del nivel
   // de la página y lo resuelve el build, página por página.
@@ -160,6 +167,10 @@ export interface HtmlPageVars {
   backCover?: string;
   creatorImage?: string;
   creatorImageAlt?: string;
+  license?: string;
+  menu?: string;
+  announcementsTop?: string;
+  announcementsBottom?: string;
   indiceColeccion?: string;
 
   /** Las tarjetas de creadoras y de colecciones, ya en HTML. */

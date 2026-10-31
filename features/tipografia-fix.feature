@@ -584,11 +584,11 @@ Característica: la corrección tipográfica del markdown
       Cuando escaneo el texto de pdftotext
       Entonces las incidencias son:
         """
+        repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; b ;; 2: Beto come pan, || 3: Beto corta cedros,
+        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: Beto come pan, || 3: Beto corta cedros,
         repeated-last-letter ;; pág 1 ;; líneas 3-4 ;; s ;; 3: Beto corta cedros, || 4: Carla canta coplas
         repeated-last-letter ;; pág 1 ;; líneas 4-5 ;; s ;; 4: Carla canta coplas || 5: Carlos corta cebras
-        repeated-first-letter ;; pág 1 ;; líneas 2-3 ;; b ;; 2: Beto come pan, || 3: Beto corta cedros,
         repeated-first-letter ;; pág 1 ;; líneas 4-5 ;; c ;; 4: Carla canta coplas || 5: Carlos corta cebras
-        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: Beto come pan, || 3: Beto corta cedros,
         """
 
   Regla de negocio: --ignore guarda incidencias del informe como excepciones
@@ -848,6 +848,20 @@ Característica: la corrección tipográfica del markdown
       Y la salida dice "1 corregidas de 1"
       Y el archivo "preamble/15-hyphenation-rules.tex" contiene "GrandeArriola"
       Y el archivo "preamble/15-hyphenation-rules.tex" contiene "Cronos"
+
+    Escenario: La puntuación que arrastra la línea no entra en la hiphenación
+      Dado que la raíz del proyecto está vacía
+      Y que la raíz del proyecto es un repositorio git
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Georgina Paola Grande-
+        Arriola, escribió este texto.
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --rules hyphenated-proper-noun --fix" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "preamble/15-hyphenation-rules.tex" contiene "GrandeArriola"
+      Y el archivo "preamble/15-hyphenation-rules.tex" no contiene "GrandeArriola,"
 
     Escenario: Si el proyecto ya tiene el archivo, agrega ahí sin repetir
       Dado que la raíz del proyecto está vacía

@@ -82,14 +82,14 @@ export const templatePathFor = (kind: TemplateKind, templatesDir: string): strin
 
 const PREAMBLE_TEMPLATE_KINDS = ['latex', 'latex-collection', 'latex-creator', 'latex-intervention'] as const satisfies readonly TemplateKind[];
 
-export function latexKindFor(type: PreambleDocType | 'list' | undefined): TemplateKind {
-  if (type === undefined || type === 'file') return 'latex';
+export function latexKindFor(type: PreambleDocType | 'list' | 'menu' | 'announcement' | undefined): TemplateKind {
+  if (type === undefined || type === 'file' || type === 'menu' || type === 'announcement') return 'latex';
   if (type === 'list') return 'latex-collection';
   return `latex-${type}`;
 }
 
 export function htmlKindFor(type: HtmlDocType): TemplateKind {
-  if (type === 'file') return 'html';
+  if (type === 'file' || type === 'menu' || type === 'announcement') return 'html';
   if (type === 'list') return 'html-collection';
   return `html-${type}`;
 }
@@ -132,7 +132,7 @@ export async function writeEffectiveTemplates(
     cropActive: false,
     pageDimensions: undefined,
     templates: Object.fromEntries(TEMPLATE_KINDS.map((kind) => [kind, templatePathFor(kind, templatesDir)])) as Record<TemplateKind, string>,
-    refsCardTemplates: { file: '', collection: '', creator: '', list: '' },
+    refsCardTemplates: { file: '', collection: '', creator: '', list: '', menu: '', announcement: '' },
   };
 
   state.refsCardTemplates = {
@@ -140,6 +140,8 @@ export async function writeEffectiveTemplates(
     collection: await loadReferencesCardTemplate('collection'),
     creator: await loadReferencesCardTemplate('creator'),
     list: await loadReferencesCardTemplate('collection'),
+    menu: await loadReferencesCardTemplate('file'),
+    announcement: await loadReferencesCardTemplate('file'),
   };
 
   const disabledPreamble = disableBibliographyWithoutBibFiles(effectiveDisabledPreamble, bibFiles);
@@ -188,6 +190,8 @@ export interface RenderContext {
   pdfxActive: boolean;
   cropActive: boolean;
   pageDimensions: { w: number; h: number; textW: number } | undefined;
+  /** Las imágenes de los anuncios, procesadas una vez por build. */
+  announcementImages?: Map<string, string>;
 }
 
 export interface ExportContext extends EffectiveTemplates {

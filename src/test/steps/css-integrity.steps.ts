@@ -122,6 +122,12 @@ Then('el CSS incluye las clases del HTML y el acento configurado', () => {
   }
 });
 
+Then('el CSS mezcla el acento en el fondo de las tarjetas', () => {
+  if (!/color-mix\(in oklab, var\(--color-accent-500\) 4%/.test(world.css)) {
+    throw new Error('el fondo de .tarjeta no mezcla el acento');
+  }
+});
+
 Then('el CSS lleva el acento {string}', (accent: string) => {
   if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new Error(`la paleta ${accent} no existe`);
   const referencia = `--color-accent-500:var(--color-${accent}-500)`;
@@ -157,6 +163,7 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
   const sinComentarios = world.css.replace(/\/\*[\s\S]*?\*\//g, '');
   const utilities = [...sinComentarios.matchAll(/@utility\s+([\w-]+)/g)].map((m) => m[1] ?? '').sort();
   const expected = [
+    'bg-paper',
     'bg-paper-grid',
     'dictum',
     'logo-fill',
@@ -282,6 +289,21 @@ Then('el esqueleto usa el fondo de papel milimetrado y sin degradados', async ()
   const skeleton = await readFile(join(RESOURCES, 'html', 'skeleton.html'), 'utf8');
 
   if (skeleton.includes('radial-gradient')) throw new Error('el fondo usa radial-gradient');
+});
+
+Then('el esqueleto usa el fondo del sitio teñido del acento', async () => {
+  const skeleton = await readFile(join(RESOURCES, 'html', 'skeleton.html'), 'utf8');
+  if (!skeleton.includes('bg-paper')) throw new Error('el esqueleto no trae la utilidad bg-paper');
+  if (skeleton.includes('bg-stone-200') || skeleton.includes('bg-stone-900')) {
+    throw new Error('el esqueleto sigue usando el fondo gris de stone');
+  }
+});
+
+Then('el CSS mezcla el acento en el fondo del sitio', () => {
+  if (!world.css.includes('@utility bg-paper')) throw new Error('falta la utilidad bg-paper');
+  if (!world.css.includes('color-mix(in oklab, var(--color-accent-500) 2%, #fff)')) {
+    throw new Error('el fondo del sitio no mezcla el acento');
+  }
 });
 
 Then('el styles.css define ese fondo con las dos retículas y sin utilidad muerta', () => {

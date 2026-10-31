@@ -30,6 +30,7 @@ export interface TypographyOptions {
   rules?: string;
   exceptions?: string;
   ignore?: string | boolean;
+  clean?: string | boolean;
   fix?: string | boolean;
 }
 
@@ -179,7 +180,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
   try {
     // Sin números es todo; si el valor no es una selección, es una ruta que
     // commander se comió al pasar el argumento opcional.
-    for (const opcion of ['ignore', 'fix'] as const) {
+    for (const opcion of ['ignore', 'clean', 'fix'] as const) {
       const valor = options[opcion];
       if (typeof valor === 'string' && !esSeleccion(valor)) {
         args.unshift(valor);
@@ -190,6 +191,29 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     const outputDir = resolve(cwd, options.output ?? DIST_FILES_DIR);
     const targets = args.length > 0 ? args.map((path) => resolve(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${relativeLabel(cwd, outputDir)}`);
+
+    if (options.clean !== undefined && options.clean !== false) {
+      if (options.fix !== undefined && options.fix !== false) {
+        throw new BuildError('--clean y --fix no se combinan: elige limpiar o corregir');
+      }
+      const { limpiados, sinLimpiar, porPdf } = await limpiaTypografia(cwd, targets, analisis, options);
+      const total = [...porPdf.values()].reduce((suma, item) => suma + item.incidences.length, 0);
+      if (total === 0) {
+        logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
+        return;
+      }
+      reportIncidencias(
+        cwd,
+        [...porPdf].map(([pdf, resultado]) => ({
+          pdf,
+          incidences: resultado.incidences,
+          motivo: (incidencia) => resultado.estado.get(incidencia),
+        })),
+      );
+      logInfo(`${limpiados} párrafos limpios de ${total}${sinLimpiar > 0 ? ` · ${sinLimpiar} sin limpiar` : ''}`, 'typography');
+      if (sinLimpiar > 0) process.exitCode = 1;
+      return;
+    }
 
     if (options.fix !== undefined && options.fix !== false) {
       const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, sinUnion, exactMiss, porPdf } = await arreglaTypografia(
@@ -290,14 +314,14 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
   }
 }
 
-async function aseguraGit(cwd: string): Promise<void> {
+async function aseguraGit(cwd: string, opcion = '--fix'): Promise<void> {
   let rev: RunResult;
   try {
     rev = await exec('git', ['rev-parse', '--is-inside-work-tree'], { cwd });
   } catch {
-    throw new BuildError('typography --fix requiere un repositorio git');
+    throw new BuildError(`typography ${opcion} requiere un repositorio git`);
   }
-  if (rev.exitCode !== 0) throw new BuildError('typography --fix requiere un repositorio git');
+  if (rev.exitCode !== 0) throw new BuildError(`typography ${opcion} requiere un repositorio git`);
 }
 
 async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[]> {
@@ -367,7 +391,10 @@ function escapaRegex(texto: string): string {
  * perder las reglas que ya traía.
  */
 async function agregaHifenacion(cwd: string, palabra: string): Promise<void> {
-  if (palabra === '') return;
+  // \hyphenation sólo acepta letras: la puntuación que arrastra la línea del
+  // PDF (una coma, un punto) rompe LaTeX con "Not a letter".
+  const limpia = palabra.replace(/[^\p{L}]/gu, '');
+  if (limpia === '') return;
   const dir = join(cwd, 'preamble');
   const ruta = join(dir, ARCHIVO_HIFENACION);
   let contenido: string;
@@ -377,15 +404,15 @@ async function agregaHifenacion(cwd: string, palabra: string): Promise<void> {
     const base = join(PKG_PREAMBLE_DIR, ARCHIVO_HIFENACION);
     contenido = (await Bun.file(base).exists()) ? await Bun.file(base).text() : '\\hyphenation{\n}\n';
   }
-  if (new RegExp(`^\\s*${escapaRegex(palabra)}\\s*$`, 'm').test(contenido)) return;
+  if (new RegExp(`^\\s*${escapaRegex(limpia)}\\s*$`, 'm').test(contenido)) return;
   const abre = contenido.indexOf('\\hyphenation{');
   const cierra = abre < 0 ? -1 : contenido.indexOf('}', abre);
   let nuevo: string;
   if (abre >= 0 && cierra > abre) {
     const antes = contenido.slice(0, cierra).replace(/\s+$/, '');
-    nuevo = `${antes}\n  ${palabra}\n${contenido.slice(cierra)}`;
+    nuevo = `${antes}\n  ${limpia}\n${contenido.slice(cierra)}`;
   } else {
-    nuevo = `${contenido.replace(/\s+$/, '')}\n\n\\hyphenation{\n  ${palabra}\n}\n`;
+    nuevo = `${contenido.replace(/\s+$/, '')}\n\n\\hyphenation{\n  ${limpia}\n}\n`;
   }
   await mkdir(dir, { recursive: true });
   await Bun.write(ruta, nuevo);
@@ -838,7 +865,8 @@ function agujaEncontrada(content: string, aguja: string): boolean {
 
 export function normalizaParaBusqueda(texto: string): string {
   return igualaCaracteresPdf(sinComillasTipograficas(texto))
-    .texto.replace(/:::[^\n]*/g, ' ')
+    .texto.replace(/&nbsp;|&#160;|&#xa0;|\u00a0/gi, ' ')
+    .replace(/:::[^\n]*/g, ' ')
     .replace(/[*_`]+/g, '')
     .replace(/\[([^\]]*)\]\{[^}]*\}/g, '$1')
     .replace(/\[[^\]]*\]\([^)]*\)/g, (m) => m.match(/^\[([^\]]*)\]/)?.[1] ?? '')
@@ -913,6 +941,173 @@ type MotivoIncidencia =
   | 'sin acción'
   | 'sin unión pegable'
   | 'sin coincidencia exacta';
+
+const DIV_DE_AJUSTE = /\b(?:runt|shrink|stretch)\b/;
+
+function abreDivDeAjuste(linea: string): boolean {
+  return /^[ \t]*:::+[ \t]*\{[^}]*\}/.test(linea) && DIV_DE_AJUSTE.test(linea);
+}
+
+function cierraDiv(linea: string): boolean {
+  return /^[ \t]*:::+[ \t]*$/.test(linea);
+}
+
+/** Los bloques de texto separados por líneas en blanco. */
+function bloquesDeTexto(content: string): { inicio: number; fin: number }[] {
+  const bloques: { inicio: number; fin: number }[] = [];
+  let inicio = 0;
+  for (const encontrado of content.matchAll(/\n[ \t]*\n/g)) {
+    if (encontrado.index > inicio) bloques.push({ inicio, fin: encontrado.index });
+    inicio = encontrado.index + encontrado[0].length;
+  }
+  if (inicio < content.length) bloques.push({ inicio, fin: content.length });
+  return bloques;
+}
+
+/** Extiende el rango del párrafo a los fenced divs de ajuste que lo envuelven. */
+function extiendeAFences(content: string, inicio: number, fin: number): { inicio: number; fin: number } {
+  const lineas = content.split('\n');
+  const offsets: number[] = [];
+  let acumulado = 0;
+  for (const linea of lineas) {
+    offsets.push(acumulado);
+    acumulado += linea.length + 1;
+  }
+  const lineaDe = (posicion: number): number => {
+    let i = 0;
+    while (i + 1 < offsets.length && (offsets[i + 1] as number) <= posicion) i++;
+    return i;
+  };
+  let desde = lineaDe(inicio);
+  let hasta = lineaDe(Math.max(inicio, fin - 1));
+  for (;;) {
+    let j = desde - 1;
+    while (j >= 0 && (lineas[j] as string).trim() === '') j--;
+    if (j < 0 || !abreDivDeAjuste(lineas[j] as string)) break;
+    desde = j;
+  }
+  for (;;) {
+    let j = hasta + 1;
+    while (j < lineas.length && (lineas[j] as string).trim() === '') j++;
+    if (j >= lineas.length || !cierraDiv(lineas[j] as string)) break;
+    hasta = j;
+  }
+  return {
+    inicio: offsets[desde] ?? inicio,
+    fin: (offsets[hasta] ?? fin) + (lineas[hasta] as string).length,
+  };
+}
+
+/** El párrafo del hallazgo, con sus divs de ajuste, si se puede identificar. */
+function parrafoDeIncidencia(content: string, incidencia: TypographyIncidence): { inicio: number; fin: number } | undefined {
+  const frases = cadenasDeBusqueda(incidencia).filter((frase) => frase.length >= 6);
+  const puntajes = bloquesDeTexto(content).map((bloque) => {
+    const normalizado = normalizaParaBusqueda(content.slice(bloque.inicio, bloque.fin));
+    return { ...bloque, puntos: frases.filter((frase) => normalizado.includes(frase)).length };
+  });
+  const maximo = Math.max(...puntajes.map((p) => p.puntos), 0);
+  if (maximo === 0) return undefined;
+  const mejores = puntajes.filter((p) => p.puntos === maximo);
+  if (mejores.length !== 1) return undefined;
+  const elegido = mejores[0] as { inicio: number; fin: number };
+  return extiendeAFences(content, elegido.inicio, elegido.fin);
+}
+
+/** Deja el párrafo sin &nbsp;, sin .text-nowrap y sin runt/shrink/stretch. */
+export function limpiaParrafo(texto: string): string {
+  let limpio = texto.replace(/&nbsp;|&#160;|&#xa0;|\u00a0/gi, ' ');
+  limpio = limpio.replace(/\[([^\]]+)\]\{([^}]*\.text-(?:nowrap|no-wrap)[^}]*)\}/g, '$1');
+  const salida: string[] = [];
+  const pila: boolean[] = [];
+  for (const linea of limpio.split('\n')) {
+    const abre = /^[ \t]*:::+[ \t]*\{([^}]*)\}[ \t]*$/.exec(linea);
+    if (abre) {
+      const quitar = DIV_DE_AJUSTE.test(abre[1] ?? '');
+      pila.push(quitar);
+      if (!quitar) salida.push(linea);
+      continue;
+    }
+    if (cierraDiv(linea)) {
+      if (pila.pop() !== true) salida.push(linea);
+      continue;
+    }
+    salida.push(linea);
+  }
+  return salida.join('\n');
+}
+
+async function limpiaTypografia(
+  cwd: string,
+  targets: string[],
+  analisis: OpcionesAnalisis,
+  options: TypographyOptions,
+): Promise<{
+  limpiados: number;
+  sinLimpiar: number;
+  porPdf: Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, string> }>;
+}> {
+  await aseguraGit(cwd, '--clean');
+  const excepciones = cargarExcepciones(cwd, options, true);
+  const analizados = await mapWithConcurrency(targets, 4, async (pdf) => ({
+    pdf,
+    incidences: await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) }),
+  }));
+  const planas = analizados.flatMap((file) => file.incidences.map((incidencia) => ({ pdf: file.pdf, incidencia })));
+  const numeros =
+    typeof options.clean === 'string' ? seleccionaIncidencias(options.clean, planas.length, '--clean') : planas.map((_, indice) => indice + 1);
+  const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, string> }>();
+  for (const numero of numeros) {
+    const elegida = planas[numero - 1] as { pdf: string; incidencia: TypographyIncidence };
+    const actual = porPdf.get(elegida.pdf) ?? { incidences: [], estado: new Map<TypographyIncidence, string>() };
+    actual.incidences.push(elegida.incidencia);
+    porPdf.set(elegida.pdf, actual);
+  }
+
+  let limpiados = 0;
+  let sinLimpiar = 0;
+  for (const [pdf, resultado] of porPdf) {
+    const fuentes = await candidatosDeFuente(cwd, pdf);
+    const contenido = new Map<string, string>();
+    const contenidoNormalizado = new Map<string, string>();
+    for (const fuente of fuentes) {
+      try {
+        const texto = await Bun.file(fuente).text();
+        contenido.set(fuente, texto);
+        contenidoNormalizado.set(fuente, normalizaParaBusqueda(texto));
+      } catch {}
+    }
+    for (const incidencia of resultado.incidences) {
+      const candidatos = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, cadenasDeBusqueda(incidencia));
+      if (candidatos.length !== 1) {
+        resultado.estado.set(incidencia, candidatos.length === 0 ? 'no encontrado' : 'múltiples coincidencias');
+        sinLimpiar++;
+        continue;
+      }
+      const ruta = candidatos[0] as string;
+      const texto = contenido.get(ruta) ?? '';
+      const parrafo = parrafoDeIncidencia(texto, incidencia);
+      if (parrafo === undefined) {
+        resultado.estado.set(incidencia, 'no encontrado');
+        sinLimpiar++;
+        continue;
+      }
+      const original = texto.slice(parrafo.inicio, parrafo.fin);
+      const limpio = limpiaParrafo(original);
+      if (limpio === original) {
+        resultado.estado.set(incidencia, 'sin cambios');
+        continue;
+      }
+      contenido.set(ruta, texto.slice(0, parrafo.inicio) + limpio + texto.slice(parrafo.fin));
+      contenidoNormalizado.set(ruta, normalizaParaBusqueda(contenido.get(ruta) ?? ''));
+      resultado.estado.set(incidencia, 'limpio');
+      limpiados++;
+    }
+    for (const [ruta, texto] of contenido) {
+      if (texto !== (await Bun.file(ruta).text())) await Bun.write(ruta, texto);
+    }
+  }
+  return { limpiados, sinLimpiar, porPdf };
+}
 
 async function arreglaTypografia(
   cwd: string,

@@ -72,8 +72,10 @@ function htmlMetadataField(
 
 function docChipLabel(type: string | undefined): string {
   if (type === 'collection') return 'Colección';
-  if (type === 'creator') return 'Creadora';
+  if (type === 'creator') return 'Colaboradora';
   if (type === 'list') return 'Lista';
+  if (type === 'menu') return 'Menú';
+  if (type === 'announcement') return 'Anuncio';
   if (type === 'all') return 'Publicaciones';
   return 'Texto';
 }
@@ -251,6 +253,22 @@ function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | u
   };
 }
 
+/** Las tarjetas site-wide que dependen de la página: menú, anuncios y licencia. */
+function tarjetasDeSitio(args: {
+  siteConfig: SiteConfig;
+  dir: string;
+  menu?: string;
+  announcementsTop?: string;
+  announcementsBottom?: string;
+}): Pick<HtmlPageVars, 'license' | 'menu' | 'announcementsTop' | 'announcementsBottom'> {
+  return {
+    license: licenciaHtml(args.siteConfig, args.dir),
+    menu: args.menu,
+    announcementsTop: args.announcementsTop === '' ? undefined : args.announcementsTop,
+    announcementsBottom: args.announcementsBottom === '' ? undefined : args.announcementsBottom,
+  };
+}
+
 function htmlVars(args: {
   doc: BuildDocument;
   outputs: DocumentOutputs;
@@ -261,6 +279,9 @@ function htmlVars(args: {
   docChip?: string;
   covers?: { front?: string; back?: string };
   creatorImage?: string;
+  menu?: string;
+  announcementsTop?: string;
+  announcementsBottom?: string;
   indiceColeccion?: string;
   creatorHrefs: Map<string, string>;
   extras: string;
@@ -276,6 +297,9 @@ function htmlVars(args: {
     docChip,
     covers,
     creatorImage,
+    menu,
+    announcementsTop,
+    announcementsBottom,
     indiceColeccion,
     creatorHrefs,
     extras,
@@ -313,6 +337,7 @@ function htmlVars(args: {
     backCover: covers?.back,
     creatorImage,
     creatorImageAlt: creatorImage === undefined ? undefined : `Retrato de ${titulo}`,
+    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menu, announcementsTop, announcementsBottom }),
     indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
@@ -329,11 +354,14 @@ export async function emitHtmlPage(
   imagePaths?: string,
   paginas?: string[],
   creatorHrefs: Map<string, string> = new Map(),
-  extras = '',
+  extras: string | string[] = '',
   docChipOverride?: string,
   covers?: { front?: string; back?: string },
   indices?: string[],
   creatorImage?: string,
+  menu?: string,
+  announcementsTop?: string,
+  announcementsBottom?: string,
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -347,6 +375,7 @@ export async function emitHtmlPage(
     doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' || doc.frontmatter.type === 'list' ? doc.frontmatter.type : 'file';
   const contenidos = paginas ?? [content];
   for (const [indice, contenido] of contenidos.entries()) {
+    const extraPagina = Array.isArray(extras) ? (extras[indice] ?? '') : extras;
     const slugPagina = indice === 0 ? outSlug : `${outSlug}-${indice + 1}`;
     const htmlPath = outBase(`${slugPagina}${primaryOutputExtension('html')}`);
     const pagination = paginationNav(outSlug, indice + 1, contenidos.length);
@@ -367,9 +396,12 @@ export async function emitHtmlPage(
         docChip: docChipOverride,
         covers,
         creatorImage,
+        menu,
+        announcementsTop,
+        announcementsBottom,
         indiceColeccion: indices?.[indice],
         creatorHrefs,
-        extras,
+        extras: extraPagina,
         pagination,
       }),
       siteConfig: ctx.siteConfig,
@@ -954,7 +986,13 @@ const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
-const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora', collection: 'Colección', list: 'Lista' };
+const MEMBER_TYPE_LABEL: Record<string, string> = {
+  file: 'Texto',
+  creator: 'Colaboradora',
+  collection: 'Colección',
+  list: 'Lista',
+  announcement: 'Anuncio',
+};
 
 // El chip de un keyword va en gris y sólo con contorno: así no se confunde con
 // el del tipo (acento relleno) ni con el de una colección (acento con contorno).
@@ -989,7 +1027,44 @@ function chipHtml(
 const MEMBER_LINK_CLASSES =
   'no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current';
 
+// El CTA de las tarjetas y el «Ver más» del menú comparten el mismo botón:
+// pill con el acento, para que no divergan con el tiempo.
+const CARD_CTA_CLASSES =
+  'inline-flex items-center gap-2 rounded-full bg-accent-600 px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors duration-200 hover:bg-accent-700 hover:text-white hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-accent-400 dark:text-stone-950 dark:hover:bg-accent-300';
+
+/** El texto del CTA según lo que hay al otro lado. */
+function ctaDeTarjeta(type: string | undefined): string {
+  if (type === 'collection') return 'Ver colección completa';
+  if (type === 'creator') return 'Ver página de la creadora';
+  if (type === 'list') return 'Ver lista completa';
+  if (type === 'announcement') return 'Leer anuncio';
+  return 'Leer texto completo';
+}
+
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
+
+/** La licencia CC que el sitio sabe pintar (iconos y texto). */
+const LICENCIA_CC_BY_NC_ND = 'CC-BY-NC-ND-4.0';
+
+const TEXTO_LICENCIA =
+  'Algunos derechos reservados. Esta obra está bajo una Licencia Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional. Usted es libre de compartir, copiar y redistribuir el material en cualquier medio o formato, pero debe dar crédito de manera adecuada, brindar un enlace a la&nbsp;licencia e indicar si se han realizado cambios. No puede hacer uso de esta obra con propósitos comerciales, ni remezclar, transformar o crear obras derivadas, ni distribuir el material modificado.';
+
+/** La tarjeta de licencia, site-wide, antes del footer. */
+function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
+  if (siteConfig.format?.html?.site?.license !== LICENCIA_CC_BY_NC_ND) return undefined;
+  const iconos = ['cc', 'by', 'nc', 'nd']
+    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block my-0!" style="width:26.25pt">`)
+    .join('');
+  return [
+    '<div class="break-inside-avoid pb-6">',
+    `<div class="${EXTRA_CARD_CLASSES}">`,
+    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
+    `<div class="flex items-center gap-2">${iconos}</div>`,
+    `<p class="m-0 text-xs leading-relaxed">${TEXTO_LICENCIA}</p>`,
+    '</div>',
+    '</div>',
+  ].join('');
+}
 
 /** La tarjeta con la biografía de una creadora. */
 export function creatorCard(
@@ -1004,7 +1079,7 @@ export function creatorCard(
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    chipHtml('Creadora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
+    chipHtml('Colaboradora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
     '',
     ...(retrato === undefined ? [] : [retratoDeCreadora(retrato, doc.name, perfil), '']),
     `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
@@ -1053,6 +1128,179 @@ export function keywordsCard(keywords: { titulo: string; href: string }[]): stri
   ].join('\n');
 }
 
+interface EnlaceMenu {
+  name: string;
+  url: string;
+}
+
+/** Los enlaces del único `type: menu` del proyecto. */
+function enlacesDelMenu(discoveryIndex: Map<string, DiscoveryEntry>): EnlaceMenu[] {
+  const menus = [...discoveryIndex.entries()].filter(([, entry]) => entry.type === 'menu');
+  if (menus.length > 1) {
+    throw new BuildError(`solo puede haber un "type: menu"; hay ${menus.length}: ${menus.map(([ruta]) => `"${ruta}"`).join(', ')}`);
+  }
+  const links = menus[0]?.[1].fm?.links;
+  if (!Array.isArray(links)) return [];
+  return links.flatMap((link) => {
+    if (typeof link !== 'object' || link === null) return [];
+    const { name, url } = link as Record<string, unknown>;
+    return typeof name === 'string' && typeof url === 'string' ? [{ name, url }] : [];
+  });
+}
+
+function esEnlaceExterno(url: string): boolean {
+  return /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(url);
+}
+
+/** Un enlace del menú, con la ruta relativa a la página que lo pinta. */
+function hrefDeMenu(url: string, dir: string): string {
+  if (esEnlaceExterno(url) || /^(?:mailto|tel):/i.test(url) || url.startsWith('#')) return url;
+  return relativeHref(dir, url.replace(/^\.?\//, ''));
+}
+
+function enlaceDeMenuHtml(enlace: EnlaceMenu, dir: string): string {
+  const attrs = esEnlaceExterno(enlace.url) ? ' target="_blank" rel="noopener noreferrer"' : '';
+  return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MEMBER_LINK_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
+}
+
+/** La tarjeta del menú: los primeros 3 enlaces y «Ver más» si hay más. */
+function menuCardHtml(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
+  if (links.length === 0) return undefined;
+  const items = links
+    .slice(0, 3)
+    .map((enlace) => `<li>${enlaceDeMenuHtml(enlace, dir)}</li>`)
+    .join('');
+  const mas =
+    links.length > 3 ? `<p class="mt-4 text-center"><a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Ver más →</a></p>` : '';
+  return [
+    '<div class="break-inside-avoid pb-6">',
+    `<div class="${EXTRA_CARD_CLASSES}">`,
+    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span></div>`,
+    `<ul class="m-0 list-disc space-y-2 ps-6">${items}</ul>`,
+    mas,
+    '</div>',
+    '</div>',
+  ].join('');
+}
+
+/** Las tarjetas de los anuncios, en HTML, para los slots del sitio. */
+async function renderAnuncios(args: {
+  entries: CollectionEntry[];
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  dir: string;
+  available?: Set<string>;
+  creatorHrefs: Map<string, string>;
+  imagenes: Map<string, string>;
+  filters: ExportContext['filters'];
+  imagePaths?: string;
+  sourcePath: string;
+}): Promise<string> {
+  const cards = args.entries
+    .map((entry) => {
+      const destino = args.discoveryIndex.get(entry.file);
+      if (destino?.slug === undefined) return '';
+      const rel = posix(join(dirname(entry.file), `${htmlSlugFor(entry.file, destino.slug)}.html`));
+      return collectionCard(
+        entry,
+        relativeHref(args.dir, rel),
+        args.creatorHrefs,
+        args.dir,
+        args.available,
+        args.discoveryIndex,
+        undefined,
+        undefined,
+        args.imagenes,
+      );
+    })
+    .filter((card) => card !== '')
+    .join('\n\n');
+  if (cards === '') return '';
+  const extraArgs: string[] = [];
+  for (const filter of [...args.filters.semantic, ...args.filters.user, ...args.filters.flags, ...args.filters.html]) {
+    extraArgs.push('--lua-filter', filter);
+  }
+  const html = await execPandoc({
+    input: cards,
+    sourcePath: args.sourcePath,
+    from: MD_READER,
+    to: 'html5',
+    extraArgs,
+    env: imagePathsEnv(args.imagePaths),
+  });
+  return minifyHtml(html);
+}
+
+/** Las tarjetas de anuncios que van en los slots de una página. */
+async function anunciosDeLaPagina(args: {
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  cwd: string;
+  dir: string;
+  docPath?: string;
+  available?: Set<string>;
+  creatorHrefs: Map<string, string>;
+  imagenes: Map<string, string>;
+  outputDir: string;
+  announcementImages?: Map<string, string>;
+  filters: ExportContext['filters'];
+  imagePaths?: string;
+  sourcePath: string;
+}): Promise<{ top: string; bottom: string }> {
+  const anuncios = (await readAnuncios(args.discoveryIndex, args.cwd)).filter((entry) => posix(entry.file).replace(/^\.\//, '') !== args.docPath);
+  const imagenes = new Map([
+    ...(args.announcementImages === undefined ? [] : hrefsDeImagenes(args.announcementImages, args.outputDir, args.dir)),
+    ...args.imagenes,
+  ]);
+  const comunes = {
+    discoveryIndex: args.discoveryIndex,
+    dir: args.dir,
+    available: args.available,
+    creatorHrefs: args.creatorHrefs,
+    imagenes,
+    filters: args.filters,
+    imagePaths: args.imagePaths,
+    sourcePath: args.sourcePath,
+  };
+  const top = await renderAnuncios({ ...comunes, entries: anuncios.filter((entry) => placementDe(entry, args.discoveryIndex) === 'top') });
+  const bottom = await renderAnuncios({ ...comunes, entries: anuncios.filter((entry) => placementDe(entry, args.discoveryIndex) === 'bottom') });
+  return { top, bottom };
+}
+
+/** Procesa una sola vez las imágenes de cabecera de los anuncios. */
+export async function preparaImagenesDeAnuncios(args: {
+  cwd: string;
+  outputDir: string;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  pdfxActive: boolean;
+}): Promise<Map<string, string>> {
+  const anuncios = await readAnuncios(args.discoveryIndex, args.cwd);
+  if (anuncios.length === 0) return new Map();
+  const procesadas = await processWebImages(
+    imagenesDeLasTarjetas(anuncios, args.cwd),
+    join(args.outputDir, ASSETS_IMAGES_DIR),
+    imageNamerFor('anuncio', 'webp'),
+    args.pdfxActive,
+  );
+  return procesadas.imageMap;
+}
+
+/** Los anuncios del sitio, ordenados por fecha descendente. */
+async function readAnuncios(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<CollectionEntry[]> {
+  const rutas = [...discoveryIndex.entries()].filter(([, entry]) => entry.type === 'announcement').map(([ruta]) => ruta);
+  if (rutas.length === 0) return [];
+  const entries = await readCollectionEntries(rutas, 'anuncios.md', [cwd], true);
+  return entries.sort((a, b) => fechaOrdenable(discoveryIndex.get(b.file)) - fechaOrdenable(discoveryIndex.get(a.file)));
+}
+
+/** El cuerpo de `menu.html`: todos los enlaces, en markdown. */
+function menuPageMarkdown(links: EnlaceMenu[], dir: string): string {
+  return links
+    .map((enlace) => {
+      const attrs = esEnlaceExterno(enlace.url) ? '{target="_blank" rel="noopener noreferrer"}' : '';
+      return `- [${enlace.name}](${hrefDeMenu(enlace.url, dir)})${attrs}`;
+    })
+    .join('\n');
+}
+
 /** La tarjeta con las redes de la creadora, con su nombre como dueño. */
 export function creatorLinksCard(nombre: string, links: { name: string; url: string }[]): string {
   // Fuera del sitio, igual que las redes del proyecto: se abren aparte.
@@ -1068,20 +1316,6 @@ export function creatorLinksCard(nombre: string, links: { name: string; url: str
   ].join('\n');
 }
 
-/** La tarjeta con los textos donde aparece una creadora. */
-export function creatorTextsCard(textos: { titulo: string; href: string }[], dir: string, available?: Set<string>): string {
-  const items = textos.map((t) => `- [${t.titulo}](${t.href})`).join('\n');
-  return [
-    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
-    '',
-    chipHtml('Textos', 'file', dir, EXTRA_PILL_SPACED_CLASSES, available),
-    '',
-    items,
-    '',
-    '::::',
-  ].join('\n');
-}
-
 /**
  * Las tarjetas que van después del texto: la biografía de cada creadora y las
  * colecciones donde vive el documento.
@@ -1090,9 +1324,9 @@ export function creatorTextsCard(textos: { titulo: string; href: string }[], dir
  * cuerpo del documento quedarían dentro de su tarjeta.
  */
 async function buildExtrasHtml(args: {
+  tarjetas?: string;
   creatorDocs: CreatorDoc[];
   contenedores: { titulo: string; href: string; type: string | undefined }[];
-  textos: { titulo: string; href: string }[];
   palabrasClave: { titulo: string; href: string }[];
   redesCreador: { name: string; url: string }[];
   duenoRedes: string;
@@ -1105,10 +1339,9 @@ async function buildExtrasHtml(args: {
   dir: string;
 }): Promise<string> {
   const partes: string[] = [];
-  // Los textos donde aparece la creadora van primero: es lo que la identifica.
-  if (args.textos.length > 0) {
-    partes.push([MASONRY_WRAPPER, '', creatorTextsCard(args.textos, args.dir, args.available), '', '</div>'].join('\n'));
-  }
+  // Las tarjetas de textos y colecciones de una autora van primero, ya en
+  // celdas del masonry independientes.
+  if (args.tarjetas !== undefined && args.tarjetas !== '') partes.push(args.tarjetas);
   // Cada tarjeta va en su propia celda del masonry, con su separación.
   for (const doc of args.creatorDocs) {
     partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs, args.available, args.imagenes), '', '</div>'].join('\n'));
@@ -1235,7 +1468,38 @@ export async function emitKeywordLists(args: {
       outBase: (name: string): string => join(outputDir, KEYWORDS_DIR, name),
     };
     const imagePaths = await writeListImagePaths(cwd, `${KEYWORDS_DIR}-${slug}`, procesadas.imageMap);
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, paginas, hrefsCreadores, '', 'Palabras clave');
+    const menu = menuCardHtml(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
+    const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
+      discoveryIndex,
+      cwd,
+      dir: KEYWORDS_DIR,
+      available,
+      creatorHrefs: hrefsCreadores,
+      imagenes: hrefsDeImagenes(procesadas.imageMap, outputDir, KEYWORDS_DIR),
+      outputDir,
+      announcementImages: renderCtx.announcementImages,
+      filters: exportCtx.filters,
+      imagePaths,
+      sourcePath: doc.filePath,
+    });
+    await emitHtmlPage(
+      doc,
+      outputs,
+      renderCtx,
+      exportCtx,
+      discoveryIndex,
+      imagePaths,
+      paginas,
+      hrefsCreadores,
+      '',
+      'Palabras clave',
+      undefined,
+      undefined,
+      undefined,
+      menu,
+      anunciosTop,
+      anunciosBottom,
+    );
     await removeExtraHtmlPages(outputDir, KEYWORDS_DIR, slug, paginas.length, discoveryIndex);
   }
 }
@@ -1453,7 +1717,7 @@ function collectionCard(
   ];
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
-    card.push('', `<p class="text-center mt-4"><a href="${href}" class="${MEMBER_LINK_CLASSES}">Leer el texto completo →</a></p>`);
+    card.push('', `<p class="text-center mt-4"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
   }
   card.push('', '::::');
   return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
@@ -1801,33 +2065,44 @@ function contenedoresDe(
   });
 }
 
-/** Los textos donde aparece la creadora del documento, si el documento es una creadora. */
-function textosDeLaCreadoraDelDoc(
-  doc: BuildDocument,
-  outputs: DocumentOutputs,
-  discoveryIndex: Map<string, DiscoveryEntry>,
-): { titulo: string; href: string }[] {
-  if (doc.frontmatter.type !== 'creator') return [];
-  return textosDeCreadora(String(outputs.fm.name ?? outputs.fm.title ?? ''), outputs.dir, discoveryIndex);
+/** La fecha que ordena las tarjetas: `date`; sin fecha, al final. */
+function fechaDeContenido(entry: DiscoveryEntry | undefined): number {
+  if (entry?.date !== undefined) {
+    const fecha = Date.parse(entry.date);
+    if (!Number.isNaN(fecha)) return fecha;
+  }
+  return Number.NEGATIVE_INFINITY;
 }
 
 /**
- * Los textos donde aparece una creadora: como creator o como collectionCreator.
- * El criterio de coincidencia es el mismo que usa la sección de autoras.
+ * Los documentos donde participa la creadora del documento, como `creator` o
+ * como `collectionCreator`: textos y colecciones. Lo más reciente primero.
  */
-function textosDeCreadora(nombre: string, dir: string, discoveryIndex: Map<string, DiscoveryEntry>): { titulo: string; href: string }[] {
+function documentosDeLaCreadora(doc: BuildDocument, outputs: DocumentOutputs, discoveryIndex: Map<string, DiscoveryEntry>): string[] {
+  if (doc.frontmatter.type !== 'creator') return [];
+  const nombre = String(outputs.fm.name ?? outputs.fm.title ?? '');
   if (nombre === '') return [];
-  const textos: { titulo: string; href: string }[] = [];
-  for (const [ruta, entry] of discoveryIndex.entries()) {
-    if (entry.type !== undefined && entry.type !== 'file') continue;
-    const autores = [...entry.creator, ...parseAuthors(entry.fm?.collectionCreator)];
-    if (!autores.includes(nombre)) continue;
-    const html = join(dirname(ruta), `${htmlSlugFor(ruta, entry.slug)}.html`)
-      .split(sep)
-      .join('/');
-    textos.push({ titulo: entry.title || ruta, href: relativeHref(dir, html) });
-  }
-  return textos.sort((a, b) => a.titulo.localeCompare(b.titulo, 'es'));
+  const rutas = [...discoveryIndex.entries()]
+    .filter(([, entry]) => entry.type === undefined || entry.type === 'file' || entry.type === 'collection')
+    .filter(([, entry]) => [...entry.creator, ...parseAuthors(entry.fm?.collectionCreator)].includes(nombre))
+    .map(([ruta]) => ruta);
+  return rutas.sort((a, b) => {
+    const fecha = fechaDeContenido(discoveryIndex.get(b)) - fechaDeContenido(discoveryIndex.get(a));
+    if (fecha !== 0) return fecha;
+    return (discoveryIndex.get(a)?.title ?? a).localeCompare(discoveryIndex.get(b)?.title ?? b, 'es');
+  });
+}
+
+/** Las entradas completas de las tarjetas de una creadora. */
+async function entradasDeLaCreadora(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  cwd: string,
+): Promise<CollectionEntry[]> {
+  const rutas = documentosDeLaCreadora(doc, outputs, discoveryIndex);
+  if (rutas.length === 0) return [];
+  return readCollectionEntries(rutas, doc.relativePath, [cwd], true);
 }
 
 async function preprocessDocImages(
@@ -1837,6 +2112,7 @@ async function preprocessDocImages(
   creatorDocs: CreatorDoc[],
   content: string,
   renderCtx: RenderContext,
+  extraEntries: CollectionEntry[] = [],
 ): Promise<DocumentImages> {
   const { ctx, plan, formatCfg } = renderCtx;
   const active = plan.activeFormats;
@@ -1865,10 +2141,69 @@ async function preprocessDocImages(
     wants: { pdf: active.latex || active.pdf, web: active.html || active.epub || active.markdown, epub: active.epub },
     // Las imágenes de las tarjetas de una colección no viven en su cuerpo.
     extraImages: [
-      ...(collectionEntries.length > 0 ? imagenesDeLasTarjetas(collectionEntries, ctx.cwd) : []),
+      ...(collectionEntries.length > 0 || extraEntries.length > 0 ? imagenesDeLasTarjetas([...collectionEntries, ...extraEntries], ctx.cwd) : []),
       ...(doc.frontmatter.type === 'creator' ? retratoDeLaPagina(outputs.fm, dirname(doc.filePath)) : []),
     ],
   });
+}
+
+/** Las páginas de una autora: la bio sola y las tarjetas aparte. */
+function paginasDeLaPagina(args: Parameters<typeof paginasDeDocumento>[0]): { paginas: string[]; tarjetasPaginas: string[] } {
+  if (args.doc.frontmatter.type !== 'creator') return { paginas: paginasDeDocumento(args), tarjetasPaginas: [] };
+  if (args.entradas.length === 0) return { paginas: [args.pageContent], tarjetasPaginas: [] };
+  const tarjetasPaginas = collectionCardsPages(
+    args.entradas,
+    args.memberHrefs,
+    '',
+    args.pageSize,
+    args.creatorHrefs,
+    args.dir,
+    args.available,
+    false,
+    args.discoveryIndex,
+    { path: args.doc.relativePath, outSlug: args.outSlug },
+    args.imagenes,
+  );
+  return { paginas: [args.pageContent, ...tarjetasPaginas.slice(1).map(() => '')], tarjetasPaginas };
+}
+
+/** Los extras de cada página: las tarjetas de la autora, o los de siempre. */
+async function extrasDeLaPagina(
+  comunes: Omit<Parameters<typeof buildExtrasHtml>[0], 'tarjetas'>,
+  tarjetasPaginas: string[],
+): Promise<string | string[]> {
+  if (tarjetasPaginas.length === 0) return buildExtrasHtml(comunes);
+  return Promise.all(tarjetasPaginas.map((tarjetas) => buildExtrasHtml({ ...comunes, tarjetas })));
+}
+
+/** Las páginas de un documento: la bio y las tarjetas, o las tarjetas solas. */
+function paginasDeDocumento(args: {
+  doc: BuildDocument;
+  outSlug: string;
+  entradas: CollectionEntry[];
+  memberHrefs: Map<string, string>;
+  pageContent: string;
+  pageSize: number;
+  creatorHrefs: Map<string, string>;
+  dir: string;
+  available?: Set<string>;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  imagenes: Map<string, string>;
+}): string[] {
+  if (args.entradas.length === 0) return [args.pageContent];
+  return collectionCardsPages(
+    args.entradas,
+    args.memberHrefs,
+    args.pageContent,
+    args.pageSize,
+    args.creatorHrefs,
+    args.dir,
+    args.available,
+    false,
+    args.discoveryIndex,
+    { path: args.doc.relativePath, outSlug: args.outSlug },
+    args.imagenes,
+  );
 }
 
 async function emitCollectionHtml(
@@ -1876,6 +2211,7 @@ async function emitCollectionHtml(
   outputs: DocumentOutputs,
   collectionEntries: CollectionEntry[],
   creatorDocs: CreatorDoc[],
+  entradasCreadora: CollectionEntry[],
   content: string,
   renderCtx: RenderContext,
   exportCtx: ExportContext,
@@ -1889,45 +2225,67 @@ async function emitCollectionHtml(
   const { ctx, plan, formatCfg } = renderCtx;
   if (!(plan.activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html'))) return;
 
-  const memberHrefs = memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex);
+  const entradasTarjetas = doc.frontmatter.type === 'creator' ? entradasCreadora : collectionEntries;
+  const memberHrefs = memberHtmlHrefs(doc.relativePath, entradasTarjetas, discoveryIndex);
   const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
   const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
   const available = availableDefaultListSlugs(discoveryIndex);
-  const paginas = collectionCardsPages(
-    collectionEntries,
+  const esMenu = doc.frontmatter.type === 'menu';
+  const enlaces = enlacesDelMenu(discoveryIndex);
+  const menu = esMenu ? undefined : menuCardHtml(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
+  const pageContent = esMenu
+    ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlaces, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
+    : content;
+  const imagenes = hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir);
+  const esCreadora = doc.frontmatter.type === 'creator';
+  const { paginas, tarjetasPaginas } = paginasDeLaPagina({
+    doc,
+    outSlug: outputs.outSlug,
+    entradas: entradasTarjetas,
     memberHrefs,
-    content,
+    pageContent,
     pageSize,
-    hrefsCreadores,
-    outputs.dir,
+    creatorHrefs: hrefsCreadores,
+    dir: outputs.dir,
     available,
-    false,
     discoveryIndex,
-    { path: doc.relativePath, outSlug: outputs.outSlug },
-    hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir),
-  );
+    imagenes,
+  });
   assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 
   const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', webMap, docDir, true);
+  const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
+    discoveryIndex,
+    cwd: ctx.cwd,
+    dir: outputs.dir,
+    docPath: doc.relativePath,
+    available,
+    creatorHrefs: hrefsCreadores,
+    imagenes,
+    outputDir: ctx.outputDir,
+    announcementImages: renderCtx.announcementImages,
+    filters: exportCtx.filters,
+    imagePaths,
+    sourcePath: doc.filePath,
+  });
   const esTexto = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
   const palabrasClave = esTexto ? palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex) : [];
-  const esCreadora = doc.frontmatter.type === 'creator';
   const duenoRedes = String(outputs.fm.name ?? outputs.fm.title ?? '');
-  const extras = await buildExtrasHtml({
+  const extrasComunes = {
     creatorDocs,
     contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
-    textos: textosDeLaCreadoraDelDoc(doc, outputs, discoveryIndex),
     palabrasClave,
     redesCreador: esCreadora ? creatorLinks : [],
     duenoRedes,
     creatorHrefs: hrefsCreadores,
     filters: exportCtx.filters,
     imagePaths,
-    imagenes: hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir),
+    imagenes,
     sourcePath: doc.filePath,
     dir: outputs.dir,
     available,
-  });
+  };
+  const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas);
   // Las redes de la creadora van en su tarjeta, no al inicio del cuerpo.
   const contenidos = paginas;
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
@@ -1947,6 +2305,9 @@ async function emitCollectionHtml(
     covers,
     indices,
     retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir),
+    menu,
+    anunciosTop,
+    anunciosBottom,
   );
   await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 }
@@ -1971,7 +2332,8 @@ async function emitCollectionFormats(
 
   const docDir = dirname(doc.filePath);
   const mergedFm = mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd);
-  const images = await preprocessDocImages(doc, outputs, collectionEntries, creatorDocs, content, renderCtx);
+  const entradasCreadora = doc.frontmatter.type === 'creator' ? await entradasDeLaCreadora(doc, outputs, discoveryIndex, ctx.cwd) : [];
+  const images = await preprocessDocImages(doc, outputs, collectionEntries, creatorDocs, content, renderCtx, entradasCreadora);
   const pdfImages = images.pdf ?? { imageMap: new Map<string, string>(), processedFiles: [] };
   const webMap = images.web?.imageMap ?? new Map<string, string>();
   const epubMap = images.epub?.imageMap ?? new Map<string, string>();
@@ -2009,6 +2371,7 @@ async function emitCollectionFormats(
     outputs,
     collectionEntries,
     creatorDocs,
+    entradasCreadora,
     content,
     renderCtx,
     exportCtx,
@@ -2111,6 +2474,10 @@ function tipoDe(entry: DiscoveryEntry): string {
 }
 
 /** La fecha del `date` del frontmatter o, si no existe, la última modificación del archivo. */
+function placementDe(entry: CollectionEntry, discoveryIndex: Map<string, DiscoveryEntry>): 'top' | 'bottom' {
+  return discoveryIndex.get(entry.file)?.fm?.placement === 'bottom' ? 'bottom' : 'top';
+}
+
 function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
   if (entry?.date !== undefined) {
     const fecha = Date.parse(entry.date);
@@ -2121,7 +2488,9 @@ function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
 
 /** Las listas por defecto se ordenan de lo más reciente a lo más antiguo. */
 function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
-  const rutas = [...discoveryIndex.entries()].filter(([, entry]) => type === 'all' || tipoDe(entry) === type).map(([ruta]) => ruta);
+  const rutas = [...discoveryIndex.entries()]
+    .filter(([, entry]) => (type === 'all' ? tipoDe(entry) !== 'menu' && tipoDe(entry) !== 'announcement' : tipoDe(entry) === type))
+    .map(([ruta]) => ruta);
   // Las creadoras van siempre por nombre, sin importar la fecha.
   if (type === 'creator') {
     const nombre = (ruta: string): string => discoveryIndex.get(ruta)?.title ?? ruta;
@@ -2254,7 +2623,38 @@ export async function emitDefaultLists(args: {
     };
 
     const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
-    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex, imagePaths, contenidos, hrefsCreadores, '', 'Lista');
+    const menu = menuCardHtml(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
+    const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
+      discoveryIndex,
+      cwd,
+      dir: '.',
+      available,
+      creatorHrefs: hrefsCreadores,
+      imagenes: hrefsDeImagenes(procesadas.imageMap, outputDir, '.'),
+      outputDir,
+      announcementImages: renderCtx.announcementImages,
+      filters: exportCtx.filters,
+      imagePaths,
+      sourcePath: doc.filePath,
+    });
+    await emitHtmlPage(
+      doc,
+      outputs,
+      renderCtx,
+      exportCtx,
+      discoveryIndex,
+      imagePaths,
+      contenidos,
+      hrefsCreadores,
+      '',
+      'Lista',
+      undefined,
+      undefined,
+      undefined,
+      menu,
+      anunciosTop,
+      anunciosBottom,
+    );
   }
 }
 
@@ -2282,7 +2682,8 @@ export async function processDocumentFormats(
 
   const entry = discoveryIndex.get(doc.relativePath);
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
-  const outSlug = htmlSlugFor(doc.relativePath, slug);
+  // El menú del sitio vive siempre en menu.html.
+  const outSlug = doc.frontmatter.type === 'menu' ? 'menu' : htmlSlugFor(doc.relativePath, slug);
   const dir = dirname(doc.relativePath);
 
   const isCollection = doc.frontmatter.type === 'collection';
