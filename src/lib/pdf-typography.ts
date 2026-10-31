@@ -499,9 +499,9 @@ function validaPaginasPedidas(pdfPath: string, opciones: OpcionesAnalisis, total
 
 const ORDEN_REGLA = new Map(TYPOGRAPHY_RULES.map((regla, indice) => [regla, indice]));
 
-/** El informe va por página y, dentro de cada página, en el orden de las reglas. */
-function porPaginaYRegla(a: TypographyIncidence, b: TypographyIncidence): number {
-  return a.page - b.page || (ORDEN_REGLA.get(a.type) ?? 99) - (ORDEN_REGLA.get(b.type) ?? 99) || a.line - b.line;
+/** El informe va por página, después por línea y, a igual línea, por regla. */
+function porPaginaLineaYRegla(a: TypographyIncidence, b: TypographyIncidence): number {
+  return a.page - b.page || a.line - b.line || (ORDEN_REGLA.get(a.type) ?? 99) - (ORDEN_REGLA.get(b.type) ?? 99);
 }
 
 /** Qué páginas entran: la lista pedida o el rango de siempre. */
@@ -538,7 +538,7 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
   ];
   const vivas = excepciones.length === 0 ? halladas : filtraExcepciones(halladas, opciones.archivo ?? '', excepciones);
   const dentro = filtroDePaginas(opciones, pages.length);
-  return vivas.filter((incidencia) => dentro(incidencia.page)).sort(porPaginaYRegla);
+  return vivas.filter((incidencia) => dentro(incidencia.page)).sort(porPaginaLineaYRegla);
 }
 
 export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {}): Promise<TypographyIncidence[]> {
