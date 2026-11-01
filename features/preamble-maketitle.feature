@@ -106,6 +106,20 @@ Característica: el maketitle y las páginas de título
       \titleimagerender[\extratitlewidth]{\@titleimage}
       """
 
+  Regla de negocio: La portada de la colección ocupa todo el ancho
+
+    Escenario: El title y el extratitle usan el 100% de la caja de texto
+      Dado que la raíz del proyecto está vacía
+      Cuando miro el filtro de la colección "19-maketitle"
+      Entonces el filtro trae:
+      """
+      \newcommand{\titleimagerender}[2][1\textwidth]{%
+      """
+      Y el filtro trae:
+      """
+      \newcommand*{\extratitlewidth}{1\textwidth}
+      """
+
   Regla de negocio: El colofón no hereda las imágenes automáticas
 
     Escenario: El colofón no trae titleImage ni publisherImage
