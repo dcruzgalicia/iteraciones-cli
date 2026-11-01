@@ -23,6 +23,10 @@ Característica: el tipo `intervention`
         | {"type":"intervention","lineLength":0.6} |
         | {"type":"intervention","date":"2026-01-01"} |
         | {"type":"intervention","pages":2,"lineLength":0.5} |
+        | {"type":"intervention","letterheadHeight":"5cm"} |
+        | {"type":"intervention","letterheadHeight":"50mm"} |
+        | {"type":"intervention","letterheadHeight":"2in"} |
+        | {"type":"intervention","letterheadHeight":7} |
 
     Escenario: Sin título ni autor la intervention es válida
       Dado que la raíz del proyecto está vacía
@@ -49,6 +53,8 @@ Característica: el tipo `intervention`
         | {"type":"intervention","pages":0} | pages |
         | {"type":"intervention","pages":-1} | pages |
         | {"type":"intervention","lineLength":1.5} | lineLength |
+        | {"type":"intervention","letterheadHeight":"alto"} | letterheadHeight |
+        | {"type":"intervention","letterheadHeight":0} | letterheadHeight |
 
     Escenario: Un type que no es intervention se valida como desconocido
       Dado que la raíz del proyecto está vacía
@@ -116,8 +122,14 @@ Característica: el tipo `intervention`
       Y la página 2 lleva el membrete a la izquierda y abajo
       Y la página 3 lleva el membrete a la derecha y abajo
       Y la página 4 lleva el membrete a la izquierda y abajo
-      Y el membrete de cada página mide 3 cm de alto
+      Y el membrete de cada página mide 5 cm de alto
       Y la página 4 repite la imagen de la página 1
+
+    Escenario: El frontmatter cambia la altura del membrete
+      Dado que la raíz del proyecto está vacía
+      Y una intervention con membrete de 1 imágenes, 1 páginas y altura "7cm"
+      Cuando compilo el proyecto con PDF
+      Entonces el .tex de la intervention fija el membrete a "70mm" de alto
 
     Escenario: El membrete también sale en el PDF de la colección
       Dado que la raíz del proyecto está vacía

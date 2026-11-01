@@ -11,7 +11,7 @@ import { isInside, posix } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { COVER_IMAGE_FIELDS, uniqueName } from './image-processor.js';
+import { COVER_IMAGE_FIELDS, parseLetterheadHeight, uniqueName } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { ASSETS_PDF_IMAGES_DIR } from './output-layout.js';
 import { metadataArgs } from './pandoc-metadata.js';
@@ -153,9 +153,11 @@ async function pushCoverImageMetadata(
   // de plantilla y no como metadato: pandoc escapa los guiones bajos de las
   // rutas en los metadatos y el archivo se vuelve ilegible para LaTeX.
   if (doc.frontmatter.type === 'intervention') {
-    for (const value of fmStringList(fm.letterhead) ?? []) {
+    const membrete = fmStringList(fm.letterhead) ?? [];
+    for (const value of membrete) {
       await resolveAndPushImage(extraArgs, 'letterhead', value, doc, imageMap, 'variable');
     }
+    if (membrete.length > 0) extraArgs.push(`--variable=letterhead-height:${parseLetterheadHeight(fm.letterheadHeight)}mm`);
   }
 }
 
