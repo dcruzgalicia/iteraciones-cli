@@ -105,6 +105,7 @@ export function parseFileFrontmatter(
   lineLength: number | undefined;
   pages: number | undefined;
   letterhead: string[];
+  letterheadHeight: string | undefined;
   image: string | undefined;
   body: string;
 } {
@@ -118,6 +119,7 @@ export function parseFileFrontmatter(
       lineLength: undefined,
       pages: undefined,
       letterhead: [],
+      letterheadHeight: undefined,
       image: undefined,
       body,
     };
@@ -132,6 +134,7 @@ export function parseFileFrontmatter(
     lineLength: typeof parsed.lineLength === 'number' ? parsed.lineLength : undefined,
     pages: typeof parsed.pages === 'number' ? parsed.pages : undefined,
     letterhead: fmStringList(parsed.letterhead) ?? [],
+    letterheadHeight: fmTrimmedString(parsed.letterheadHeight),
     image: fmTrimmedString(parsed.image),
     body,
   };

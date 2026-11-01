@@ -63,6 +63,7 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'pages',
   'lineLength',
   'letterhead',
+  'letterheadHeight',
   'image',
   'placement',
 ];
@@ -192,7 +193,15 @@ function validateInterventionType(parsed: Record<string, unknown>): ValidationIs
   if (lineLength !== undefined && (typeof lineLength !== 'number' || lineLength <= 0 || lineLength > 1)) {
     return [{ severity: 'error', message: 'frontmatter: "lineLength" debe ser un número entre 0 y 1 (ej. 0.5, 0.7, 1)' }];
   }
-  return [];
+  return validateLetterheadHeight(parsed.letterheadHeight);
+}
+
+function validateLetterheadHeight(value: unknown): ValidationIssue[] {
+  if (value === undefined) return [];
+  const numero = typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;
+  const formato = typeof value === 'number' || (typeof value === 'string' && /^\s*[\d.]+\s*(mm|cm|pt|in)?\s*$/i.test(value));
+  if (formato && Number.isFinite(numero) && numero > 0) return [];
+  return [{ severity: 'error', message: 'frontmatter: "letterheadHeight" debe ser una medida positiva, por ejemplo "5cm", "50mm" o "2in"' }];
 }
 
 function validateListDate(value: unknown): ValidationIssue[] {

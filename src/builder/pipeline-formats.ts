@@ -24,7 +24,9 @@ import {
   type DocumentImages,
   imageNamerFor,
   imagePathsMap,
+  LETTERHEAD_HEIGHT_MM,
   type ProcessedImages,
+  parseLetterheadHeight,
   preprocessDocumentImages,
   processWebImages,
   relImageMapFor,
@@ -429,6 +431,8 @@ export type CollectionEntry = {
 
   /** Las imágenes del membrete, ya resueltas contra el directorio del archivo. */
   letterhead?: string[];
+  /** La altura del membrete en el frontmatter de la intervention (`5cm`, `50mm`…). */
+  letterheadHeight?: string;
 
   /** El directorio real del archivo miembro, para resolver sus imágenes. */
   dirAbs?: string;
@@ -577,7 +581,10 @@ function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean, membre
     parts.push(interventionSectionRaw(e.lineLength));
     // El \chapter de arriba ya saltó de página: encender el membrete antes
     // pintaría también la página anterior, que se envía al hacer el salto.
-    if (membrete.length > 0) parts.push(`\\letterheadsetup{${membrete.join(',')}}`);
+    if (membrete.length > 0) {
+      parts.push(`\\setlength{\\letterheadheight}{${parseLetterheadHeight(e.letterheadHeight)}mm}`);
+      parts.push(`\\letterheadsetup{${membrete.join(',')}}`);
+    }
     parts.push('\\thispagestyle{empty}');
     parts.push(e.body.trim());
     if (e.pages && e.pages > 0) {
@@ -2121,13 +2128,16 @@ async function preprocessDocImages(
   // procesan aquí para que el PDF las pueda usar. En un texto suelto manda su
   // propio frontmatter.
   const membreteColeccion = collectionLetterheadFiles(collectionEntries);
+  const alturaMembrete = collectionEntries
+    .filter((e) => e.type === 'intervention')
+    .reduce((max, e) => Math.max(max, parseLetterheadHeight(e.letterheadHeight)), LETTERHEAD_HEIGHT_MM);
   return preprocessDocumentImages({
     content: [
       collectionScanContent(collectionEntries, content),
       // El retrato de la creadora vive en su frontmatter, no en el cuerpo.
       ...creatorDocs.flatMap((c) => (c.image === undefined ? [c.body] : [`![](${c.image})`, c.body])),
     ].join('\n\n'),
-    fm: membreteColeccion.length > 0 ? { ...fmBase, letterhead: membreteColeccion } : fmBase,
+    fm: membreteColeccion.length > 0 ? { ...fmBase, letterhead: membreteColeccion, letterheadHeight: `${alturaMembrete}mm` } : fmBase,
     docDir: dirname(doc.filePath),
     pageDimensions: renderCtx.pageDimensions ?? detectPageSize([]),
     cropActive: renderCtx.cropActive,

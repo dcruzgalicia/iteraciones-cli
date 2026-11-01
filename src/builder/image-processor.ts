@@ -160,9 +160,21 @@ function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | 
 
 export const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper', 'frontCover', 'backCover'] as const;
 
-/** Las imágenes de membrete van a 3 cm de alto, con el ancho que pidan. */
+/** Las imágenes de membrete van a 5 cm de alto por defecto, con el ancho que pidan. */
 export const LETTERHEAD_FIELD = 'letterhead';
-export const LETTERHEAD_HEIGHT_MM = 30;
+export const LETTERHEAD_HEIGHT_MM = 50;
+
+/** La altura del membrete: `5cm`, `50mm`, `2in` o un número en cm. */
+export function parseLetterheadHeight(value: unknown): number {
+  if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? value * 10 : LETTERHEAD_HEIGHT_MM;
+  if (typeof value !== 'string') return LETTERHEAD_HEIGHT_MM;
+  const match = /^\s*([\d.]+)\s*(mm|cm|pt|in)?\s*$/i.exec(value);
+  const numero = Number.parseFloat(match?.[1] ?? '');
+  const unidad = (match?.[2] ?? 'cm').toLowerCase();
+  if (!(numero > 0)) return LETTERHEAD_HEIGHT_MM;
+  if (unidad === 'in') return numero * 25.4;
+  return toMm(numero, unidad) ?? LETTERHEAD_HEIGHT_MM;
+}
 const IMAGE_FIELDS = [...COVER_IMAGE_FIELDS, LETTERHEAD_FIELD] as const;
 
 const MULTILINE_IMAGE_FIELDS = [
@@ -348,13 +360,14 @@ function warnMissingMagick(pdfxActive: boolean): void {
 
 /** Las imágenes declaradas en los campos del frontmatter (guardas, membrete…). */
 async function collectFieldSources(fm: Record<string, unknown>, docDir: string, push: (source: ImageSource) => void): Promise<void> {
+  const alturaMembrete = parseLetterheadHeight(fm.letterheadHeight);
   for (const field of IMAGE_FIELDS) {
     const cover = FULL_PAGE_COVER_FIELDS.includes(field);
     const membrete = field === LETTERHEAD_FIELD;
     for (const value of fmStringList(fm[field]) ?? []) {
       const absPath = isAbsolute(value) ? value : resolve(docDir, value);
       if (!(await Bun.file(absPath).exists())) continue;
-      push(membrete ? { absPath, kind: 'title', cover: false, field, heightMm: LETTERHEAD_HEIGHT_MM } : { absPath, kind: 'cover', cover, field });
+      push(membrete ? { absPath, kind: 'title', cover: false, field, heightMm: alturaMembrete } : { absPath, kind: 'cover', cover, field });
     }
   }
 }

@@ -133,7 +133,7 @@ Given('un proyecto cuya colección sólo incluye interventions', () => {
   escribirEnProyecto('regla.md', ['---', 'title: Regla', 'type: intervention', '---', '', 'regla de imprenta', ''].join('\n'));
 });
 
-Given('una intervention con membrete de {int} imágenes y {int} páginas', (cuantas: number, paginas: number) => {
+function escribeInterventionConMembrete(cuantas: number, paginas: number, altura?: string): void {
   escribirEnProyecto(
     'iteraciones.config.yaml',
     ['language: es-MX', 'format:', '  latex:', '    generate: true', '  pdf:', '    generate: true'].join('\n'),
@@ -151,10 +151,19 @@ Given('una intervention con membrete de {int} imágenes y {int} páginas', (cuan
     if (creada.exitCode !== 0) throw new Error('magick no pudo crear la imagen de membrete');
     rutas.push(`  - img/i${i}.png`);
   }
+  const alturaLinea = altura === undefined ? [] : [`letterheadHeight: "${altura}"`];
   escribirEnProyecto(
     'regla.md',
-    ['---', 'type: intervention', `pages: ${paginas}`, 'letterhead:', ...rutas, '---', '', 'Escribe tu propio texto.', ''].join('\n'),
+    ['---', 'type: intervention', `pages: ${paginas}`, ...alturaLinea, 'letterhead:', ...rutas, '---', '', 'Escribe tu propio texto.', ''].join('\n'),
   );
+}
+
+Given('una intervention con membrete de {int} imágenes y {int} páginas', (cuantas: number, paginas: number) => {
+  escribeInterventionConMembrete(cuantas, paginas);
+});
+
+Given('una intervention con membrete de {int} imágenes, {int} páginas y altura {string}', (cuantas: number, paginas: number, altura: string) => {
+  escribeInterventionConMembrete(cuantas, paginas, altura);
 });
 
 Given('una colección con una intervention con membrete', () => {
@@ -237,7 +246,7 @@ interface Membrete {
 function mideMembrete(archivo: string): Membrete {
   const tam = Bun.spawnSync(['magick', 'identify', '-format', '%wx%h', archivo]).stdout.toString();
   const [ancho, alto] = tam.split('x').map(Number) as [number, number];
-  const banda = 320;
+  const banda = 500;
   const caja = Bun.spawnSync([
     'magick',
     archivo,
@@ -296,6 +305,14 @@ Then('el membrete de cada página mide {int} cm de alto', (cm: number) => {
       throw new Error(`el membrete de la página ${i + 1} mide ${m.h}px de alto y debía medir ${Math.round(esperado)}px`);
     }
   }
+});
+
+Then('el .tex de la intervention fija el membrete a {string} de alto', (altura: string) => {
+  const tex = readFileSync(join(world.root, 'dist', 'files', 'regla.tex'), 'utf8');
+  const cuerpo = tex.slice(tex.indexOf('\\begin{document}'));
+  const medida = /\\setlength\{\\letterheadheight\}\{([^}]*)\}/.exec(cuerpo)?.[1];
+  if (medida === undefined) throw new Error('el .tex no fija la altura del membrete');
+  if (medida !== altura) throw new Error(`el membrete mide ${medida} y debía medir ${altura}`);
 });
 
 Then('la página {int} repite la imagen de la página {int}', (una: number, otra: number) => {

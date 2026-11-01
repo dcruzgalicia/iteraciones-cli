@@ -181,6 +181,7 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   }
   lines.push('\\begin{document}');
   lines.push('$if(letterhead)$');
+  lines.push('$if(letterhead-height)$\\setlength{\\letterheadheight}{$letterhead-height$}$endif$');
   lines.push('\\letterheadsetup{$for(letterhead)$$letterhead$$sep$,$endfor$}');
   lines.push('$endif$');
   lines.push('$if(extratitle)$');
