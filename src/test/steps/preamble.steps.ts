@@ -291,6 +291,15 @@ When('miro el filtro {string}', async (nombre: string) => {
   world.filtroNombre = nombre;
 });
 
+When('miro el filtro de la colección {string}', async (nombre: string) => {
+  const filtros: PreambleFilter[] = await loadPreambleFilters(undefined, undefined, 'collection');
+  world.filtro = filtros.find((f) => f.name === nombre);
+  if (!world.filtro) {
+    throw new Error(`el paquete no trae el filtro de colección ${nombre}`);
+  }
+  world.filtroNombre = nombre;
+});
+
 Then('el filtro trae:', (fragmento: string) => {
   exige(world.filtro?.content ?? '', `${world.filtroNombre}.tex`, [fragmento.replace(/<br>/g, '\n').replace(/\\n$/, '')]);
 });
