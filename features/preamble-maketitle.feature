@@ -113,11 +113,11 @@ Característica: el maketitle y las páginas de título
       Cuando miro el filtro de la colección "19-maketitle"
       Entonces el filtro trae:
       """
-      \newcommand{\titleimagerender}[2][1\textwidth]{%
+      \newcommand{\titleimagerender}[2][0.8\textwidth]{%
       """
       Y el filtro trae:
       """
-      \newcommand*{\extratitlewidth}{1\textwidth}
+      \newcommand*{\extratitlewidth}{0.75\textwidth}
       """
 
   Regla de negocio: El colofón no hereda las imágenes automáticas
