@@ -32,7 +32,7 @@
 }%
 
 \newsavebox{\titleimagebox}
-\newcommand{\titleimagerender}[2][1\textwidth]{%
+\newcommand{\titleimagerender}[2][0.8\textwidth]{%
   \sbox{\titleimagebox}{\includegraphics{#2}}%
   \ifdim\wd\titleimagebox>#1
     \includegraphics[width=#1,keepaspectratio]{#2}%
@@ -41,7 +41,7 @@
   \fi
 }
 
-\newcommand*{\extratitlewidth}{1\textwidth}%
+\newcommand*{\extratitlewidth}{0.75\textwidth}%
 \newcommand*{\colophonwidth}{0.75\textwidth}%
 \newcommand{\titlepageblock}[4]{%
   \par
