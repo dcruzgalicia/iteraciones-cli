@@ -8,6 +8,7 @@ import { configHelp } from './config-help.js';
 import { runCover } from './cover.js';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 import { runMarkdown } from './markdown.js';
+import { runMarkdownClean } from './markdown-clean.js';
 import { runMerge } from './merge.js';
 import { runCollectPdf } from './pdf.js';
 import { runPost } from './post.js';
@@ -223,6 +224,27 @@ Ejemplos:
     )
     .action(async (path: string, opts: { output: string }) => {
       await runMarkdown(projectRoot(), path, opts);
+    });
+
+  program
+    .command('clean-markdown [paths...]')
+    .description('limpia el markdown de origen: quita shrink, stretch, runt, text-nowrap y espacios duros, y deja cada párrafo en una línea')
+    .option('--check', 'sólo informa qué archivos cambiarían, sin escribirlos')
+    .addHelpText(
+      'after',
+      `
+Sólo toca el cuerpo: el frontmatter se conserva tal cual. Usa las mismas reglas
+que el export a markdown (internal/strip-typographic.lua) y --wrap=none. Las
+formas viejas que el CLI ya no reconoce se dejan como están: quítalas a mano.
+
+Ejemplos:
+  iteraciones clean-markdown                    limpia todos los markdown del proyecto
+  iteraciones clean-markdown texto.md           limpia sólo ese archivo
+  iteraciones clean-markdown --check texto.md   revisa sin escribir
+`,
+    )
+    .action(async (paths: string[], opts: { check?: boolean }) => {
+      await runMarkdownClean(projectRoot(), paths, opts);
     });
 
   program
