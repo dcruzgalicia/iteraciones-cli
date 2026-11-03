@@ -197,6 +197,8 @@ local function walk_inlines(inls)
   for _, el in ipairs(inls) do
     if el.t == 'Span' and el.classes:find('mbox', 1, true) then
       table.insert(out, mbox_span_to_rawlatex(el))
+    elseif el.t == 'Span' and el.classes:find('text-nowrap', 1, true) then
+      table.insert(out, mbox_span_to_rawlatex(el))
     elseif el.t == 'Span' and el.classes:find('uppercase', 1, true) then
       table.insert(out, uppercase_span_to_rawlatex(el))
     elseif el.t == 'Span' and textsize_cmd(el) then
@@ -297,7 +299,7 @@ local function serialize_titleback(blocks)
                 end
               end
             end
-            author = pandoc.write(pandoc.Pandoc({ pandoc.Para(author_inls) }), 'latex')
+            author = pandoc.write(pandoc.Pandoc({ pandoc.Para(walk_inlines(author_inls)) }), 'latex')
             author = author:gsub('%s+$', '')
           else
             table.insert(text_parts, inner)
@@ -305,7 +307,7 @@ local function serialize_titleback(blocks)
         end
         local text_latex = ''
         if #text_parts > 0 then
-          text_latex = pandoc.write(pandoc.Pandoc(text_parts), 'latex')
+          text_latex = pandoc.write(pandoc.Pandoc(preprocess_blocks(text_parts)), 'latex')
           text_latex = text_latex:gsub('%s+$', '')
         end
         local cmd = '\\dictum'
