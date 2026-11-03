@@ -168,6 +168,7 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | titleback-text-xs-cambia-el-tamano-igual-que-en-el-cuerpo |
         | titleback-la-forma-antigua-ya-no-transforma |
         | titleback-line-height-multiplica-el-interlineado |
+        | titleback-text-nowrap-cierra-la-caja |
         | titleback-line-height-la-forma-vieja-ya-no-transforma |
         | titleback-line-height-no-numerico-no-transforma |
         | startpaper-pasa-la-ruta-literal-sin-escapar-el-guion-bajo |
