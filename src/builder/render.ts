@@ -39,20 +39,27 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     { key: 'author-names', value: vars.authors },
     { key: 'collection-creator-names', value: vars.collectionCreator },
   ]);
-  if (vars.docChip) args.push(`--variable=doc-chip:${vars.docChip}`);
-  if (vars.docChipHref) args.push(`--variable=doc-chip-href:${vars.docChipHref}`);
-  if (vars.contentChip) args.push(`--variable=content-chip:${vars.contentChip}`);
-  if (vars.frontCover) args.push(`--variable=front-cover:${vars.frontCover}`);
-  if (vars.backCover) args.push(`--variable=back-cover:${vars.backCover}`);
-  if (vars.creatorImage) args.push(`--variable=creator-image:${vars.creatorImage}`);
-  if (vars.creatorImageAlt) args.push(`--variable=creator-image-alt:${vars.creatorImageAlt}`);
-  if (vars.license) args.push(`--variable=license:${vars.license}`);
-  if (vars.menu) args.push(`--variable=menu:${vars.menu}`);
-  if (vars.announcementsTop) args.push(`--variable=announcements-top:${vars.announcementsTop}`);
-  if (vars.announcementsBottom) args.push(`--variable=announcements-bottom:${vars.announcementsBottom}`);
-  if (vars.indiceColeccion) args.push(`--variable=indice-coleccion:${vars.indiceColeccion}`);
-  if (vars.extras) args.push(`--variable=extras:${vars.extras}`);
-  if (vars.pagination) args.push(`--variable=pagination:${vars.pagination}`);
+  const bandas: Array<[string, string | undefined]> = [
+    ['doc-chip', vars.docChip],
+    ['doc-chip-href', vars.docChipHref],
+    ['content-chip', vars.contentChip],
+    ['front-cover', vars.frontCover],
+    ['back-cover', vars.backCover],
+    ['creator-image', vars.creatorImage],
+    ['creator-image-alt', vars.creatorImageAlt],
+    ['license', vars.license],
+    ['menu-header', vars.menuHeader],
+    ['menu-footer', vars.menuFooter],
+    ['announcements-top', vars.announcementsTop],
+    ['announcements-bottom', vars.announcementsBottom],
+    ['indice-coleccion', vars.indiceColeccion],
+    ['extras', vars.extras],
+    ['sidebar-extras', vars.sidebarExtras],
+    ['pagination', vars.pagination],
+  ];
+  for (const [clave, valor] of bandas) {
+    if (valor) args.push(`--variable=${clave}:${valor}`);
+  }
   return args;
 }
 

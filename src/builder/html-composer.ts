@@ -34,11 +34,17 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   footer: 'card-identity.html',
 };
 
-const IDENTITY_APERTURA = '    <div id="card-identity" class="break-inside-avoid pb-6">\n\n';
-const FOOTER_APERTURA = '    <div id="card-identity-footer" class="break-inside-avoid">\n';
+const HTML_REGION: Record<HtmlBlockKey, 'header' | 'main' | 'sidebar' | 'footer'> = {
+  header: 'header',
+  contenido: 'main',
+  formatos: 'sidebar',
+  indice: 'sidebar',
+  referencias: 'main',
+  footer: 'footer',
+};
 
-const EXTRAS_CARD = '    $if(extras)$$extras$$endif$\n';
-const PAGINATION_CARD = '    $if(pagination)$$pagination$$endif$\n';
+const IDENTITY_APERTURA = '    <div id="card-identity" class="min-w-0">\n\n';
+const FOOTER_APERTURA = '    <div id="card-identity-footer" class="min-w-0">\n';
 
 function comoFooter(card: string): string {
   return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA);
@@ -94,44 +100,50 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
   const html = siteConfig.format?.html;
   const order = (html !== undefined && 'blocks' in html && html.blocks) || [...DEFAULT_HTML_BLOCKS];
-  const cards: string[] = [];
-  let header = '';
+  const mainCards: string[] = [];
+  const sidebarCards: string[] = [];
+  let identity = '';
+  let footerIdentity = '';
   let metadata = '';
-  let footer = '';
   for (const key of order) {
     const card = await loadCard(type, HTML_CARDS[key]);
-    if (key === 'header') header = card;
-    else if (key === 'footer') footer = comoFooter(card);
-    else cards.push(card);
-    if (key === 'formatos') cards.push(await loadCard('file', 'card-indice-coleccion.html'));
+    const region = HTML_REGION[key];
+    if (region === 'header') identity = card;
+    else if (region === 'footer') footerIdentity = comoFooter(card);
+    else if (region === 'main') mainCards.push(card);
+    else sidebarCards.push(card);
     if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
+    if (key === 'formatos') sidebarCards.push(await loadCard('file', 'card-indice-coleccion.html'));
   }
-  // «Redes» va justo después del header (slot-header) y otra vez antes del
-  // footer; el chip del dueño dice que son las redes del sitio. El menú va
-  // entre la tarjeta de identidad y la primera Redes.
+
   const redes = await frecuenciasCard(siteConfig);
-  header += '$if(menu)$$menu$$endif$';
-  header += redes;
-  header += '$if(announcements-top)$$announcements-top$$endif$';
-  // Las portadas van después de la tarjeta de título y antes de Formatos.
-  cards.unshift(await loadCard('file', 'card-portadas.html'));
-  // El retrato de una creadora es su propia tarjeta, después de la del nombre.
-  if (type === 'creator') cards.unshift(await loadCard('file', 'card-retrato.html'));
-  // Las tarjetas de creadoras y de colecciones, y el nav de paginación, van
-  // después de todo lo demás y antes del footer: son tarjetas del masonry, no
-  // parte de la del texto.
-  cards.push(EXTRAS_CARD);
-  cards.push(PAGINATION_CARD);
-  cards.push('$if(announcements-bottom)$$announcements-bottom$$endif$');
-  cards.push('$if(license)$$license$$endif$');
-  cards.push(redes);
-  // `$logo-block$` queda como variable de pandoc: el bloque depende del nivel
-  // de la página y lo resuelve el build, página por página.
+  const menuHeader = '$if(menu-header)$$menu-header$$endif$';
+  const menuFooter = '$if(menu-footer)$$menu-footer$$endif$';
+  const header = `<div class="grid items-start gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">${identity}${menuHeader}${redes}</div>`;
+  const portadas = await loadCard('file', 'card-portadas.html');
+  const main = [
+    '$if(announcements-top)$$announcements-top$$endif$',
+    portadas,
+    '<div id="block-intro"></div>',
+    ...mainCards,
+    '$if(extras)$$extras$$endif$',
+    '$if(announcements-bottom)$$announcements-bottom$$endif$',
+    '$if(pagination)$$pagination$$endif$',
+  ].join('\n');
+  const sidebar = [
+    ...(type === 'creator' ? [await loadCard('file', 'card-retrato.html')] : []),
+    metadata,
+    ...sidebarCards,
+    '$if(sidebar-extras)$$sidebar-extras$$endif$',
+    ...(type === 'list' || type === 'collection' || type === 'menu' ? [menuFooter, redes] : []),
+  ].join('\n');
+  const footer = `<div class="grid items-start gap-4 md:grid-cols-3"><div class="space-y-4">${footerIdentity}${redes}</div><div>${menuFooter}</div><div>$if(license)$$license$$endif$</div></div>`;
+
   return skeleton
     .replace(slot('header'), () => header)
-    .replace(slot('metadata'), () => metadata)
-    .replace(slot('footer'), () => footer)
-    .replace(slot('cards'), () => cards.join('\n'));
+    .replace(slot('main'), () => main)
+    .replace(slot('sidebar'), () => sidebar)
+    .replace(slot('footer'), () => footer);
 }
 
 export interface HtmlPageVars {
@@ -168,13 +180,17 @@ export interface HtmlPageVars {
   creatorImage?: string;
   creatorImageAlt?: string;
   license?: string;
-  menu?: string;
+  menuHeader?: string;
+  menuFooter?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;
 
   /** Las tarjetas de creadoras y de colecciones, ya en HTML. */
   extras?: string;
+
+  /** Las tarjetas de información de la barra lateral, ya en HTML. */
+  sidebarExtras?: string;
 
   /** El nav de paginación, ya en HTML. */
   pagination?: string;

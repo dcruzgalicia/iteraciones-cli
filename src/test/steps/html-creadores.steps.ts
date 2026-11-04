@@ -96,9 +96,9 @@ Then('la biografía del texto está en su propia tarjeta', () => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'un-texto-por-ana-garcia.html'), 'utf8');
   const bio = html.indexOf('Bio de Ana García.');
   const antes = html.slice(0, bio);
-  const wrapper = antes.lastIndexOf('break-inside-avoid');
+  const wrapper = antes.lastIndexOf('class="min-w-0"');
   if (wrapper < 0) {
-    throw new Error('la biografía no está dentro de una tarjeta del masonry');
+    throw new Error('la biografía no está dentro de una tarjeta propia');
   }
   const finArticulo = html.indexOf('</article>');
   if (finArticulo >= 0 && wrapper < finArticulo) {

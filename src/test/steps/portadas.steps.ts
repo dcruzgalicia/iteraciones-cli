@@ -199,15 +199,15 @@ Given('el libro produce epub', () => {
   escribirEnProyecto('iteraciones.config.yaml', `${CONFIG_EPUB}\n`);
 });
 
-Then('las portadas del HTML van después del título y antes de los formatos', () => {
+Then('las portadas del HTML van en el contenido antes de los formatos', () => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'un-libro.html'), 'utf8');
-  const titulo = html.indexOf('<h1');
+  const main = html.indexOf('<main');
   const front = html.indexOf('un-libro-frontCover.webp');
   const back = html.indexOf('un-libro-backCover.webp');
   const formatos = html.indexOf('>Formatos</h2>');
-  if (titulo < 0 || front < 0 || back < 0 || formatos < 0) throw new Error('faltan el título, las portadas o los formatos');
-  if (!(titulo < front && front < back && back < formatos)) {
-    throw new Error('las portadas no van después del título y antes de los formatos');
+  if (main < 0 || front < 0 || back < 0 || formatos < 0) throw new Error('faltan el contenido, las portadas o los formatos');
+  if (!(main < front && front < back && back < formatos)) {
+    throw new Error('las portadas no van en el contenido antes de los formatos');
   }
 });
 

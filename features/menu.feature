@@ -5,9 +5,9 @@ Característica: el menú del sitio
   Quiero una tarjeta de menú con los primeros enlaces y una página con todos
   Para llegar a las secciones sin buscar en las tarjetas
 
-  Regla de negocio: La tarjeta muestra tres enlaces y «Ver más»
+  Regla de negocio: El header lleva al menú y el footer muestra cinco enlaces
 
-    Escenario: Con cinco enlaces la tarjeta muestra tres y «Ver más»
+    Escenario: Con más de cinco enlaces el footer recorta y muestra «Más»
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y que el archivo "menu.md" tiene este contenido
@@ -26,6 +26,8 @@ Característica: el menú del sitio
             url: ./creadora.html
           - name: Facebook
             url: https://www.facebook.com/Historikasmx
+          - name: Mastodon
+            url: https://mastodon.social/@iteraciones
         ---
         """
       Y que el archivo "libro.md" tiene este contenido
@@ -43,8 +45,10 @@ Característica: el menú del sitio
       Y el archivo "dist/files/index.html" dice "Inicio"
       Y el archivo "dist/files/index.html" dice "Libro"
       Y el archivo "dist/files/index.html" dice "Convocatorias"
-      Y el archivo "dist/files/index.html" no dice ">Autoras<"
-      Y el archivo "dist/files/index.html" dice "Ver más →"
+      Y el archivo "dist/files/index.html" dice ">Autoras<"
+      Y el archivo "dist/files/index.html" dice "Facebook"
+      Y el archivo "dist/files/index.html" no dice "Mastodon"
+      Y el archivo "dist/files/index.html" dice "Más →"
 
     Escenario: La tarjeta va después de la identidad y antes de Redes
       Dado que la raíz del proyecto tiene un proyecto de prueba

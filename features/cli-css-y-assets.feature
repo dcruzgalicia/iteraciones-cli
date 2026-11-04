@@ -15,11 +15,11 @@ Característica: el CSS y los assets que deja un build
       Entonces el comando termina con el código de salida 0
       Y el CSS se compila sobre los HTML finales
 
-    Escenario: La página trae el botón de volver al principio y el CSS su animación
+    Escenario: La página trae el botón de volver al principio
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y la página trae el botón de volver al principio y el CSS su animación
+      Y la página trae el botón de volver al principio
 
     Escenario: Sin HTML activo no se copian las fuentes ni sus licencias
       Dado que la raíz del proyecto tiene un proyecto de prueba

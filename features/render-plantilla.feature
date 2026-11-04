@@ -7,10 +7,14 @@ Característica: la plantilla HTML que se entrega a pandoc
 
   Regla de negocio: El orden por defecto de las tarjetas
 
-    Escenario: Cada tarjeta va detrás de la anterior
+    Escenario: El layout va del header al footer
       Dado que la plantilla HTML se compone para "file"
-      Entonces la plantilla ordena "$doc-chip$, $if(toc)$, $if(formats)$, $if(has-references)$"
+      Entonces la plantilla ordena "<header, <main id=\"contenido\", <aside, <footer"
       Y la plantilla dice "$if(home-href)$"
+      Y la plantilla dice "$doc-chip$"
+      Y la plantilla dice "$if(toc)$"
+      Y la plantilla dice "$if(formats)$"
+      Y la plantilla dice "$if(has-references)$"
 
     Escenario: La tarjeta de referencias es condicional
       Dado que la plantilla HTML se compone para "file"
@@ -35,7 +39,7 @@ Característica: la plantilla HTML que se entrega a pandoc
       Entonces la plantilla ordena "id=\"card-identity\", id=\"card-document\", id=\"card-identity-footer\""
       Y la plantilla ordena "id=\"card-document\", $if(toc)$"
 
-  Regla de negocio: El masonry envuelve todas las tarjetas menos el cuerpo
+  Regla de negocio: El contenido y la sidebar reparten las tarjetas
 
     Escenario: En una colección el body no va dentro del article
       Dado que la plantilla HTML se compone para "collection"
@@ -54,13 +58,15 @@ Característica: la plantilla HTML que se entrega a pandoc
       Entonces la plantilla dice "<article"
       Y la plantilla no dice "$if(collection)$"
 
-  Regla de negocio: El header abre el masonry y el footer lo cierra
+  Regla de negocio: El header abre el layout y el footer lo cierra
 
-    Escenario: Header y footer son tarjetas del masonry
+    Escenario: Header, main, sidebar y footer son las regiones del layout
       Dado que la plantilla HTML se compone para "file"
-      Entonces el masonry trae "id=\"card-identity\""
-      Y el masonry trae "id=\"card-identity-footer\""
-      Y el masonry trae "$doc-chip$"
-      Y la plantilla dice "<main class=\"lg:container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-4"
-      Y la plantilla dice "<div id=\"card-identity\" class=\"break-inside-avoid pb-6\">"
-      Y la plantilla dice "<div id=\"card-identity-footer\" class=\"break-inside-avoid\">"
+      Entonces la plantilla dice "<header"
+      Y la plantilla dice "id=\"card-identity\""
+      Y la plantilla dice "id=\"card-identity-footer\""
+      Y la plantilla dice "<main id=\"contenido\""
+      Y la plantilla dice "<aside"
+      Y la plantilla dice "<footer"
+      Y la plantilla no dice "columns-"
+      Y la plantilla no dice "break-inside-avoid"

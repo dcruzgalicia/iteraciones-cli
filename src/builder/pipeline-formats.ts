@@ -259,13 +259,15 @@ function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | u
 function tarjetasDeSitio(args: {
   siteConfig: SiteConfig;
   dir: string;
-  menu?: string;
+  menuHeader?: string;
+  menuFooter?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
-}): Pick<HtmlPageVars, 'license' | 'menu' | 'announcementsTop' | 'announcementsBottom'> {
+}): Pick<HtmlPageVars, 'license' | 'menuHeader' | 'menuFooter' | 'announcementsTop' | 'announcementsBottom'> {
   return {
     license: licenciaHtml(args.siteConfig, args.dir),
-    menu: args.menu,
+    menuHeader: args.menuHeader,
+    menuFooter: args.menuFooter,
     announcementsTop: args.announcementsTop === '' ? undefined : args.announcementsTop,
     announcementsBottom: args.announcementsBottom === '' ? undefined : args.announcementsBottom,
   };
@@ -281,12 +283,14 @@ function htmlVars(args: {
   docChip?: string;
   covers?: { front?: string; back?: string };
   creatorImage?: string;
-  menu?: string;
+  menuHeader?: string;
+  menuFooter?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;
   creatorHrefs: Map<string, string>;
   extras: string;
+  sidebarExtras: string;
   pagination: string;
 }): HtmlPageVars {
   const {
@@ -299,12 +303,14 @@ function htmlVars(args: {
     docChip,
     covers,
     creatorImage,
-    menu,
+    menuHeader,
+    menuFooter,
     announcementsTop,
     announcementsBottom,
     indiceColeccion,
     creatorHrefs,
     extras,
+    sidebarExtras,
     pagination,
   } = args;
   const { ctx, lang, formatCfg } = renderCtx;
@@ -339,10 +345,11 @@ function htmlVars(args: {
     backCover: covers?.back,
     creatorImage,
     creatorImageAlt: creatorImage === undefined ? undefined : `Retrato de ${titulo}`,
-    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menu, announcementsTop, announcementsBottom }),
+    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menuHeader, menuFooter, announcementsTop, announcementsBottom }),
     indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
+    sidebarExtras: sidebarExtras === '' ? undefined : sidebarExtras,
     pagination: pagination === '' ? undefined : pagination,
   };
 }
@@ -357,11 +364,13 @@ export async function emitHtmlPage(
   paginas?: string[],
   creatorHrefs: Map<string, string> = new Map(),
   extras: string | string[] = '',
+  sidebarExtras = '',
   docChipOverride?: string,
   covers?: { front?: string; back?: string },
   indices?: string[],
   creatorImage?: string,
-  menu?: string,
+  menuHeader?: string,
+  menuFooter?: string,
   announcementsTop?: string,
   announcementsBottom?: string,
 ): Promise<void> {
@@ -398,12 +407,14 @@ export async function emitHtmlPage(
         docChip: docChipOverride,
         covers,
         creatorImage,
-        menu,
+        menuHeader,
+        menuFooter,
         announcementsTop,
         announcementsBottom,
         indiceColeccion: indices?.[indice],
         creatorHrefs,
         extras: extraPagina,
+        sidebarExtras,
         pagination,
       }),
       siteConfig: ctx.siteConfig,
@@ -833,28 +844,48 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'scroll-reveal-at-end pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-accent-500/90 bg-accent-500/35 px-4 text-accent-700 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500/90 dark:hover:bg-accent-500/35';
+  'inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-accent-500/40 bg-accent-500/10 px-3 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
-const PAGINATION_NAV_CLASSES = 'pointer-events-none fixed inset-x-0 bottom-6 z-50';
+const PAGINATION_ACTIVE_CLASSES =
+  'inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-accent-500 bg-accent-500/20 px-3 text-sm font-semibold text-accent-900 dark:text-accent-100';
+
+const PAGINATION_NAV_CLASSES = 'flex flex-wrap items-center justify-center gap-2';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
 }
 
+/** La ventana de páginas: primera, última y el entorno de la actual. */
+function ventanaDePaginas(pagina: number, total: number): Array<number | '…'> {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const numeros = new Set([1, total, pagina - 1, pagina, pagina + 1]);
+  if (pagina <= 3) for (const n of [2, 3, 4]) numeros.add(n);
+  if (pagina >= total - 2) for (const n of [total - 1, total - 2, total - 3]) numeros.add(n);
+  const ordenados = [...numeros].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  const salida: Array<number | '…'> = [];
+  for (const [i, n] of ordenados.entries()) {
+    if (i > 0 && n - (ordenados[i - 1] as number) > 1) salida.push('…');
+    salida.push(n);
+  }
+  return salida;
+}
+
 /**
- * Los botones de paginación, flotantes junto al de «volver al principio»: el
- * anterior a su izquierda y el siguiente a su derecha. Se esconden hasta que
- * el scroll llega al final de la página.
+ * La paginación estática al final del contenido: anterior, números de página
+ * en ventana y siguiente. Las páginas son hermanas, aunque la colección viva
+ * en un subdirectorio.
  */
 export function paginationNav(outSlug: string, pagina: number, total: number): string {
   if (total <= 1) return '';
-  // Las páginas paginadas son hermanas: viven en el mismo directorio que la
-  // primera, aunque la colección esté en un subdirectorio.
-  const enlace = (n: number, texto: string, posicion: string): string =>
-    `<a href="./${pageSlug(outSlug, n)}.html" class="${PAGINATION_BUTTON_CLASSES} fixed bottom-6 left-1/2 ${posicion}" aria-label="${texto}">${texto}</a>`;
-  const anterior = pagina > 1 ? enlace(pagina - 1, '← Anterior', '-translate-x-[calc(100%_+_2rem)]') : '';
-  const siguiente = pagina < total ? enlace(pagina + 1, 'Siguiente →', 'translate-x-[2rem]') : '';
-  return `<nav class="${PAGINATION_NAV_CLASSES}">${anterior}${siguiente}</nav>`;
+  const enlace = (n: number, texto: string): string =>
+    `<a href="./${pageSlug(outSlug, n)}.html" class="${PAGINATION_BUTTON_CLASSES}" aria-label="${texto}">${texto}</a>`;
+  const actual = (n: number): string => `<span aria-current="page" class="${PAGINATION_ACTIVE_CLASSES}">${n}</span>`;
+  const anterior = pagina > 1 ? enlace(pagina - 1, '← Anterior') : '';
+  const siguiente = pagina < total ? enlace(pagina + 1, 'Siguiente →') : '';
+  const numeros = ventanaDePaginas(pagina, total)
+    .map((n) => (n === '…' ? '<span class="px-1 text-stone-500 dark:text-stone-400">…</span>' : n === pagina ? actual(n) : enlace(n, String(n))))
+    .join('');
+  return `<nav class="${PAGINATION_NAV_CLASSES}" aria-label="Paginación">${anterior}${numeros}${siguiente}</nav>`;
 }
 
 // `mt-0 mb-6` y `m-0`: el prose de la página mete márgenes a figure e img, y
@@ -939,7 +970,7 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
         ? `<a href="./${pageSlug(outSlug, pagina + 1)}.html#indice-pagina-${pagina + 1}" class="${claseEnlace}">Índice siguiente →</a>`
         : '';
     indices.push(
-      `<div class="break-inside-avoid pb-6" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-800 dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,
+      `<div class="min-w-0" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-800 dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,
     );
   }
   return indices;
@@ -969,7 +1000,7 @@ function assertPaginasLibres(relativePath: string, dir: string, outSlug: string,
   }
 }
 
-const MASONRY_WRAPPER = '<div class="break-inside-avoid pb-6">';
+const CARD_WRAPPER = '<div class="min-w-0">';
 
 const CARD_TEXT_CLASSES =
   'prose prose-lg dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)]';
@@ -1063,7 +1094,7 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
     .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block my-0!" style="width:26.25pt">`)
     .join('');
   return [
-    '<div class="break-inside-avoid pb-6">',
+    '<div class="min-w-0">',
     `<div class="${EXTRA_CARD_CLASSES}">`,
     `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
     `<div class="flex items-center gap-2">${iconos}</div>`,
@@ -1170,17 +1201,29 @@ function enlaceDeMenuHtml(enlace: EnlaceMenu, dir: string): string {
   return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MEMBER_LINK_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
 }
 
-/** La tarjeta del menú: los primeros 3 enlaces y «Ver más» si hay más. */
-function menuCardHtml(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
+/** La tarjeta del menú en el header: sólo el enlace al menú completo. */
+function menuHeaderCard(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
+  if (links.length === 0) return undefined;
+  return [
+    '<div class="min-w-0">',
+    `<div class="${EXTRA_CARD_CLASSES}">`,
+    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span></div>`,
+    `<a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Menú →</a>`,
+    '</div>',
+    '</div>',
+  ].join('');
+}
+
+/** La tarjeta del menú en el footer: hasta 5 enlaces y «Más». */
+function menuFooterCard(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
   if (links.length === 0) return undefined;
   const items = links
-    .slice(0, 3)
+    .slice(0, 5)
     .map((enlace) => `<li>${enlaceDeMenuHtml(enlace, dir)}</li>`)
     .join('');
-  const mas =
-    links.length > 3 ? `<p class="mt-4 text-center"><a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Ver más →</a></p>` : '';
+  const mas = links.length > 5 ? `<p class="mt-4"><a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Más →</a></p>` : '';
   return [
-    '<div class="break-inside-avoid pb-6">',
+    '<div class="min-w-0">',
     `<div class="${EXTRA_CARD_CLASSES}">`,
     `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span></div>`,
     `<ul class="m-0 list-disc space-y-2 ps-6">${items}</ul>`,
@@ -1330,56 +1373,61 @@ export function creatorLinksCard(nombre: string, links: { name: string; url: str
  * Los bios son Markdown, así que se convierten aparte: si entraran en el
  * cuerpo del documento quedarían dentro de su tarjeta.
  */
-async function buildExtrasHtml(args: {
-  tarjetas?: string;
-  creatorDocs: CreatorDoc[];
-  contenedores: { titulo: string; href: string; type: string | undefined }[];
-  palabrasClave: { titulo: string; href: string }[];
-  redesCreador: { name: string; url: string }[];
-  duenoRedes: string;
-  creatorHrefs: Map<string, string>;
-  available?: Set<string>;
-  filters: ExportContext['filters'];
-  imagePaths?: string;
-  imagenes?: Map<string, string>;
-  sourcePath: string;
-  dir: string;
-}): Promise<string> {
-  const partes: string[] = [];
-  // Las tarjetas de textos y colecciones de una autora van primero, ya en
-  // celdas del masonry independientes.
-  if (args.tarjetas !== undefined && args.tarjetas !== '') partes.push(args.tarjetas);
-  // Cada tarjeta va en su propia celda del masonry, con su separación.
-  for (const doc of args.creatorDocs) {
-    partes.push([MASONRY_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs, args.available, args.imagenes), '', '</div>'].join('\n'));
-  }
-  // La tarjeta "También está en" se muestra si el texto vive en al menos una
-  // colección real. No se crea si no pertenece a ninguna colección o sólo a
-  // las listas por defecto (que nunca aparecen aquí).
-  if (args.contenedores.some((c) => c.type === 'collection')) {
-    partes.push([MASONRY_WRAPPER, '', containersCard(args.contenedores, args.dir, args.available), '', '</div>'].join('\n'));
-  }
-  if (args.palabrasClave.length > 0) {
-    partes.push([MASONRY_WRAPPER, '', keywordsCard(args.palabrasClave), '', '</div>'].join('\n'));
-  }
-  if (args.redesCreador.length > 0) {
-    partes.push([MASONRY_WRAPPER, '', creatorLinksCard(args.duenoRedes, args.redesCreador), '', '</div>'].join('\n'));
-  }
-  if (partes.length === 0) return '';
-
+async function buildExtrasHtml(
+  args: {
+    tarjetas?: string;
+    creatorDocs: CreatorDoc[];
+    contenedores: { titulo: string; href: string; type: string | undefined }[];
+    palabrasClave: { titulo: string; href: string }[];
+    redesCreador: { name: string; url: string }[];
+    duenoRedes: string;
+    creatorHrefs: Map<string, string>;
+    available?: Set<string>;
+    filters: ExportContext['filters'];
+    imagePaths?: string;
+    imagenes?: Map<string, string>;
+    sourcePath: string;
+    dir: string;
+  },
+  parte: 'main' | 'sidebar' = 'main',
+): Promise<string> {
   const extraArgs = ['--shift-heading-level-by=4'];
   for (const f of [...args.filters.semantic, ...args.filters.user, ...args.filters.flags, ...args.filters.html]) {
     extraArgs.push('--lua-filter', f);
   }
-  const html = await execPandoc({
-    input: partes.join('\n\n'),
-    sourcePath: args.sourcePath,
-    from: MD_READER,
-    to: 'html5',
-    extraArgs,
-    env: imagePathsEnv(args.imagePaths),
-  });
-  return minifyHtml(html);
+  const render = async (partes: string[]): Promise<string> => {
+    if (partes.length === 0) return '';
+    const html = await execPandoc({
+      input: partes.join('\n\n'),
+      sourcePath: args.sourcePath,
+      from: MD_READER,
+      to: 'html5',
+      extraArgs,
+      env: imagePathsEnv(args.imagePaths),
+    });
+    return minifyHtml(html);
+  };
+
+  if (parte === 'main') {
+    const tarjetasHtml = args.tarjetas === undefined || args.tarjetas === '' ? '' : await render([args.tarjetas]);
+    const docs = args.creatorDocs.map((doc) =>
+      [CARD_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs, args.available, args.imagenes), '', '</div>'].join('\n'),
+    );
+    const docsHtml = await render(docs);
+    return [tarjetasHtml === '' ? '' : `<div class="grid gap-6 sm:grid-cols-2">${tarjetasHtml}</div>`, docsHtml].filter(Boolean).join('\n');
+  }
+
+  const partes: string[] = [];
+  if (args.contenedores.some((c) => c.type === 'collection')) {
+    partes.push([CARD_WRAPPER, '', containersCard(args.contenedores, args.dir, args.available), '', '</div>'].join('\n'));
+  }
+  if (args.palabrasClave.length > 0) {
+    partes.push([CARD_WRAPPER, '', keywordsCard(args.palabrasClave), '', '</div>'].join('\n'));
+  }
+  if (args.redesCreador.length > 0) {
+    partes.push([CARD_WRAPPER, '', creatorLinksCard(args.duenoRedes, args.redesCreador), '', '</div>'].join('\n'));
+  }
+  return render(partes);
 }
 
 const KEYWORD_CACHE = 'keyword-lists.json';
@@ -1475,7 +1523,8 @@ export async function emitKeywordLists(args: {
       outBase: (name: string): string => join(outputDir, KEYWORDS_DIR, name),
     };
     const imagePaths = await writeListImagePaths(cwd, `${KEYWORDS_DIR}-${slug}`, procesadas.imageMap);
-    const menu = menuCardHtml(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuHeader = menuHeaderCard(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuFooter = menuFooterCard(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
     const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
       discoveryIndex,
       cwd,
@@ -1499,11 +1548,13 @@ export async function emitKeywordLists(args: {
       paginas,
       hrefsCreadores,
       '',
+      '',
       'Palabras clave',
       undefined,
       undefined,
       undefined,
-      menu,
+      menuHeader,
+      menuFooter,
       anunciosTop,
       anunciosBottom,
     );
@@ -1727,7 +1778,7 @@ function collectionCard(
     card.push('', `<p class="text-center mt-4"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
   }
   card.push('', '::::');
-  return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
+  return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');
 }
 
 /** Baja los encabezados del cuerpo para que no compitan con los del merge. */
@@ -2181,9 +2232,11 @@ function paginasDeLaPagina(args: Parameters<typeof paginasDeDocumento>[0]): { pa
 async function extrasDeLaPagina(
   comunes: Omit<Parameters<typeof buildExtrasHtml>[0], 'tarjetas'>,
   tarjetasPaginas: string[],
+  parte: 'main' | 'sidebar' = 'main',
 ): Promise<string | string[]> {
-  if (tarjetasPaginas.length === 0) return buildExtrasHtml(comunes);
-  return Promise.all(tarjetasPaginas.map((tarjetas) => buildExtrasHtml({ ...comunes, tarjetas })));
+  if (parte === 'sidebar') return buildExtrasHtml({ ...comunes, tarjetas: '' }, 'sidebar');
+  if (tarjetasPaginas.length === 0) return buildExtrasHtml({ ...comunes, tarjetas: '' }, 'main');
+  return Promise.all(tarjetasPaginas.map((tarjetas) => buildExtrasHtml({ ...comunes, tarjetas }, 'main')));
 }
 
 /** Las páginas de un documento: la bio y las tarjetas, o las tarjetas solas. */
@@ -2242,7 +2295,8 @@ async function emitCollectionHtml(
   const available = availableDefaultListSlugs(discoveryIndex);
   const esMenu = doc.frontmatter.type === 'menu';
   const enlaces = enlacesDelMenu(discoveryIndex);
-  const menu = esMenu ? undefined : menuCardHtml(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
+  const menuHeader = esMenu ? undefined : menuHeaderCard(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
+  const menuFooter = esMenu ? undefined : menuFooterCard(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
   const pageContent = esMenu
     ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlaces, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
     : content;
@@ -2295,7 +2349,8 @@ async function emitCollectionHtml(
     dir: outputs.dir,
     available,
   };
-  const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas);
+  const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas, 'main');
+  const sidebarExtras = (await extrasDeLaPagina(extrasComunes, [], 'sidebar')) as string;
   // Las redes de la creadora van en su tarjeta, no al inicio del cuerpo.
   const contenidos = paginas;
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
@@ -2311,11 +2366,13 @@ async function emitCollectionHtml(
     contenidos,
     hrefsCreadores,
     extras,
+    sidebarExtras,
     undefined,
     covers,
     indices,
     retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir),
-    menu,
+    menuHeader,
+    menuFooter,
     anunciosTop,
     anunciosBottom,
   );
@@ -2633,7 +2690,8 @@ export async function emitDefaultLists(args: {
     };
 
     const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
-    const menu = menuCardHtml(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuHeader = menuHeaderCard(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuFooter = menuFooterCard(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
     const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
       discoveryIndex,
       cwd,
@@ -2657,11 +2715,13 @@ export async function emitDefaultLists(args: {
       contenidos,
       hrefsCreadores,
       '',
+      '',
       'Lista',
       undefined,
       undefined,
       undefined,
-      menu,
+      menuHeader,
+      menuFooter,
       anunciosTop,
       anunciosBottom,
     );
