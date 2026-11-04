@@ -849,7 +849,7 @@ const PAGINATION_BUTTON_CLASSES =
 const PAGINATION_ACTIVE_CLASSES =
   'inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-accent-500 bg-accent-500/20 px-3 text-sm font-semibold text-accent-900 dark:text-accent-100';
 
-const PAGINATION_NAV_CLASSES = 'flex flex-wrap items-center justify-center gap-2';
+const PAGINATION_NAV_CLASSES = 'mt-6 flex flex-wrap items-center justify-center gap-2';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
@@ -1198,9 +1198,9 @@ function hrefDeMenu(url: string, dir: string): string {
   return relativeHref(dir, url.replace(/^\.?\//, ''));
 }
 
-function enlaceDeMenuHtml(enlace: EnlaceMenu, dir: string): string {
+function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
   const attrs = esEnlaceExterno(enlace.url) ? ' target="_blank" rel="noopener noreferrer"' : '';
-  return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MEMBER_LINK_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
+  return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MENU_BUTTON_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
 }
 
 /** El botón del menú en el header: hamburguesa sutil, sin flecha. */
@@ -1209,19 +1209,15 @@ function menuHeaderLink(links: EnlaceMenu[], dir: string): string | undefined {
   return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="Menú"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menú</span></a>`;
 }
 
-/** El menú del footer, sin tarjeta: hasta 5 enlaces y «Más». */
+/** El menú del footer: hamburguesa y hasta 10 enlaces, todos como chips. */
 function menuFooterContent(links: EnlaceMenu[], dir: string): string | undefined {
   if (links.length === 0) return undefined;
-  const items = links
-    .slice(0, 5)
-    .map((enlace) => `<li>${enlaceDeMenuHtml(enlace, dir)}</li>`)
+  const boton = menuHeaderLink(links, dir);
+  const enlaces = links
+    .slice(0, 10)
+    .map((enlace) => enlaceDeMenuChip(enlace, dir))
     .join('');
-  const mas = links.length > 5 ? `<p class="mt-4"><a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Más →</a></p>` : '';
-  return [
-    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2></div>`,
-    `<ul class="m-0 list-disc space-y-2 ps-6">${items}</ul>`,
-    mas,
-  ].join('');
+  return `${boton}${enlaces}`;
 }
 
 /** Las tarjetas de los anuncios, en HTML, para los slots del sitio. */

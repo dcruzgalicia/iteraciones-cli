@@ -7,7 +7,7 @@ Característica: el menú del sitio
 
   Regla de negocio: El header lleva al menú y el footer muestra cinco enlaces
 
-    Escenario: Con más de cinco enlaces el footer recorta y muestra «Más»
+    Escenario: Con más de diez enlaces el footer recorta
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y que el archivo "menu.md" tiene este contenido
@@ -28,6 +28,16 @@ Característica: el menú del sitio
             url: https://www.facebook.com/Historikasmx
           - name: Mastodon
             url: https://mastodon.social/@iteraciones
+          - name: Instagram
+            url: https://instagram.com/x
+          - name: YouTube
+            url: https://youtube.com/x
+          - name: TikTok
+            url: https://tiktok.com/@x
+          - name: Bluesky
+            url: https://bsky.app/profile/x
+          - name: Threads
+            url: https://threads.net/@x
         ---
         """
       Y que el archivo "libro.md" tiene este contenido
@@ -47,8 +57,10 @@ Característica: el menú del sitio
       Y el archivo "dist/files/index.html" dice "Convocatorias"
       Y el archivo "dist/files/index.html" dice ">Autoras<"
       Y el archivo "dist/files/index.html" dice "Facebook"
-      Y el archivo "dist/files/index.html" no dice "Mastodon"
-      Y el archivo "dist/files/index.html" dice "Más →"
+      Y el archivo "dist/files/index.html" dice "Mastodon"
+      Y el archivo "dist/files/index.html" dice "Bluesky"
+      Y el archivo "dist/files/index.html" no dice "Threads"
+      Y el archivo "dist/files/index.html" no dice "Más →"
 
     Escenario: El botón del menú va después de la identidad y antes de Redes
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -98,7 +110,7 @@ Característica: el menú del sitio
         ---
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "<a href=\"./index.html\" class=\"no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current\">Inicio</a>"
+      Entonces el archivo "dist/files/index.html" dice "<a href=\"./index.html\" class=\"inline-flex items-center gap-2 rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1.5 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20\">Inicio</a>"
       Y el archivo "dist/files/index.html" dice "href=\"https://www.facebook.com/Historikasmx\""
       Y el archivo "dist/files/index.html" dice "target=\"_blank\" rel=\"noopener noreferrer\""
 
