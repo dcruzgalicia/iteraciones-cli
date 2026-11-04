@@ -261,13 +261,15 @@ function tarjetasDeSitio(args: {
   dir: string;
   menuHeader?: string;
   menuFooter?: string;
+  menuFooterPlain?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
-}): Pick<HtmlPageVars, 'license' | 'menuHeader' | 'menuFooter' | 'announcementsTop' | 'announcementsBottom'> {
+}): Pick<HtmlPageVars, 'license' | 'menuHeader' | 'menuFooter' | 'menuFooterPlain' | 'announcementsTop' | 'announcementsBottom'> {
   return {
     license: licenciaHtml(args.siteConfig, args.dir),
     menuHeader: args.menuHeader,
     menuFooter: args.menuFooter,
+    menuFooterPlain: args.menuFooterPlain,
     announcementsTop: args.announcementsTop === '' ? undefined : args.announcementsTop,
     announcementsBottom: args.announcementsBottom === '' ? undefined : args.announcementsBottom,
   };
@@ -285,6 +287,7 @@ function htmlVars(args: {
   creatorImage?: string;
   menuHeader?: string;
   menuFooter?: string;
+  menuFooterPlain?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;
@@ -305,6 +308,7 @@ function htmlVars(args: {
     creatorImage,
     menuHeader,
     menuFooter,
+    menuFooterPlain,
     announcementsTop,
     announcementsBottom,
     indiceColeccion,
@@ -345,7 +349,7 @@ function htmlVars(args: {
     backCover: covers?.back,
     creatorImage,
     creatorImageAlt: creatorImage === undefined ? undefined : `Retrato de ${titulo}`,
-    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menuHeader, menuFooter, announcementsTop, announcementsBottom }),
+    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menuHeader, menuFooter, menuFooterPlain, announcementsTop, announcementsBottom }),
     indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
@@ -371,6 +375,7 @@ export async function emitHtmlPage(
   creatorImage?: string,
   menuHeader?: string,
   menuFooter?: string,
+  menuFooterPlain?: string,
   announcementsTop?: string,
   announcementsBottom?: string,
 ): Promise<void> {
@@ -409,6 +414,7 @@ export async function emitHtmlPage(
         creatorImage,
         menuHeader,
         menuFooter,
+        menuFooterPlain,
         announcementsTop,
         announcementsBottom,
         indiceColeccion: indices?.[indice],
@@ -890,7 +896,7 @@ export function paginationNav(outSlug: string, pagina: number, total: number): s
 
 // `mt-0 mb-6` y `m-0`: el prose de la página mete márgenes a figure e img, y
 // esos márgenes quedarían dentro del enlace (área clickeable de más).
-const CARD_IMAGE_CLASSES = 'mt-0! mb-6! flex h-[150px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl';
+const CARD_IMAGE_CLASSES = 'mt-0! mb-4! flex h-[80px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl';
 const CARD_IMAGE_IMG_CLASSES = 'm-0! block h-full w-full object-cover';
 const CARD_IMAGE_LINK_CLASSES = 'block h-full w-full rounded-tr-xl rounded-bl-xl';
 const PORTRAIT_WRAPPER_CLASSES = 'mb-6 flex justify-center';
@@ -931,7 +937,7 @@ function figuraDeTarjeta(href: string, enlace?: string): string {
 }
 
 function retratoDeCreadora(href: string, nombre: string, enlace?: string): string {
-  const img = `<img src="${href}" alt="Retrato de ${escaparHtml(nombre)}" class="${PORTRAIT_CLASSES}" style="width:150px;height:150px">`;
+  const img = `<img src="${href}" alt="Retrato de ${escaparHtml(nombre)}" class="${PORTRAIT_CLASSES}" style="width:100px;height:100px">`;
   const dentro =
     enlace === undefined
       ? img
@@ -1005,7 +1011,7 @@ const CARD_WRAPPER = '<div class="min-w-0">';
 const CARD_TEXT_CLASSES =
   'prose prose-lg dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)]';
 
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-full flex-col justify-center overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_p]:line-clamp-2 [&_h3]:line-clamp-2 [&>h2]:line-clamp-1 ${CARD_TEXT_CLASSES}`;
 
 const PILL_BASE =
   'inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-800 dark:text-accent-300';
@@ -1087,20 +1093,16 @@ const LICENCIA_CC_BY_NC_ND = 'CC-BY-NC-ND-4.0';
 const TEXTO_LICENCIA =
   'Algunos derechos reservados. Esta obra está bajo una Licencia Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional. Usted es libre de compartir, copiar y redistribuir el material en cualquier medio o formato, pero debe dar crédito de manera adecuada, brindar un enlace a la&nbsp;licencia e indicar si se han realizado cambios. No puede hacer uso de esta obra con propósitos comerciales, ni remezclar, transformar o crear obras derivadas, ni distribuir el material modificado.';
 
-/** La tarjeta de licencia, site-wide, antes del footer. */
+/** La licencia CC, site-wide, dentro de la tarjeta del footer. */
 function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
   if (siteConfig.format?.html?.site?.license !== LICENCIA_CC_BY_NC_ND) return undefined;
   const iconos = ['cc', 'by', 'nc', 'nd']
     .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block my-0!" style="width:26.25pt">`)
     .join('');
   return [
-    '<div class="min-w-0">',
-    `<div class="${EXTRA_CARD_CLASSES}">`,
     `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
     `<div class="flex items-center gap-2">${iconos}</div>`,
     `<p class="m-0 text-xs leading-relaxed">${TEXTO_LICENCIA}</p>`,
-    '</div>',
-    '</div>',
   ].join('');
 }
 
@@ -1201,21 +1203,14 @@ function enlaceDeMenuHtml(enlace: EnlaceMenu, dir: string): string {
   return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MEMBER_LINK_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
 }
 
-/** La tarjeta del menú en el header: sólo el enlace al menú completo. */
-function menuHeaderCard(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
+/** El botón del menú en el header: sólo el enlace al menú completo. */
+function menuHeaderLink(links: EnlaceMenu[], dir: string): string | undefined {
   if (links.length === 0) return undefined;
-  return [
-    '<div class="min-w-0">',
-    `<div class="${EXTRA_CARD_CLASSES}">`,
-    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span></div>`,
-    `<a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Menú →</a>`,
-    '</div>',
-    '</div>',
-  ].join('');
+  return `<a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Menú →</a>`;
 }
 
-/** La tarjeta del menú en el footer: hasta 5 enlaces y «Más». */
-function menuFooterCard(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
+/** El menú del footer, sin tarjeta: hasta 5 enlaces y «Más». */
+function menuFooterContent(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
   if (links.length === 0) return undefined;
   const items = links
     .slice(0, 5)
@@ -1223,14 +1218,17 @@ function menuFooterCard(links: EnlaceMenu[], dir: string, siteTitle: string): st
     .join('');
   const mas = links.length > 5 ? `<p class="mt-4"><a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Más →</a></p>` : '';
   return [
-    '<div class="min-w-0">',
-    `<div class="${EXTRA_CARD_CLASSES}">`,
     `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span></div>`,
     `<ul class="m-0 list-disc space-y-2 ps-6">${items}</ul>`,
     mas,
-    '</div>',
-    '</div>',
   ].join('');
+}
+
+/** La tarjeta del menú en la sidebar: el contenido del footer, con tarjeta. */
+function menuFooterCard(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
+  const contenido = menuFooterContent(links, dir, siteTitle);
+  if (contenido === undefined) return undefined;
+  return ['<div class="min-w-0">', `<div class="${EXTRA_CARD_CLASSES}">`, contenido, '</div>', '</div>'].join('');
 }
 
 /** Las tarjetas de los anuncios, en HTML, para los slots del sitio. */
@@ -1523,8 +1521,9 @@ export async function emitKeywordLists(args: {
       outBase: (name: string): string => join(outputDir, KEYWORDS_DIR, name),
     };
     const imagePaths = await writeListImagePaths(cwd, `${KEYWORDS_DIR}-${slug}`, procesadas.imageMap);
-    const menuHeader = menuHeaderCard(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuHeader = menuHeaderLink(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR);
     const menuFooter = menuFooterCard(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuFooterPlain = menuFooterContent(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
     const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
       discoveryIndex,
       cwd,
@@ -1555,6 +1554,7 @@ export async function emitKeywordLists(args: {
       undefined,
       menuHeader,
       menuFooter,
+      menuFooterPlain,
       anunciosTop,
       anunciosBottom,
     );
@@ -1614,8 +1614,8 @@ function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, Dis
 }
 
 function titleHtmlPara(title: string, href: string | undefined): string {
-  if (href === undefined) return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6">${title}</h3>`;
-  return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-6"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
+  if (href === undefined) return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-4">${title}</h3>`;
+  return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-4"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
 }
 
 /**
@@ -1755,6 +1755,27 @@ function cabeceraDeTarjeta(
   return partes;
 }
 
+/** El fragmento en texto plano: las tarjetas recortan con elipsis, no con markdown. */
+function fragmentoPlano(fragment: string): string {
+  return fragment
+    .replace(/^:::[^\n]*$/gm, '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/[*_`~]/g, '')
+    .replace(/^#+\s*/gm, '')
+    .replace(/^>\s*/gm, '')
+    .replace(/^[-+*]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function collectionCard(
   e: CollectionEntry,
   href: string | undefined,
@@ -1773,9 +1794,10 @@ function collectionCard(
     '',
     ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, href),
   ];
-  if (fragment !== '') card.push('', fragment);
+  const texto = fragment === '' ? '' : fragmentoPlano(fragment);
+  if (texto !== '') card.push('', texto);
   if (href !== undefined) {
-    card.push('', `<p class="text-center mt-4"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
+    card.push('', `<p class="mt-4 text-center"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
   }
   card.push('', '::::');
   return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');
@@ -2295,8 +2317,9 @@ async function emitCollectionHtml(
   const available = availableDefaultListSlugs(discoveryIndex);
   const esMenu = doc.frontmatter.type === 'menu';
   const enlaces = enlacesDelMenu(discoveryIndex);
-  const menuHeader = esMenu ? undefined : menuHeaderCard(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
+  const menuHeader = esMenu ? undefined : menuHeaderLink(enlaces, outputs.dir);
   const menuFooter = esMenu ? undefined : menuFooterCard(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
+  const menuFooterPlain = esMenu ? undefined : menuFooterContent(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
   const pageContent = esMenu
     ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlaces, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
     : content;
@@ -2373,6 +2396,7 @@ async function emitCollectionHtml(
     retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir),
     menuHeader,
     menuFooter,
+    menuFooterPlain,
     anunciosTop,
     anunciosBottom,
   );
@@ -2690,8 +2714,9 @@ export async function emitDefaultLists(args: {
     };
 
     const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
-    const menuHeader = menuHeaderCard(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuHeader = menuHeaderLink(enlacesDelMenu(discoveryIndex), '.');
     const menuFooter = menuFooterCard(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuFooterPlain = menuFooterContent(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
     const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
       discoveryIndex,
       cwd,
@@ -2722,6 +2747,7 @@ export async function emitDefaultLists(args: {
       undefined,
       menuHeader,
       menuFooter,
+      menuFooterPlain,
       anunciosTop,
       anunciosBottom,
     );

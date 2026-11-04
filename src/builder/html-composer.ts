@@ -47,7 +47,12 @@ const IDENTITY_APERTURA = '    <div id="card-identity" class="min-w-0">\n\n';
 const FOOTER_APERTURA = '    <div id="card-identity-footer" class="min-w-0">\n';
 
 function comoFooter(card: string): string {
-  return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA);
+  return card
+    .replace(IDENTITY_APERTURA, FOOTER_APERTURA)
+    .replace(
+      'class="relative flex items-center gap-3 rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-5 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 transition-all duration-200 hover:ring-accent-500/40"',
+      'class="flex items-center gap-3"',
+    );
 }
 
 export function htmlResourceFiles(): string[] {
@@ -81,8 +86,8 @@ function escapeHtml(text: string): string {
 export const CHIP_OUTLINE_CLASSES =
   'inline-block align-top rounded-full border border-accent-500/40 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
 
-/** La tarjeta de «Frecuencias» con los enlaces del proyecto, o vacía si no hay. */
-async function frecuenciasCard(siteConfig: SiteConfig): Promise<string> {
+/** La fila de «Redes» con los enlaces del proyecto, fuera de las tarjetas. */
+function frecuenciasInline(siteConfig: SiteConfig): string {
   const links = siteConfig.format?.html?.site?.links ?? [];
   if (links.length === 0) return '';
   const titulo = siteConfig.format?.html?.site?.title ?? '';
@@ -90,10 +95,32 @@ async function frecuenciasCard(siteConfig: SiteConfig): Promise<string> {
   const items = links
     .map(
       (link: { name: string; url: string }) =>
-        `<li><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="text-accent-700 no-underline underline-offset-4 transition-colors duration-200 hover:underline hover:decoration-current dark:text-accent-300">${escapeHtml(link.name)}</a></li>`,
+        `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-3 py-1 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20">${escapeHtml(link.name)}</a>`,
     )
-    .join('\n          ');
-  return (await loadCard('file', 'card-frecuencias.html')).replace('[[FRECUENCIAS]]', items).replace('[[DUENO]]', dueno);
+    .join('');
+  return `<nav aria-label="Redes" class="flex flex-wrap items-center gap-2"><span class="font-mono text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Redes</span>${dueno}${items}</nav>`;
+}
+
+function headerHtml(identity: string, menuHeader: string, redes: string): string {
+  return [
+    '<div class="flex flex-col gap-4 sm:flex-row sm:items-stretch">',
+    `<div class="min-w-0 sm:flex-1">${identity}</div>`,
+    `<div class="flex items-center sm:justify-end">${menuHeader}</div>`,
+    '</div>',
+    redes === '' ? '' : `<div class="mt-4">${redes}</div>`,
+  ].join('\n');
+}
+
+function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
+  return [
+    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6">',
+    '<div class="grid gap-6 md:grid-cols-3">',
+    `<div class="space-y-4">${footerIdentity}${redes}</div>`,
+    `<div>${menuFooterPlain}</div>`,
+    '<div>$if(license)$$license$$endif$</div>',
+    '</div>',
+    '</div>',
+  ].join('\n');
 }
 
 export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocType = 'file'): Promise<string> {
@@ -116,10 +143,11 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     if (key === 'formatos') sidebarCards.push(await loadCard('file', 'card-indice-coleccion.html'));
   }
 
-  const redes = await frecuenciasCard(siteConfig);
+  const redes = frecuenciasInline(siteConfig);
   const menuHeader = '$if(menu-header)$$menu-header$$endif$';
   const menuFooter = '$if(menu-footer)$$menu-footer$$endif$';
-  const header = `<div class="grid items-start gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">${identity}${menuHeader}${redes}</div>`;
+  const menuFooterPlain = '$if(menu-footer-plain)$$menu-footer-plain$$endif$';
+  const header = headerHtml(identity, menuHeader, redes);
   const portadas = await loadCard('file', 'card-portadas.html');
   const main = [
     '$if(announcements-top)$$announcements-top$$endif$',
@@ -137,7 +165,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
     ...(type === 'list' || type === 'collection' || type === 'menu' ? [menuFooter, redes] : []),
   ].join('\n');
-  const footer = `<div class="grid items-start gap-4 md:grid-cols-3"><div class="space-y-4">${footerIdentity}${redes}</div><div>${menuFooter}</div><div>$if(license)$$license$$endif$</div></div>`;
+  const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
 
   return skeleton
     .replace(slot('header'), () => header)
@@ -182,6 +210,7 @@ export interface HtmlPageVars {
   license?: string;
   menuHeader?: string;
   menuFooter?: string;
+  menuFooterPlain?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;

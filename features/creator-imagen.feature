@@ -14,7 +14,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/creadora.html" dice "assets/images/lista-ana"
-      Y el archivo "dist/files/creadora.html" dice "width:150px;height:150px"
+      Y el archivo "dist/files/creadora.html" dice "width:100px;height:100px"
       Y el archivo "dist/files/creadora.html" dice "rounded-full object-cover"
       Y el archivo "dist/files/creadora.html" dice "aria-label=\"Ver la biografía de Ana García\" class=\"block overflow-hidden rounded-full"
       Y el archivo "dist/files/creadora.html" pone "Retrato de Ana García" antes que ">Ana García</a>"

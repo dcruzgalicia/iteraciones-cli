@@ -50,7 +50,7 @@ Característica: el menú del sitio
       Y el archivo "dist/files/index.html" no dice "Mastodon"
       Y el archivo "dist/files/index.html" dice "Más →"
 
-    Escenario: La tarjeta va después de la identidad y antes de Redes
+    Escenario: El botón del menú va después de la identidad y antes de Redes
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y que el archivo "menu.md" tiene este contenido
@@ -79,7 +79,7 @@ Característica: el menú del sitio
         """
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/index.html" pone "<div id=\"card-identity\"" antes que ">Menú<"
-      Y el archivo "dist/files/index.html" pone ">Menú<" antes que ">Redes<"
+      Y el archivo "dist/files/index.html" pone "Menú →" antes que ">Redes<"
       Y el archivo "dist/files/index.html" no dice "Ver más →"
 
     Escenario: Los enlaces externos abren en otra pestaña y los internos no

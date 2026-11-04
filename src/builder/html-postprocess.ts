@@ -37,7 +37,7 @@ export function moveCollectionIntro(html: string): string {
     return withoutIntro;
   }
   if (inner === '') return withoutIntro.replace(marker, '');
-  const bloque = `<div class="mx-auto mt-10 max-w-none pt-6 text-left prose prose-xl dark:prose-invert [--tw-prose-links:var(--color-accent-600)] [--tw-prose-invert-links:var(--color-accent-500)]">${inner}</div>`;
+  const bloque = `<div class="mx-auto max-w-none rounded-tr-xl rounded-bl-xl border-l-4 border-accent-500/80 bg-white/75 px-4 py-3 text-left prose prose-xl shadow-sm ring-1 ring-inset ring-stone-300/50 backdrop-blur-sm dark:bg-stone-900/70 dark:ring-stone-600/40 [--tw-prose-links:var(--color-accent-600)] [--tw-prose-invert-links:var(--color-accent-500)]">${inner}</div>`;
   return withoutIntro.replace(marker, () => bloque);
 }
 
