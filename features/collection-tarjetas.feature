@@ -61,7 +61,7 @@ Característica: la tarjeta de cada miembro de una colección
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML dice "<a href=\"./documento-por-autora-a.html\""
       Y el HTML dice "tarjeta-fragmento relative"
-      Y el HTML dice "<p class=\"text-center mt-4\">"
+      Y el HTML dice "<p class=\"mt-4 text-center\">"
       Y el HTML no dice "after:absolute after:inset-0"
 
     Escenario: Cada tarjeta va en su propio contenedor

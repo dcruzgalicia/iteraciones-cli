@@ -23,7 +23,7 @@ Característica: la imagen de cabecera de las tarjetas
       Y un texto en "autoras/historikas" que empieza con la imagen "Mapa.png"
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/texto.html" pone "assets/images/lista-Mapa" antes que "Tres libros"
-      Y el archivo "dist/files/texto.html" dice "h-[150px] w-full"
+      Y el archivo "dist/files/texto.html" dice "h-[80px] w-full"
       Y el archivo "dist/files/texto.html" dice "rounded-tr-xl rounded-bl-xl"
       Y el archivo "dist/files/texto.html" dice "h-full w-full object-cover"
 

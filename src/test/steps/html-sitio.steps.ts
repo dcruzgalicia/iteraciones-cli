@@ -26,7 +26,7 @@ Then('las tarjetas de Redes van una en el header y otra en el footer', () => {
   const html = leer('dist/files/test-document.html');
   const header = html.indexOf('<header');
   const footer = html.indexOf('<footer');
-  const frecuencias = [...html.matchAll(/Redes/g)].map((m) => m.index ?? -1);
+  const frecuencias = [...html.matchAll(/>Redes</g)].map((m) => m.index ?? -1);
   if (frecuencias.length !== 2) throw new Error(`hay ${frecuencias.length} tarjetas de Redes y deberían ser 2`);
   const [primera, segunda] = frecuencias as [number, number];
   if (!(header < primera && primera < footer)) throw new Error('la primera Redes no va dentro del header');
