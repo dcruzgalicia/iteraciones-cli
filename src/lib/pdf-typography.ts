@@ -1,4 +1,5 @@
 import { BuildError } from './errors.js';
+import { analyzeBbox } from './pdf-spacing.js';
 import { plural } from './plural.js';
 import { exec, ProcessSpawnError, type RunResult } from './run.js';
 
@@ -9,6 +10,9 @@ export const TYPOGRAPHY_RULES = [
   'repeated-first-letter',
   'consecutive-punctuation',
   'hyphenated-proper-noun',
+  'stretched-line',
+  'shrunk-line',
+  'river',
 ] as const;
 
 interface Incidence {
@@ -49,6 +53,30 @@ export interface HyphenatedProperNoun extends Incidence {
   continuation?: string;
 }
 
+export interface StretchedLine extends Incidence {
+  type: 'stretched-line';
+  gapPt: number;
+  ratio: number;
+}
+
+export interface ShrunkLine extends Incidence {
+  type: 'shrunk-line';
+  gapPt: number;
+  ratio: number;
+}
+
+/** Un canal blanco de tres o más líneas consecutivas. */
+export interface River extends Incidence {
+  type: 'river';
+  from: number;
+  to: number;
+  xPt: number;
+  channelPt: number;
+  lineas: LineaCoincidencia[];
+  total: number;
+  lastText: string;
+}
+
 /** El nombre tal como se lee: los dos trozos con el guion del corte. */
 export function nombreCortado(incidencia: HyphenatedProperNoun): string {
   return `${incidencia.word}-${incidencia.continuation ?? ''}`;
@@ -59,7 +87,14 @@ export function palabraSinCorte(incidencia: HyphenatedProperNoun): string {
   return `${incidencia.word}${incidencia.continuation ?? ''}`;
 }
 
-export type TypographyIncidence = SingleWordLine | ConsecutivePunctuation | RepeatedLetter | HyphenatedProperNoun;
+export type TypographyIncidence =
+  | SingleWordLine
+  | ConsecutivePunctuation
+  | RepeatedLetter
+  | HyphenatedProperNoun
+  | StretchedLine
+  | ShrunkLine
+  | River;
 
 const PAGE_BREAK = '\f';
 
@@ -167,7 +202,7 @@ function hyphenatedProperNouns(pages: string[][]): HyphenatedProperNoun[] {
   return hits;
 }
 
-interface LineaCoincidencia {
+export interface LineaCoincidencia {
   line: number;
   text: string;
 }
@@ -341,7 +376,7 @@ export function parseaExcepciones(texto: string): ExcepcionTipografia[] {
 
 /** El bloque de texto de una incidencia, con el formato que lee el parser. */
 export function formateaExcepcion(incidencia: TypographyIncidence): string {
-  if (incidencia.type === 'single-word-line') {
+  if (incidencia.type === 'single-word-line' || incidencia.type === 'stretched-line' || incidencia.type === 'shrunk-line') {
     return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${incidencia.text.trim()}`;
   }
   if (incidencia.type === 'hyphenated-proper-noun') {
@@ -371,7 +406,7 @@ export function agregaExcepcionesAlTexto(texto: string, archivo: string, inciden
   const cabecera = lineas.findIndex((linea) => /^\S/.test(linea) && normalizaCabeceraArchivo(linea.trim()) === archivo);
   if (cabecera < 0) {
     const separacion = lineas.length > 0 ? [''] : [];
-    return [...lineas, ...separacion, archivo, ...bloques].join('\n') + '\n';
+    return `${[...lineas, ...separacion, archivo, ...bloques].join('\n')}\n`;
   }
   let fin = cabecera + 1;
   while (fin < lineas.length && !/^\S/.test(lineas[fin] as string)) fin++;
@@ -380,7 +415,7 @@ export function agregaExcepcionesAlTexto(texto: string, archivo: string, inciden
   const antes = lineas.slice(0, ultimo + 1);
   const despues = lineas.slice(fin);
   const separacion = despues.length > 0 ? [''] : [];
-  return [...antes, ...bloques, ...separacion, ...despues].join('\n') + '\n';
+  return `${[...antes, ...bloques, ...separacion, ...despues].join('\n')}\n`;
 }
 
 function parseaBloqueExcepcion(archivo: string, lines: string[]): ExcepcionTipografia | undefined {
@@ -455,8 +490,13 @@ function excepcionCoincide(archivo: string, incidencia: TypographyIncidence, exc
     if (excepcion.file !== archivo || excepcion.type !== incidencia.type || excepcion.page !== incidencia.page) {
       return false;
     }
-    if (incidencia.type === 'single-word-line' || incidencia.type === 'hyphenated-proper-noun') {
-      const texto = incidencia.type === 'single-word-line' ? incidencia.text.trim() : nombreCortado(incidencia);
+    if (
+      incidencia.type === 'single-word-line' ||
+      incidencia.type === 'stretched-line' ||
+      incidencia.type === 'shrunk-line' ||
+      incidencia.type === 'hyphenated-proper-noun'
+    ) {
+      const texto = incidencia.type === 'hyphenated-proper-noun' ? nombreCortado(incidencia) : incidencia.text.trim();
       return excepcion.lines.length === 1 && excepcion.lines[0]?.line === incidencia.line && excepcion.lines[0]?.text === texto;
     }
     return (
@@ -541,10 +581,14 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
   return vivas.filter((incidencia) => dentro(incidencia.page)).sort(porPaginaLineaYRegla);
 }
 
-export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {}): Promise<TypographyIncidence[]> {
+export function esReglaDeEspaciado(type: string): boolean {
+  return type === 'stretched-line' || type === 'shrunk-line' || type === 'river';
+}
+
+async function leePdf(pdfPath: string, modo: '-layout' | '-bbox-layout'): Promise<string> {
   let result: RunResult;
   try {
-    result = await exec('pdftotext', ['-layout', pdfPath, '-']);
+    result = await exec('pdftotext', [modo, pdfPath, '-']);
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       throw new BuildError(`typography necesita pdftotext, que no está en PATH. Instala poppler (por ejemplo: brew install poppler).`);
@@ -555,6 +599,21 @@ export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {
     const motivo = result.stderr.trim().split('\n').pop() ?? 'error desconocido';
     throw new BuildError(`pdftotext no pudo leer "${pdfPath}": ${motivo}`);
   }
-  validaPaginasPedidas(pdfPath, opciones, splitPages(result.stdout).length);
-  return analyzeText(result.stdout, opciones);
+  return result.stdout;
+}
+
+export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {}): Promise<TypographyIncidence[]> {
+  const layout = await leePdf(pdfPath, '-layout');
+  const pages = splitPages(layout);
+  validaPaginasPedidas(pdfPath, opciones, pages.length);
+  const texto = analyzeText(layout, opciones);
+  const pedidas = opciones.reglas ?? TYPOGRAPHY_RULES;
+  if (!pedidas.some(esReglaDeEspaciado)) return texto;
+
+  const bbox = await leePdf(pdfPath, '-bbox-layout');
+  const geometria = analyzeBbox(bbox, opciones);
+  const dentro = filtroDePaginas(opciones, pages.length);
+  const excepciones = opciones.excepciones ?? [];
+  const vivas = excepciones.length > 0 ? filtraExcepciones(geometria, opciones.archivo ?? '', excepciones) : geometria;
+  return [...texto, ...vivas.filter((incidencia) => dentro(incidencia.page))].sort(porPaginaLineaYRegla);
 }
