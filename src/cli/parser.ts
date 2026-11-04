@@ -375,6 +375,12 @@ Reglas:
   repeated-first-letter     varias líneas seguidas que empiezan por la misma letra
   repeated-last-letter      varias líneas seguidas que terminan por la misma letra
   hyphenated-proper-noun    un nombre propio partido por el guion al final de la línea
+  stretched-line            una línea justificada con los espacios estirados (≥1.80×)
+  shrunk-line               una línea justificada con los espacios comprimidos (≤0.70×)
+  river                     un canal blanco de 3 o más líneas consecutivas
+
+Las reglas de espaciado (stretched-line, shrunk-line, river) sólo se reportan: --fix y --clean
+no las tocan.
 
 El número de línea reinicia en cada página. Una línea vacía y el final de página cortan la
 consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.
@@ -389,6 +395,7 @@ Ejemplos:
   iteraciones typography --pages 3,7,10-12              sólo esas páginas, sueltas o en tramos
   iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra
   iteraciones typography --rules repeated-first-letter,repeated-last-letter   sólo las letras
+  iteraciones typography --rules stretched-line,shrunk-line,river            sólo el espaciado
   iteraciones typography --ignore 3,5                   guarda esas incidencias como excepciones
   iteraciones typography --ignore                       guarda todas las del informe
   iteraciones typography --fix 3,5                      corrige sólo esas incidencias

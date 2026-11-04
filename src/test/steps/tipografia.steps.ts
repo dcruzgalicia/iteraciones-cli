@@ -19,6 +19,12 @@ function describe(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'hyphenated-proper-noun') {
     return `hyphenated-proper-noun ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${nombreCortado(incidencia)}`;
   }
+  if (incidencia.type === 'stretched-line' || incidencia.type === 'shrunk-line') {
+    return `${incidencia.type} ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ratio ${incidencia.ratio.toFixed(2)} ;; gap ${incidencia.gapPt.toFixed(1)} ;; ${incidencia.text.trim()}`;
+  }
+  if (incidencia.type === 'river') {
+    return `river ;; pág ${incidencia.page} ;; líneas ${incidencia.from}-${incidencia.to} ;; x ${incidencia.xPt.toFixed(1)} ;; canal ${incidencia.channelPt.toFixed(1)} ;; ${incidencia.text.trim()} || ${incidencia.lastText.trim()}`;
+  }
   const numeros = incidencia.lineas.map((l) => l.line);
   const rango = `líneas ${numeros[0]}-${numeros.at(-1)}${incidencia.total > incidencia.lineas.length ? ` de ${incidencia.total}` : ''}`;
   const cuerpo = incidencia.lineas.map((l) => `${l.line}: ${l.text.trim()}`).join(' || ');

@@ -12,6 +12,7 @@ import { relativeLabel } from '../lib/paths.js';
 import {
   agregaExcepcionesAlTexto,
   analyzePdf,
+  esReglaDeEspaciado,
   nombreCortado,
   type OpcionesAnalisis,
   palabraSinCorte,
@@ -112,6 +113,14 @@ function formatea(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'hyphenated-proper-noun') {
     return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${nombreCortado(incidencia)}`;
   }
+  if (incidencia.type === 'stretched-line' || incidencia.type === 'shrunk-line') {
+    return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${incidencia.ratio.toFixed(2)}× (${incidencia.gapPt.toFixed(1)} pt)  ${texto}`;
+  }
+  if (incidencia.type === 'river') {
+    const primera = incidencia.lineas[0];
+    const ultima = incidencia.lineas.at(-1);
+    return `  pág ${incidencia.page}  líneas ${incidencia.from}-${incidencia.to}  river  ${incidencia.total} líneas  canal ${incidencia.channelPt.toFixed(1)} pt  x ${incidencia.xPt.toFixed(1)} pt\n         ${primera?.line ?? incidencia.from}  ${primera?.text.trimEnd() ?? texto}\n         ${ultima?.line ?? incidencia.to}  ${ultima?.text.trimEnd() ?? incidencia.lastText}`;
+  }
   const lineas = incidencia.lineas;
   const numeros = lineas.map((l) => l.line);
   const rango =
@@ -196,7 +205,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
       if (options.fix !== undefined && options.fix !== false) {
         throw new BuildError('--clean y --fix no se combinan: elige limpiar o corregir');
       }
-      const { limpiados, sinLimpiar, porPdf } = await limpiaTypografia(cwd, targets, analisis, options);
+      const { limpiados, sinLimpiar, noAplica, porPdf } = await limpiaTypografia(cwd, targets, analisis, options);
       const total = [...porPdf.values()].reduce((suma, item) => suma + item.incidences.length, 0);
       if (total === 0) {
         logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
@@ -210,18 +219,17 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
           motivo: (incidencia) => resultado.estado.get(incidencia),
         })),
       );
-      logInfo(`${limpiados} párrafos limpios de ${total}${sinLimpiar > 0 ? ` · ${sinLimpiar} sin limpiar` : ''}`, 'typography');
+      logInfo(
+        `${limpiados} párrafos limpios de ${total}${noAplica > 0 ? ` · ${noAplica} no aplica (solo reporte)` : ''}${sinLimpiar > 0 ? ` · ${sinLimpiar} sin limpiar` : ''}`,
+        'typography',
+      );
       if (sinLimpiar > 0) process.exitCode = 1;
       return;
     }
 
     if (options.fix !== undefined && options.fix !== false) {
-      const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, sinUnion, exactMiss, porPdf } = await arreglaTypografia(
-        cwd,
-        targets,
-        analisis,
-        options,
-      );
+      const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, soloReporte, sinAccion, sinUnion, exactMiss, porPdf } =
+        await arreglaTypografia(cwd, targets, analisis, options);
       const total = [...porPdf.values()].reduce((suma, item) => suma + item.incidences.length, 0);
       if (total === 0) {
         logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
@@ -239,6 +247,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
         }),
       );
       const partes = [`${corregidos} corregidas de ${total}`];
+      if (soloReporte > 0) partes.push(`${soloReporte} no aplica (solo reporte)`);
       const sinCorregir = sinAplicar;
       if (sinCorregir > 0) {
         partes.push(`${sinCorregir} sin corregir`);
@@ -524,6 +533,7 @@ export type ObjetivoTypography = { aguja: string; posterior: boolean };
 export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypography[] {
   if (inc.type === 'single-word-line') return [{ aguja: inc.text.trim() as string, posterior: false }];
   if (inc.type === 'hyphenated-proper-noun') return [];
+  if (inc.type === 'stretched-line' || inc.type === 'shrunk-line' || inc.type === 'river') return [];
   const lineas = inc.lineas;
   const textoDe = (i: number): string => (lineas[i] as { text: string } | undefined)?.text.trim() ?? '';
   const tokens = (texto: string): string[] => texto.split(/\s+/u).filter(Boolean);
@@ -909,6 +919,9 @@ function cadenasDeBusqueda(inc: TypographyIncidence): string[] {
     if (fiesta.size === 0) fiesta.add(palabra);
     return [...fiesta].sort((a, b) => b.length - a.length);
   }
+  if (inc.type === 'stretched-line' || inc.type === 'shrunk-line') {
+    return [normalizaParaBusqueda(inc.text)].filter((frase) => frase.length > 0);
+  }
   const lineas = inc.lineas.map((l) => normalizaParaBusqueda(l.text));
   const unidas = lineas.join(' ');
   const fiesta = new Set<string>();
@@ -1044,6 +1057,7 @@ async function limpiaTypografia(
 ): Promise<{
   limpiados: number;
   sinLimpiar: number;
+  noAplica: number;
   porPdf: Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, string> }>;
 }> {
   await aseguraGit(cwd, '--clean');
@@ -1065,6 +1079,7 @@ async function limpiaTypografia(
 
   let limpiados = 0;
   let sinLimpiar = 0;
+  let noAplica = 0;
   for (const [pdf, resultado] of porPdf) {
     const fuentes = await candidatosDeFuente(cwd, pdf);
     const contenido = new Map<string, string>();
@@ -1077,6 +1092,11 @@ async function limpiaTypografia(
       } catch {}
     }
     for (const incidencia of resultado.incidences) {
+      if (esReglaDeEspaciado(incidencia.type)) {
+        resultado.estado.set(incidencia, 'no aplica');
+        noAplica++;
+        continue;
+      }
       const candidatos = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, cadenasDeBusqueda(incidencia));
       if (candidatos.length !== 1) {
         resultado.estado.set(incidencia, candidatos.length === 0 ? 'no encontrado' : 'múltiples coincidencias');
@@ -1106,7 +1126,7 @@ async function limpiaTypografia(
       if (texto !== (await Bun.file(ruta).text())) await Bun.write(ruta, texto);
     }
   }
-  return { limpiados, sinLimpiar, porPdf };
+  return { limpiados, sinLimpiar, noAplica, porPdf };
 }
 
 async function arreglaTypografia(
@@ -1120,6 +1140,7 @@ async function arreglaTypografia(
   noEncontradas: number;
   multiples: number;
   noAplica: number;
+  soloReporte: number;
   sinAccion: number;
   sinUnion: number;
   exactMiss: number;
@@ -1132,6 +1153,7 @@ async function arreglaTypografia(
   let noEncontradas = 0;
   let multiples = 0;
   let noAplica = 0;
+  let soloReporte = 0;
   let sinAccion = 0;
   let sinUnion = 0;
   let exactMiss = 0;
@@ -1186,6 +1208,11 @@ async function arreglaTypografia(
     }
 
     for (const inc of resto) {
+      if (esReglaDeEspaciado(inc.type)) {
+        estado.set(inc, 'no aplica');
+        soloReporte++;
+        continue;
+      }
       const objetivos = objetivosParaIncidencia(inc);
       const objetivo = objetivos[0] ?? '';
       if (!objetivo) {
@@ -1278,5 +1305,5 @@ async function arreglaTypografia(
     }
   }
 
-  return { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, sinUnion, exactMiss, porPdf };
+  return { corregidos, sinAplicar, noEncontradas, multiples, noAplica, soloReporte, sinAccion, sinUnion, exactMiss, porPdf };
 }
