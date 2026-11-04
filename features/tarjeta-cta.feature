@@ -84,7 +84,7 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
         Cuerpo del texto.
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "inline-flex items-center gap-2 rounded-full bg-accent-600 px-4 py-2 text-sm font-semibold"
+      Entonces el archivo "dist/files/index.html" dice "inline-flex items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-4 py-2 text-sm font-semibold"
       Y el archivo "dist/files/index.html" dice "focus-visible:outline"
 
     Escenario: El «Ver más» del menú usa el mismo botón que las tarjetas
@@ -104,10 +104,14 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
             url: ./convocatorias.html
           - name: Autoras
             url: ./creadora.html
+          - name: Facebook
+            url: https://facebook.com/x
+          - name: Mastodon
+            url: https://mastodon.social/@x
         ---
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "href=\"./menu.html\" class=\"inline-flex items-center gap-2 rounded-full bg-accent-600"
+      Entonces el archivo "dist/files/index.html" dice "href=\"./menu.html\" class=\"inline-flex items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20"
 
   Regla de negocio: En lo visible se dice Colaboradora, pero el type sigue siendo creator
 

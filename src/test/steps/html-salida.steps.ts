@@ -261,8 +261,9 @@ Then('el CSS se compila sobre los HTML finales', () => {
 Then('la página trae el botón de volver al principio', () => {
   const archivo = 'test-document.html';
   const html = salida(archivo);
-  exige(html, archivo, ['<body id="top"', 'aria-label="Volver al principio"', 'fixed bottom-6 right-6']);
-  prohibe(html, archivo, ['block:volver', 'scroll-reveal']);
+  exige(html, archivo, ['<body id="top"', 'aria-label="Volver al principio"', 'fixed bottom-6 right-6', 'scroll-reveal']);
+  prohibe(html, archivo, ['block:volver']);
+  exige(salida(join('assets', 'css', 'styles.css')), 'styles.css', ['@keyframes scroll-reveal', 'animation-timeline:scroll()']);
 });
 
 Then('sin HTML activo no se copian las fuentes', () => {

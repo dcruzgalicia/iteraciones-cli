@@ -1,9 +1,9 @@
 # language: es
 Característica: los enlaces del sitio y el índice paginado de una colección
 
-  Regla de negocio: Los enlaces del proyecto generan tarjetas de «Redes»
+  Regla de negocio: Los enlaces del proyecto se muestran como redes
 
-    Escenario: Con enlaces hay una tarjeta en el header y otra en el footer
+    Escenario: Con enlaces las redes aparecen en el header y en el footer
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el sitio declara los enlaces:
       """
@@ -13,8 +13,7 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/test-document.html" dice "Redes"
       Y el archivo "dist/files/test-document.html" dice 'target="_blank"'
-      Y las tarjetas de Redes van una en el header y otra en el footer
-      Y las tarjetas de Redes llevan el chip del sitio "Test"
+      Y las redes aparecen una vez en el header y otra en el footer
 
   Regla de negocio: Las redes de la creadora van en su tarjeta
 
@@ -50,13 +49,13 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Cuando hago un build del proyecto
       Entonces ningún enlace del HTML lleva "underline" por defecto
 
-  Regla de negocio: La tarjeta de identidad enlaza por separado
+  Regla de negocio: La identidad enlaza por separado
 
     Escenario: El logo y el nombre enlazan, la descripción no
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces la tarjeta de identidad no es un enlace
+      Entonces la identidad no es un enlace
       Y el logo y el nombre enlazan al inicio
       Y la descripción no es un enlace
 

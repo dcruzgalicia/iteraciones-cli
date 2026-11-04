@@ -28,6 +28,10 @@ When('extraigo su fragmento', () => {
   world.fragmento = extractFragment(world.cuerpoDoc);
 });
 
+When('extraigo su fragmento con máximo {int}', (maximo: number) => {
+  world.fragmento = extractFragment(world.cuerpoDoc, maximo);
+});
+
 Then('el fragmento es:', (esperado: string) => {
   if (world.fragmento !== esperado.replace(/<br>/g, '\n').replace(/\n$/, '')) {
     throw new Error(`el fragmento es ${JSON.stringify(world.fragmento)} y debería ser ${JSON.stringify(esperado)}`);

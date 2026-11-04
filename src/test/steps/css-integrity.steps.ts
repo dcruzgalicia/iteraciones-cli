@@ -22,7 +22,7 @@ const CARDS = [
 ];
 
 function sinMarco(type: string, card: string): boolean {
-  return card === 'card-referencias.html' || (type === 'collection' && card === 'card-contenido.html');
+  return card === 'card-referencias.html' || card === 'card-identity.html' || (type === 'collection' && card === 'card-contenido.html');
 }
 
 async function readCard(type: string, card: string): Promise<string> {

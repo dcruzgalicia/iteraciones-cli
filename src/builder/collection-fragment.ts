@@ -151,11 +151,6 @@ function readParagraph(lines: string[], start: number): { text: string; end: num
   return { text: block.join('\n'), end: i, setext };
 }
 
-function cutParagraph(text: string, maxWords: number): string {
-  const cut = cutWords(text, maxWords);
-  return cut === text ? text : `${cut} ${CUT_MARK}`;
-}
-
 function skipCodeFence(lines: string[], start: number): number {
   const marker = CODE_FENCE_RE.exec(lineAt(lines, start))?.[1] ?? '```';
   const char = marker.charAt(0);
@@ -177,32 +172,66 @@ function skipBlock(lines: string[], start: number): number {
   return i;
 }
 
+function normalizaParrafo(text: string): string {
+  return text.replace(/\s*\n\s*/g, ' ').trim();
+}
+
+/** Recorta una lista de párrafos sin romper los saltos entre ellos. */
+function recortaParrafos(partes: string[], maxWords: number): string {
+  let usadas = 0;
+  const salida: string[] = [];
+  for (const parte of partes) {
+    const palabras = countWords(parte);
+    if (usadas + palabras <= maxWords) {
+      salida.push(parte);
+      usadas += palabras;
+      continue;
+    }
+    const restante = maxWords - usadas;
+    if (restante > 0) salida.push(cutWords(parte, restante));
+    break;
+  }
+  return salida.join('\n\n');
+}
+
+type PasoDeFragmento = {
+  next: number;
+  texto?: string;
+  div?: { start: number; colons: number };
+};
+
+function pasoDeFragmento(lines: string[], i: number): PasoDeFragmento {
+  const line = lineAt(lines, i);
+  if (BLANK_RE.test(line) || ATX_HEADING_RE.test(line)) return { next: i + 1 };
+  const opener = DIV_OPENER_RE.exec(line);
+  if (opener) return { next: skipBlock(lines, i), div: { start: i, colons: (opener[1] ?? '').length } };
+  if (CODE_FENCE_RE.test(line)) return { next: skipCodeFence(lines, i) };
+  if (NON_PARAGRAPH_RE.test(line)) return { next: skipBlock(lines, i) };
+  const paragraph = readParagraph(lines, i);
+  if (paragraph.setext) return { next: paragraph.end };
+  const texto = normalizaParrafo(paragraph.text);
+  return { next: paragraph.end, texto: texto === '' ? undefined : texto };
+}
+
 export function extractFragment(body: string, maxWords: number = COLLECTION_FRAGMENT_MAX_WORDS): string {
   const lines = body.split(/\r?\n/);
   let i = 0;
-  while (i < lines.length) {
-    const line = lineAt(lines, i);
-    if (BLANK_RE.test(line) || ATX_HEADING_RE.test(line)) {
-      i += 1;
+  const partes: string[] = [];
+  let usadas = 0;
+  while (i < lines.length && usadas <= maxWords) {
+    const paso = pasoDeFragmento(lines, i);
+    if (paso.div !== undefined) {
+      if (partes.length === 0) return divFragment(lines, paso.div.start, paso.div.colons, maxWords);
+      i = paso.next;
       continue;
     }
-    const opener = DIV_OPENER_RE.exec(line);
-    if (opener) return divFragment(lines, i, (opener[1] ?? '').length, maxWords);
-    if (CODE_FENCE_RE.test(line)) {
-      i = skipCodeFence(lines, i);
-      continue;
+    if (paso.texto !== undefined) {
+      partes.push(paso.texto);
+      usadas += countWords(paso.texto);
     }
-    if (NON_PARAGRAPH_RE.test(line)) {
-      i = skipBlock(lines, i);
-      continue;
-    }
-    const paragraph = readParagraph(lines, i);
-
-    if (paragraph.setext) {
-      i = paragraph.end;
-      continue;
-    }
-    return cutParagraph(paragraph.text, maxWords);
+    i = paso.next;
   }
-  return '';
+  if (partes.length === 0) return '';
+  if (usadas <= maxWords) return partes.join('\n\n');
+  return `${recortaParrafos(partes, maxWords)} ${CUT_MARK}`;
 }

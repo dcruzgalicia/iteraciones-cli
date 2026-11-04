@@ -22,21 +22,15 @@ Given('el sitio declara los enlaces:', (tabla: string) => {
   escribirEnProyecto('iteraciones.config.yaml', `${yaml}\n`);
 });
 
-Then('las tarjetas de Redes van una en el header y otra en el footer', () => {
+Then('las redes aparecen una vez en el header y otra en el footer', () => {
   const html = leer('dist/files/test-document.html');
   const header = html.indexOf('<header');
   const footer = html.indexOf('<footer');
-  const frecuencias = [...html.matchAll(/>Redes</g)].map((m) => m.index ?? -1);
-  if (frecuencias.length !== 2) throw new Error(`hay ${frecuencias.length} tarjetas de Redes y deberían ser 2`);
+  const frecuencias = [...html.matchAll(/aria-label="Redes"/g)].map((m) => m.index ?? -1);
+  if (frecuencias.length !== 2) throw new Error(`hay ${frecuencias.length} bloques de redes y deberían ser 2`);
   const [primera, segunda] = frecuencias as [number, number];
-  if (!(header < primera && primera < footer)) throw new Error('la primera Redes no va dentro del header');
-  if (!(segunda > footer)) throw new Error('la segunda Redes no va dentro del footer');
-});
-
-Then('las tarjetas de Redes llevan el chip del sitio {string}', (titulo: string) => {
-  const html = leer('dist/files/test-document.html');
-  const chips = html.match(new RegExp(`<span class="[^"]*bg-transparent[^"]*">${escaparRegex(titulo)}</span>`, 'g')) ?? [];
-  if (chips.length !== 2) throw new Error(`el chip del sitio aparece ${chips.length} veces y deberían ser 2`);
+  if (!(header < primera && primera < footer)) throw new Error('la primera redes no va dentro del header');
+  if (!(segunda > footer)) throw new Error('la segunda redes no va dentro del footer');
 });
 
 Given('un proyecto con una creadora con redes', () => {
@@ -77,8 +71,8 @@ Then('el cuerpo de {string} no lleva las redes en negritas', (archivo: string) =
 
 Then('el HTML de {string} sólo tiene las redes del sitio', (archivo: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const tarjetas = html.match(/>Redes</g) ?? [];
-  if (tarjetas.length !== 2) throw new Error(`${archivo} tiene ${tarjetas.length} tarjetas de Redes y deberían ser 2 (las del sitio)`);
+  const tarjetas = html.match(/aria-label="Redes"/g) ?? [];
+  if (tarjetas.length !== 2) throw new Error(`${archivo} tiene ${tarjetas.length} bloques de redes y deberían ser 2 (los del sitio)`);
 });
 
 Given('el proyecto produce html y markdown', () => {
@@ -210,10 +204,10 @@ Then('los enlaces de Formatos abren en otra pestaña', () => {
   }
 });
 
-Then('la tarjeta de identidad no es un enlace', () => {
+Then('la identidad no es un enlace', () => {
   const html = leer('dist/files/test-document.html');
-  if (!html.includes('id="card-identity" class="min-w-0"><div class="relative')) {
-    throw new Error('la tarjeta de identidad sigue siendo un enlace');
+  if (!html.includes('id="card-identity" class="min-w-0"><div class="flex items-center gap-3">')) {
+    throw new Error('la identidad sigue siendo un enlace');
   }
 });
 

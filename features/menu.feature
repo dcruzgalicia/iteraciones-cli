@@ -79,7 +79,7 @@ Característica: el menú del sitio
         """
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/index.html" pone "<div id=\"card-identity\"" antes que ">Menú<"
-      Y el archivo "dist/files/index.html" pone "Menú →" antes que ">Redes<"
+      Y el archivo "dist/files/index.html" pone "aria-label=\"Menú\"" antes que "aria-label=\"Redes\""
       Y el archivo "dist/files/index.html" no dice "Ver más →"
 
     Escenario: Los enlaces externos abren en otra pestaña y los internos no

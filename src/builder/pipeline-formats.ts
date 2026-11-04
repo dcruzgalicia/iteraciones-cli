@@ -260,15 +260,13 @@ function tarjetasDeSitio(args: {
   siteConfig: SiteConfig;
   dir: string;
   menuHeader?: string;
-  menuFooter?: string;
   menuFooterPlain?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
-}): Pick<HtmlPageVars, 'license' | 'menuHeader' | 'menuFooter' | 'menuFooterPlain' | 'announcementsTop' | 'announcementsBottom'> {
+}): Pick<HtmlPageVars, 'license' | 'menuHeader' | 'menuFooterPlain' | 'announcementsTop' | 'announcementsBottom'> {
   return {
     license: licenciaHtml(args.siteConfig, args.dir),
     menuHeader: args.menuHeader,
-    menuFooter: args.menuFooter,
     menuFooterPlain: args.menuFooterPlain,
     announcementsTop: args.announcementsTop === '' ? undefined : args.announcementsTop,
     announcementsBottom: args.announcementsBottom === '' ? undefined : args.announcementsBottom,
@@ -286,7 +284,6 @@ function htmlVars(args: {
   covers?: { front?: string; back?: string };
   creatorImage?: string;
   menuHeader?: string;
-  menuFooter?: string;
   menuFooterPlain?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
@@ -307,7 +304,6 @@ function htmlVars(args: {
     covers,
     creatorImage,
     menuHeader,
-    menuFooter,
     menuFooterPlain,
     announcementsTop,
     announcementsBottom,
@@ -349,7 +345,7 @@ function htmlVars(args: {
     backCover: covers?.back,
     creatorImage,
     creatorImageAlt: creatorImage === undefined ? undefined : `Retrato de ${titulo}`,
-    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menuHeader, menuFooter, menuFooterPlain, announcementsTop, announcementsBottom }),
+    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menuHeader, menuFooterPlain, announcementsTop, announcementsBottom }),
     indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: extras === '' ? undefined : extras,
@@ -374,7 +370,6 @@ export async function emitHtmlPage(
   indices?: string[],
   creatorImage?: string,
   menuHeader?: string,
-  menuFooter?: string,
   menuFooterPlain?: string,
   announcementsTop?: string,
   announcementsBottom?: string,
@@ -413,7 +408,6 @@ export async function emitHtmlPage(
         covers,
         creatorImage,
         menuHeader,
-        menuFooter,
         menuFooterPlain,
         announcementsTop,
         announcementsBottom,
@@ -1008,10 +1002,13 @@ function assertPaginasLibres(relativePath: string, dir: string, outSlug: string,
 
 const CARD_WRAPPER = '<div class="min-w-0">';
 
+/** Las tarjetas muestran sólo un aperitivo: 20 palabras como máximo. */
+const CARD_PREVIEW_MAX_WORDS = 20;
+
 const CARD_TEXT_CLASSES =
   'prose prose-lg dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)]';
 
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-full flex-col justify-center overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_p]:line-clamp-2 [&_h3]:line-clamp-2 [&>h2]:line-clamp-1 ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-full flex-col overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_p]:line-clamp-2 [&_h3]:line-clamp-2 [&>h2]:line-clamp-1 ${CARD_TEXT_CLASSES}`;
 
 const PILL_BASE =
   'inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-800 dark:text-accent-300';
@@ -1074,7 +1071,10 @@ const MEMBER_LINK_CLASSES =
 // El CTA de las tarjetas y el «Ver más» del menú comparten el mismo botón:
 // pill con el acento, para que no divergan con el tiempo.
 const CARD_CTA_CLASSES =
-  'inline-flex items-center gap-2 rounded-full bg-accent-600 px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors duration-200 hover:bg-accent-700 hover:text-white hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-accent-400 dark:text-stone-950 dark:hover:bg-accent-300';
+  'inline-flex items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-4 py-2 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
+
+const MENU_BUTTON_CLASSES =
+  'inline-flex items-center gap-2 rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1.5 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
 /** El texto del CTA según lo que hay al otro lado. */
 function ctaDeTarjeta(type: string | undefined): string {
@@ -1203,14 +1203,14 @@ function enlaceDeMenuHtml(enlace: EnlaceMenu, dir: string): string {
   return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MEMBER_LINK_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
 }
 
-/** El botón del menú en el header: sólo el enlace al menú completo. */
+/** El botón del menú en el header: hamburguesa sutil, sin flecha. */
 function menuHeaderLink(links: EnlaceMenu[], dir: string): string | undefined {
   if (links.length === 0) return undefined;
-  return `<a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Menú →</a>`;
+  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="Menú"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menú</span></a>`;
 }
 
 /** El menú del footer, sin tarjeta: hasta 5 enlaces y «Más». */
-function menuFooterContent(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
+function menuFooterContent(links: EnlaceMenu[], dir: string): string | undefined {
   if (links.length === 0) return undefined;
   const items = links
     .slice(0, 5)
@@ -1218,17 +1218,10 @@ function menuFooterContent(links: EnlaceMenu[], dir: string, siteTitle: string):
     .join('');
   const mas = links.length > 5 ? `<p class="mt-4"><a href="${relativeHref(dir, 'menu.html')}" class="${CARD_CTA_CLASSES}">Más →</a></p>` : '';
   return [
-    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span></div>`,
+    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Menú</h2></div>`,
     `<ul class="m-0 list-disc space-y-2 ps-6">${items}</ul>`,
     mas,
   ].join('');
-}
-
-/** La tarjeta del menú en la sidebar: el contenido del footer, con tarjeta. */
-function menuFooterCard(links: EnlaceMenu[], dir: string, siteTitle: string): string | undefined {
-  const contenido = menuFooterContent(links, dir, siteTitle);
-  if (contenido === undefined) return undefined;
-  return ['<div class="min-w-0">', `<div class="${EXTRA_CARD_CLASSES}">`, contenido, '</div>', '</div>'].join('');
 }
 
 /** Las tarjetas de los anuncios, en HTML, para los slots del sitio. */
@@ -1522,8 +1515,7 @@ export async function emitKeywordLists(args: {
     };
     const imagePaths = await writeListImagePaths(cwd, `${KEYWORDS_DIR}-${slug}`, procesadas.imageMap);
     const menuHeader = menuHeaderLink(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR);
-    const menuFooter = menuFooterCard(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
-    const menuFooterPlain = menuFooterContent(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR, formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuFooterPlain = menuFooterContent(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR);
     const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
       discoveryIndex,
       cwd,
@@ -1553,7 +1545,6 @@ export async function emitKeywordLists(args: {
       undefined,
       undefined,
       menuHeader,
-      menuFooter,
       menuFooterPlain,
       anunciosTop,
       anunciosBottom,
@@ -1755,25 +1746,30 @@ function cabeceraDeTarjeta(
   return partes;
 }
 
-/** El fragmento en texto plano: las tarjetas recortan con elipsis, no con markdown. */
-function fragmentoPlano(fragment: string): string {
+/** El fragmento en párrafos de texto plano, sin markdown ni bloques. */
+function parrafosPlanos(fragment: string): string[] {
   return fragment
-    .replace(/^:::[^\n]*$/gm, '')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/[*_`~]/g, '')
-    .replace(/^#+\s*/gm, '')
-    .replace(/^>\s*/gm, '')
-    .replace(/^[-+*]\s+/gm, '')
-    .replace(/^\d+\.\s+/gm, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .split(/\n{2,}/)
+    .map((parrafo) =>
+      parrafo
+        .replace(/^:::[^\n]*$/gm, '')
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/[*_`~]/g, '')
+        .replace(/^#+\s*/gm, '')
+        .replace(/^>\s*/gm, '')
+        .replace(/^[-+*]\s+/gm, '')
+        .replace(/^\d+\.\s+/gm, '')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
+    .filter((parrafo) => parrafo !== '');
 }
 
 function collectionCard(
@@ -1788,16 +1784,16 @@ function collectionCard(
   imagenes?: Map<string, string>,
 ): string {
   const title = e.title || TITULO_POR_DEFECTO;
-  const fragment = extractFragment(e.body);
+  const fragment = extractFragment(e.body, CARD_PREVIEW_MAX_WORDS);
   const card = [
     `:::: {class="${COLLECTION_CARD_CLASSES}"}`,
     '',
     ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, href),
   ];
-  const texto = fragment === '' ? '' : fragmentoPlano(fragment);
-  if (texto !== '') card.push('', texto);
+  const parrafos = fragment === '' ? [] : parrafosPlanos(fragment);
+  if (parrafos.length > 0) card.push('', `<p>${parrafos.map((parrafo) => escaparHtml(parrafo)).join('<br>')}</p>`);
   if (href !== undefined) {
-    card.push('', `<p class="mt-4 text-center"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
+    card.push('', `<p class="mt-auto pt-4 text-center"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
   }
   card.push('', '::::');
   return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');
@@ -2318,8 +2314,7 @@ async function emitCollectionHtml(
   const esMenu = doc.frontmatter.type === 'menu';
   const enlaces = enlacesDelMenu(discoveryIndex);
   const menuHeader = esMenu ? undefined : menuHeaderLink(enlaces, outputs.dir);
-  const menuFooter = esMenu ? undefined : menuFooterCard(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
-  const menuFooterPlain = esMenu ? undefined : menuFooterContent(enlaces, outputs.dir, formatCfg?.html?.site?.title ?? 'iteraciones');
+  const menuFooterPlain = esMenu ? undefined : menuFooterContent(enlaces, outputs.dir);
   const pageContent = esMenu
     ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlaces, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
     : content;
@@ -2395,7 +2390,6 @@ async function emitCollectionHtml(
     indices,
     retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir),
     menuHeader,
-    menuFooter,
     menuFooterPlain,
     anunciosTop,
     anunciosBottom,
@@ -2619,7 +2613,7 @@ function imagenesDeLasTarjetas(entradas: CollectionEntry[], cwd: string): string
   const imagenes: string[] = [];
   for (const entrada of entradas) {
     const dir = entrada.dirAbs ?? dirname(join(cwd, entrada.file));
-    const fragmento = extractFragment(entrada.body);
+    const fragmento = extractFragment(entrada.body, CARD_PREVIEW_MAX_WORDS);
     if (fragmento !== '') imagenes.push(...scanInlineImages(fragmento, dir));
     // La imagen de cabecera ya no vive en el fragmento: se procesa aparte.
     const src = primeraImagenDelCuerpo(entrada.body);
@@ -2715,8 +2709,7 @@ export async function emitDefaultLists(args: {
 
     const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
     const menuHeader = menuHeaderLink(enlacesDelMenu(discoveryIndex), '.');
-    const menuFooter = menuFooterCard(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
-    const menuFooterPlain = menuFooterContent(enlacesDelMenu(discoveryIndex), '.', formatCfg?.html?.site?.title ?? 'iteraciones');
+    const menuFooterPlain = menuFooterContent(enlacesDelMenu(discoveryIndex), '.');
     const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
       discoveryIndex,
       cwd,
@@ -2746,7 +2739,6 @@ export async function emitDefaultLists(args: {
       undefined,
       undefined,
       menuHeader,
-      menuFooter,
       menuFooterPlain,
       anunciosTop,
       anunciosBottom,
