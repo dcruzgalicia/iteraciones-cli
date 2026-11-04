@@ -91,25 +91,29 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
         `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-3 py-1 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20">${escapeHtml(link.name)}</a>`,
     )
     .join('');
-  return `<nav aria-label="Redes" class="flex flex-wrap items-center gap-2">${items}</nav>`;
+  return `<nav aria-label="Redes" class="contents">${items}</nav>`;
 }
 
 function headerHtml(identity: string, menuHeader: string, redes: string): string {
   return [
-    '<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">',
-    `<div class="min-w-0 sm:flex-1">${identity}</div>`,
-    `<div class="flex items-center sm:justify-end">${menuHeader}</div>`,
+    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6">',
+    '<div class="grid gap-6 md:grid-cols-3">',
+    `<div class="min-w-0">${identity}</div>`,
+    '<div class="hidden md:block"></div>',
+    `<div class="flex flex-wrap items-center gap-2">${menuHeader}${redes}</div>`,
     '</div>',
-    redes === '' ? '' : `<div class="mt-4 flex justify-center sm:justify-end">${redes}</div>`,
+    '</div>',
   ].join('\n');
 }
 
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
   return [
+    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6">',
     '<div class="grid gap-6 md:grid-cols-3">',
-    `<div>${menuFooterPlain}</div>`,
+    `<div class="min-w-0">${footerIdentity}</div>`,
+    `<div class="flex flex-wrap items-center gap-2">${menuFooterPlain}${redes}</div>`,
     '<div>$if(license)$$license$$endif$</div>',
-    `<div class="space-y-4">${footerIdentity}${redes}</div>`,
+    '</div>',
     '</div>',
   ].join('\n');
 }
@@ -149,15 +153,15 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   ].join('\n');
   const sidebar = [
     ...(type === 'creator' ? [await loadCard('file', 'card-retrato.html')] : []),
-    metadata,
+    ...(type === 'file' ? [await loadCard('file', 'card-autor.html')] : []),
     ...sidebarCards,
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
-    ...(type === 'list' || type === 'collection' || type === 'menu' ? [redes] : []),
   ].join('\n');
   const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
 
   return skeleton
     .replace(slot('header'), () => header)
+    .replace(slot('page-header'), () => metadata)
     .replace(slot('main'), () => main)
     .replace(slot('sidebar'), () => sidebar)
     .replace(slot('footer'), () => footer);
