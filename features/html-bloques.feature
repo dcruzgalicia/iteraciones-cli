@@ -1,5 +1,5 @@
 # language: es
-Característica: las tarjetas del masonry salen en el orden que el autor espera
+Característica: las tarjetas del layout salen en el orden que el autor espera
 
   Como quien lee el resultado en el navegador
   Quiero que las tarjetas salgan en un orden predecible
@@ -8,7 +8,7 @@ Característica: las tarjetas del masonry salen en el orden que el autor espera
 
   Regla de negocio: El orden de las tarjetas
 
-    Escenario: El masonry sigue el orden de bloques por defecto
+    Escenario: El layout sigue el orden de bloques por defecto
       Dado que la raíz del proyecto tiene un proyecto con índice y una cita
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0

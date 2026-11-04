@@ -145,7 +145,7 @@ Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
 
 Then('las tarjetas del documento salen en el orden por defecto', () => {
   const archivo = 'test-document.html';
-  enOrden(salida(archivo), archivo, 'id="card-identity", id="TOC", >Formatos</h2>, <article, id="refs-heading", id="card-identity-footer"');
+  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="refs-heading", id="TOC", >Formatos</h2>, id="card-identity-footer"');
 });
 
 Then('la lista explícita de bloques ES el orden', () => {
@@ -172,7 +172,7 @@ Then('las tarjetas de formatos y referencias quedan fuera de la de contenido', (
     throw new Error(`faltan tarjetas en ${archivo}`);
   }
 
-  if (!(html1 < article)) throw new Error('la tarjeta de formatos quedó dentro del article');
+  if (html1 > article && html1 < cierre) throw new Error('la tarjeta de formatos quedó dentro del article');
   if (!(refs > cierre)) throw new Error('la tarjeta de referencias quedó dentro del article');
 });
 
@@ -258,19 +258,11 @@ Then('el CSS se compila sobre los HTML finales', () => {
   prohibe(css, 'styles.css', ['bg-fuchsia-700', 'bg-indigo-700']);
 });
 
-Then('la página trae el botón de volver al principio y el CSS su animación', () => {
+Then('la página trae el botón de volver al principio', () => {
   const archivo = 'test-document.html';
   const html = salida(archivo);
-  exige(html, archivo, [
-    '<body id="top"',
-    'aria-label="Volver al principio"',
-    'scroll-reveal',
-
-    '<main class="lg:container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-4 sm:gap-6 px-2 sm:px-4 lg:px-8 pt-6 sm:pt-8 pb-20 sm:pb-24">',
-  ]);
-
-  prohibe(html, archivo, ['block:volver']);
-  exige(salida(join('assets', 'css', 'styles.css')), 'styles.css', ['@keyframes scroll-reveal', 'animation-timeline:scroll()']);
+  exige(html, archivo, ['<body id="top"', 'aria-label="Volver al principio"', 'fixed bottom-6 right-6']);
+  prohibe(html, archivo, ['block:volver', 'scroll-reveal']);
 });
 
 Then('sin HTML activo no se copian las fuentes', () => {

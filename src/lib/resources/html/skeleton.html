@@ -11,17 +11,29 @@
 </head>
 <body id="top" class="font-sans antialiased text-lg text-stone-900 dark:text-stone-100 bg-paper bg-paper-grid">
 
-  <main class="lg:container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-4 sm:gap-6 px-2 sm:px-4 lg:px-8 pt-6 sm:pt-8 pb-20 sm:pb-24">
-<div id="slot-header"></div>
-<div id="slot-metadata"></div>
-<div id="slot-cards"></div>
-<div id="slot-footer"></div>
-  </main>
+  <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-accent-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">Saltar al contenido</a>
+
+  <header class="mx-auto w-full max-w-7xl px-2 sm:px-4 lg:px-8 pt-6 sm:pt-8">
+    <div id="slot-header"></div>
+  </header>
+
+  <div class="mx-auto grid w-full max-w-7xl items-start gap-6 px-2 py-6 sm:px-4 sm:py-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8 lg:px-8">
+    <main id="contenido" class="min-w-0 space-y-6">
+      <div id="slot-main"></div>
+    </main>
+    <aside aria-label="Información" class="min-w-0 space-y-6">
+      <div id="slot-sidebar"></div>
+    </aside>
+  </div>
+
+  <footer class="mx-auto w-full max-w-7xl px-2 sm:px-4 lg:px-8 pb-20 sm:pb-24">
+    <div id="slot-footer"></div>
+  </footer>
 
   <a
     href="#top"
     aria-label="Volver al principio"
-    class="scroll-reveal supports-[animation-timeline:scroll()]:pointer-events-none supports-[animation-timeline:scroll()]:opacity-0 fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex size-12 items-center justify-center rounded-full border border-accent-500/90 bg-accent-500/35 text-accent-700 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:bg-accent-500/45 hover:border-accent-500 dark:hover:bg-accent-500/35 dark:hover:border-accent-500/90"
+    class="fixed bottom-6 right-6 z-50 flex size-12 items-center justify-center rounded-full border border-accent-500/90 bg-accent-500/35 text-accent-700 shadow-lg shadow-accent-500/25 transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/45 dark:border-accent-500/70 dark:bg-accent-500/25 dark:text-accent-300 dark:hover:border-accent-500/90 dark:hover:bg-accent-500/35"
   >
     <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
   </a>

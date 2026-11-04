@@ -24,7 +24,7 @@ Característica: la tarjeta de cada miembro de una colección
       Y el HTML dice ":::: {class=\"collection-intro\"}"
       Y el HTML dice "Intro de la antología."
       Y el HTML pone "collection-intro" antes que "tarjeta-fragmento"
-      Y el HTML tiene 1 contenedores de masonry
+      Y el HTML tiene 1 contenedores de tarjeta
 
     Escenario: Sin cuerpo propio no hay nada que subir a la banda
       Dado que la colección tiene 1 miembros
@@ -64,13 +64,13 @@ Característica: la tarjeta de cada miembro de una colección
       Y el HTML dice "<p class=\"text-center mt-4\">"
       Y el HTML no dice "after:absolute after:inset-0"
 
-    Escenario: Cada tarjeta va en su propio contenedor del masonry
+    Escenario: Cada tarjeta va en su propio contenedor
       Dado que la colección tiene 1 miembros
       Y que la colección tiene el cuerpo propio:
       """
       """
       Cuando compogo las tarjetas de la página HTML
-      Entonces el HTML tiene 1 contenedores de masonry
+      Entonces el HTML tiene 1 contenedores de tarjeta
 
     Escenario: La tarjeta no fusiona el cuerpo completo del miembro
       Dado que la colección tiene un cuerpo propio con 150 palabras
@@ -79,7 +79,7 @@ Característica: la tarjeta de cada miembro de una colección
       """
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML no dice "Segundo párrafo que no debe aparecer."
-      Y el HTML tiene 1 contenedores de masonry
+      Y el HTML tiene 1 contenedores de tarjeta
 
     Escenario: Un miembro sin slug se queda sin enlace
       Dado que la colección tiene 1 miembros

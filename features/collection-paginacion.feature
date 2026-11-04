@@ -66,20 +66,20 @@ Característica: La paginación de las colecciones
       Entonces el nav de la página 2 enlaza a "←"
       Y el nav de la página 2 no enlaza a "→"
 
-    Escenario: El nav flota al pie, como el botón de volver al principio
+    Escenario: La paginación va estática al final del contenido
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y una colección con 5 miembros
       Y el proyecto pagina de 2 tarjetas
       Cuando hago un build del proyecto
-      Entonces el nav de la página 2 es flotante
+      Entonces la paginación de la página 2 es estática
       Y el nav de la página 2 no está dentro del texto
 
-    Escenario: Los botones se esconden hasta que el scroll llega al final
+    Escenario: La paginación muestra los números de página
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y una colección con 5 miembros
       Y el proyecto pagina de 2 tarjetas
       Cuando hago un build del proyecto
-      Entonces el nav de la página 2 se revela al final de la página
+      Entonces la paginación de la página 2 muestra los números
 
     Escenario: El título de la página no lleva el número de página
       Dado que la raíz del proyecto tiene un proyecto de prueba

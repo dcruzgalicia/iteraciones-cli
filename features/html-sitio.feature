@@ -3,7 +3,7 @@ Característica: los enlaces del sitio y el índice paginado de una colección
 
   Regla de negocio: Los enlaces del proyecto generan tarjetas de «Redes»
 
-    Escenario: Con enlaces hay una tarjeta después del header y otra antes del footer
+    Escenario: Con enlaces hay una tarjeta en el header y otra en el footer
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el sitio declara los enlaces:
       """
@@ -13,7 +13,7 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/test-document.html" dice "Redes"
       Y el archivo "dist/files/test-document.html" dice 'target="_blank"'
-      Y las tarjetas de Redes van después del header y antes del footer
+      Y las tarjetas de Redes van una en el header y otra en el footer
       Y las tarjetas de Redes llevan el chip del sitio "Test"
 
   Regla de negocio: Las redes de la creadora van en su tarjeta

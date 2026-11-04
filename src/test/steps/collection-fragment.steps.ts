@@ -204,8 +204,8 @@ Then('el HTML pone {string} antes que {string}', (primero: string, segundo: stri
   if (a >= b) throw new Error(`${JSON.stringify(primero)} (${a}) no va antes que ${JSON.stringify(segundo)} (${b})`);
 });
 
-Then('el HTML tiene {int} contenedores de masonry', (cuantos: number) => {
-  const leidos = (world.html.match(/break-inside-avoid pb-6/g) ?? []).length;
+Then('el HTML tiene {int} contenedores de tarjeta', (cuantos: number) => {
+  const leidos = (world.html.match(/class="min-w-0"/g) ?? []).length;
   if (leidos !== cuantos) throw new Error(`hay ${leidos} contenedores y son ${cuantos}`);
 });
 
@@ -277,7 +277,7 @@ Then('la página {int} no dice {string}', (pagina: number, texto: string) => {
 });
 
 function navDePaginacion(html: string): string {
-  return /<nav class="[^"]*\bfixed\b[^"]*\bbottom-6\b[^"]*">[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
+  return /<nav[^>]*aria-label="Paginación"[^>]*>[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
 }
 
 Then('el nav de {string} no dice {string}', async (relativa: string, texto: string) => {
@@ -353,13 +353,11 @@ Then('el archivo {string} no dice {string}', async (relativa: string, texto: str
   }
 });
 
-Then('el nav de la página {int} es flotante', (_pagina: number) => {
+Then('la paginación de la página {int} es estática', (_pagina: number) => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'antologia-2.html'), 'utf8');
-  const nav = html.match(/<nav class="([^"]*)"/);
+  const nav = html.match(/<nav[^>]*aria-label="Paginación"[^>]*>/);
   if (nav === null) throw new Error('la página no tiene nav');
-  if (!nav[1]?.includes('fixed') || !nav[1]?.includes('bottom-6')) {
-    throw new Error(`el nav no flota al pie: ${nav[1]}`);
-  }
+  if (/\bfixed\b|\bbottom-6\b/.test(nav[0])) throw new Error(`la paginación sigue flotante: ${nav[0]}`);
 });
 
 Then('el título de la página {int} no lleva el número de página', (pagina: number) => {
@@ -375,15 +373,12 @@ Then('el título de la página {int} no lleva el número de página', (pagina: n
   }
 });
 
-Then('el nav de la página {int} se revela al final de la página', (_pagina: number) => {
+Then('la paginación de la página {int} muestra los números', (_pagina: number) => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'antologia-2.html'), 'utf8');
-  if (!html.includes('scroll-reveal-at-end')) {
-    throw new Error('los botones del nav no se esconden hasta el final');
-  }
-  const css = readFileSync(join(world.root, 'dist', 'files', 'assets', 'css', 'styles.css'), 'utf8');
-  if (!/animation-range:\s*90%\s*100%/.test(css)) {
-    throw new Error('el CSS no revela los botones al final del scroll');
-  }
+  const nav = /<nav[^>]*aria-label="Paginación"[^>]*>[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
+  if (nav === '') throw new Error('la página no tiene nav de paginación');
+  if (!nav.includes('aria-current="page"')) throw new Error('el nav no marca la página actual');
+  if (!nav.includes('>2<')) throw new Error('el nav no muestra el número 2');
 });
 
 Then('el nav de la página {int} no está dentro del texto', (_pagina: number) => {

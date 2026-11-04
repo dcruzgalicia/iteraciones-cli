@@ -125,7 +125,7 @@ Característica: las portadas del PDF
 
   Regla de negocio: Las portadas también se ven en HTML y EPUB
 
-    Escenario: Las portadas son tarjetas del HTML después del título
+    Escenario: Las portadas son tarjetas del contenido antes de los formatos
       Dado que la raíz del proyecto está vacía
       Y el proyecto tiene un libro
       Y el libro lleva la portada "frontCover"
@@ -134,7 +134,7 @@ Característica: las portadas del PDF
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/un-libro.html" dice "un-libro-frontCover.webp"
       Y el archivo "dist/files/un-libro.html" dice "un-libro-backCover.webp"
-      Y las portadas del HTML van después del título y antes de los formatos
+      Y las portadas del HTML van en el contenido antes de los formatos
 
     Escenario: El EPUB usa la portada como cover
       Dado que la raíz del proyecto está vacía
