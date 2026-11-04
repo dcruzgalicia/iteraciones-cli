@@ -25,7 +25,7 @@
 /* El fondo del sitio: un papel muy claro teñido del acento. Lleva menos tinte
    que las tarjetas para que éstas se lean como una superficie aparte. */
 @utility bg-paper {
-  background-color: color-mix(in oklab, var(--color-accent-500) 2%, #fff);
+  background-color: color-mix(in oklab, var(--color-accent-500) 3%, var(--color-stone-100));
 
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     background-color: color-mix(in oklab, var(--color-accent-500) 4%, var(--color-stone-950));

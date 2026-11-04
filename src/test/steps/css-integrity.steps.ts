@@ -301,7 +301,7 @@ Then('el esqueleto usa el fondo del sitio teñido del acento', async () => {
 
 Then('el CSS mezcla el acento en el fondo del sitio', () => {
   if (!world.css.includes('@utility bg-paper')) throw new Error('falta la utilidad bg-paper');
-  if (!world.css.includes('color-mix(in oklab, var(--color-accent-500) 2%, #fff)')) {
+  if (!world.css.includes('color-mix(in oklab, var(--color-accent-500) 3%, var(--color-stone-100))')) {
     throw new Error('el fondo del sitio no mezcla el acento');
   }
 });
