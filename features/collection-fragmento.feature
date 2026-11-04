@@ -5,7 +5,7 @@ Característica: el fragmento que muestra la tarjeta de un miembro
   Quiero ver el primer párrafo de cada uno en su tarjeta
   Para saber qué hay sin abrir cuarenta archivos
 
-  Regla de negocio: El fragmento es el primer párrafo, y lo que no es texto se salta
+  Regla de negocio: El fragmento junta párrafos hasta el máximo, y lo que no es texto se salta
 
     Esquema del escenario: El fragmento es el primer párrafo de verdad
       Dado que el documento tiene el cuerpo:
@@ -17,7 +17,7 @@ Característica: el fragmento que muestra la tarjeta de un miembro
 
       Ejemplos:
         | cuerpo | esperado |
-        | Una frase corta.<br><br>Y otra que no entra. | Una frase corta. |
+        | Una frase corta.<br><br>Y otra que no entra. | Una frase corta.<br><br>Y otra que no entra. |
         | # Título<br><br>## Subtítulo<br><br>El párrafo de verdad. | El párrafo de verdad. |
         | Título del documento<br>=====================<br><br>Tras el título. | Tras el título. |
         | ```js<br>codigo();<br>```<br><br>Tras el código. | Tras el código. |
@@ -98,3 +98,9 @@ Característica: el fragmento que muestra la tarjeta de un miembro
       Entonces el fragmento se corta con puntos suspensivos
       Y el fragmento no dice "["
       Y el fragmento tiene 100 palabras
+
+    Escenario: El fragmento de una tarjeta se corta a 20 palabras
+      Dado que el cuerpo es un párrafo con 150 palabras
+      Cuando extraigo su fragmento con máximo 20
+      Entonces el fragmento se corta con puntos suspensivos
+      Y el fragmento tiene 21 palabras

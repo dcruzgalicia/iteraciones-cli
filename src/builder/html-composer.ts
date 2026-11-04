@@ -47,12 +47,7 @@ const IDENTITY_APERTURA = '    <div id="card-identity" class="min-w-0">\n\n';
 const FOOTER_APERTURA = '    <div id="card-identity-footer" class="min-w-0">\n';
 
 function comoFooter(card: string): string {
-  return card
-    .replace(IDENTITY_APERTURA, FOOTER_APERTURA)
-    .replace(
-      'class="relative flex items-center gap-3 rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-5 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 transition-all duration-200 hover:ring-accent-500/40"',
-      'class="flex items-center gap-3"',
-    );
+  return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA);
 }
 
 export function htmlResourceFiles(): string[] {
@@ -86,39 +81,35 @@ function escapeHtml(text: string): string {
 export const CHIP_OUTLINE_CLASSES =
   'inline-block align-top rounded-full border border-accent-500/40 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
 
-/** La fila de «Redes» con los enlaces del proyecto, fuera de las tarjetas. */
+/** La fila de redes con los enlaces del proyecto, fuera de las tarjetas. */
 function frecuenciasInline(siteConfig: SiteConfig): string {
   const links = siteConfig.format?.html?.site?.links ?? [];
   if (links.length === 0) return '';
-  const titulo = siteConfig.format?.html?.site?.title ?? '';
-  const dueno = titulo === '' ? '' : `<span class="${CHIP_OUTLINE_CLASSES}">${escapeHtml(titulo)}</span>`;
   const items = links
     .map(
       (link: { name: string; url: string }) =>
         `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-3 py-1 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20">${escapeHtml(link.name)}</a>`,
     )
     .join('');
-  return `<nav aria-label="Redes" class="flex flex-wrap items-center gap-2"><span class="font-mono text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Redes</span>${dueno}${items}</nav>`;
+  return `<nav aria-label="Redes" class="flex flex-wrap items-center gap-2">${items}</nav>`;
 }
 
 function headerHtml(identity: string, menuHeader: string, redes: string): string {
   return [
-    '<div class="flex flex-col gap-4 sm:flex-row sm:items-stretch">',
+    '<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">',
     `<div class="min-w-0 sm:flex-1">${identity}</div>`,
     `<div class="flex items-center sm:justify-end">${menuHeader}</div>`,
     '</div>',
-    redes === '' ? '' : `<div class="mt-4">${redes}</div>`,
+    redes === '' ? '' : `<div class="mt-4 flex justify-center sm:justify-end">${redes}</div>`,
   ].join('\n');
 }
 
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
   return [
-    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6">',
     '<div class="grid gap-6 md:grid-cols-3">',
-    `<div class="space-y-4">${footerIdentity}${redes}</div>`,
     `<div>${menuFooterPlain}</div>`,
     '<div>$if(license)$$license$$endif$</div>',
-    '</div>',
+    `<div class="space-y-4">${footerIdentity}${redes}</div>`,
     '</div>',
   ].join('\n');
 }
@@ -145,14 +136,12 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
 
   const redes = frecuenciasInline(siteConfig);
   const menuHeader = '$if(menu-header)$$menu-header$$endif$';
-  const menuFooter = '$if(menu-footer)$$menu-footer$$endif$';
   const menuFooterPlain = '$if(menu-footer-plain)$$menu-footer-plain$$endif$';
   const header = headerHtml(identity, menuHeader, redes);
   const portadas = await loadCard('file', 'card-portadas.html');
   const main = [
     '$if(announcements-top)$$announcements-top$$endif$',
     portadas,
-    '<div id="block-intro"></div>',
     ...mainCards,
     '$if(extras)$$extras$$endif$',
     '$if(announcements-bottom)$$announcements-bottom$$endif$',
@@ -163,7 +152,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     metadata,
     ...sidebarCards,
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
-    ...(type === 'list' || type === 'collection' || type === 'menu' ? [menuFooter, redes] : []),
+    ...(type === 'list' || type === 'collection' || type === 'menu' ? [redes] : []),
   ].join('\n');
   const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
 
@@ -209,7 +198,6 @@ export interface HtmlPageVars {
   creatorImageAlt?: string;
   license?: string;
   menuHeader?: string;
-  menuFooter?: string;
   menuFooterPlain?: string;
   announcementsTop?: string;
   announcementsBottom?: string;

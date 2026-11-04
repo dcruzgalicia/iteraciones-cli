@@ -1,12 +1,12 @@
     <div id="card-identity" class="min-w-0">
 
-      <div class="relative flex items-center gap-3 rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-5 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 transition-all duration-200 hover:ring-accent-500/40">
+      <div class="flex items-center gap-3">
         $if(home-href)$
         <a href="$home-href$" class="no-underline shrink-0" aria-label="$site-title$">$logo-block$</a>
         $else$
         $logo-block$
         $endif$
-        <div class="flex flex-col">
+        <div class="flex min-w-0 flex-col items-start">
           $if(home-href)$
           <a href="$home-href$" class="font-semibold text-2xl leading-none text-accent-800 dark:text-accent-300 no-underline hover:underline">$site-title$</a>
           $else$
