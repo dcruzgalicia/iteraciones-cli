@@ -123,7 +123,7 @@ Then('el CSS incluye las clases del HTML y el acento configurado', () => {
 });
 
 Then('el CSS mezcla el acento en el fondo de las tarjetas', () => {
-  if (!/color-mix\(in oklab, var\(--color-accent-500\) 4%/.test(world.css)) {
+  if (!/color-mix\(in oklab, var\(--color-accent-500\) 2%/.test(world.css)) {
     throw new Error('el fondo de .tarjeta no mezcla el acento');
   }
 });
@@ -301,7 +301,7 @@ Then('el esqueleto usa el fondo del sitio teñido del acento', async () => {
 
 Then('el CSS mezcla el acento en el fondo del sitio', () => {
   if (!world.css.includes('@utility bg-paper')) throw new Error('falta la utilidad bg-paper');
-  if (!world.css.includes('color-mix(in oklab, var(--color-accent-500) 3%, var(--color-stone-100))')) {
+  if (!world.css.includes('color-mix(in oklab, var(--color-accent-500) 8%, var(--color-stone-50))')) {
     throw new Error('el fondo del sitio no mezcla el acento');
   }
 });
