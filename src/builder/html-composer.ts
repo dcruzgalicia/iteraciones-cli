@@ -97,7 +97,7 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
 function headerHtml(identity: string, menuHeader: string, redes: string): string {
   return [
     '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6 lg:p-8">',
-    '<div class="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:gap-6">',
+    '<div class="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:gap-12">',
     `<div class="min-w-0">${identity}</div>`,
     `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-end">${menuHeader}${redes}</div>`,
     '</div>',
@@ -108,9 +108,9 @@ function headerHtml(identity: string, menuHeader: string, redes: string): string
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
   return [
     '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6 lg:p-8">',
-    '<div class="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:gap-6">',
+    '<div class="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:gap-12">',
     `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-start">${menuFooterPlain}${redes}</div>`,
-    `<div class="flex min-w-0 items-center">${footerIdentity}</div>`,
+    `<div class="flex min-w-0 items-center justify-center sm:justify-start">${footerIdentity}</div>`,
     '</div>',
     '</div>',
   ].join('\n');

@@ -1763,7 +1763,7 @@ function parrafosPlanos(fragment: string): string[] {
         .replace(/<[^>]+>/g, ' ')
         .replace(/&lt;\/?[a-z][^&]*?&gt;/gi, ' ')
         .replace(/:{3,}/g, ' ')
-        .replace(/\\/g, ' ')
+        .replace(/\\[ \t]*(?=\n|$)/g, '')
         .replace(/&nbsp;/g, ' ')
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
@@ -1774,7 +1774,8 @@ function parrafosPlanos(fragment: string): string[] {
         .replace(/^>\s*/gm, '')
         .replace(/^[-+*]\s+/gm, '')
         .replace(/^\d+\.\s+/gm, '')
-        .replace(/\s+/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\s*\n\s*/g, '\n')
         .trim(),
     )
     .filter((parrafo) => parrafo !== '');
@@ -1803,7 +1804,7 @@ function collectionCard(
       ' style="mask-image:linear-gradient(to bottom,black 70%,transparent);-webkit-mask-image:linear-gradient(to bottom,black 70%,transparent)"';
     const previewHtml = [
       `<div class="tarjeta-preview-wrap min-h-0 flex-1 overflow-hidden"${estiloPreview}>`,
-      `<p class="tarjeta-preview">${parrafos.map((parrafo) => escaparHtml(parrafo)).join('<br><br>')}</p>`,
+      `<p class="tarjeta-preview">${parrafos.map((parrafo) => escaparHtml(parrafo).replace(/\n/g, '<br>')).join('<br><br>')}</p>`,
       '</div>',
     ].join('\n');
     contenido.push('', previewHtml);
