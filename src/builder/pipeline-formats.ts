@@ -265,13 +265,14 @@ function opcional(valor: string | undefined): string | undefined {
 function tarjetasDeSitio(args: {
   siteConfig: SiteConfig;
   dir: string;
+  license?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
 }): Pick<HtmlPageVars, 'license' | 'menuHeader' | 'menuFooterPlain' | 'announcementsTop' | 'announcementsBottom'> {
   return {
-    license: licenciaHtml(args.siteConfig, args.dir),
+    license: licenciaHtml(args.siteConfig, args.dir, args.license),
     menuHeader: args.menuHeader,
     menuFooterPlain: args.menuFooterPlain,
     announcementsTop: opcional(args.announcementsTop),
@@ -393,7 +394,15 @@ function htmlVars(args: {
     backCover: covers?.back,
     creatorImage,
     creatorImageAlt: cuando(creatorImage !== undefined, `Retrato de ${titulo}`),
-    ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menuHeader, menuFooterPlain, announcementsTop, announcementsBottom }),
+    ...tarjetasDeSitio({
+      siteConfig: ctx.siteConfig,
+      dir,
+      license: fmTrimmedString(fm.license),
+      menuHeader,
+      menuFooterPlain,
+      announcementsTop,
+      announcementsBottom,
+    }),
     pageChips: opcional(pageChips),
     indiceColeccion,
     docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
@@ -1154,16 +1163,37 @@ function ctaDeTarjeta(type: string | undefined): string {
 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-4 text-xs! ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! ${CARD_TEXT_CLASSES}`;
 
-/** La licencia CC que el sitio sabe pintar (iconos y texto). */
-const LICENCIA_CC_BY_NC_ND = 'CC-BY-NC-ND-4.0';
+/** Las licencias que el sitio sabe pintar (iconos y texto). */
+interface LicenciaDef {
+  iconos: readonly string[];
+  texto: string;
+}
 
-const TEXTO_LICENCIA =
+const TEXTO_CC_BY_NC_ND =
   'Algunos derechos reservados. Esta obra está bajo una Licencia Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional. Usted es libre de compartir, copiar y redistribuir el material en cualquier medio o formato, pero debe dar crédito de manera adecuada, brindar un enlace a la&nbsp;licencia e indicar si se han realizado cambios. No puede hacer uso de esta obra con propósitos comerciales, ni remezclar, transformar o crear obras derivadas, ni distribuir el material modificado.';
 
-/** La licencia CC, site-wide, dentro de la tarjeta del footer. */
-function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
-  if (siteConfig.format?.html?.site?.license !== LICENCIA_CC_BY_NC_ND) return undefined;
-  const iconos = ['cc', 'by', 'nc', 'nd']
+const TEXTO_F2F =
+  'Algunos derechos reservados. Esta obra está bajo la <a href="https://labekka.red/licencia-f2f/" target="_blank" rel="noopener noreferrer" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">Licencia de producción de pares feministas (F2F)</a>. Usted es libre de compartir, copiar, distribuir, ejecutar o comunicar públicamente la obra y de hacer obras derivadas bajo las siguientes condiciones: debe reconocer los créditos de la obra de la manera especificada por la o las autoras o licenciantes, sin sugerir que respaldan su uso; si modifica o transforma esta obra, o produce una obra derivada, sólo puede distribuir la obra generada bajo una licencia idéntica a ésta; y la explotación comercial sólo está permitida a cooperativas, organizaciones y colectivos sin fines de lucro, y a organizaciones de trabajadoras autogestionadas, que se identifiquen y organicen bajo principios feministas. Todo excedente o plusvalía obtenidos por el ejercicio de los derechos concedidos por esta licencia sobre la obra no puede acumularse ni usarse para la especulación y debe reinvertirse en la lucha contra el cisheteropatriarcado y el capitalismo. Al reutilizar o distribuir la obra debe dejar claros los términos de esta licencia; la mejor forma de hacerlo es enlazar a la&nbsp;licencia.';
+
+const LICENCIAS: Record<string, LicenciaDef> = {
+  'CC-BY-NC-ND-4.0': { iconos: ['cc', 'by', 'nc', 'nd'], texto: TEXTO_CC_BY_NC_ND },
+  F2F: { iconos: ['f2f-atribucion', 'f2f-compartirigual', 'f2f-feministanocapitalista'], texto: TEXTO_F2F },
+};
+
+const LICENCIA_POR_DEFECTO = 'F2F';
+
+function normalizarLicencia(valor: string | undefined): string | undefined {
+  const limpio = valor?.trim().toLocaleUpperCase('es');
+  return limpio === undefined || limpio === '' ? undefined : limpio;
+}
+
+/** La licencia del sitio o la del documento, dentro de la tarjeta del sidebar. */
+function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string): string | undefined {
+  const explicita =
+    normalizarLicencia(override) ?? normalizarLicencia(siteConfig.format?.html?.site?.license) ?? normalizarLicencia(siteConfig.license);
+  const licencia = LICENCIAS[explicita ?? LICENCIA_POR_DEFECTO];
+  if (licencia === undefined) return undefined;
+  const iconos = licencia.iconos
     .map(
       (nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.webp`)}" alt="" class="block my-0!" style="width:32px;height:32px">`,
     )
@@ -1171,7 +1201,7 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
   return [
     `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
     `<div class="mb-3 flex items-center gap-2">${iconos}</div>`,
-    `<p class="m-0 text-xs leading-relaxed sm:text-xs md:text-sm lg:text-base">${TEXTO_LICENCIA}</p>`,
+    `<p class="m-0 text-xs leading-relaxed sm:text-xs md:text-sm lg:text-base">${licencia.texto}</p>`,
   ].join('');
 }
 

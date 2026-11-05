@@ -2,10 +2,10 @@
 Característica: la tarjeta de licencia del sitio
 
   Como quien publica el sitio
-  Quiero una tarjeta automática con la licencia Creative Commons
+  Quiero una tarjeta automática con la licencia del proyecto o del documento
   Para que los derechos queden claros en todas las páginas
 
-  Regla de negocio: La licencia se declara en la configuración del sitio
+  Regla de negocio: La licencia se declara en la configuración o en el frontmatter
 
     Escenario: Con CC-BY-NC-ND-4.0 aparece la licencia en el sidebar
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -80,8 +80,62 @@ Característica: la tarjeta de licencia del sitio
       Entonces el archivo "dist/files/convocatorias/antologia.html" dice "src=\"./../assets/images/cc.webp\""
       Y el archivo "dist/files/convocatorias/antologia.html" dice "width:32px;height:32px"
 
-    Escenario: Sin licencia no hay tarjeta
+    Escenario: Sin licencia configurada se muestra la F2F por defecto
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" no dice "Algunos derechos reservados."
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
+      Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas (F2F)"
+      Y el archivo "dist/files/index.html" dice "labekka.red/licencia-f2f"
+      Y el archivo "dist/files/index.html" dice "assets/images/f2f-atribucion.webp"
+      Y el archivo "dist/files/index.html" dice "assets/images/f2f-compartirigual.webp"
+      Y el archivo "dist/files/index.html" dice "assets/images/f2f-feministanocapitalista.webp"
+      Y el archivo "dist/files/assets/images/f2f-atribucion.webp" existe
+      Y el archivo "dist/files/assets/images/f2f-compartirigual.webp" existe
+      Y el archivo "dist/files/assets/images/f2f-feministanocapitalista.webp" existe
+
+    Escenario: La clave license del nivel superior elige la licencia del proyecto
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        license: cc-by-nc-nd-4.0
+        format:
+          html:
+            generate: true
+            site:
+              title: Test
+        """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/index.html" dice "Licencia Creative Commons"
+      Y el archivo "dist/files/index.html" dice "assets/images/cc.webp"
+      Y el archivo "dist/files/index.html" no dice "Licencia de producción de pares feministas"
+
+    Escenario: El frontmatter del documento gana sobre la licencia del sitio
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        license: F2F
+        format:
+          html:
+            generate: true
+            site:
+              title: Test
+        """
+      Y que el archivo "un-texto.md" tiene este contenido
+        """
+        ---
+        title: Un texto
+        license: CC-BY-NC-ND-4.0
+        ---
+
+        Cuerpo del texto.
+        """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/un-texto.html" dice "Licencia Creative Commons"
+      Y el archivo "dist/files/un-texto.html" dice "assets/images/cc.webp"
+      Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas (F2F)"
