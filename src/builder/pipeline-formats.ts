@@ -1166,18 +1166,24 @@ const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl 
 /** Las licencias que el sitio sabe pintar (iconos y texto). */
 interface LicenciaDef {
   iconos: readonly string[];
-  texto: string;
+  parrafos: readonly string[];
 }
 
-const TEXTO_CC_BY_NC_ND =
-  'Algunos derechos reservados. Esta obra está bajo una Licencia Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional. Usted es libre de compartir, copiar y redistribuir el material en cualquier medio o formato, pero debe dar crédito de manera adecuada, brindar un enlace a la&nbsp;licencia e indicar si se han realizado cambios. No puede hacer uso de esta obra con propósitos comerciales, ni remezclar, transformar o crear obras derivadas, ni distribuir el material modificado.';
+const TEXTO_CC_BY_NC_ND = [
+  'Algunos derechos reservados. Esta obra está bajo una Licencia Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional. Usted es libre de compartir, copiar y redistribuir el material en cualquier medio o formato, pero debe dar crédito de manera adecuada, brindar un enlace a la&nbsp;licencia e indicar si se han realizado cambios. No puede hacer uso de esta obra con propósitos comerciales, ni remezclar, transformar o crear obras derivadas, ni distribuir el material modificado.',
+] as const;
 
-const TEXTO_F2F =
-  'Algunos derechos reservados. Esta obra está bajo la <a href="https://labekka.red/licencia-f2f/" target="_blank" rel="noopener noreferrer" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">Licencia de producción de pares feministas (F2F)</a>. Usted es libre de compartir, copiar, distribuir, ejecutar o comunicar públicamente la obra y de hacer obras derivadas bajo las siguientes condiciones: debe reconocer los créditos de la obra de la manera especificada por la o las autoras o licenciantes, sin sugerir que respaldan su uso; si modifica o transforma esta obra, o produce una obra derivada, sólo puede distribuir la obra generada bajo una licencia idéntica a ésta; y la explotación comercial sólo está permitida a cooperativas, organizaciones y colectivos sin fines de lucro, y a organizaciones de trabajadoras autogestionadas, que se identifiquen y organicen bajo principios feministas. Todo excedente o plusvalía obtenidos por el ejercicio de los derechos concedidos por esta licencia sobre la obra no puede acumularse ni usarse para la especulación y debe reinvertirse en la lucha contra el cisheteropatriarcado y el capitalismo. Al reutilizar o distribuir la obra debe dejar claros los términos de esta licencia; la mejor forma de hacerlo es enlazar a la&nbsp;licencia.';
+const TEXTO_F2F = [
+  'Algunos derechos reservados. Esta obra está bajo la <a href="https://labekka.red/licencia-f2f/" target="_blank" rel="noopener noreferrer" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">Licencia de producción de pares feministas (F2F)</a>, una licencia feminista y anticapitalista. Usted es libre de compartir, copiar, distribuir, ejecutar o comunicar públicamente la obra y de hacer obras derivadas bajo las siguientes condiciones:',
+  'Debes reconocer los créditos de la obra de la manera especificada por la o las autoras o licenciantes (pero no de una manera que sugiera que tiene su apoyo o que apoyan el uso que hace de su obra).',
+  'Si modifican o transforman esta obra, o producen una obra derivada, sólo pueden distribuir la obra generada bajo una licencia idéntica a ésta.',
+  'La explotación comercial de esta obra sólo está permitida a cooperativas, organizaciones, colectivas y redes sin fines de lucro, y a organizaciones de trabajadoras autogestionadas, que se identifiquen y organicen bajo principios feministas. Todo excedente o plusvalía obtenidos por el ejercicio de los derechos concedidos por esta licencia sobre la obra no pueden ser acumulados o utilizados para la especulación y deben ser reinvertidos en la lucha contra el cisheteropatriarcado y el capitalismo.',
+  'Al reutilizar o distribuir la obra debe dejar claros los términos de esta licencia; la mejor forma de hacerlo es enlazar a la&nbsp;licencia.',
+] as const;
 
 const LICENCIAS: Record<string, LicenciaDef> = {
-  'CC-BY-NC-ND-4.0': { iconos: ['cc', 'by', 'nc', 'nd'], texto: TEXTO_CC_BY_NC_ND },
-  F2F: { iconos: ['f2f-atribucion', 'f2f-compartirigual', 'f2f-feministanocapitalista'], texto: TEXTO_F2F },
+  'CC-BY-NC-ND-4.0': { iconos: ['cc', 'by', 'nc', 'nd'], parrafos: TEXTO_CC_BY_NC_ND },
+  F2F: { iconos: ['f2f-atribucion', 'f2f-compartirigual', 'f2f-feministanocapitalista'], parrafos: TEXTO_F2F },
 };
 
 const LICENCIA_POR_DEFECTO = 'F2F';
@@ -1198,10 +1204,11 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string): s
       (nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.webp`)}" alt="" class="block my-0!" style="width:32px;height:32px">`,
     )
     .join('');
+  const parrafos = licencia.parrafos.map((parrafo) => `<p class="m-0">${parrafo}</p>`).join('');
   return [
     `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
     `<div class="mb-3 flex items-center gap-2">${iconos}</div>`,
-    `<p class="m-0 text-xs leading-relaxed sm:text-xs md:text-sm lg:text-base">${licencia.texto}</p>`,
+    `<div class="space-y-3 text-xs leading-relaxed sm:text-xs md:text-sm lg:text-base">${parrafos}</div>`,
   ].join('');
 }
 
