@@ -7,7 +7,7 @@ Característica: los anuncios del sitio
 
   Regla de negocio: El anuncio elige su lugar
 
-    Escenario: Con placement top sale después de Redes y antes del contenido
+    Escenario: Con placement top aparece primero en el sidebar
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y que el archivo "anuncio.md" tiene este contenido
@@ -25,12 +25,22 @@ Característica: los anuncios del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/tercera-convocatoria-por-historikas.html" existe
-      Y el archivo "dist/files/index.html" pone "<div id=\"card-identity\"" antes que "Tercera convocatoria"
-      Y el archivo "dist/files/index.html" pone "Tercera convocatoria" antes que "card-identity-footer"
+      Y el archivo "dist/files/index.html" pone "</main>" antes que "Tercera convocatoria"
+      Y el archivo "dist/files/anuncio.html" no existe
 
-    Escenario: Con placement bottom sale antes de la segunda Redes
+    Escenario: Con placement bottom aparece al final del sidebar
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        format:
+          html:
+            generate: true
+            site:
+              title: Test
+              license: CC-BY-NC-ND-4.0
+        """
       Y que el archivo "anuncio.md" tiene este contenido
         """
         ---
@@ -46,7 +56,8 @@ Característica: los anuncios del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice "Anuncio del pie"
-      Y el archivo "dist/files/index.html" pone "Anuncio del pie" antes que "card-identity-footer"
+      Y el archivo "dist/files/index.html" pone "</main>" antes que "Anuncio del pie"
+      Y el archivo "dist/files/index.html" pone "Algunos derechos reservados." antes que "Anuncio del pie"
 
     Escenario: El anuncio no se duplica en las listas
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -63,6 +74,7 @@ Característica: los anuncios del sitio
 
         Este es el anuncio.
         """
+      Y otro texto de "Ana García"
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/index.html" contiene 1 veces "Tercera convocatoria"
       Y el archivo "dist/files/texto.html" contiene 1 veces "Tercera convocatoria"
@@ -109,6 +121,39 @@ Característica: los anuncios del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice "anuncio-foto.webp"
       Y el archivo "dist/files/assets/images/anuncio-foto.webp" existe
+
+    Escenario: Con dos anuncios el chip lleva a la lista de anuncios
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y que el archivo "anuncio.md" tiene este contenido
+        """
+        ---
+        type: announcement
+        title: Tercera convocatoria
+        date: 2026-09-11
+        creator: Histórikas
+        placement: top
+        ---
+
+        Este es el anuncio.
+        """
+      Y que el archivo "otro-anuncio.md" tiene este contenido
+        """
+        ---
+        type: announcement
+        title: Anuncio del pie
+        date: 2026-09-10
+        creator: Histórikas
+        placement: bottom
+        ---
+
+        Anuncio que va abajo.
+        """
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/anuncio.html" existe
+      Y el archivo "dist/files/anuncio.html" dice "Tercera convocatoria"
+      Y el archivo "dist/files/anuncio.html" dice "Anuncio del pie"
+      Y el archivo "dist/files/index.html" dice "href=\"./anuncio.html\""
 
     Escenario: Sin anuncios el sitio no cambia
       Dado que la raíz del proyecto tiene un proyecto de prueba

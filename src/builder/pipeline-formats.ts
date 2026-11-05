@@ -19,7 +19,7 @@ import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { CHIP_OUTLINE_CLASSES, type HtmlDocType, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
+import { CHIP_OUTLINE_CLASSES, creatorPortraitHtml, type HtmlDocType, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
 import {
   type DocumentImages,
   imageNamerFor,
@@ -234,6 +234,7 @@ function epubCoverPath(fm: Record<string, unknown>, docDir: string, epubMap: Map
 
 function contentChipPara(type: string | undefined): string | undefined {
   if (type === 'creator') return 'Bio';
+  if (type === 'menu') return 'Menú';
   if (type === undefined || type === 'file') return 'Contenido';
   return undefined;
 }
@@ -320,11 +321,14 @@ function htmlVars(args: {
   pageChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
+  docChipHrefOverride?: string;
+  contentChipOverride?: string;
   indiceColeccion?: string;
   creatorHrefs: Map<string, string>;
   extras: string;
   sidebarExtras: string;
   pagination: string;
+  discoveryIndex: Map<string, DiscoveryEntry>;
 }): HtmlPageVars {
   const {
     doc,
@@ -341,11 +345,14 @@ function htmlVars(args: {
     pageChips,
     announcementsTop,
     announcementsBottom,
+    docChipHrefOverride,
+    contentChipOverride,
     indiceColeccion,
     creatorHrefs,
     extras,
     sidebarExtras,
     pagination,
+    discoveryIndex,
   } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
@@ -353,6 +360,10 @@ function htmlVars(args: {
   const titulo = doc.frontmatter.title || slug;
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
+  const siteTitle = conValorPorDefecto(htmlConfig?.site?.title, 'iteraciones');
+  const esListaIndex = doc.relativePath === 'index.md' && doc.frontmatter.type === 'list';
+  const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
+  const esPaginaIndex = doc.relativePath === 'index.md';
   return {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
     title: titulo,
@@ -361,6 +372,7 @@ function htmlVars(args: {
     lang,
     theme: htmlConfig?.site?.theme,
     css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
+    iconTop: relativeHref(dir, `${ASSETS_IMAGES_DIR}/arrow-upward.webp`),
     keywords: opcional(keywordsFromFm(fm).join(', ')),
     authorMeta: doc.frontmatter.creator.join(', '),
     docTitle: cuando(doc.frontmatter.title !== undefined && doc.frontmatter.title !== TITULO_POR_DEFECTO, doc.frontmatter.title ?? ''),
@@ -376,7 +388,7 @@ function htmlVars(args: {
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: conValorPorDefecto(docChip, docChipLabel(doc.frontmatter.type)),
-    contentChip: contentChipPara(doc.frontmatter.type),
+    contentChip: contentChipOverride ?? contentChipPara(doc.frontmatter.type),
     frontCover: covers?.front,
     backCover: covers?.back,
     creatorImage,
@@ -384,9 +396,19 @@ function htmlVars(args: {
     ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menuHeader, menuFooterPlain, announcementsTop, announcementsBottom }),
     pageChips: opcional(pageChips),
     indiceColeccion,
-    docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
+    docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: opcional(extras),
     sidebarExtras: opcional(sidebarExtras),
+    recientes: opcional(esListaIndex ? '' : recentesCard(discoveryIndex, dir)),
+    siteKeywords: opcional(
+      siteKeywordsCard(
+        discoveryIndex,
+        dir,
+        siteTitle,
+        esPaginaKeyword ? undefined : keywordIndexHref(dir, discoveryIndex),
+        esPaginaIndex ? undefined : relativeHref(dir, 'index.html'),
+      ),
+    ),
     pagination: opcional(pagination),
   };
 }
@@ -411,6 +433,8 @@ export async function emitHtmlPage(
   pageChips?: string,
   announcementsTop?: string,
   announcementsBottom?: string,
+  docChipHrefOverride?: string,
+  contentChipOverride?: string,
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
   const { dir, outBase, outSlug, content } = outputs;
@@ -450,11 +474,14 @@ export async function emitHtmlPage(
         pageChips,
         announcementsTop,
         announcementsBottom,
+        docChipHrefOverride,
+        contentChipOverride,
         indiceColeccion: indices?.[indice],
         creatorHrefs,
         extras: extraPagina,
         sidebarExtras,
         pagination,
+        discoveryIndex,
       }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
@@ -983,36 +1010,24 @@ function escaparHtml(texto: string): string {
 }
 
 /**
- * La tarjeta de índice de una colección, una por página: lista los textos de
- * esa página y enlaza con los índices de la página anterior y la siguiente.
+ * La tarjeta de índice de una colección. La misma lista completa se repite en
+ * todas las páginas: el índice no se corta por página.
  */
-function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, string>, outSlug: string, pageSize: number): string[] {
+function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, string>, pageSize: number): string[] {
   const imprimibles = printableEntries(entries);
+  if (imprimibles.length === 0) return [];
   const total = Math.ceil(imprimibles.length / pageSize);
-  const indices: string[] = [];
-  for (let pagina = 1; pagina <= total; pagina++) {
-    const items = imprimibles
-      .slice((pagina - 1) * pageSize, pagina * pageSize)
-      .map((entrada) => {
-        const href = memberHrefs.get(entrada.file);
-        const titulo = escaparHtml(entrada.title || TITULO_POR_DEFECTO);
-        return href === undefined
-          ? `<li>${titulo}</li>`
-          : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
-      })
-      .join('');
-    const claseEnlace = 'text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
-    const anterior =
-      pagina > 1 ? `<a href="./${pageSlug(outSlug, pagina - 1)}.html#indice-pagina-${pagina - 1}" class="${claseEnlace}">← Índice anterior</a>` : '';
-    const siguiente =
-      pagina < total
-        ? `<a href="./${pageSlug(outSlug, pagina + 1)}.html#indice-pagina-${pagina + 1}" class="${claseEnlace}">Índice siguiente →</a>`
-        : '';
-    indices.push(
-      `<div class="min-w-0" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,
-    );
-  }
-  return indices;
+  const items = imprimibles
+    .map((entrada) => {
+      const href = memberHrefs.get(entrada.file);
+      const titulo = escaparHtml(entrada.title || TITULO_POR_DEFECTO);
+      return href === undefined
+        ? `<li>${titulo}</li>`
+        : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
+    })
+    .join('');
+  const indice = `<div class="min-w-0" id="indice-completo"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
+  return Array.from({ length: total }, () => indice);
 }
 
 function indicesDeColeccion(
@@ -1025,7 +1040,7 @@ function indicesDeColeccion(
 ): string[] {
   const tocActivo = typeof outputs.fm.toc === 'boolean' ? outputs.fm.toc : siteConfig.toc;
   if (doc.frontmatter.type !== 'collection' || !tocActivo) return [];
-  return collectionIndices(entries, memberHrefs, outputs.outSlug, pageSize);
+  return collectionIndices(entries, memberHrefs, pageSize);
 }
 
 function assertPaginasLibres(relativePath: string, dir: string, outSlug: string, total: number, discoveryIndex: Map<string, DiscoveryEntry>): void {
@@ -1057,6 +1072,8 @@ const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 // En las tarjetas extras el chip no deja espacio ni arriba ni abajo: es el
 // primero de la tarjeta y el h2 traería sus márgenes del navegador.
 const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
+const EXTRA_PILL_OUTLINE_CLASSES =
+  'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-transparent px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300';
 
 // El chip que abre una tarjeta extra deja aire antes del elemento que sigue.
 const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
@@ -1119,6 +1136,12 @@ const PAGE_CHIP_BASE =
   'inline-flex h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none no-underline transition-colors duration-200 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm';
 const PAGE_COLLECTION_CHIP_CLASSES = `${PAGE_CHIP_BASE} border-accent-500/50 bg-transparent text-accent-800 hover:border-accent-500 hover:underline dark:border-accent-400/50 dark:text-accent-200`;
 const PAGE_KEYWORD_CHIP_CLASSES = `${PAGE_CHIP_BASE} border-stone-500/60 bg-transparent text-stone-600 hover:border-stone-600 hover:underline dark:border-stone-400/60 dark:text-stone-300`;
+const RECENTES_LIMIT = 5;
+const KEYWORD_INDEX_SLUG = 'keyword';
+const SIDEBAR_KEYWORD_CHIP_CLASSES =
+  'not-prose inline-flex h-7 items-center gap-1.5 rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-colors duration-200 hover:border-stone-600 hover:underline sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+const KEYWORD_BADGE_CLASSES =
+  'inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
 
 /** El texto del CTA según lo que hay al otro lado. */
 function ctaDeTarjeta(type: string | undefined): string {
@@ -1141,10 +1164,12 @@ const TEXTO_LICENCIA =
 function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
   if (siteConfig.format?.html?.site?.license !== LICENCIA_CC_BY_NC_ND) return undefined;
   const iconos = ['cc', 'by', 'nc', 'nd']
-    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.svg`)}" alt="" class="block my-0!" style="width:26.25pt">`)
+    .map(
+      (nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.webp`)}" alt="" class="block my-0!" style="width:32px;height:32px">`,
+    )
     .join('');
   return [
-    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
+    `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
     `<div class="mb-3 flex items-center gap-2">${iconos}</div>`,
     `<p class="m-0 text-xs leading-relaxed sm:text-xs md:text-sm lg:text-base">${TEXTO_LICENCIA}</p>`,
   ].join('');
@@ -1199,17 +1224,73 @@ export function containersCard(
 }
 
 /** La tarjeta que lista los keywords del documento, cada uno con su lista. */
-export function keywordsCard(keywords: { titulo: string; href: string }[]): string {
-  const items = keywords.map((k) => `- [${k.titulo}](${k.href})`).join('\n');
-  return [
-    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
-    '',
-    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Palabras clave</h2></div>`,
-    '',
-    items,
-    '',
-    '::::',
-  ].join('\n');
+function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], ownerChip: string, titleHref?: string): string {
+  if (keywords.length === 0) return '';
+  const chips = keywords
+    .map((keyword) => {
+      const badge = keyword.count === undefined ? '' : `<span class="${KEYWORD_BADGE_CLASSES}">${keyword.count}</span>`;
+      return `<a href="${keyword.href}" class="${SIDEBAR_KEYWORD_CHIP_CLASSES}">${escaparHtml(keyword.titulo)}${badge}</a>`;
+    })
+    .join('');
+  const titulo =
+    titleHref === undefined
+      ? `<h2 class="${EXTRA_PILL_CLASSES}">Palabras clave</h2>`
+      : `<a href="${titleHref}" class="${EXTRA_PILL_CLASSES} hover:underline">Palabras clave</a>`;
+  return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2">${titulo}${ownerChip}</div><div class="flex flex-wrap gap-2">${chips}</div></div>`;
+}
+
+/** La tarjeta de las palabras clave del documento o la colección. */
+export function keywordsCard(keywords: { titulo: string; href: string; count?: number }[], ownerLabel: string, titleHref?: string): string {
+  const ownerChip = `<span class="${EXTRA_PILL_OUTLINE_CLASSES}">${escaparHtml(ownerLabel)}</span>`;
+  return keywordChipsCard(keywords, ownerChip, titleHref);
+}
+
+/** La tarjeta con todas las palabras clave disponibles del sitio. */
+function siteKeywordsCard(
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  dir: string,
+  siteTitle: string,
+  titleHref?: string,
+  siteHref?: string,
+): string {
+  const keywords = keywordListsOf(discoveryIndex).map(({ slug, label }) => ({
+    titulo: label,
+    href: keywordHref(dir, slug),
+    count: keywordMembers(discoveryIndex, slug).length,
+  }));
+  const ownerChip =
+    siteHref === undefined
+      ? `<span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span>`
+      : `<a href="${siteHref}" class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</a>`;
+  return keywordChipsCard(keywords, ownerChip, titleHref);
+}
+
+/** La página por defecto con todas las palabras clave, si hay al menos dos. */
+function keywordIndexAvailable(discoveryIndex: Map<string, DiscoveryEntry>): boolean {
+  return keywordListsOf(discoveryIndex).length >= 2;
+}
+
+function keywordIndexHref(dir: string, discoveryIndex: Map<string, DiscoveryEntry>): string | undefined {
+  return keywordIndexAvailable(discoveryIndex) ? relativeHref(dir, `${KEYWORD_INDEX_SLUG}.html`) : undefined;
+}
+
+/** Las entradas más recientes del sitio, de la más nueva a la más vieja. */
+function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string): string {
+  const recientes = miembrosDeUnType(discoveryIndex, 'all')
+    .filter((ruta) => {
+      const entry = discoveryIndex.get(ruta);
+      return entry !== undefined && tipoDe(entry) !== 'list';
+    })
+    .slice(0, RECENTES_LIMIT);
+  if (recientes.length === 0) return '';
+  const items = recientes
+    .map((ruta) => {
+      const entry = discoveryIndex.get(ruta);
+      const html = posix(join(dirname(ruta), `${htmlSlugFor(ruta, entry?.slug)}.html`));
+      return `<li><a href="${relativeHref(dir, html)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${escaparHtml(entry?.title ?? ruta)}</a></li>`;
+    })
+    .join('');
+  return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Recientes</h2></div><ul class="m-0 list-disc space-y-1 ps-5">${items}</ul></div>`;
 }
 
 interface EnlaceMenu {
@@ -1232,6 +1313,31 @@ function enlacesDelMenu(discoveryIndex: Map<string, DiscoveryEntry>): EnlaceMenu
   });
 }
 
+function existeMenu(discoveryIndex: Map<string, DiscoveryEntry>): boolean {
+  return [...discoveryIndex.values()].some((entry) => entry.type === 'menu');
+}
+
+/** El menú siempre abre con el nombre del sitio, que lleva al inicio. */
+function enlacesConInicio(links: EnlaceMenu[], siteTitle: string): EnlaceMenu[] {
+  return [{ name: siteTitle, url: './index.html' }, ...links];
+}
+
+/** Los enlaces a las listas por defecto que sí existen. */
+function enlacesListasPorDefecto(available: Set<string>, conKeywords: boolean): EnlaceMenu[] {
+  const enlaces = DEFAULT_LISTS.filter((lista) => lista.slug !== 'index' && available.has(lista.slug)).map((lista) => ({
+    name: lista.title,
+    url: `./${lista.slug}.html`,
+  }));
+  return conKeywords ? [...enlaces, { name: 'Palabras clave', url: `./${KEYWORD_INDEX_SLUG}.html` }] : enlaces;
+}
+
+/** El menú del sitio: botón del header y enlaces del footer, si hay menú. */
+function menuDelSitio(discoveryIndex: Map<string, DiscoveryEntry>, siteTitle: string, dir: string): { header?: string; footer?: string } {
+  if (!existeMenu(discoveryIndex)) return {};
+  const links = enlacesConInicio(enlacesDelMenu(discoveryIndex), siteTitle);
+  return { header: menuHeaderLink(links, dir), footer: menuFooterContent(links, dir) };
+}
+
 function esEnlaceExterno(url: string): boolean {
   return /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(url);
 }
@@ -1250,7 +1356,7 @@ function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
 /** El botón del menú en el header: hamburguesa sutil, sin flecha. */
 function menuHeaderLink(links: EnlaceMenu[], dir: string): string | undefined {
   if (links.length === 0) return undefined;
-  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="Menú"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menú</span></a>`;
+  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="Menú"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" class="h-4 w-4"><span>Menú</span></a>`;
 }
 
 /** El menú del footer: hamburguesa y hasta 10 enlaces, todos como chips. */
@@ -1262,6 +1368,39 @@ function menuFooterContent(links: EnlaceMenu[], dir: string): string | undefined
     .map((enlace) => enlaceDeMenuChip(enlace, dir))
     .join('');
   return `${boton}${enlaces}`;
+}
+
+function tituloSidebarHtml(title: string, href: string | undefined): string {
+  const clases = 'not-prose mt-4 mb-4 text-center text-base font-bold text-accent-900 sm:text-lg dark:text-accent-300';
+  return href === undefined
+    ? `<h3 class="${clases}">${title}</h3>`
+    : `<h3 class="${clases}"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
+}
+
+/** La tarjeta de un anuncio, con la misma superficie y texto del sidebar. */
+function announcementCard(
+  e: CollectionEntry,
+  href: string | undefined,
+  dir: string,
+  available: Set<string> | undefined,
+  imagenes: Map<string, string>,
+): string {
+  const title = e.title || TITULO_POR_DEFECTO;
+  const imagen = imagenDeCabecera(e, 'announcement', imagenes, href);
+  const body = extractFragment(e.body, 150);
+  return [
+    `:::: {class="${EXTRA_CARD_CLASSES}"}`,
+    '',
+    chipHtml('Anuncio', 'announcement', dir, EXTRA_PILL_CLASSES, available),
+    '',
+    ...(imagen === undefined ? [] : [imagen, '']),
+    tituloSidebarHtml(title, href),
+    '',
+    body,
+    '',
+    href === undefined ? '' : `<p class="not-prose mt-4 text-center"><a href="${href}" class="${CARD_CTA_CLASSES}">Leer anuncio →</a></p>`,
+    '::::',
+  ].join('\n');
 }
 
 /** Las tarjetas de los anuncios, en HTML, para los slots del sitio. */
@@ -1281,17 +1420,7 @@ async function renderAnuncios(args: {
       const destino = args.discoveryIndex.get(entry.file);
       if (destino?.slug === undefined) return '';
       const rel = posix(join(dirname(entry.file), `${htmlSlugFor(entry.file, destino.slug)}.html`));
-      return collectionCard(
-        entry,
-        relativeHref(args.dir, rel),
-        args.creatorHrefs,
-        args.dir,
-        args.available,
-        args.discoveryIndex,
-        undefined,
-        undefined,
-        args.imagenes,
-      );
+      return announcementCard(entry, relativeHref(args.dir, rel), args.dir, args.available, args.imagenes);
     })
     .filter((card) => card !== '')
     .join('\n\n');
@@ -1328,8 +1457,8 @@ async function anunciosDeLaPagina(args: {
 }): Promise<{ top: string; bottom: string }> {
   const anuncios = (await readAnuncios(args.discoveryIndex, args.cwd)).filter((entry) => posix(entry.file).replace(/^\.\//, '') !== args.docPath);
   const imagenes = new Map([
-    ...(args.announcementImages === undefined ? [] : hrefsDeImagenes(args.announcementImages, args.outputDir, args.dir)),
     ...args.imagenes,
+    ...(args.announcementImages === undefined ? [] : hrefsDeImagenes(args.announcementImages, args.outputDir, args.dir)),
   ]);
   const comunes = {
     discoveryIndex: args.discoveryIndex,
@@ -1389,7 +1518,7 @@ export function creatorLinksCard(nombre: string, links: { name: string; url: str
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Redes</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(nombre)}</span></div>`,
+    `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Redes</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(nombre)}</span></div>`,
     '',
     items,
     '',
@@ -1410,8 +1539,12 @@ async function buildExtrasHtml(
     creatorDocs: CreatorDoc[];
     contenedores: { titulo: string; href: string; type: string | undefined }[];
     palabrasClave: { titulo: string; href: string }[];
+    keywordOwner: string;
     redesCreador: { name: string; url: string }[];
     duenoRedes: string;
+    creatorImage?: string;
+    creatorAlt?: string;
+    keywordPageHref?: string;
     creatorHrefs: Map<string, string>;
     available?: Set<string>;
     filters: ExportContext['filters'];
@@ -1440,9 +1573,10 @@ async function buildExtrasHtml(
   };
 
   if (parte === 'main') {
-    if (args.tarjetas === undefined || args.tarjetas === '') return '';
+    const retrato = args.creatorImage === undefined ? '' : creatorPortraitHtml(args.creatorImage, args.creatorAlt ?? '');
+    if (args.tarjetas === undefined || args.tarjetas === '') return retrato;
     const tarjetasHtml = await render([args.tarjetas]);
-    return `<div class="grid gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-6">${tarjetasHtml}</div>`;
+    return `<div class="grid gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-6">${retrato}${tarjetasHtml}</div>`;
   }
 
   const partes: string[] = [];
@@ -1453,7 +1587,7 @@ async function buildExtrasHtml(
     partes.push([CARD_WRAPPER, '', containersCard(args.contenedores, args.dir, args.available), '', '</div>'].join('\n'));
   }
   if (args.palabrasClave.length > 0) {
-    partes.push([CARD_WRAPPER, '', keywordsCard(args.palabrasClave), '', '</div>'].join('\n'));
+    partes.push([CARD_WRAPPER, '', keywordsCard(args.palabrasClave, args.keywordOwner, args.keywordPageHref), '', '</div>'].join('\n'));
   }
   if (args.redesCreador.length > 0) {
     partes.push([CARD_WRAPPER, '', creatorLinksCard(args.duenoRedes, args.redesCreador), '', '</div>'].join('\n'));
@@ -1470,6 +1604,107 @@ async function leerKeywordCache(cwd: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/** Crea o borra `keyword.html` según cuántas palabras clave haya. */
+async function syncKeywordIndex(args: {
+  cwd: string;
+  outputDir: string;
+  renderCtx: RenderContext;
+  exportCtx: ExportContext;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  listas: { slug: string; label: string; miembros: string[] }[];
+}): Promise<void> {
+  const { outputDir, discoveryIndex } = args;
+  const dueno = htmlOwner(discoveryIndex, '.', KEYWORD_INDEX_SLUG);
+  if (dueno !== undefined) {
+    if (keywordIndexAvailable(discoveryIndex)) {
+      logWarning(
+        `no se escribió la lista de palabras clave porque "${KEYWORD_INDEX_SLUG}.html" es el archivo de "${dueno}": renombra ese documento para que la lista exista`,
+        'build',
+      );
+    }
+    return;
+  }
+  if (!keywordIndexAvailable(discoveryIndex)) {
+    await rm(join(outputDir, `${KEYWORD_INDEX_SLUG}.html`), { force: true }).catch(() => {});
+    return;
+  }
+  await emitKeywordIndex(args);
+}
+
+/** El contenido de la página con todas las palabras clave del sitio. */
+function keywordIndexContent(listas: { slug: string; label: string }[]): string {
+  return listas.map(({ slug, label }) => `- [${escaparHtml(label)}](${keywordHref('.', slug)})`).join('\n');
+}
+
+/** La página por defecto `keyword.html` con todas las palabras clave. */
+async function emitKeywordIndex(args: {
+  cwd: string;
+  outputDir: string;
+  renderCtx: RenderContext;
+  exportCtx: ExportContext;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  listas: { slug: string; label: string; miembros: string[] }[];
+}): Promise<void> {
+  const { cwd, outputDir, renderCtx, exportCtx, discoveryIndex, listas } = args;
+  const { plan, formatCfg } = renderCtx;
+  if (!plan.activeFormats.html) return;
+
+  const hrefsCreadores = creatorHrefs(discoveryIndex, '.');
+  const available = availableDefaultListSlugs(discoveryIndex);
+  const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
+  const menu = menuDelSitio(discoveryIndex, siteTitle, '.');
+  const doc: BuildDocument = {
+    filePath: join(cwd, `${KEYWORD_INDEX_SLUG}.md`),
+    relativePath: `${KEYWORD_INDEX_SLUG}.md`,
+    frontmatter: { title: 'Palabras clave', date: '', creator: [], type: 'file', files: listas.flatMap((lista) => lista.miembros) },
+  };
+  const outputs: DocumentOutputs = {
+    slug: KEYWORD_INDEX_SLUG,
+    outSlug: KEYWORD_INDEX_SLUG,
+    dir: '.',
+    fm: { title: 'Palabras clave', type: 'file' },
+    content: '',
+    outBase: (name: string): string => join(outputDir, name),
+  };
+  const imagePaths = await writeListImagePaths(cwd, KEYWORD_INDEX_SLUG, new Map());
+  const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
+    discoveryIndex,
+    cwd,
+    dir: '.',
+    available,
+    creatorHrefs: hrefsCreadores,
+    imagenes: new Map(),
+    outputDir,
+    announcementImages: renderCtx.announcementImages,
+    filters: exportCtx.filters,
+    imagePaths,
+    sourcePath: doc.filePath,
+  });
+  await emitHtmlPage(
+    doc,
+    outputs,
+    renderCtx,
+    exportCtx,
+    discoveryIndex,
+    imagePaths,
+    [keywordIndexContent(listas)],
+    hrefsCreadores,
+    '',
+    '',
+    'Lista',
+    undefined,
+    undefined,
+    undefined,
+    menu.header,
+    menu.footer,
+    '',
+    anunciosTop,
+    anunciosBottom,
+    '',
+    'Palabras clave',
+  );
 }
 
 /**
@@ -1554,8 +1789,10 @@ export async function emitKeywordLists(args: {
       outBase: (name: string): string => join(outputDir, KEYWORDS_DIR, name),
     };
     const imagePaths = await writeListImagePaths(cwd, `${KEYWORDS_DIR}-${slug}`, procesadas.imageMap);
-    const menuHeader = menuHeaderLink(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR);
-    const menuFooterPlain = menuFooterContent(enlacesDelMenu(discoveryIndex), KEYWORDS_DIR);
+    const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
+    const menu = menuDelSitio(discoveryIndex, siteTitle, KEYWORDS_DIR);
+    const menuHeader = menu.header;
+    const menuFooterPlain = menu.footer;
     const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
       discoveryIndex,
       cwd,
@@ -1580,7 +1817,7 @@ export async function emitKeywordLists(args: {
       hrefsCreadores,
       '',
       '',
-      'Palabras clave',
+      'Palabra clave',
       undefined,
       undefined,
       undefined,
@@ -1589,9 +1826,12 @@ export async function emitKeywordLists(args: {
       '',
       anunciosTop,
       anunciosBottom,
+      keywordIndexAvailable(discoveryIndex) ? relativeHref(KEYWORDS_DIR, `${KEYWORD_INDEX_SLUG}.html`) : '',
     );
     await removeExtraHtmlPages(outputDir, KEYWORDS_DIR, slug, paginas.length, discoveryIndex);
   }
+
+  await syncKeywordIndex({ cwd, outputDir, renderCtx, exportCtx, discoveryIndex, listas });
 }
 
 /** Las creadoras de cada texto de la colección, sin repetir y en orden alfabético. */
@@ -1662,16 +1902,28 @@ function chipsDePertenencia(
 }
 
 /** Los keywords del documento, uno por slug y en orden alfabético, con su lista. */
-function palabrasClaveDe(relativePath: string, dir: string, discoveryIndex: Map<string, DiscoveryEntry>): { titulo: string; href: string }[] {
+function palabrasClaveDeRutas(
+  rutas: string[],
+  dir: string,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): { titulo: string; href: string; count: number }[] {
   const porSlug = new Map<string, string>();
-  for (const keyword of keywordsOf(discoveryIndex.get(relativePath))) {
-    const slug = keywordSlug(keyword);
-    if (slug === undefined) continue;
-    if (htmlOwner(discoveryIndex, KEYWORDS_DIR, slug) !== undefined) continue;
-    const actual = porSlug.get(slug);
-    if (actual === undefined || keyword.localeCompare(actual, 'es') < 0) porSlug.set(slug, keyword);
+  for (const ruta of rutas) {
+    for (const keyword of keywordsOf(discoveryIndex.get(ruta))) {
+      const slug = keywordSlug(keyword);
+      if (slug === undefined) continue;
+      if (htmlOwner(discoveryIndex, KEYWORDS_DIR, slug) !== undefined) continue;
+      const actual = porSlug.get(slug);
+      if (actual === undefined || keyword.localeCompare(actual, 'es') < 0) porSlug.set(slug, keyword);
+    }
   }
-  return [...porSlug].sort(([, a], [, b]) => a.localeCompare(b, 'es')).map(([slug, label]) => ({ titulo: label, href: keywordHref(dir, slug) }));
+  return [...porSlug]
+    .sort(([, a], [, b]) => a.localeCompare(b, 'es'))
+    .map(([slug, label]) => ({ titulo: label, href: keywordHref(dir, slug), count: keywordMembers(discoveryIndex, slug).length }));
+}
+
+function palabrasClaveDe(relativePath: string, dir: string, discoveryIndex: Map<string, DiscoveryEntry>): { titulo: string; href: string }[] {
+  return palabrasClaveDeRutas([relativePath], dir, discoveryIndex);
 }
 
 function chipsDePagina(
@@ -2330,11 +2582,14 @@ async function emitCollectionHtml(
   const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
   const available = availableDefaultListSlugs(discoveryIndex);
   const esMenu = doc.frontmatter.type === 'menu';
+  const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
   const enlaces = enlacesDelMenu(discoveryIndex);
-  const menuHeader = esMenu ? undefined : menuHeaderLink(enlaces, outputs.dir);
-  const menuFooterPlain = esMenu ? undefined : menuFooterContent(enlaces, outputs.dir);
+  const menu = menuDelSitio(discoveryIndex, siteTitle, outputs.dir);
+  const menuHeader = esMenu ? undefined : menu.header;
+  const menuFooterPlain = menu.footer;
+  const enlacesMenuPage = [...enlacesConInicio(enlaces, siteTitle), ...enlacesListasPorDefecto(available, keywordIndexAvailable(discoveryIndex))];
   const pageContent = esMenu
-    ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlaces, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
+    ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlacesMenuPage, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
     : content;
   const imagenes = hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir);
   const esCreadora = doc.frontmatter.type === 'creator';
@@ -2369,14 +2624,29 @@ async function emitCollectionHtml(
     sourcePath: doc.filePath,
   });
   const esTexto = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
-  const palabrasClave = esTexto ? palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex) : [];
+  const esColeccion = doc.frontmatter.type === 'collection';
+  const palabrasClave = esTexto
+    ? palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex)
+    : esColeccion
+      ? palabrasClaveDeRutas(
+          collectionEntries.map((entrada) => entrada.file),
+          outputs.dir,
+          discoveryIndex,
+        )
+      : [];
+  const keywordOwner = docChipLabel(doc.frontmatter.type);
   const duenoRedes = String(outputs.fm.name ?? outputs.fm.title ?? '');
+  const creatorImage = retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir);
   const extrasComunes = {
     creatorDocs,
     contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
     palabrasClave,
+    keywordOwner,
     redesCreador: esCreadora ? creatorLinks : [],
     duenoRedes,
+    creatorImage,
+    creatorAlt: creatorImage === undefined ? undefined : `Retrato de ${doc.frontmatter.title || outputs.slug}`,
+    keywordPageHref: keywordIndexHref(outputs.dir, discoveryIndex),
     creatorHrefs: hrefsCreadores,
     filters: exportCtx.filters,
     imagePaths,
@@ -2407,7 +2677,7 @@ async function emitCollectionHtml(
     undefined,
     covers,
     indices,
-    retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir),
+    creatorImage,
     menuHeader,
     menuFooterPlain,
     pageChips,
@@ -2568,7 +2838,7 @@ export function availableDefaultListSlugs(discoveryIndex: Map<string, DiscoveryE
     if (lista.type === 'all') {
       if (discoveryIndex.size > 0 && !discoveryIndex.has('index.md')) slugs.add(lista.slug);
     } else {
-      if (miembrosDeUnType(discoveryIndex, lista.type).length > 0) slugs.add(lista.slug);
+      if (miembrosDeUnType(discoveryIndex, lista.type).length > 1) slugs.add(lista.slug);
     }
   }
   return slugs;
@@ -2682,8 +2952,8 @@ export async function emitDefaultLists(args: {
   );
 
   for (const { slug, title, type, miembros, entradas, description } of listas) {
-    // Las listas por defecto sólo se escriben si hay elementos que listar.
-    if (miembros.length === 0) continue;
+    // Las listas por defecto sólo existen si hay al menos dos elementos.
+    if (type === 'all' ? miembros.length === 0 : miembros.length < 2) continue;
     const dueno = htmlOwner(discoveryIndex, '.', slug);
     if (dueno !== undefined) {
       logWarning(
@@ -2728,8 +2998,10 @@ export async function emitDefaultLists(args: {
     };
 
     const imagePaths = await writeListImagePaths(cwd, slug, procesadas.imageMap);
-    const menuHeader = menuHeaderLink(enlacesDelMenu(discoveryIndex), '.');
-    const menuFooterPlain = menuFooterContent(enlacesDelMenu(discoveryIndex), '.');
+    const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
+    const menu = menuDelSitio(discoveryIndex, siteTitle, '.');
+    const menuHeader = menu.header;
+    const menuFooterPlain = menu.footer;
     const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
       discoveryIndex,
       cwd,

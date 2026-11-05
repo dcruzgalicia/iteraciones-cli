@@ -14,7 +14,7 @@ Característica: los assets de la salida
       Entonces en los assets hay:
         """
         assets/css/styles.css
-        assets/images/favicon.svg
+        assets/images/favicon.png
         """
       Y en los assets NO hay:
         """
@@ -66,27 +66,32 @@ Característica: los assets de la salida
 
   Regla de negocio: El logo no se reescribe si no cambió
 
-    Escenario: Una segunda llamada deja el logo intacto
+    Escenario: Una segunda llamada mantiene el logo en WebP
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Cuando construyo los assets
-      Entonces anoto la fecha del logo copiado
-      Cuando construyo los assets otra vez
-      Y el logo copiado no se ha vuelto a escribir
+      Y construyo los assets otra vez
+      Entonces en los assets hay:
+        """
+        assets/images/logo.webp
+        assets/images/favicon.png
+        """
 
-    Escenario: Un logo del proyecto modificado se vuelve a copiar
+    Escenario: Un logo propio se convierte a WebP
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Y un proyecto con un logo propio
       Cuando construyo los assets con el logo del proyecto
-      Entonces el logo copiado dice "<svg>A</svg>"
+      Entonces en los assets hay:
+        """
+        assets/images/logo.webp
+        assets/images/favicon.png
+        """
       Y en los assets NO hay:
         """
         assets/mi-logo.svg
+        assets/images/favicon.svg
         """
-      Y el proyecto cambia su logo a "<svg>B</svg>"
-      Cuando construyo los assets con el logo del proyecto
-      Y el logo copiado dice "<svg>B</svg>"
 
   Regla de negocio: Una salida vieja se reconoce
 

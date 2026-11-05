@@ -7,6 +7,7 @@ import { detectPageSize } from '../builder/latex-preamble.js';
 import { aggregateCollectionCreators, postProcessCollections } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR, ASSETS_PDF_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import {
+  availableDefaultListSlugs,
   type CollectionEntry,
   collectionBaseContent,
   collectionCardsContent,
@@ -151,7 +152,7 @@ async function composeFor(
       src.text,
       creatorHrefs,
       dirname(src.relativePath),
-      undefined,
+      availableDefaultListSlugs(slugIndex),
       slugIndex,
       { path: src.relativePath, outSlug },
       ctx.relImageMap,

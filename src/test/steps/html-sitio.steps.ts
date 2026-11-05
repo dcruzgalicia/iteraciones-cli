@@ -173,7 +173,7 @@ Then('en el HTML de {string} el chip {string} no es un enlace', (archivo: string
   const html = leer(`dist/files/${archivo}`);
   const chip = new RegExp(`<span class="[^"]*bg-transparent[^"]*">${escaparRegex(etiqueta)}</span>`);
   if (!chip.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no aparece sin enlace en ${archivo}`);
-  if (new RegExp(`<a [^>]*>${escaparRegex(etiqueta)}</a>`).test(html)) {
+  if (new RegExp(`<a [^>]*class="[^"]*rounded-full[^"]*"[^>]*>${escaparRegex(etiqueta)}</a>`).test(html)) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} es un enlace y no debería`);
   }
 });
@@ -240,23 +240,21 @@ Given('el proyecto tiene toc activo', () => {
   escribirEnProyecto('iteraciones.config.yaml', `${yaml}\n`);
 });
 
-function indiceDe(pagina: string, numero: number): string {
+function indiceDe(pagina: string): string {
   const html = leer(pagina);
-  const inicio = html.indexOf(`id="indice-pagina-${numero}"`);
-  if (inicio < 0) throw new Error(`${pagina} no tiene el índice de la página ${numero}`);
+  const inicio = html.indexOf('id="indice-completo"');
+  if (inicio < 0) throw new Error(`${pagina} no tiene el índice completo`);
   return html.slice(inicio, html.indexOf('</nav>', inicio));
 }
 
 Then('el índice de la página {int} de la colección lista {int} textos', (pagina: number, cuantos: number) => {
   const html = pagina === 1 ? 'dist/files/antologia.html' : `dist/files/antologia-${pagina}.html`;
-  const indice = indiceDe(html, pagina);
+  const indice = indiceDe(html);
   const items = [...indice.matchAll(/<li><a /g)].length;
   if (items !== cuantos) throw new Error(`el índice de la página ${pagina} lista ${items} textos y deberían ser ${cuantos}`);
 });
 
-Then('el índice de la página {int} enlaza el índice de la página {int}', (desde: number, hacia: number) => {
-  const html = desde === 1 ? 'dist/files/antologia.html' : `dist/files/antologia-${desde}.html`;
-  const indice = indiceDe(html, desde);
-  const href = hacia === 1 ? 'antologia.html#indice-pagina-1' : `antologia-${hacia}.html#indice-pagina-${hacia}`;
-  if (!indice.includes(href)) throw new Error(`el índice de la página ${desde} no enlaza ${href}`);
+Then('el índice de la página {int} no dice {string}', (pagina: number, texto: string) => {
+  const html = pagina === 1 ? 'dist/files/antologia.html' : `dist/files/antologia-${pagina}.html`;
+  if (indiceDe(html).includes(texto)) throw new Error(`el índice de la página ${pagina} dice ${JSON.stringify(texto)} y no debería`);
 });

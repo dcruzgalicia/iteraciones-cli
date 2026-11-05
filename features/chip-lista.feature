@@ -19,7 +19,9 @@ Característica: El chip de tipo lleva a la lista de ese type
     Escenario: El build escribe una lista por type
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y una creadora llamada "Ana García"
+      Y otra creadora llamada "Otra Autora"
       Y un texto de "Ana García"
+      Y otro texto de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
@@ -31,7 +33,9 @@ Característica: El chip de tipo lleva a la lista de ese type
     Escenario: Cada lista trae los documentos de su type
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y una creadora llamada "Ana García"
+      Y otra creadora llamada "Otra Autora"
       Y un texto de "Ana García"
+      Y otro texto de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/texto.html" dice "Un texto"
@@ -47,6 +51,7 @@ Característica: El chip de tipo lleva a la lista de ese type
     Escenario: La lista de creadoras no pone "Anónima" en las tarjetas
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y una creadora llamada "Ana García"
+      Y otra creadora llamada "Otra Autora"
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/creadora.html" dice "Ana García"
@@ -57,6 +62,7 @@ Característica: El chip de tipo lleva a la lista de ese type
     Escenario: El chip de un texto lleva a la lista de textos
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
+      Y otro texto de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "href=\"./texto.html\""
@@ -66,6 +72,7 @@ Característica: El chip de tipo lleva a la lista de ese type
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
       Y una colección de "Ana García"
+      Y otra colección con el mismo texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/antologia-por-ana-garcia.html" dice "href=\"./coleccion.html\""
@@ -73,6 +80,7 @@ Característica: El chip de tipo lleva a la lista de ese type
     Escenario: El chip de la tarjeta de un miembro lleva a la lista de su type
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
+      Y otro texto de "Ana García"
       Y una colección de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto

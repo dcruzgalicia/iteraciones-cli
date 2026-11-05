@@ -50,6 +50,17 @@ Característica: las tarjetas de textos y colecciones en la página de la autora
           - texto-1.md
         ---
         """
+      Y que el archivo "otra-coleccion.md" tiene este contenido
+        """
+        ---
+        title: Otra colección
+        type: collection
+        date: 2026-02-02
+        collectionCreator: Autora A
+        files:
+          - texto-1.md
+        ---
+        """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/autora-a.html" no dice ">Textos<"
@@ -59,7 +70,7 @@ Característica: las tarjetas de textos y colecciones en la página de la autora
       Y el archivo "dist/files/autora-a.html" dice "Ver colección completa →"
       Y el archivo "dist/files/autora-a.html" dice ">Colección</a>"
       Y el archivo "dist/files/autora-a.html" contiene 1 veces "Texto 1"
-      Y el archivo "dist/files/autora-a.html" contiene 1 veces "Texto 2"
+      Y el archivo "dist/files/autora-a.html" contiene 2 veces "Texto 2"
 
   Regla de negocio: Lo más reciente va primero
 
@@ -167,7 +178,7 @@ Característica: las tarjetas de textos y colecciones en la página de la autora
       Y el archivo "dist/files/autora-a.html" dice "Bio de Autora A."
       Y el archivo "dist/files/autora-a.html" dice "Texto 3"
       Y el archivo "dist/files/autora-a.html" dice "Texto 2"
-      Y el archivo "dist/files/autora-a.html" no dice "Texto 1"
+      Y el archivo "dist/files/autora-a.html" contiene 1 veces "Texto 1"
       Y el archivo "dist/files/autora-a.html" dice "Siguiente →"
       Y el archivo "dist/files/autora-a-2.html" no dice "Bio de Autora A."
       Y el archivo "dist/files/autora-a-2.html" no dice "card-document"

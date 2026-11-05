@@ -67,14 +67,14 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Cuando hago un build del proyecto
       Entonces los enlaces de Formatos abren en otra pestaña
 
-  Regla de negocio: El índice de una colección se pagina con sus textos
+  Regla de negocio: El índice de una colección es completo en todas las páginas
 
-    Escenario: Con más de 10 textos el índice enlaza la página siguiente
+    Escenario: El índice completo aparece en todas las páginas
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y una colección con 15 textos
       Y el proyecto tiene toc activo
       Cuando hago un build del proyecto
-      Entonces el índice de la página 1 de la colección lista 10 textos
-      Y el índice de la página 1 enlaza el índice de la página 2
-      Y el índice de la página 2 de la colección lista 5 textos
-      Y el índice de la página 2 enlaza el índice de la página 1
+      Entonces el índice de la página 1 de la colección lista 15 textos
+      Y el índice de la página 2 de la colección lista 15 textos
+      Y el índice de la página 1 no dice "Índice siguiente"
+      Y el índice de la página 2 no dice "Índice siguiente"
