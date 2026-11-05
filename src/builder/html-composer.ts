@@ -79,7 +79,7 @@ function escapeHtml(text: string): string {
  * colecciones y la tarjeta de redes para decir de quién son los enlaces.
  */
 export const CHIP_OUTLINE_CLASSES =
-  'inline-block align-top rounded-full border border-accent-500/40 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
+  'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/40 bg-transparent px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none no-underline text-accent-700 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:text-accent-300';
 
 /** La fila de redes con los enlaces del proyecto, fuera de las tarjetas. */
 function frecuenciasInline(siteConfig: SiteConfig): string {
@@ -88,7 +88,7 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
   const items = links
     .map(
       (link: { name: string; url: string }) =>
-        `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-3 py-1 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20">${escapeHtml(link.name)}</a>`,
+        `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex h-7 items-center rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold text-stone-600 no-underline transition-colors duration-200 hover:border-stone-600 hover:bg-stone-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:bg-transparent dark:text-stone-300 dark:hover:bg-stone-500/10">${escapeHtml(link.name)}</a>`,
     )
     .join('');
   return `<nav aria-label="Redes" class="contents">${items}</nav>`;
@@ -96,11 +96,10 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
 
 function headerHtml(identity: string, menuHeader: string, redes: string): string {
   return [
-    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6">',
-    '<div class="grid gap-6 md:grid-cols-3">',
+    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6 lg:p-8">',
+    '<div class="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:gap-6">',
     `<div class="min-w-0">${identity}</div>`,
-    '<div class="hidden md:block"></div>',
-    `<div class="flex flex-wrap items-center gap-2">${menuHeader}${redes}</div>`,
+    `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-end">${menuHeader}${redes}</div>`,
     '</div>',
     '</div>',
   ].join('\n');
@@ -108,11 +107,10 @@ function headerHtml(identity: string, menuHeader: string, redes: string): string
 
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
   return [
-    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6">',
-    '<div class="grid gap-6 md:grid-cols-3">',
-    `<div class="min-w-0">${footerIdentity}</div>`,
-    `<div class="flex flex-wrap items-center gap-2">${menuFooterPlain}${redes}</div>`,
-    '<div>$if(license)$$license$$endif$</div>',
+    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6 lg:p-8">',
+    '<div class="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:gap-6">',
+    `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-start">${menuFooterPlain}${redes}</div>`,
+    `<div class="flex min-w-0 items-center">${footerIdentity}</div>`,
     '</div>',
     '</div>',
   ].join('\n');
@@ -153,13 +151,18 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   ].join('\n');
   const sidebar = [
     ...(type === 'creator' ? [await loadCard('file', 'card-retrato.html')] : []),
-    ...(type === 'file' ? [await loadCard('file', 'card-autor.html')] : []),
-    ...sidebarCards,
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
+    ...sidebarCards,
+    await loadCard('file', 'card-licencia.html'),
   ].join('\n');
   const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
 
+  const esLista = type === 'collection';
+  const mainSpan = esLista ? 'sm:col-span-3 md:col-span-2' : 'sm:col-span-2';
+  const asideSpan = esLista ? 'sm:col-span-3 md:col-span-1' : 'sm:col-span-1';
   return skeleton
+    .replace('__MAIN_SPAN__', mainSpan)
+    .replace('__ASIDE_SPAN__', asideSpan)
     .replace(slot('header'), () => header)
     .replace(slot('page-header'), () => metadata)
     .replace(slot('main'), () => main)
@@ -203,6 +206,8 @@ export interface HtmlPageVars {
   license?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
+  /** Los chips de colecciones y keywords de la cabecera de página. */
+  pageChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;

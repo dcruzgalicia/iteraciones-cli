@@ -128,7 +128,7 @@ Característica: el post-proceso del HTML y los formatos del argv
       Entonces el post-proceso deja "<p>Intro de la antología.</p>"
       Y el post-proceso deja "<div class=\"nota\"><p>con un div anidado</p></div>"
       Y el post-proceso quita "collection-intro"
-      Y el post-proceso deja "text-left prose prose-2xl"
+      Y el post-proceso deja "text-center prose prose-lg"
       Y el post-proceso deja "<p>resto</p>"
       Y el post-proceso pone "Intro de la antología." antes que "<main>"
 

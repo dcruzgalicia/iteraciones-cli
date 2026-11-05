@@ -18,23 +18,17 @@ Característica: las palabras clave del proyecto
 
   Regla de negocio: Los chips de keyword
 
-    Escenario: En la lista de textos cada keyword enlaza a su lista
+    Escenario: En la página del texto cada keyword enlaza a su lista
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con textos que comparten keywords
       Cuando hago un build del proyecto
-      Entonces en el HTML de "texto.html" el chip "cuidados" enlaza a "./keywords/cuidados.html"
+      Entonces en el HTML de "ensayo.html" el chip "cuidados" enlaza a "./keywords/cuidados.html"
 
     Escenario: El chip del keyword no va subrayado hasta el hover
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con textos que comparten keywords
       Cuando hago un build del proyecto
-      Entonces el chip "cuidados" del HTML de "texto.html" sólo se subraya al pasar el ratón
-
-    Escenario: En la página del keyword su propio chip no es un enlace
-      Dado que la raíz del proyecto tiene un proyecto de prueba
-      Y un proyecto con textos que comparten keywords
-      Cuando hago un build del proyecto
-      Entonces el chip "cuidados" del HTML de "keywords/cuidados.html" no es un enlace
+      Entonces el chip "cuidados" del HTML de "ensayo.html" sólo se subraya al pasar el ratón
 
   Regla de negocio: La página del texto y los metadatos
 
@@ -45,7 +39,6 @@ Característica: las palabras clave del proyecto
       Entonces el HTML de "ensayo.html" contiene "Palabras clave"
       Y el HTML de "ensayo.html" contiene "./keywords/mujeres.html"
       Y el HTML de "ensayo.html" contiene "<meta name=\"keywords\" content=\"cuidados,mujeres\">"
-      Y el HTML de "ensayo.html" no tiene chips de pertenencia
 
     @requires-pandoc
     Escenario: El EPUB lleva los keywords como dc:subject

@@ -1,18 +1,18 @@
     <div id="card-identity" class="min-w-0">
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-3 sm:items-center sm:text-left">
         $if(home-href)$
         <a href="$home-href$" class="no-underline shrink-0" aria-label="$site-title$">$logo-block$</a>
         $else$
         $logo-block$
         $endif$
-        <div class="flex min-w-0 flex-col items-start">
+        <div class="flex min-w-0 flex-col items-center sm:items-start">
           $if(home-href)$
-          <a href="$home-href$" class="font-semibold text-2xl leading-none text-accent-800 dark:text-accent-300 no-underline hover:underline">$site-title$</a>
+          <a href="$home-href$" class="font-semibold text-base leading-none sm:text-lg lg:text-xl text-accent-800 dark:text-accent-300 no-underline hover:underline">$site-title$</a>
           $else$
-          <span class="font-semibold text-2xl leading-none text-accent-800 dark:text-accent-300">$site-title$</span>
+          <span class="font-semibold text-base leading-none sm:text-lg lg:text-xl text-accent-800 dark:text-accent-300">$site-title$</span>
           $endif$
-          $if(tagline)$<span class="mt-1 text-base italic leading-none text-stone-600 dark:text-stone-400">$tagline$</span>$endif$
+          $if(tagline)$<span class="mt-1 text-[11px] italic leading-none text-stone-600 sm:text-xs lg:text-sm dark:text-stone-400">$tagline$</span>$endif$
         </div>
       </div>
     </div>
