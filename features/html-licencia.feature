@@ -86,8 +86,8 @@ Característica: la tarjeta de licencia del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
-      Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas"
-      Y el archivo "dist/files/index.html" dice "pero debe reconocer los créditos de la obra de la manera especificada por la o las autoras o licenciantas (pero no de una manera que sugiera"
+      Y el archivo "dist/files/index.html" dice "Licencia de Producción de Pares Feministas"
+      Y el archivo "dist/files/index.html" dice "pero debe reconocer los créditos de la obra de la manera especificada por la autora o las autoras, o por la licencianta o las licenciantas, y no de una manera que sugiera"
       Y el archivo "dist/files/index.html" dice "colectivas y redes sin fines de lucro"
       Y el archivo "dist/files/index.html" dice "trabajadoras autogestionadas"
       Y el archivo "dist/files/index.html" dice "cisheteropatriarcado, el falologocentrismo"
@@ -115,7 +115,7 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice "Licencia Creative Commons"
       Y el archivo "dist/files/index.html" dice "assets/images/cc.webp"
-      Y el archivo "dist/files/index.html" no dice "Licencia de producción de pares feministas"
+      Y el archivo "dist/files/index.html" no dice "Licencia de Producción de Pares Feministas"
 
     Escenario: El frontmatter del documento gana sobre la licencia del sitio
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -142,4 +142,4 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/un-texto.html" dice "Licencia Creative Commons"
       Y el archivo "dist/files/un-texto.html" dice "assets/images/cc.webp"
-      Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas"
+      Y el archivo "dist/files/index.html" dice "Licencia de Producción de Pares Feministas"
