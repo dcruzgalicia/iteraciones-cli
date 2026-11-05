@@ -9,26 +9,8 @@ import { world } from './cli-world.steps.ts';
 
 type TipoDoc = 'file' | 'collection' | 'creator';
 
-function configConBloques(bloques: string[]): Parameters<typeof composeHtmlTemplate>[0] {
-  return {
-    ...DEFAULT_SITE_CONFIG,
-    format: {
-      ...DEFAULT_SITE_CONFIG.format,
-      html: { ...DEFAULT_SITE_CONFIG.format.html, blocks: bloques as never },
-    },
-  };
-}
-
 Given('que la plantilla HTML se compone para {string}', async (tipo: string) => {
   world.plantilla = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, tipo as TipoDoc);
-});
-
-Given('que compongo la plantilla HTML con los bloques {string}', async (bloques: string) => {
-  const lista = bloques
-    .split(',')
-    .map((b) => b.trim())
-    .filter(Boolean);
-  world.plantilla = await composeHtmlTemplate(configConBloques(lista));
 });
 
 function celdas(texto: string): string {
@@ -54,12 +36,6 @@ Then('la plantilla ordena {string}', (cadena: string) => {
     if (donde < 0) throw new Error(`la plantilla no tiene ${JSON.stringify(celdas(texto))} después de lo anterior`);
     anterior = donde;
   }
-});
-
-Then('el masonry trae {string}', (texto: string) => {
-  const inicio = world.plantilla.indexOf('<main');
-  const bloque = world.plantilla.slice(inicio, world.plantilla.indexOf('</main>', inicio));
-  if (!bloque.includes(texto)) throw new Error(`el masonry no trae ${JSON.stringify(texto)}`);
 });
 
 Then('los nombres de los filtros del paquete se memoizan', () => {

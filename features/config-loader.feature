@@ -33,7 +33,6 @@ Característica: la configuración del proyecto
         | format: { pdf: { generate: true } }                | format.pdf.generate        | true                    |
         | format: { epub: { generate: true } }               | format.epub.generate       | true                    |
         | format: { markdown: { generate: true } }           | format.markdown.generate   | true                    |
-        | format: { html: { blocks: [header, indice] } }    | format.html.blocks         | header, indice           |
         | bibliography: refs.bib                              | bibliography               | refs.bib              |
         | csl: estilos/apa.csl                                | csl                        | estilos/apa.csl       |
 
@@ -180,28 +179,17 @@ Característica: la configuración del proyecto
       Cuando cargo la configuración del proyecto
       Entonces la carga falla con "valor no válido"
 
-    Escenario: Un bloque de HTML que no existe es un error accionable
+    Escenario: format.html.blocks ya no existe y el error lo explica
       Dado que el archivo de configuración es:
       """
       format:
         html:
           blocks:
-            - tarjeta-rara
+            - header
       """
       Cuando cargo la configuración del proyecto
-      Entonces la carga falla con "valor no válido"
-      Y la carga falla con "header"
-
-    Escenario: La sintaxis antigua de blocks es un error accionable
-      Dado que el archivo de configuración es:
-      """
-      format:
-        html:
-          blocks:
-            formatos: 4
-      """
-      Cuando cargo la configuración del proyecto
-      Entonces la carga falla con "se esperaba array"
+      Entonces la carga falla con "claves desconocidas"
+      Y la carga falla con "format.html.blocks"
 
     Escenario: El booleano antiguo `latex: true` es un error de tipo
       Dado que el archivo de configuración es:

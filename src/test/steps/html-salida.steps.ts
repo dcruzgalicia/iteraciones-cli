@@ -72,21 +72,6 @@ Given('que la raíz del proyecto tiene un proyecto con una cita', () => {
   proyectoConCita(false);
 });
 
-Given('que la raíz del proyecto ordena los bloques así:', (bloques: string) => {
-  const lista = bloques
-    .split('\n')
-    .map((b) => b.trim())
-    .filter(Boolean)
-    .map((b) => `      - ${b}`)
-    .join('\n');
-  raizVacia();
-  escribirEnProyecto(
-    'iteraciones.config.yaml',
-    `language: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n  html:\n    blocks:\n${lista}\n`,
-  );
-  escribirEnProyecto('test.md', `${FRONTMATTER}# Sección\n\nContenido.\n`);
-});
-
 Given('que la raíz del proyecto tiene el tema {word}', (tema: string) => {
   raizVacia();
   escribirEnProyecto(
@@ -146,11 +131,6 @@ Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
 Then('las tarjetas del documento salen en el orden por defecto', () => {
   const archivo = 'test-document.html';
   enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="refs-heading", id="TOC", >Formatos</h2>, id="card-identity-footer"');
-});
-
-Then('la lista explícita de bloques ES el orden', () => {
-  const archivo = 'test-document.html';
-  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="TOC", >Formatos</h2>');
 });
 
 Then('los bloques que no aplican no dejan huecos', () => {

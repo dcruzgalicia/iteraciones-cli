@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { ACCENT_COLORS } from '../lib/accent-palettes.js';
 import {
   DEFAULT_EPUB_FORMAT,
-  DEFAULT_HTML_BLOCKS,
   DEFAULT_HTML_FORMAT,
   DEFAULT_LATEX_FORMAT,
   DEFAULT_MARKDOWN_FORMAT,
@@ -72,8 +71,6 @@ const ImageFieldsSchema = {
   backCover: z.string().optional(),
 };
 
-const HtmlBlocksSchema = z.array(z.enum(DEFAULT_HTML_BLOCKS)).optional();
-
 const HtmlSiteSchema = z
   .object({
     title: z.string().default(DEFAULT_HTML_FORMAT.site.title),
@@ -91,7 +88,6 @@ const HtmlFormatSchema = z
   .object({
     site: HtmlSiteSchema.optional(),
     generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
-    blocks: HtmlBlocksSchema.optional(),
     pageSize: z.number().int().min(1).optional().default(DEFAULT_HTML_FORMAT.pageSize),
   })
   .strict();

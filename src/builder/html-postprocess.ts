@@ -17,7 +17,7 @@ export function postProcessHtml(html: string, refsCardTemplate: string): string 
   const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate);
   if (block === undefined) return clean;
   if (!clean.includes(REFS)) {
-    logWarning('la tarjeta de referencias no está en format.html.blocks; la bibliografía no se inserta en la página', 'html');
+    logWarning('no se encontró el marcador de la tarjeta de referencias; la bibliografía no se inserta en la página', 'html');
     return clean;
   }
   return clean.replace(REFS, block);
@@ -33,7 +33,7 @@ export function moveCollectionIntro(html: string): string {
   const inner = html.slice(innerStart, end - '</div>'.length).trim();
   const withoutIntro = html.slice(0, divStart) + html.slice(end);
   if (!withoutIntro.includes(marker)) {
-    logWarning('la banda de metadatos no está en format.html.blocks; el cuerpo propio de la collection no se inserta en la página', 'html');
+    logWarning('no se encontró la banda de metadatos; el cuerpo propio de la collection no se inserta en la página', 'html');
     return withoutIntro;
   }
   if (inner === '') return withoutIntro.replace(marker, '');

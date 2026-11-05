@@ -160,4 +160,4 @@ Característica: el post-proceso del HTML y los formatos del argv
       Cuando subo el body propio a la banda
       Entonces el HTML no dice "collection-intro"
       Y el post-proceso deja "<p>resto</p>"
-      Y el post-proceso avisa que "format.html.blocks"
+      Y el post-proceso avisa que "no se encontró la banda de metadatos"

@@ -1,9 +1,5 @@
 import type { SiteConfig } from './config-schema.js';
 
-export const DEFAULT_HTML_BLOCKS = ['header', 'indice', 'formatos', 'contenido', 'referencias', 'footer'] as const;
-
-export type HtmlBlockKey = (typeof DEFAULT_HTML_BLOCKS)[number];
-
 export const DEFAULT_HTML_FORMAT = {
   site: {
     title: 'iteraciones',

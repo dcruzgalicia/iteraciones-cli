@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
-import { DEFAULT_HTML_BLOCKS, DEFAULT_HTML_FORMAT, type HtmlBlockKey } from '../config/site-config.js';
+import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import type { LogoAsset } from './build-assets.js';
 
 export const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
@@ -25,7 +25,11 @@ export async function loadCard(type: HtmlDocType, name: string): Promise<string>
   return (await own.exists()) ? own.text() : Bun.file(join(HTML_RESOURCES_DIR, 'file', name)).text();
 }
 
-const HTML_CARDS: Record<HtmlBlockKey, string> = {
+type HtmlCardKey = 'header' | 'contenido' | 'formatos' | 'indice' | 'referencias' | 'footer';
+
+const HTML_ORDER: readonly HtmlCardKey[] = ['header', 'indice', 'formatos', 'contenido', 'referencias', 'footer'];
+
+const HTML_CARDS: Record<HtmlCardKey, string> = {
   header: 'card-identity.html',
   contenido: 'card-contenido.html',
   formatos: 'card-formatos.html',
@@ -34,7 +38,7 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   footer: 'card-identity.html',
 };
 
-const HTML_REGION: Record<HtmlBlockKey, 'header' | 'main' | 'sidebar' | 'footer'> = {
+const HTML_REGION: Record<HtmlCardKey, 'header' | 'main' | 'sidebar' | 'footer'> = {
   header: 'header',
   contenido: 'main',
   formatos: 'sidebar',
@@ -123,14 +127,12 @@ function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: stri
 
 export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocType = 'file'): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
-  const html = siteConfig.format?.html;
-  const order = (html !== undefined && 'blocks' in html && html.blocks) || [...DEFAULT_HTML_BLOCKS];
   const mainCards: string[] = [];
   const sidebarCards: string[] = [];
   let identity = '';
   let footerIdentity = '';
   let metadata = '';
-  for (const key of order) {
+  for (const key of HTML_ORDER) {
     const card = await loadCard(type, HTML_CARDS[key]);
     const region = HTML_REGION[key];
     if (region === 'header') identity = card;
