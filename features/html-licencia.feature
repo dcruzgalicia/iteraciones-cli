@@ -86,12 +86,12 @@ Característica: la tarjeta de licencia del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
-      Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas (F2F)"
-      Y el archivo "dist/files/index.html" dice "una licencia feminista y anticapitalista"
-      Y el archivo "dist/files/index.html" dice "Debes reconocer los créditos de la obra"
+      Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas"
+      Y el archivo "dist/files/index.html" dice "pero debe reconocer los créditos de la obra de la manera especificada por la o las autoras o licenciantas (pero no de una manera que sugiera"
       Y el archivo "dist/files/index.html" dice "colectivas y redes sin fines de lucro"
       Y el archivo "dist/files/index.html" dice "trabajadoras autogestionadas"
-      Y el archivo "dist/files/index.html" dice "labekka.red/licencia-f2f"
+      Y el archivo "dist/files/index.html" dice "cisheteropatriarcado, el falologocentrismo"
+      Y el archivo "dist/files/index.html" no dice "labekka.red"
       Y el archivo "dist/files/index.html" dice "assets/images/f2f-atribucion.webp"
       Y el archivo "dist/files/index.html" dice "assets/images/f2f-compartirigual.webp"
       Y el archivo "dist/files/index.html" dice "assets/images/f2f-feministanocapitalista.webp"
@@ -142,4 +142,4 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/un-texto.html" dice "Licencia Creative Commons"
       Y el archivo "dist/files/un-texto.html" dice "assets/images/cc.webp"
-      Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas (F2F)"
+      Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas"
