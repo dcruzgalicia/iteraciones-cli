@@ -13,7 +13,7 @@
 
   <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-accent-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">Saltar al contenido</a>
 
-  <div class="lg:container mx-auto space-y-8 px-2 pt-2 pb-28 sm:space-y-10 sm:px-4 sm:pt-4 sm:pb-32 lg:space-y-12 lg:px-8 lg:pt-8">
+  <div class="xl:container mx-auto space-y-8 px-2 pt-2 pb-28 sm:space-y-10 sm:px-4 sm:pt-4 sm:pb-32 lg:space-y-12 lg:px-8 lg:pt-8">
     <header>
       <div id="slot-header"></div>
     </header>
@@ -23,11 +23,11 @@
       <div id="block-intro"></div>
     </div>
 
-    <div class="grid items-start gap-6 sm:grid-cols-3 lg:gap-6">
-      <main id="contenido" class="min-w-0 space-y-4 sm:space-y-6 lg:space-y-8 __MAIN_SPAN__">
+    <div class="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+      <main id="contenido" class="min-w-0 space-y-4 sm:space-y-6 lg:col-span-2 lg:space-y-8">
         <div id="slot-main"></div>
       </main>
-      <aside aria-label="Información" class="min-w-0 space-y-4 sm:space-y-6 lg:space-y-8 __ASIDE_SPAN__">
+      <aside aria-label="Información" class="min-w-0 space-y-4 sm:space-y-6 lg:col-span-1 lg:space-y-8">
         <div id="slot-sidebar"></div>
       </aside>
     </div>

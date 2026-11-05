@@ -141,28 +141,25 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const menuFooterPlain = '$if(menu-footer-plain)$$menu-footer-plain$$endif$';
   const header = headerHtml(identity, menuHeader, redes);
   const portadas = await loadCard('file', 'card-portadas.html');
+  const retrato = type === 'creator' ? await loadCard('file', 'card-retrato.html') : '';
   const main = [
     '$if(announcements-top)$$announcements-top$$endif$',
     portadas,
     ...mainCards,
+    retrato === '' ? '' : `<div class="md:hidden">${retrato}</div>`,
     '$if(extras)$$extras$$endif$',
     '$if(announcements-bottom)$$announcements-bottom$$endif$',
     '$if(pagination)$$pagination$$endif$',
   ].join('\n');
   const sidebar = [
-    ...(type === 'creator' ? [await loadCard('file', 'card-retrato.html')] : []),
+    ...(type === 'creator' ? [`<div class="hidden md:block">${retrato}</div>`] : []),
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
     ...sidebarCards,
     await loadCard('file', 'card-licencia.html'),
   ].join('\n');
   const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
 
-  const esLista = type === 'collection';
-  const mainSpan = esLista ? 'sm:col-span-3 md:col-span-2' : 'sm:col-span-2';
-  const asideSpan = esLista ? 'sm:col-span-3 md:col-span-1' : 'sm:col-span-1';
   return skeleton
-    .replace('__MAIN_SPAN__', mainSpan)
-    .replace('__ASIDE_SPAN__', asideSpan)
     .replace(slot('header'), () => header)
     .replace(slot('page-header'), () => metadata)
     .replace(slot('main'), () => main)

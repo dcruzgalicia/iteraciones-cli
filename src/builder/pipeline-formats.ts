@@ -1042,10 +1042,10 @@ function assertPaginasLibres(relativePath: string, dir: string, outSlug: string,
 const CARD_WRAPPER = '<div class="min-w-0">';
 
 /** Las tarjetas muestran sólo un aperitivo: 20 palabras como máximo. */
-const CARD_PREVIEW_MAX_WORDS = 100;
+const CARD_PREVIEW_MAX_WORDS = 150;
 
 const CARD_TEXT_CLASSES =
-  'prose prose-base dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-base md:prose-lg lg:prose-lg';
+  'prose prose-base dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-lg md:prose-xl lg:prose-2xl';
 
 const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[30rem] flex-col overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-4 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_h3]:line-clamp-2 [&>h2]:line-clamp-1 sm:h-[32rem] sm:p-5 lg:h-[34rem] lg:p-6 ${CARD_TEXT_CLASSES}`;
 
@@ -1129,7 +1129,7 @@ function ctaDeTarjeta(type: string | undefined): string {
   return 'Leer texto completo';
 }
 
-const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-4 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] sm:p-5 lg:p-6 ${CARD_TEXT_CLASSES}`;
+const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-4 text-xs! ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! ${CARD_TEXT_CLASSES}`;
 
 /** La licencia CC que el sitio sabe pintar (iconos y texto). */
 const LICENCIA_CC_BY_NC_ND = 'CC-BY-NC-ND-4.0';
@@ -1166,7 +1166,7 @@ export function creatorCard(
     chipHtml('Colaboradora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
     '',
     ...(retrato === undefined ? [] : [retratoDeCreadora(retrato, doc.name, perfil), '']),
-    `<h2 class="not-prose mb-4 text-center text-lg tracking-wide sm:text-xl">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
+    `<h2 class="not-prose mb-4 text-center text-base tracking-wide sm:text-lg">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
     '',
     doc.body.trim(),
     '',
@@ -1442,7 +1442,7 @@ async function buildExtrasHtml(
   if (parte === 'main') {
     if (args.tarjetas === undefined || args.tarjetas === '') return '';
     const tarjetasHtml = await render([args.tarjetas]);
-    return `<div class="grid gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-1 lg:grid-cols-2 lg:gap-6">${tarjetasHtml}</div>`;
+    return `<div class="grid gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-6">${tarjetasHtml}</div>`;
   }
 
   const partes: string[] = [];
@@ -1761,6 +1761,9 @@ function parrafosPlanos(fragment: string): string[] {
         .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
         .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
         .replace(/<[^>]+>/g, ' ')
+        .replace(/&lt;\/?[a-z][^&]*?&gt;/gi, ' ')
+        .replace(/:{3,}/g, ' ')
+        .replace(/\\/g, ' ')
         .replace(/&nbsp;/g, ' ')
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
@@ -1798,10 +1801,12 @@ function collectionCard(
   if (parrafos.length > 0) {
     const estiloPreview =
       ' style="mask-image:linear-gradient(to bottom,black 70%,transparent);-webkit-mask-image:linear-gradient(to bottom,black 70%,transparent)"';
-    contenido.push(
-      '',
-      `<div class="tarjeta-preview-wrap min-h-0 flex-1 overflow-hidden"${estiloPreview}><p class="tarjeta-preview">${parrafos.map((parrafo) => escaparHtml(parrafo)).join('<br><br>')}</p></div>`,
-    );
+    const previewHtml = [
+      `<div class="tarjeta-preview-wrap min-h-0 flex-1 overflow-hidden"${estiloPreview}>`,
+      `<p class="tarjeta-preview">${parrafos.map((parrafo) => escaparHtml(parrafo)).join('<br><br>')}</p>`,
+      '</div>',
+    ].join('\n');
+    contenido.push('', previewHtml);
   }
   card.push(...contenido);
   if (href !== undefined) {
