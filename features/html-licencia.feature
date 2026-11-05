@@ -87,6 +87,10 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
       Y el archivo "dist/files/index.html" dice "Licencia de producción de pares feministas (F2F)"
+      Y el archivo "dist/files/index.html" dice "una licencia feminista y anticapitalista"
+      Y el archivo "dist/files/index.html" dice "Debes reconocer los créditos de la obra"
+      Y el archivo "dist/files/index.html" dice "colectivas y redes sin fines de lucro"
+      Y el archivo "dist/files/index.html" dice "trabajadoras autogestionadas"
       Y el archivo "dist/files/index.html" dice "labekka.red/licencia-f2f"
       Y el archivo "dist/files/index.html" dice "assets/images/f2f-atribucion.webp"
       Y el archivo "dist/files/index.html" dice "assets/images/f2f-compartirigual.webp"
