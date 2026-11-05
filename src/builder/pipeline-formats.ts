@@ -255,6 +255,11 @@ function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | u
   };
 }
 
+/** Un valor opcional: las cadenas vacías no viajan a la plantilla. */
+function opcional(valor: string | undefined): string | undefined {
+  return valor === '' ? undefined : valor;
+}
+
 /** Las tarjetas site-wide que dependen de la página: menú, anuncios y licencia. */
 function tarjetasDeSitio(args: {
   siteConfig: SiteConfig;
@@ -268,9 +273,36 @@ function tarjetasDeSitio(args: {
     license: licenciaHtml(args.siteConfig, args.dir),
     menuHeader: args.menuHeader,
     menuFooterPlain: args.menuFooterPlain,
-    announcementsTop: args.announcementsTop === '' ? undefined : args.announcementsTop,
-    announcementsBottom: args.announcementsBottom === '' ? undefined : args.announcementsBottom,
+    announcementsTop: opcional(args.announcementsTop),
+    announcementsBottom: opcional(args.announcementsBottom),
   };
+}
+
+function cuando(condicion: boolean, valor: string): string | undefined {
+  return condicion ? valor : undefined;
+}
+
+function conValorPorDefecto(valor: string | undefined, defecto: string): string {
+  return valor === undefined || valor === '' ? defecto : valor;
+}
+
+function formatosOpcionales(formats: HtmlPageVars['formats']): HtmlPageVars['formats'] {
+  return formats !== undefined && formats.length > 0 ? formats : undefined;
+}
+
+function esSubjectDuplicado(subject: string | undefined, keywords: string[]): boolean {
+  if (subject === undefined) return false;
+  const normalizado = subject.trim().toLocaleLowerCase('es');
+  if (keywords.includes(normalizado)) return true;
+  const partes = subject
+    .split(/[,;]/)
+    .map((parte) => parte.trim().toLocaleLowerCase('es'))
+    .filter(Boolean);
+  return partes.length > 0 && partes.every((parte) => keywords.includes(parte));
+}
+
+function subjectVisible(subject: string | undefined, keywords: string[]): string | undefined {
+  return esSubjectDuplicado(subject, keywords) ? undefined : subject;
 }
 
 function htmlVars(args: {
@@ -285,6 +317,7 @@ function htmlVars(args: {
   creatorImage?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
+  pageChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;
@@ -305,6 +338,7 @@ function htmlVars(args: {
     creatorImage,
     menuHeader,
     menuFooterPlain,
+    pageChips,
     announcementsTop,
     announcementsBottom,
     indiceColeccion,
@@ -317,40 +351,43 @@ function htmlVars(args: {
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
   const titulo = doc.frontmatter.title || slug;
+  const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
+  const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
   return {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
     title: titulo,
-    siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
-    tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
+    siteTitle: conValorPorDefecto(htmlConfig?.site?.title, 'iteraciones'),
+    tagline: conValorPorDefecto(htmlConfig?.site?.description, 'escribir, compartir, re-existir'),
     lang,
     theme: htmlConfig?.site?.theme,
-    css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
-    keywords: keywordsFromFm(fm).join(', ') || undefined,
+    css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
+    keywords: opcional(keywordsFromFm(fm).join(', ')),
     authorMeta: doc.frontmatter.creator.join(', '),
-    docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? doc.frontmatter.title : undefined,
+    docTitle: cuando(doc.frontmatter.title !== undefined && doc.frontmatter.title !== TITULO_POR_DEFECTO, doc.frontmatter.title ?? ''),
     subtitle: doc.frontmatter.subtitle,
     date: formatHumanDate(doc.frontmatter.date),
-    homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
-    formats: formats && formats.length > 0 ? formats : undefined,
+    homeHref: cuando(hasHomePage, relativeHref(dir, 'index.html')),
+    formats: formatosOpcionales(formats),
 
     titlehead: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
-    subject: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject'),
+    subject: subjectVisible(subject, keywords),
     publishers: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publishers'),
     collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
-    docChip: docChip ?? docChipLabel(doc.frontmatter.type),
+    docChip: conValorPorDefecto(docChip, docChipLabel(doc.frontmatter.type)),
     contentChip: contentChipPara(doc.frontmatter.type),
     frontCover: covers?.front,
     backCover: covers?.back,
     creatorImage,
-    creatorImageAlt: creatorImage === undefined ? undefined : `Retrato de ${titulo}`,
+    creatorImageAlt: cuando(creatorImage !== undefined, `Retrato de ${titulo}`),
     ...tarjetasDeSitio({ siteConfig: ctx.siteConfig, dir, menuHeader, menuFooterPlain, announcementsTop, announcementsBottom }),
+    pageChips: opcional(pageChips),
     indiceColeccion,
     docChipHref: docChipHrefPara(dir, doc.frontmatter.type, available),
-    extras: extras === '' ? undefined : extras,
-    sidebarExtras: sidebarExtras === '' ? undefined : sidebarExtras,
-    pagination: pagination === '' ? undefined : pagination,
+    extras: opcional(extras),
+    sidebarExtras: opcional(sidebarExtras),
+    pagination: opcional(pagination),
   };
 }
 
@@ -371,6 +408,7 @@ export async function emitHtmlPage(
   creatorImage?: string,
   menuHeader?: string,
   menuFooterPlain?: string,
+  pageChips?: string,
   announcementsTop?: string,
   announcementsBottom?: string,
 ): Promise<void> {
@@ -409,6 +447,7 @@ export async function emitHtmlPage(
         creatorImage,
         menuHeader,
         menuFooterPlain,
+        pageChips,
         announcementsTop,
         announcementsBottom,
         indiceColeccion: indices?.[indice],
@@ -844,12 +883,12 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-accent-500/40 bg-accent-500/10 px-3 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
+  'inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-accent-500/40 bg-accent-500/10 px-2 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 sm:px-2.5 sm:text-xs lg:px-3 lg:text-sm dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
 const PAGINATION_ACTIVE_CLASSES =
-  'inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-accent-500 bg-accent-500/20 px-3 text-sm font-semibold text-accent-900 dark:text-accent-100';
+  'inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-accent-500 bg-accent-500/20 px-2 text-[11px] font-semibold text-accent-900 sm:px-2.5 sm:text-xs lg:px-3 lg:text-sm dark:text-accent-100';
 
-const PAGINATION_NAV_CLASSES = 'mt-6 flex flex-wrap items-center justify-center gap-2';
+const PAGINATION_NAV_CLASSES = 'mt-8 flex flex-wrap items-center justify-center gap-2 sm:mt-10 lg:mt-12';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
@@ -890,7 +929,7 @@ export function paginationNav(outSlug: string, pagina: number, total: number): s
 
 // `mt-0 mb-6` y `m-0`: el prose de la página mete márgenes a figure e img, y
 // esos márgenes quedarían dentro del enlace (área clickeable de más).
-const CARD_IMAGE_CLASSES = 'mt-0! mb-4! flex h-[80px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl';
+const CARD_IMAGE_CLASSES = 'mt-0! mb-3! flex h-[100px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl sm:mb-4!';
 const CARD_IMAGE_IMG_CLASSES = 'm-0! block h-full w-full object-cover';
 const CARD_IMAGE_LINK_CLASSES = 'block h-full w-full rounded-tr-xl rounded-bl-xl';
 const PORTRAIT_WRAPPER_CLASSES = 'mb-6 flex justify-center';
@@ -970,7 +1009,7 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
         ? `<a href="./${pageSlug(outSlug, pagina + 1)}.html#indice-pagina-${pagina + 1}" class="${claseEnlace}">Índice siguiente →</a>`
         : '';
     indices.push(
-      `<div class="min-w-0" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-800 dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,
+      `<div class="min-w-0" id="indice-pagina-${pagina}"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol><div class="mt-4 flex justify-between gap-4 text-sm">${anterior}${siguiente}</div></nav></div>`,
     );
   }
   return indices;
@@ -1003,15 +1042,15 @@ function assertPaginasLibres(relativePath: string, dir: string, outSlug: string,
 const CARD_WRAPPER = '<div class="min-w-0">';
 
 /** Las tarjetas muestran sólo un aperitivo: 20 palabras como máximo. */
-const CARD_PREVIEW_MAX_WORDS = 20;
+const CARD_PREVIEW_MAX_WORDS = 100;
 
 const CARD_TEXT_CLASSES =
-  'prose prose-lg dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)]';
+  'prose prose-base dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-base md:prose-lg lg:prose-lg';
 
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-full flex-col overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_p]:line-clamp-2 [&_h3]:line-clamp-2 [&>h2]:line-clamp-1 ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[30rem] flex-col overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-4 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_h3]:line-clamp-2 [&>h2]:line-clamp-1 sm:h-[32rem] sm:p-5 lg:h-[34rem] lg:p-6 ${CARD_TEXT_CLASSES}`;
 
 const PILL_BASE =
-  'inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none text-accent-800 dark:text-accent-300';
+  'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300';
 
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
@@ -1037,9 +1076,6 @@ const MEMBER_TYPE_LABEL: Record<string, string> = {
 
 // El chip de un keyword va en gris y sólo con contorno: así no se confunde con
 // el del tipo (acento relleno) ni con el de una colección (acento con contorno).
-const MEMBER_KEYWORD_PILL_CLASSES =
-  'inline-block align-top rounded-full border border-stone-400/60 bg-transparent px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none no-underline text-stone-600 dark:border-stone-500/60 dark:text-stone-300';
-
 // El subrayado es la señal de que el chip es un enlace: sólo al pasar el ratón.
 const CHIP_HOVER_CLASSES = 'transition-colors duration-200 hover:underline';
 
@@ -1071,10 +1107,18 @@ const MEMBER_LINK_CLASSES =
 // El CTA de las tarjetas y el «Ver más» del menú comparten el mismo botón:
 // pill con el acento, para que no divergan con el tiempo.
 const CARD_CTA_CLASSES =
-  'inline-flex items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-4 py-2 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
+  'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
 
 const MENU_BUTTON_CLASSES =
-  'inline-flex items-center gap-2 rounded-full border border-accent-500/30 bg-accent-500/12 px-3 py-1.5 text-sm font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
+  'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
+
+const MENU_LINK_CLASSES =
+  'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/40 bg-transparent px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
+
+const PAGE_CHIP_BASE =
+  'inline-flex h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none no-underline transition-colors duration-200 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm';
+const PAGE_COLLECTION_CHIP_CLASSES = `${PAGE_CHIP_BASE} border-accent-500/50 bg-transparent text-accent-800 hover:border-accent-500 hover:underline dark:border-accent-400/50 dark:text-accent-200`;
+const PAGE_KEYWORD_CHIP_CLASSES = `${PAGE_CHIP_BASE} border-stone-500/60 bg-transparent text-stone-600 hover:border-stone-600 hover:underline dark:border-stone-400/60 dark:text-stone-300`;
 
 /** El texto del CTA según lo que hay al otro lado. */
 function ctaDeTarjeta(type: string | undefined): string {
@@ -1085,7 +1129,7 @@ function ctaDeTarjeta(type: string | undefined): string {
   return 'Leer texto completo';
 }
 
-const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_TEXT_CLASSES}`;
+const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-4 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] sm:p-5 lg:p-6 ${CARD_TEXT_CLASSES}`;
 
 /** La licencia CC que el sitio sabe pintar (iconos y texto). */
 const LICENCIA_CC_BY_NC_ND = 'CC-BY-NC-ND-4.0';
@@ -1101,8 +1145,8 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string): string | undefined {
     .join('');
   return [
     `<div class="flex flex-wrap items-center gap-2 mb-4"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
-    `<div class="flex items-center gap-2">${iconos}</div>`,
-    `<p class="m-0 text-xs leading-relaxed">${TEXTO_LICENCIA}</p>`,
+    `<div class="mb-3 flex items-center gap-2">${iconos}</div>`,
+    `<p class="m-0 text-xs leading-relaxed sm:text-xs md:text-sm lg:text-base">${TEXTO_LICENCIA}</p>`,
   ].join('');
 }
 
@@ -1122,7 +1166,7 @@ export function creatorCard(
     chipHtml('Colaboradora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
     '',
     ...(retrato === undefined ? [] : [retratoDeCreadora(retrato, doc.name, perfil), '']),
-    `<h2 class="text-center text-xl uppercase tracking-wide">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
+    `<h2 class="not-prose mb-4 text-center text-lg tracking-wide sm:text-xl">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
     '',
     doc.body.trim(),
     '',
@@ -1200,7 +1244,7 @@ function hrefDeMenu(url: string, dir: string): string {
 
 function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
   const attrs = esEnlaceExterno(enlace.url) ? ' target="_blank" rel="noopener noreferrer"' : '';
-  return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MENU_BUTTON_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
+  return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MENU_LINK_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
 }
 
 /** El botón del menú en el header: hamburguesa sutil, sin flecha. */
@@ -1396,15 +1440,15 @@ async function buildExtrasHtml(
   };
 
   if (parte === 'main') {
-    const tarjetasHtml = args.tarjetas === undefined || args.tarjetas === '' ? '' : await render([args.tarjetas]);
-    const docs = args.creatorDocs.map((doc) =>
-      [CARD_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs, args.available, args.imagenes), '', '</div>'].join('\n'),
-    );
-    const docsHtml = await render(docs);
-    return [tarjetasHtml === '' ? '' : `<div class="grid gap-6 sm:grid-cols-2">${tarjetasHtml}</div>`, docsHtml].filter(Boolean).join('\n');
+    if (args.tarjetas === undefined || args.tarjetas === '') return '';
+    const tarjetasHtml = await render([args.tarjetas]);
+    return `<div class="grid gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-1 lg:grid-cols-2 lg:gap-6">${tarjetasHtml}</div>`;
   }
 
   const partes: string[] = [];
+  for (const doc of args.creatorDocs) {
+    partes.push([CARD_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs, args.available, args.imagenes), '', '</div>'].join('\n'));
+  }
   if (args.contenedores.some((c) => c.type === 'collection')) {
     partes.push([CARD_WRAPPER, '', containersCard(args.contenedores, args.dir, args.available), '', '</div>'].join('\n'));
   }
@@ -1542,6 +1586,7 @@ export async function emitKeywordLists(args: {
       undefined,
       menuHeader,
       menuFooterPlain,
+      '',
       anunciosTop,
       anunciosBottom,
     );
@@ -1559,38 +1604,13 @@ function creadoresDeArchivosDeColeccion(e: CollectionEntry, discoveryIndex: Map<
   return [...nombres].sort((a, b) => a.localeCompare(b, 'es'));
 }
 
-function ordenarNombres(nombres: string[]): string[] {
-  return [...new Set(nombres)].sort((a, b) => a.localeCompare(b, 'es'));
-}
-
 function renderNombres(lista: string[], tono: 'accent' | 'gris' | 'plano', creatorHrefs: Map<string, string>): string {
   return lista.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`).join(', ');
 }
 
-/** Las partes de una tarjeta de colección, después del chip: título, autoras de los textos, prefijo y antologadora. */
-function partesDeColeccion(
-  e: CollectionEntry,
-  titleHtml: string,
-  creatorHrefs: Map<string, string>,
-  discoveryIndex?: Map<string, DiscoveryEntry>,
-): string[] {
-  const partes = [titleHtml, ''];
-  const nombres = discoveryIndex === undefined ? [] : creadoresDeArchivosDeColeccion(e, discoveryIndex);
-  if (nombres.length > 0) {
-    partes.push(
-      `<p class="not-prose nombres-enlazados-gris mt-2 mb-6 text-center text-base leading-relaxed text-stone-900 dark:text-stone-100">${renderNombres(nombres, 'plano', creatorHrefs)}</p>`,
-    );
-  }
-  const coleccion = discoveryIndex?.get(e.file);
-  const prefijo = typeof coleccion?.fm?.collectionCreatorPrefix === 'string' ? coleccion.fm.collectionCreatorPrefix : '';
-  if (prefijo !== '') partes.push(`<p class="not-prose mt-8 mb-1 text-center text-sm font-mono text-stone-700 dark:text-stone-300">${prefijo}</p>`);
-  const antologistas = ordenarNombres(parseAuthors(coleccion?.fm?.collectionCreator));
-  if (antologistas.length > 0) {
-    partes.push(
-      `<p class="not-prose nombres-enlazados-gris mb-8 text-center text-lg font-bold text-stone-900 dark:text-stone-100">${renderNombres(antologistas, 'plano', creatorHrefs)}</p>`,
-    );
-  }
-  return partes;
+/** Las partes de una tarjeta de colección: «Varias colaboradoras» y el título. */
+function partesDeColeccion(titleHtml: string): string[] {
+  return ['<h2 class="not-prose text-center text-sm sm:text-base">Varias colaboradoras</h2>', '', titleHtml];
 }
 
 function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, DiscoveryEntry>): { tono: 'accent' | 'gris'; nombres?: string[] } {
@@ -1601,8 +1621,9 @@ function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, Dis
 }
 
 function titleHtmlPara(title: string, href: string | undefined): string {
-  if (href === undefined) return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-4">${title}</h3>`;
-  return `<h3 class="text-center text-[22px] font-bold text-accent-900 dark:text-accent-300 mb-4"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
+  if (href === undefined)
+    return `<h3 class="not-prose mb-4 text-center text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300">${title}</h3>`;
+  return `<h3 class="not-prose mb-4 text-center text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
 }
 
 /**
@@ -1653,29 +1674,19 @@ function palabrasClaveDe(relativePath: string, dir: string, discoveryIndex: Map<
   return [...porSlug].sort(([, a], [, b]) => a.localeCompare(b, 'es')).map(([slug, label]) => ({ titulo: label, href: keywordHref(dir, slug) }));
 }
 
-/** Los chips de los keywords del miembro, en orden alfabético. */
-function chipsDeKeywords(
-  e: CollectionEntry,
-  dir: string,
-  page: PageRef | undefined,
-  discoveryIndex: Map<string, DiscoveryEntry> | undefined,
-): string[] {
-  const porSlug = new Map<string, string>();
-  for (const keyword of keywordsOf(discoveryIndex?.get(e.file))) {
-    const slug = keywordSlug(keyword);
-    if (slug === undefined) continue;
-    // Si un documento ocupa esa ruta, la lista no existe: mejor no ofrecerla.
-    if (discoveryIndex !== undefined && htmlOwner(discoveryIndex, KEYWORDS_DIR, slug) !== undefined) continue;
-    const actual = porSlug.get(slug);
-    if (actual === undefined || keyword.localeCompare(actual, 'es') < 0) porSlug.set(slug, keyword);
+function chipsDePagina(
+  contenedores: { titulo: string; href: string; type: string | undefined }[],
+  palabrasClave: { titulo: string; href: string }[],
+): string {
+  const chips: string[] = [];
+  for (const contenedor of contenedores) {
+    if (contenedor.type !== 'collection') continue;
+    chips.push(`<a href="${contenedor.href}" class="${PAGE_COLLECTION_CHIP_CLASSES}">${escaparHtml(contenedor.titulo)}</a>`);
   }
-  return [...porSlug]
-    .sort(([, a], [, b]) => a.localeCompare(b, 'es'))
-    .map(([slug, label]) => {
-      const titulo = escaparHtml(label);
-      if (page?.keywordSlug === slug) return `<span class="${MEMBER_KEYWORD_PILL_CLASSES}">${titulo}</span>`;
-      return `<a href="${keywordHref(dir, slug)}" class="${MEMBER_KEYWORD_PILL_CLASSES} ${CHIP_HOVER_CLASSES}">${titulo}</a>`;
-    });
+  for (const keyword of palabrasClave) {
+    chips.push(`<a href="${keyword.href}" class="${PAGE_KEYWORD_CHIP_CLASSES}">${escaparHtml(keyword.titulo)}</a>`);
+  }
+  return chips.join('');
 }
 
 function chipsDeCabecera(
@@ -1691,28 +1702,24 @@ function chipsDeCabecera(
   const chips = [
     chipHtml(typeLabel, e.type, dir, `${PILL_BASE} mt-0 mb-0`, available, currentHref),
     ...chipsDePertenencia(e, dir, page?.path, discoveryIndex),
-    ...chipsDeKeywords(e, dir, page, discoveryIndex),
   ];
   return `<div class="flex items-start justify-between gap-4"><div class="flex flex-wrap items-center gap-2 mb-6">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`;
 }
 
-function imagenDeCabecera(
-  e: CollectionEntry,
-  tipo: string,
-  imagenes: Map<string, string> | undefined,
-  creatorHrefs: Map<string, string>,
-  discoveryIndex: Map<string, DiscoveryEntry> | undefined,
-  href: string | undefined,
-): string | undefined {
+function imagenDeCabecera(e: CollectionEntry, tipo: string, imagenes: Map<string, string> | undefined, href: string | undefined): string | undefined {
   const src = tipo === 'creator' ? e.image : primeraImagenDelCuerpo(e.body);
   if (src === undefined) return undefined;
   const abs = isAbsolute(src) ? src : resolve(e.dirAbs ?? '.', src);
   const imagen = imagenes?.get(abs);
   if (imagen === undefined) return undefined;
   if (tipo === 'creator') return retratoDeCreadora(imagen, e.title || TITULO_POR_DEFECTO, href);
-  // La imagen del texto lleva a la biografía de su autora, como el nombre.
-  const primera = creadoresDeTarjeta(e, discoveryIndex).nombres?.[0];
-  return figuraDeTarjeta(imagen, primera === undefined ? undefined : creatorHrefs.get(primera));
+  // La imagen lleva al mismo destino que el título de la tarjeta.
+  return figuraDeTarjeta(imagen, href);
+}
+
+interface CabeceraTarjeta {
+  chips: string;
+  cuerpo: string[];
 }
 
 function cabeceraDeTarjeta(
@@ -1726,20 +1733,22 @@ function cabeceraDeTarjeta(
   currentHref?: string,
   imagenes?: Map<string, string>,
   href?: string,
-): string[] {
+): CabeceraTarjeta {
   const tipo = e.type ?? 'file';
-  const partes: string[] = [];
   const chips = chipsDeCabecera(e, dir, available, discoveryIndex, page, currentHref);
-  if (chips !== '') partes.push(chips, '');
-  const imagen = imagenDeCabecera(e, tipo, imagenes, creatorHrefs, discoveryIndex, href);
-  if (imagen !== undefined) partes.push(imagen, '');
-  if (tipo === 'collection') return [...partes, ...partesDeColeccion(e, titleHtml, creatorHrefs, discoveryIndex)];
+  const imagen = imagenDeCabecera(e, tipo, imagenes, href);
+  const cuerpo: string[] = [];
+  if (imagen !== undefined) cuerpo.push(imagen, '');
+  if (tipo === 'collection') {
+    cuerpo.push(...partesDeColeccion(titleHtml));
+    return { chips, cuerpo };
+  }
   const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
   const creator = nombres === undefined ? '' : nombres.length > 0 ? renderNombres(nombres, tono, creatorHrefs) : AUTORA_POR_DEFECTO;
-  if (creator !== '') partes.push(`<h2 class="text-center text-base">${creator}</h2>`, '');
-  partes.push(titleHtml);
-  if (e.subtitle) partes.push('', `<h4 class="text-center text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
-  return partes;
+  if (creator !== '') cuerpo.push(`<h2 class="not-prose text-center text-sm sm:text-base">${creator}</h2>`, '');
+  cuerpo.push(titleHtml);
+  if (e.subtitle) cuerpo.push('', `<h4 class="text-center text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
+  return { chips, cuerpo };
 }
 
 /** El fragmento en párrafos de texto plano, sin markdown ni bloques. */
@@ -1781,15 +1790,22 @@ function collectionCard(
 ): string {
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body, CARD_PREVIEW_MAX_WORDS);
-  const card = [
-    `:::: {class="${COLLECTION_CARD_CLASSES}"}`,
-    '',
-    ...cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, href),
-  ];
+  const cabecera = cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, href);
+  const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
+  if (cabecera.chips !== '') card.push(cabecera.chips, '');
+  const contenido = [...cabecera.cuerpo];
   const parrafos = fragment === '' ? [] : parrafosPlanos(fragment);
-  if (parrafos.length > 0) card.push('', `<p>${parrafos.map((parrafo) => escaparHtml(parrafo)).join('<br>')}</p>`);
+  if (parrafos.length > 0) {
+    const estiloPreview =
+      ' style="mask-image:linear-gradient(to bottom,black 70%,transparent);-webkit-mask-image:linear-gradient(to bottom,black 70%,transparent)"';
+    contenido.push(
+      '',
+      `<div class="tarjeta-preview-wrap min-h-0 flex-1 overflow-hidden"${estiloPreview}><p class="tarjeta-preview">${parrafos.map((parrafo) => escaparHtml(parrafo)).join('<br><br>')}</p></div>`,
+    );
+  }
+  card.push(...contenido);
   if (href !== undefined) {
-    card.push('', `<p class="mt-auto pt-4 text-center"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
+    card.push('', `<p class="not-prose mt-auto pt-4 text-center"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
   }
   card.push('', '::::');
   return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');
@@ -2365,6 +2381,7 @@ async function emitCollectionHtml(
   };
   const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas, 'main');
   const sidebarExtras = (await extrasDeLaPagina(extrasComunes, [], 'sidebar')) as string;
+  const pageChips = chipsDePagina(extrasComunes.contenedores, extrasComunes.palabrasClave);
   // Las redes de la creadora van en su tarjeta, no al inicio del cuerpo.
   const contenidos = paginas;
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
@@ -2387,6 +2404,7 @@ async function emitCollectionHtml(
     retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir),
     menuHeader,
     menuFooterPlain,
+    pageChips,
     anunciosTop,
     anunciosBottom,
   );
@@ -2736,6 +2754,7 @@ export async function emitDefaultLists(args: {
       undefined,
       menuHeader,
       menuFooterPlain,
+      '',
       anunciosTop,
       anunciosBottom,
     );

@@ -26,11 +26,12 @@ Característica: los chips de pertenencia en las tarjetas de colecciones y lista
       Cuando hago un build del proyecto
       Entonces en el HTML de "antologia.html" el chip "Antología" no es un enlace
 
-    Escenario: La página del texto no lleva chips de pertenencia
+    Escenario: La página del texto muestra sus colecciones en la cabecera
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con un texto en dos colecciones
       Cuando hago un build del proyecto
-      Entonces el HTML de "ensayo.html" no tiene chips de pertenencia
+      Entonces en el HTML de "ensayo.html" el chip "Antología" enlaza a "./antologia.html"
+      Y en el HTML de "ensayo.html" el chip "Otra antología" enlaza a "./otra-antologia.html"
 
   Regla de negocio: Los chips no enlazan a la página en la que estás
 

@@ -39,6 +39,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     { key: 'author-names', value: vars.authors },
     { key: 'collection-creator-names', value: vars.collectionCreator },
   ]);
+  if (!vars.subject) args.push('--metadata=subject:');
   const bandas: Array<[string, string | undefined]> = [
     ['doc-chip', vars.docChip],
     ['doc-chip-href', vars.docChipHref],
@@ -50,6 +51,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     ['license', vars.license],
     ['menu-header', vars.menuHeader],
     ['menu-footer-plain', vars.menuFooterPlain],
+    ['page-chips', vars.pageChips],
     ['announcements-top', vars.announcementsTop],
     ['announcements-bottom', vars.announcementsBottom],
     ['indice-coleccion', vars.indiceColeccion],

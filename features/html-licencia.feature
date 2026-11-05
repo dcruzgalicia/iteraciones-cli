@@ -7,7 +7,7 @@ Característica: la tarjeta de licencia del sitio
 
   Regla de negocio: La licencia se declara en la configuración del sitio
 
-    Escenario: Con CC-BY-NC-ND-4.0 aparece la licencia en el footer
+    Escenario: Con CC-BY-NC-ND-4.0 aparece la licencia en el sidebar
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y que el archivo "iteraciones.config.yaml" tiene este contenido
         """
@@ -26,13 +26,13 @@ Característica: la tarjeta de licencia del sitio
       Y el archivo "dist/files/index.html" no dice "mb-2 flex items-center gap-2"
       Y el archivo "dist/files/index.html" dice "my-0!"
       Y el archivo "dist/files/index.html" dice "brindar un enlace a la&nbsp;licencia"
-      Y el archivo "dist/files/index.html" pone "card-identity-footer" antes que "Algunos derechos reservados."
+      Y el archivo "dist/files/index.html" pone "Algunos derechos reservados." antes que "card-identity-footer"
       Y el archivo "dist/files/assets/images/cc.svg" existe
       Y el archivo "dist/files/assets/images/by.svg" existe
       Y el archivo "dist/files/assets/images/nc.svg" existe
       Y el archivo "dist/files/assets/images/nd.svg" existe
 
-    Escenario: La licencia va en el footer después de las redes
+    Escenario: La licencia va en el sidebar antes de las redes
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y que el archivo "iteraciones.config.yaml" tiene este contenido
         """
@@ -60,7 +60,7 @@ Característica: la tarjeta de licencia del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/un-texto.html" pone "Palabras clave" antes que "Algunos derechos reservados."
-      Y la licencia de "dist/files/un-texto.html" va después de la segunda Redes
+      Y la licencia de "dist/files/un-texto.html" va antes de la segunda Redes
 
     Escenario: Los iconos se referencian desde cada página
       Dado que la raíz del proyecto tiene un proyecto de prueba

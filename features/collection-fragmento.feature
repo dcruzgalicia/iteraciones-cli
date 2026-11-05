@@ -44,9 +44,9 @@ Característica: el fragmento que muestra la tarjeta de un miembro
       Cuando extraigo su fragmento
       Entonces el fragmento está vacío
 
-  Regla de negocio: Un bloque `:::` se muestra completo
+  Regla de negocio: El texto de un bloque `:::` cuenta como párrafo
 
-    Escenario: Un bloque corto sale entero, con sus líneas de fence
+    Escenario: Un bloque corto se toma como texto y sigue el resto
       Dado que el documento tiene el cuerpo:
       """
       ::: {.nota}
@@ -58,19 +58,18 @@ Característica: el fragmento que muestra la tarjeta de un miembro
       Cuando extraigo su fragmento
       Entonces el fragmento es:
       """
-      ::: {.nota}
       Contenido corto de la nota.
-      :::
+
+      Después del div.
       """
 
-    Escenario: Un bloque largo se recorta por dentro y se cierra él mismo
+    Escenario: Un bloque largo se recorta con puntos suspensivos
       Dado que el cuerpo es un bloque de 150 palabras
       Cuando extraigo su fragmento
-      Entonces el fragmento cierra el bloque él mismo
-      Y los puntos suspensivos van antes del cierre del bloque
-      Y el fragmento tiene 100 palabras en su línea de contenido
+      Entonces el fragmento se corta con puntos suspensivos
+      Y el fragmento tiene 101 palabras
 
-    Escenario: Un bloque sin cerrar se cierra en el fragmento
+    Escenario: Un bloque sin cerrar se toma como texto
       Dado que el documento tiene el cuerpo:
       """
       ::: {.nota}
@@ -79,9 +78,7 @@ Característica: el fragmento que muestra la tarjeta de un miembro
       Cuando extraigo su fragmento
       Entonces el fragmento es:
       """
-      ::: {.nota}
       Contenido sin cierre.
-      :::
       """
 
   Regla de negocio: El recorte no parte un enlace
