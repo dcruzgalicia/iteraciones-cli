@@ -20,20 +20,6 @@ Característica: las tarjetas del layout salen en el orden que el autor espera
       Entonces el comando termina con el código de salida 0
       Y la tarjeta de descargas es una lista sin iconos ni descripciones
 
-    Escenario: Una lista explícita de bloques ES el orden
-      Dado que la raíz del proyecto ordena los bloques así:
-      """
-      header
-      contenido
-      indice
-      formatos
-      referencias
-      footer
-      """
-      Cuando hago un build del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y la lista explícita de bloques ES el orden
-
     Escenario: Sin índice, sin citas y sin formatos, los bloques ausentes no aparecen
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando hago un build del proyecto

@@ -33,6 +33,24 @@ async function readConfigText(cwd: string): Promise<{ configPath: string; raw: s
   }
 }
 
+/** El error de claves desconocidas, con la pista de las claves que se movieron. */
+function unknownKeysMessage(issues: { path: (string | number | symbol)[]; keys: string[] }[]): string {
+  const details = issues
+    .map((issue) => {
+      const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
+      return `en ${path}: ${issue.keys.map((k) => `"${k}"`).join(', ')}`;
+    })
+    .join('; ');
+  const hints: string[] = [];
+  if (issues.some((issue) => issue.path.join('.') === 'format' && issue.keys.includes('script'))) {
+    hints.push('"format.script" pasó a "script" (nivel superior): renombra la clave');
+  }
+  if (issues.some((issue) => issue.path.join('.') === 'format.html' && issue.keys.includes('blocks'))) {
+    hints.push('"format.html.blocks" ya no existe: el orden de las tarjetas es fijo');
+  }
+  return `claves desconocidas: ${details}${hints.length > 0 ? ` — ${hints.join('; ')}` : ''}`;
+}
+
 function parseConfig(raw: string, configPath: string): LoadedSiteConfig {
   let parsed: unknown;
   const yamlResult = parseYamlWithPosition(raw);
@@ -55,21 +73,7 @@ function parseConfig(raw: string, configPath: string): LoadedSiteConfig {
   const result = SiteConfigSchema.safeParse(root);
   if (!result.success) {
     const unknownKeyIssues = result.error.issues.filter((issue) => issue.code === 'unrecognized_keys');
-    if (unknownKeyIssues.length > 0) {
-      const details = unknownKeyIssues
-        .map((issue) => {
-          const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
-          const keys = issue.keys.map((k) => `"${k}"`).join(', ');
-          return `en ${path}: ${keys}`;
-        })
-        .join('; ');
-
-      const movedScript = unknownKeyIssues.some((issue) => issue.path.join('.') === 'format' && issue.keys.includes('script'));
-      throw new ConfigError(
-        `claves desconocidas: ${details}${movedScript ? ' — "format.script" pasó a "script" (nivel superior): renombra la clave' : ''}`,
-        configPath,
-      );
-    }
+    if (unknownKeyIssues.length > 0) throw new ConfigError(unknownKeysMessage(unknownKeyIssues), configPath);
     const details = result.error.issues
       .map((issue) => {
         const path = issue.path.length > 0 ? issue.path.join('.') : 'config';

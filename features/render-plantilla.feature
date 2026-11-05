@@ -28,17 +28,6 @@ Característica: la plantilla HTML que se entrega a pandoc
       Y la plantilla dice "$fmt-epub$"
       Y la plantilla no dice "$formats$"
 
-  Regla de negocio: Reordenar bloques mueve las del medio, no el header ni el footer
-
-    Escenario: Una lista explícita pone los formatos donde se pidió
-      Dado que compongo la plantilla HTML con los bloques "header, indice, contenido, formatos"
-      Entonces la plantilla ordena "$if(toc)$, $if(formats)$"
-
-    Escenario: Header y footer se quedan en sus anclas aunque se reordenen
-      Dado que compongo la plantilla HTML con los bloques "contenido, footer, header, indice"
-      Entonces la plantilla ordena "id=\"card-identity\", id=\"card-document\", id=\"card-identity-footer\""
-      Y la plantilla ordena "id=\"card-document\", $if(toc)$"
-
   Regla de negocio: El contenido y la sidebar reparten las tarjetas
 
     Escenario: En una colección el body no va dentro del article
