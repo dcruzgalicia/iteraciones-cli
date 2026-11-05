@@ -38,7 +38,25 @@ Característica: las palabras clave del proyecto
       Cuando hago un build del proyecto
       Entonces el HTML de "ensayo.html" contiene "Palabras clave"
       Y el HTML de "ensayo.html" contiene "./keywords/mujeres.html"
+      Y el HTML de "ensayo.html" contiene ">cuidados<span"
       Y el HTML de "ensayo.html" contiene "<meta name=\"keywords\" content=\"cuidados,mujeres\">"
+
+    Escenario: Una página sin keywords propios muestra las del sitio
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y un proyecto con textos que comparten keywords
+      Y que el archivo "autora.md" tiene este contenido
+        """
+        ---
+        type: creator
+        name: Ana Ruiz
+        ---
+
+        Bio de Ana Ruiz.
+        """
+      Cuando hago un build del proyecto
+      Entonces el HTML de "ana-ruiz.html" contiene "Palabras clave"
+      Y el HTML de "ana-ruiz.html" contiene "./keywords/cuidados.html"
+      Y el chip "iteraciones" del HTML de "ana-ruiz.html" enlaza a "./index.html"
 
     @requires-pandoc
     Escenario: El EPUB lleva los keywords como dc:subject

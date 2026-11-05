@@ -74,6 +74,11 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** El retrato de la creadora como primera tarjeta de su cuadrícula. */
+export function creatorPortraitHtml(image: string, alt: string): string {
+  return `<div class="min-w-0"><figure class="relative m-0 h-[30rem] overflow-hidden rounded-tr-2xl rounded-bl-2xl tarjeta sm:h-[32rem] lg:h-[34rem]"><img src="${escapeHtml(image)}" alt="${escapeHtml(alt)}" class="block h-full w-full object-cover object-center"></figure></div>`;
+}
+
 /**
  * El chip de pertenencia: contorno de acento, sin relleno. Lo comparten las
  * colecciones y la tarjeta de redes para decir de quién son los enlaces.
@@ -141,21 +146,15 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const menuFooterPlain = '$if(menu-footer-plain)$$menu-footer-plain$$endif$';
   const header = headerHtml(identity, menuHeader, redes);
   const portadas = await loadCard('file', 'card-portadas.html');
-  const retrato = type === 'creator' ? await loadCard('file', 'card-retrato.html') : '';
-  const main = [
-    '$if(announcements-top)$$announcements-top$$endif$',
-    portadas,
-    ...mainCards,
-    retrato === '' ? '' : `<div class="md:hidden">${retrato}</div>`,
-    '$if(extras)$$extras$$endif$',
-    '$if(announcements-bottom)$$announcements-bottom$$endif$',
-    '$if(pagination)$$pagination$$endif$',
-  ].join('\n');
+  const main = [portadas, ...mainCards, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
   const sidebar = [
-    ...(type === 'creator' ? [`<div class="hidden md:block">${retrato}</div>`] : []),
+    '$if(announcements-top)$$announcements-top$$endif$',
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
     ...sidebarCards,
+    '$if(recientes)$$recientes$$endif$',
+    '$if(site-keywords)$$site-keywords$$endif$',
     await loadCard('file', 'card-licencia.html'),
+    '$if(announcements-bottom)$$announcements-bottom$$endif$',
   ].join('\n');
   const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
 
@@ -181,6 +180,7 @@ export interface HtmlPageVars {
   keywords?: string;
   theme?: string;
   css?: string;
+  iconTop?: string;
   authorMeta?: string;
   docTitle?: string;
   subtitle?: string;
@@ -214,6 +214,10 @@ export interface HtmlPageVars {
 
   /** Las tarjetas de información de la barra lateral, ya en HTML. */
   sidebarExtras?: string;
+  /** La tarjeta de las entradas más recientes, ya en HTML. */
+  recientes?: string;
+  /** La tarjeta con todas las palabras clave del sitio, ya en HTML. */
+  siteKeywords?: string;
 
   /** El nav de paginación, ya en HTML. */
   pagination?: string;

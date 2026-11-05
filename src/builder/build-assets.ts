@@ -1,5 +1,5 @@
-import { cp, mkdir, stat, writeFile } from 'node:fs/promises';
-import { dirname, extname, join } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
@@ -8,7 +8,7 @@ import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
-import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_FAVICON_SVG, ASSETS_IMAGES_DIR, ASSETS_LOGO_WEBP } from './output-layout.js';
+import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_IMAGES_DIR, ASSETS_LOGO_WEBP } from './output-layout.js';
 import { hashGlobbedFiles } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
 
@@ -16,6 +16,11 @@ const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const LICENSE_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'license');
 const LICENSE_ICONS = ['cc', 'by', 'nc', 'nd'];
+const ICONS_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'icons');
+const ICON_FILES = [
+  { name: 'arrow-upward', size: 32 },
+  { name: 'menu', size: 16 },
+] as const;
 
 export async function resolveTailwindBin(): Promise<string> {
   try {
@@ -108,31 +113,7 @@ export async function buildAssets(
   return { cssHash, cssFileCache };
 }
 
-async function copyIfChanged(src: string, dest: string): Promise<void> {
-  let srcStat: Awaited<ReturnType<typeof stat>> | null = null;
-  try {
-    srcStat = await stat(src);
-  } catch {}
-  if (srcStat !== null) {
-    const destStat = await stat(dest).catch(() => null);
-    if (destStat !== null && destStat.size === srcStat.size && Math.floor(destStat.mtimeMs) === Math.floor(srcStat.mtimeMs)) {
-      return;
-    }
-  }
-  await mkdir(dirname(dest), { recursive: true });
-  await cp(src, dest, { force: true, preserveTimestamps: true });
-}
-
 const DEFAULT_LOGO = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
-
-const LOGO_MIME: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.avif': 'image/avif',
-};
 
 /** Cómo se muestra el logo del sitio en el HTML. */
 export type LogoAsset =
@@ -214,28 +195,32 @@ async function colorCount(src: string): Promise<number> {
 async function rasterLogo(src: string, outputDir: string, size: number, accent: string | undefined): Promise<boolean> {
   const webp = join(outputDir, ASSETS_LOGO_WEBP);
   await mkdir(dirname(webp), { recursive: true });
-  const args = [src, '-resize', `${size}x>`, '-define', 'webp:lossless=true'];
+  const args = [src, '-resize', `${size}x>`, '-strip', '-define', 'webp:lossless=true'];
   // ponytail: cuenta colores sobre una muestra de 64 px; un logo con antialias
   // o degradados nunca baja de 2 y se queda con sus colores, que es lo seguro.
   if (accent !== undefined && (await colorCount(src)) <= 2) args.push('-fill', accent, '-colorize', '100');
   args.push(webp);
   if (!(await runMagick(args))) return false;
-  await runMagick([src, '-resize', '32x32>', join(outputDir, ASSETS_FAVICON_PNG)]);
+  await runMagick([src, '-resize', '32x32>', '-strip', join(outputDir, ASSETS_FAVICON_PNG)]);
   return true;
 }
 
 /**
- * Resuelve el logo del sitio: lo deja en `assets/` cuando es raster y devuelve
- * cómo referenciarlo. El SVG de fábrica se queda en línea porque es lo único
- * que hereda el accent del tema con `currentColor`.
+ * Resuelve el logo del sitio y lo deja en `assets/images/logo.webp`.
+ * El SVG de fábrica también se rasteriza: el HTML no lleva SVG incrustado.
  */
 export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig: SiteConfig): Promise<LogoAsset | undefined> {
   const logo = siteConfig.format?.html?.site?.logo?.trim();
   const html = siteConfig.format?.html;
+  const size = logoPx(html?.site?.logoSize);
+  const accent = await accent500(html?.site?.color);
 
   if (!logo) {
-    await copyIfChanged(DEFAULT_LOGO, join(outputDir, ASSETS_FAVICON_SVG));
-    return { kind: 'inline', html: await Bun.file(DEFAULT_LOGO).text(), favicon: ASSETS_FAVICON_SVG };
+    if (await rasterLogo(DEFAULT_LOGO, outputDir, size, accent)) {
+      return { kind: 'file', path: ASSETS_LOGO_WEBP, favicon: ASSETS_FAVICON_PNG };
+    }
+    logWarning('no se pudo convertir el logo de fábrica a WebP', 'assets');
+    return undefined;
   }
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
     throw new BuildError(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`);
@@ -245,34 +230,48 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
     logWarning(`logo no encontrado: "${logo}"`, 'assets');
     return undefined;
   }
-
-  const ext = extname(src).toLowerCase();
-  if (ext === '.svg') {
-    await copyIfChanged(src, join(outputDir, ASSETS_FAVICON_SVG));
-    return { kind: 'inline', html: await Bun.file(src).text(), favicon: ASSETS_FAVICON_SVG };
-  }
-
-  if (await rasterLogo(src, outputDir, logoPx(html?.site?.logoSize), await accent500(html?.site?.color))) {
+  if (await rasterLogo(src, outputDir, size, accent)) {
     return { kind: 'file', path: ASSETS_LOGO_WEBP, favicon: ASSETS_FAVICON_PNG };
   }
-
-  const mime = LOGO_MIME[ext];
-  if (mime === undefined) return undefined;
-  // Sin ImageMagick el logo viaja incrustado: el HTML no se queda sin marca.
-  logWarning(`no se pudo convertir el logo "${logo}" a WebP; se incrusta tal cual`, 'assets');
-  const base64 = Buffer.from(await Bun.file(src).arrayBuffer()).toString('base64');
-  return { kind: 'inline', html: `<img src="data:${mime};base64,${base64}" alt="" class="block h-auto w-full">` };
+  logWarning(`no se pudo convertir el logo "${logo}" a WebP`, 'assets');
+  return undefined;
 }
 
-/** Copia los iconos de la licencia CC cuando el sitio declara una. */
+/** Convierte un SVG a WebP con el tamaño indicado, conservando la transparencia. */
+async function svgAWebp(src: string, dest: string, size: number, tint?: string): Promise<boolean> {
+  await mkdir(dirname(dest), { recursive: true });
+  const args = ['-background', 'none', src, '-resize', `${size}x${size}`, '-strip', '-define', 'webp:lossless=true'];
+  if (tint !== undefined) args.push('-fuzz', '20%', '-fill', tint, '-opaque', 'black');
+  args.push(dest);
+  return runMagick(args);
+}
+
+/** Genera los iconos de interfaz como WebP, sin SVG dentro del HTML. */
+async function writeIconAssets(outputDir: string, siteConfig: SiteConfig): Promise<void> {
+  const accent = await accent500(siteConfig.format?.html?.site?.color);
+  for (const icon of ICON_FILES) {
+    const src = join(ICONS_DIR, `${icon.name}.svg`);
+    const dest = join(outputDir, ASSETS_IMAGES_DIR, `${icon.name}.webp`);
+    if (!(await svgAWebp(src, dest, icon.size, accent))) {
+      throw new BuildError(`no se pudo convertir el icono "${icon.name}" a WebP`);
+    }
+  }
+}
+
+/** Convierte los iconos de la licencia CC a WebP de 48 px. */
 async function copyLicenseIcons(outputDir: string, siteConfig: SiteConfig): Promise<void> {
   if (siteConfig.format?.html?.site?.license === undefined) return;
   for (const nombre of LICENSE_ICONS) {
-    await copyIfChanged(join(LICENSE_DIR, `${nombre}.svg`), join(outputDir, ASSETS_IMAGES_DIR, `${nombre}.svg`));
+    const src = join(LICENSE_DIR, `${nombre}.svg`);
+    const dest = join(outputDir, ASSETS_IMAGES_DIR, `${nombre}.webp`);
+    if (!(await svgAWebp(src, dest, 32))) {
+      throw new BuildError(`no se pudo convertir el icono de licencia "${nombre}" a WebP`);
+    }
   }
 }
 
 export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
   await writeLogoAssets(cwd, outputDir, siteConfig);
   await copyLicenseIcons(outputDir, siteConfig);
+  await writeIconAssets(outputDir, siteConfig);
 }

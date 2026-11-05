@@ -44,6 +44,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     ['doc-chip', vars.docChip],
     ['doc-chip-href', vars.docChipHref],
     ['content-chip', vars.contentChip],
+    ['icon-top', vars.iconTop],
     ['front-cover', vars.frontCover],
     ['back-cover', vars.backCover],
     ['creator-image', vars.creatorImage],
@@ -57,6 +58,8 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     ['indice-coleccion', vars.indiceColeccion],
     ['extras', vars.extras],
     ['sidebar-extras', vars.sidebarExtras],
+    ['recientes', vars.recientes],
+    ['site-keywords', vars.siteKeywords],
     ['pagination', vars.pagination],
   ];
   for (const [clave, valor] of bandas) {

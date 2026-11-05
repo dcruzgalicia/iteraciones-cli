@@ -41,7 +41,10 @@ When('construyo los assets otra vez', async () => {
 });
 
 Given('un proyecto con un logo propio', () => {
-  escribirEnProyecto('assets/mi-logo.svg', '<svg>A</svg>');
+  escribirEnProyecto(
+    'assets/mi-logo.svg',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#ff0000"/></svg>',
+  );
 });
 
 When('el proyecto cambia su logo a {string}', (contenido: string) => {

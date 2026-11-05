@@ -15,6 +15,7 @@ export const DEFAULT_LISTS = [
   { type: 'collection', slug: 'coleccion', title: 'Colecciones', description: 'Conjuntos de contenidos reunidos por esta comunidad.' },
   { type: 'creator', slug: 'creadora', title: 'Colaboradoras', description: 'Personas que participan en esta comunidad.' },
   { type: 'list', slug: 'lista', title: 'Listas', description: 'Listas de contenidos de esta comunidad.' },
+  { type: 'announcement', slug: 'anuncio', title: 'Anuncios', description: 'Avisos de esta comunidad.' },
   {
     type: 'all',
     slug: 'index',

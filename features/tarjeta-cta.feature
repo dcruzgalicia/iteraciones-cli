@@ -127,6 +127,15 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
 
         Bio de Autora A.
         """
+      Y que el archivo "otra-autora.md" tiene este contenido
+        """
+        ---
+        type: creator
+        name: Otra Autora
+        ---
+
+        Bio de Otra Autora.
+        """
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/index.html" dice ">Colaboradora</a>"
       Y el archivo "dist/files/index.html" dice "href=\"./creadora.html\""
@@ -144,6 +153,15 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
         ---
 
         Bio de Autora A.
+        """
+      Y que el archivo "otra-autora.md" tiene este contenido
+        """
+        ---
+        type: creator
+        name: Otra Autora
+        ---
+
+        Bio de Otra Autora.
         """
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/creadora.html" dice "Ver página de la creadora →"

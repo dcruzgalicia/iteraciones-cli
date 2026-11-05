@@ -58,8 +58,10 @@ Característica: el menú del sitio
       Y el archivo "dist/files/index.html" dice ">Autoras<"
       Y el archivo "dist/files/index.html" dice "Facebook"
       Y el archivo "dist/files/index.html" dice "Mastodon"
-      Y el archivo "dist/files/index.html" dice "Bluesky"
+      Y el archivo "dist/files/index.html" dice "TikTok"
+      Y el archivo "dist/files/index.html" no dice "Bluesky"
       Y el archivo "dist/files/index.html" no dice "Threads"
+      Y el archivo "dist/files/menu.html" dice ">Menú</h2>"
       Y el archivo "dist/files/index.html" no dice "Más →"
 
     Escenario: El botón del menú va después de la identidad y antes de Redes

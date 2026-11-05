@@ -11,6 +11,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y una creadora llamada "Ana García" con retrato "ana.jpg"
+      Y otra creadora llamada "Otra Autora"
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/creadora.html" dice "assets/images/lista-ana"
@@ -39,10 +40,23 @@ Característica: el retrato de la creadora en sus tarjetas
       Y el archivo "dist/files/ana-garcia.html" dice "rounded-tr-2xl rounded-bl-2xl"
       Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "assets/images/ana-garcia-ana"
 
+    Escenario: El retrato abre la cuadrícula de textos de la creadora
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y una creadora llamada "Ana García" con retrato "ana.jpg"
+      Y un texto de "Ana García"
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/ana-garcia.html" pone "xl:grid-cols-2 xl:gap-6" antes que "Retrato de Ana García"
+      Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "tarjeta-fragmento"
+      Y el archivo "dist/files/ana-garcia.html" dice "h-[30rem]"
+      Y el archivo "dist/files/ana-garcia.html" dice "object-cover object-center"
+
     Escenario: Sin retrato la tarjeta sigue igual
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y una creadora llamada "Ana García"
+      Y otra creadora llamada "Otra Autora"
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/creadora.html" no dice "Retrato de"
 
@@ -59,6 +73,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y una creadora llamada "Ana García" cuyo retrato "no-existe.jpg" no existe
+      Y otra creadora llamada "Otra Autora"
       Y un texto de "Ana García"
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0

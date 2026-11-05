@@ -28,6 +28,14 @@ Given('un texto de {string}', (nombre: string) => {
   escribirEnProyecto('texto.md', `---\ntitle: Un texto\ncreator: ${nombre}\n---\n\nCuerpo del texto.\n`);
 });
 
+Given('otro texto de {string}', (nombre: string) => {
+  escribirEnProyecto('otro-texto.md', `---\ntitle: Otro texto\ncreator: ${nombre}\n---\n\nOtro cuerpo.\n`);
+});
+
+Given('otra creadora llamada {string}', (nombre: string) => {
+  escribirEnProyecto('otra-creadora.md', `---\ntype: creator\nname: ${nombre}\n---\n\nBio de ${nombre}.\n`);
+});
+
 Given('una colección de {string}', (nombre: string) => {
   escribirEnProyecto('antologia.md', `---\ntitle: Antología\ntype: collection\ncollectionCreator: ${nombre}\nfiles:\n  - texto.md\n---\n\nIntro.\n`);
 });

@@ -82,6 +82,8 @@ Característica: Las tarjetas que van al final de la página de un texto
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
       Y el texto es de una colección y de una lista
+      Y otra colección con el mismo texto
+      Y otra lista con el mismo texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces la tarjeta de las colecciones lleva el chip "Colecciones"
@@ -104,6 +106,7 @@ Característica: Las tarjetas que van al final de la página de un texto
     Escenario: La tarjeta de la biografía lleva el chip de creadora
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y una creadora llamada "Ana García"
+      Y otra creadora llamada "Otra Autora"
       Y un texto de "Ana García"
       Y el proyecto produce html
       Cuando hago un build del proyecto
