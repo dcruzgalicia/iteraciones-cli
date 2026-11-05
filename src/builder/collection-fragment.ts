@@ -173,7 +173,10 @@ function skipBlock(lines: string[], start: number): number {
 }
 
 function normalizaParrafo(text: string): string {
-  return text.replace(/\s*\n\s*/g, ' ').trim();
+  return text
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*\n\s*/g, '\n')
+    .trim();
 }
 
 /** Recorta una lista de párrafos sin romper los saltos entre ellos. */
