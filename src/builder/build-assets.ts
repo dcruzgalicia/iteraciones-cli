@@ -15,7 +15,15 @@ import type { CssFileCache } from './state-serialize.js';
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const LICENSE_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'license');
-const LICENSE_ICONS = ['cc', 'by', 'nc', 'nd'];
+const LICENSE_ICONS = [
+  { name: 'cc', file: 'cc.svg' },
+  { name: 'by', file: 'by.svg' },
+  { name: 'nc', file: 'nc.svg' },
+  { name: 'nd', file: 'nd.svg' },
+  { name: 'f2f-atribucion', file: 'f2f-atribucion.png' },
+  { name: 'f2f-compartirigual', file: 'f2f-compartirigual.png' },
+  { name: 'f2f-feministanocapitalista', file: 'f2f-feministanocapitalista.png' },
+];
 const ICONS_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'icons');
 const ICON_FILES = [
   { name: 'arrow-upward', size: 32 },
@@ -238,7 +246,7 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
 }
 
 /** Convierte un SVG a WebP con el tamaño indicado, conservando la transparencia. */
-async function svgAWebp(src: string, dest: string, size: number, tint?: string): Promise<boolean> {
+async function iconAWebp(src: string, dest: string, size: number, tint?: string): Promise<boolean> {
   await mkdir(dirname(dest), { recursive: true });
   const args = ['-background', 'none', src, '-resize', `${size}x${size}`, '-strip', '-define', 'webp:lossless=true'];
   if (tint !== undefined) args.push('-fuzz', '20%', '-fill', tint, '-opaque', 'black');
@@ -252,26 +260,25 @@ async function writeIconAssets(outputDir: string, siteConfig: SiteConfig): Promi
   for (const icon of ICON_FILES) {
     const src = join(ICONS_DIR, `${icon.name}.svg`);
     const dest = join(outputDir, ASSETS_IMAGES_DIR, `${icon.name}.webp`);
-    if (!(await svgAWebp(src, dest, icon.size, accent))) {
+    if (!(await iconAWebp(src, dest, icon.size, accent))) {
       throw new BuildError(`no se pudo convertir el icono "${icon.name}" a WebP`);
     }
   }
 }
 
-/** Convierte los iconos de la licencia CC a WebP de 48 px. */
-async function copyLicenseIcons(outputDir: string, siteConfig: SiteConfig): Promise<void> {
-  if (siteConfig.format?.html?.site?.license === undefined) return;
-  for (const nombre of LICENSE_ICONS) {
-    const src = join(LICENSE_DIR, `${nombre}.svg`);
-    const dest = join(outputDir, ASSETS_IMAGES_DIR, `${nombre}.webp`);
-    if (!(await svgAWebp(src, dest, 32))) {
-      throw new BuildError(`no se pudo convertir el icono de licencia "${nombre}" a WebP`);
+/** Convierte los iconos de las licencias a WebP de 32 px. */
+async function copyLicenseIcons(outputDir: string): Promise<void> {
+  for (const icon of LICENSE_ICONS) {
+    const src = join(LICENSE_DIR, icon.file);
+    const dest = join(outputDir, ASSETS_IMAGES_DIR, `${icon.name}.webp`);
+    if (!(await iconAWebp(src, dest, 32))) {
+      throw new BuildError(`no se pudo convertir el icono de licencia "${icon.name}" a WebP`);
     }
   }
 }
 
 export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
   await writeLogoAssets(cwd, outputDir, siteConfig);
-  await copyLicenseIcons(outputDir, siteConfig);
+  await copyLicenseIcons(outputDir);
   await writeIconAssets(outputDir, siteConfig);
 }

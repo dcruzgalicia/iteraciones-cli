@@ -23,6 +23,7 @@ iteraciones.config.yaml — todo se pone aquí (un archivo vacío vale todos los
   disabledFilters: []                      filtros Lua del paquete que se apagan
   disabledPreambleFilters: []              filtros de preámbulo que se apagan
   luaFilters: []                           filtros Lua propios del proyecto
+  license: F2F                             licencia del proyecto: F2F (por defecto) | CC-BY-NC-ND-4.0
 
   format.html.generate: ${html.generate}                 HTML
     format.html.site.title: ${html.site?.title}
@@ -32,7 +33,7 @@ iteraciones.config.yaml — todo se pone aquí (un archivo vacío vale todos los
     format.html.site.logo: ${html.site?.logo || "''"}
     format.html.site.logoSize: ${html.site?.logoSize}           tamaño del logo (px, rem, em…)
     format.html.pageSize: ${html.pageSize}              tarjetas por página en las colecciones
-    format.html.site.license: ${html.site.license ?? '(sin licencia)'}   licencia CC del sitio: CC-BY-NC-ND-4.0
+    format.html.site.license: ${html.site.license ?? '(por defecto)'}   F2F | CC-BY-NC-ND-4.0 (hereda del nivel superior)
 
   format.latex.generate: ${d.format.latex.generate}               .tex
   format.pdf.generate: ${d.format.pdf.generate}                   PDF (necesita LaTeX)
