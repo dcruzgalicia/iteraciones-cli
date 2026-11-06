@@ -1215,7 +1215,7 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string | f
   return [
     `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
     `<div class="mb-3 flex items-center gap-2">${iconos}</div>`,
-    `<div class="contenido-tamano contenido-compacto space-y-3">${parrafos}</div>`,
+    `<div class="contenido-compacto space-y-3">${parrafos}</div>`,
   ].join('');
 }
 
