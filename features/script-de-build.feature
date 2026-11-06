@@ -93,7 +93,7 @@ Característica: La clave script produce un build.sh portable y numerado de form
         | qué | valor esperado |
         | post-proceso | encadena el post-proceso LaTeX con el manifiesto |
         | entrada del post-proceso | lee la salida cruda de pandoc |
-      Y el manifiesto de post-proceso tiene una entrada
+      Y el manifiesto de post-proceso incluye la imagen del documento
       Y el archivo de dist existe
       Y el archivo de dist contiene la ruta de la imagen procesada
       Y la imagen procesada no se queda en la raíz de dist

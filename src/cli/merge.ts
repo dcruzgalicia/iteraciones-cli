@@ -13,6 +13,8 @@ import {
   collectionCardsContent,
   collectionScanContent,
   creatorHrefs,
+  licenciaLowertitlebackPorDefecto,
+  licenciaMarkdownPara,
   memberHtmlHrefs,
   readCollectionEntries,
 } from '../builder/pipeline-formats.js';
@@ -138,9 +140,11 @@ async function composeFor(
 ): Promise<string> {
   if (format === 'latex') {
     const pageNumber = (src.fm.pageNumber ?? siteConfig.format?.pdf?.pageNumber ?? siteConfig.pageNumber) as string | undefined;
+    const lowertitleback = licenciaLowertitlebackPorDefecto(src.fm, siteConfig.format?.pdf, siteConfig, dirname(src.inputPath));
+    const formatCfg = lowertitleback === undefined ? siteConfig.format?.pdf : { ...(siteConfig.format?.pdf ?? {}), lowertitleback };
     return buildLatexPandocContent(collectionBaseContent(entries, 'latex', src.text, pageNumber, undefined, ctx.relImageMap), ctx.doc, {
       fm: src.fm,
-      formatCfg: siteConfig.format?.pdf,
+      formatCfg,
       siteConfig,
     });
   }
@@ -159,6 +163,10 @@ async function composeFor(
     );
   }
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
+  if (format === 'epub') {
+    const licencia = licenciaMarkdownPara(src.fm, siteConfig);
+    return licencia === undefined ? base : `${base}\n\n${licencia}`;
+  }
 
   return format === 'markdown' ? rewriteImagePaths(base, ctx.relImageMap, ctx.docDir) : base;
 }

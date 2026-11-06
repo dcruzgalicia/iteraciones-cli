@@ -80,26 +80,23 @@ Característica: la tarjeta de licencia del sitio
       Entonces el archivo "dist/files/convocatorias/antologia.html" dice "src=\"./../assets/images/cc.webp\""
       Y el archivo "dist/files/convocatorias/antologia.html" dice "width:32px;height:32px"
 
-    Escenario: Sin licencia configurada se muestra la licencia PF por defecto
+    Escenario: Sin licencia configurada se muestra la CC por defecto
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
       Y el archivo "dist/files/index.html" dice "Algunos derechos reservados."
-      Y el archivo "dist/files/index.html" dice "Licencia de Producción Feminista"
-      Y el archivo "dist/files/index.html" dice "dar crédito a todas las personas que hicieron posible su creación"
-      Y el archivo "dist/files/index.html" dice "materiales y archivos necesarios para su creación, modificación y reproducción deben ser de acceso público"
-      Y el archivo "dist/files/index.html" dice "principios feministas, anticapitalistas, antirracistas y decoloniales"
-      Y el archivo "dist/files/index.html" no dice "hegemonía epistemológica"
-      Y el archivo "dist/files/index.html" no dice "labekka.red"
-      Y el archivo "dist/files/index.html" pone "assets/images/pf.webp" antes que "assets/images/ac.webp"
-      Y el archivo "dist/files/index.html" pone "assets/images/ac.webp" antes que "assets/images/pr.webp"
-      Y el archivo "dist/files/index.html" pone "assets/images/pr.webp" antes que "assets/images/fa.webp"
-      Y el archivo "dist/files/assets/images/pf.webp" existe
-      Y el archivo "dist/files/assets/images/ac.webp" existe
-      Y el archivo "dist/files/assets/images/pr.webp" existe
-      Y el archivo "dist/files/assets/images/fa.webp" existe
+      Y el archivo "dist/files/index.html" dice "Licencia Creative Commons"
+      Y el archivo "dist/files/index.html" dice "brindar un enlace a la&nbsp;licencia"
+      Y el archivo "dist/files/index.html" dice "No puede hacer uso de esta obra con propósitos comerciales"
+      Y el archivo "dist/files/index.html" pone "assets/images/cc.webp" antes que "assets/images/by.webp"
+      Y el archivo "dist/files/index.html" pone "assets/images/by.webp" antes que "assets/images/nc.webp"
+      Y el archivo "dist/files/index.html" pone "assets/images/nc.webp" antes que "assets/images/nd.webp"
+      Y el archivo "dist/files/assets/images/cc.webp" existe
+      Y el archivo "dist/files/assets/images/by.webp" existe
+      Y el archivo "dist/files/assets/images/nc.webp" existe
+      Y el archivo "dist/files/assets/images/nd.webp" existe
 
     Escenario: La clave license del nivel superior elige la licencia del proyecto
       Dado que la raíz del proyecto tiene un proyecto de prueba
