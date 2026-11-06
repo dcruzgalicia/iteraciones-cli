@@ -131,8 +131,7 @@ Then('la tarjeta de las colecciones lleva el chip {string}', (chip: string) => {
   if (match === null) {
     throw new Error(`la tarjeta de las colecciones no lleva el chip ${JSON.stringify(chip)}`);
   }
-  // El chip controla sus márgenes (sin el margen superior del h2) y deja aire
-  // antes del elemento que sigue.
+
   if (!match[1]?.includes('mt-0') || !/\bmb-\d/.test(match[1] ?? '')) {
     throw new Error(`el chip ${JSON.stringify(chip)} conserva los márgenes del h2: ${match[1]}`);
   }

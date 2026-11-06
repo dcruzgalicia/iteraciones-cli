@@ -88,8 +88,6 @@ local function process_dictum(div, width)
     end
   end
 
-  -- Un bloque con párrafos dentro (un shrink, por ejemplo) no cabe en el
-  -- argumento del macro: se usa el entorno, que aguanta bloques.
   local solo_parrafos = true
   for _, block in ipairs(quote_blocks) do
     if block.t ~= 'Para' then

@@ -49,8 +49,6 @@ export function resolveStringField(fm: CfgMap, formatCfg: CfgMap | undefined, ro
 }
 
 export function resolveBooleanField(fm: CfgMap, formatCfg: CfgMap | undefined, rootCfg: CfgMap, field: string): boolean | undefined {
-  // A diferencia de los otros dos, un valor que no es booleano no corta la
-  // búsqueda: salta al siguiente nivel (regla de precedencia del frontmatter).
   for (const value of candidatos(fm, formatCfg, rootCfg, field)) {
     if (typeof value === 'boolean') return value;
   }

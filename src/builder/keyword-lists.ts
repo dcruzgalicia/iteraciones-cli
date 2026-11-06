@@ -2,13 +2,11 @@ import { KEYWORDS_DIR } from './output-layout.js';
 import { relativeHref } from './pipeline-io.js';
 import type { DiscoveryEntry } from './types.js';
 
-/** Una lista por keyword, con el slug que usa en la salida y su texto. */
 export interface KeywordList {
   slug: string;
   label: string;
 }
 
-/** Los keywords de un documento, ya limpios. */
 export function keywordsFromFm(fm: Record<string, unknown> | undefined): string[] {
   const raw = fm?.keywords;
   const lista = typeof raw === 'string' ? [raw] : Array.isArray(raw) ? raw : [];
@@ -22,7 +20,6 @@ export function keywordsOf(entry: DiscoveryEntry | undefined): string[] {
   return keywordsFromFm(entry?.fm);
 }
 
-/** El slug de un keyword: sin acentos, en minúsculas y con guiones. */
 export function keywordSlug(keyword: string): string | undefined {
   const limpio = keyword
     .normalize('NFD')
@@ -33,11 +30,6 @@ export function keywordSlug(keyword: string): string | undefined {
   return limpio === '' ? undefined : limpio;
 }
 
-/**
- * Los keywords del proyecto, uno por slug y en orden alfabético. Dos formas del
- * mismo keyword ("Cuidados" y "cuidados") comparten página y se queda la que
- * ordena primero.
- */
 export function keywordListsOf(discoveryIndex: Map<string, DiscoveryEntry>): KeywordList[] {
   const porSlug = new Map<string, string>();
   for (const entry of discoveryIndex.values()) {
@@ -51,7 +43,6 @@ export function keywordListsOf(discoveryIndex: Map<string, DiscoveryEntry>): Key
   return [...porSlug].map(([slug, label]) => ({ slug, label })).sort((a, b) => a.label.localeCompare(b.label, 'es'));
 }
 
-/** Los documentos de una lista por keyword, sin las interventions. */
 export function keywordMembers(discoveryIndex: Map<string, DiscoveryEntry>, slug: string): string[] {
   const miembros: string[] = [];
   for (const [ruta, entry] of discoveryIndex) {
@@ -61,9 +52,7 @@ export function keywordMembers(discoveryIndex: Map<string, DiscoveryEntry>, slug
   return miembros;
 }
 
-/** A dónde lleva el chip de un keyword. */
 export function keywordHref(dir: string, slug: string): string {
-  // Dentro de `keywords/` basta el nombre; desde fuera hay que bajar.
   if (dir === KEYWORDS_DIR) return `./${slug}.html`;
   return relativeHref(dir, `${KEYWORDS_DIR}/${slug}.html`);
 }

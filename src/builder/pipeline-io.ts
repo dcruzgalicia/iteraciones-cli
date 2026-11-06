@@ -8,10 +8,6 @@ import { parseAuthors } from './discover-frontmatter.js';
 import { docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import type { BuildDocument } from './types.js';
 
-/**
- * Los espacios no separables sólo sirven en LaTeX (donde pandoc los vuelve
- * `~`). En HTML, Markdown y EPUB se cambian por un espacio normal.
- */
 export function espaciosNormales(texto: string): string {
   return texto.replace(/&nbsp;|&#160;|&#xa0;|\u00a0/gi, ' ');
 }

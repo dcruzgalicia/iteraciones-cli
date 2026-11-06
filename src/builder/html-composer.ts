@@ -35,35 +35,23 @@ export function htmlResourceFiles(): string[] {
   return [...new Bun.Glob('**/*.html').scanSync({ cwd: HTML_RESOURCES_DIR, onlyFiles: true })].sort();
 }
 
-/** Una longitud CSS segura para el logo; si no lo es, el tamaño por defecto. */
 function logoSizeCss(value: string | undefined): string {
   const limpio = (value ?? '').trim();
   return /^\d+(\.\d+)?(px|rem|em|vw|vh|%)$/.test(limpio) ? limpio : DEFAULT_HTML_FORMAT.site.logoSize;
 }
 
-/**
- * El bloque del logo para una página. El raster vive en `assets/` y se
- * referencia con una ruta relativa al nivel de la página; el SVG de fábrica va
- * incrustado para que herede el accent del tema.
- */
 export function logoBlockHtml(href: string, logoSize?: string): string {
   const inner = `<img src="${href}" alt="" class="block h-auto w-full">`;
   return `<span class="flex shrink-0 text-accent-500 logo-fill" style="width:${logoSizeCss(logoSize)}">${inner}</span>`;
 }
 
-/** El retrato de la creadora como primera tarjeta de su cuadrícula. */
 export function creatorPortraitHtml(image: string, alt: string): string {
   return `<div class="min-w-0"><figure class="relative m-0 h-[30rem] overflow-hidden rounded-tr-2xl rounded-bl-2xl tarjeta sm:h-[32rem] lg:h-[34rem]"><img src="${Bun.escapeHTML(image)}" alt="${Bun.escapeHTML(alt)}" class="block h-full w-full object-cover object-center"></figure></div>`;
 }
 
-/**
- * El chip de pertenencia: contorno de acento, sin relleno. Lo comparten las
- * colecciones y la tarjeta de redes para decir de quién son los enlaces.
- */
 export const CHIP_OUTLINE_CLASSES =
   'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/40 bg-transparent px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none no-underline text-accent-700 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:text-accent-300';
 
-/** La fila de redes con los enlaces del proyecto, fuera de las tarjetas. */
 function frecuenciasInline(siteConfig: SiteConfig): string {
   const links = siteConfig.format?.html?.site?.links ?? [];
   if (links.length === 0) return '';
@@ -140,12 +128,11 @@ export interface HtmlPageVars {
   siteTitle: string;
   tagline?: string;
   lang: string;
-  /** El bloque del logo, ya resuelto para el nivel de la página. */
+
   logoBlock?: string;
-  /** La ruta relativa del favicon. */
+
   favicon?: string;
 
-  /** Las palabras clave del documento, ya unidas por comas para el <meta>. */
   keywords?: string;
   theme?: string;
   css?: string;
@@ -172,23 +159,20 @@ export interface HtmlPageVars {
   license?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
-  /** Los chips de colecciones y keywords de la cabecera de página. */
+
   pageChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;
 
-  /** Las tarjetas de creadoras y de colecciones, ya en HTML. */
   extras?: string;
 
-  /** Las tarjetas de información de la barra lateral, ya en HTML. */
   sidebarExtras?: string;
-  /** La tarjeta de las entradas más recientes, ya en HTML. */
+
   recientes?: string;
-  /** La tarjeta con todas las palabras clave del sitio, ya en HTML. */
+
   siteKeywords?: string;
 
-  /** El nav de paginación, ya en HTML. */
   pagination?: string;
 
   authors?: string[];

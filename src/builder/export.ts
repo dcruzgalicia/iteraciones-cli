@@ -87,9 +87,6 @@ export async function convertToEpub(
     ]),
   );
 
-  // Los keywords van como `dc:subject` (una etiqueta por palabra). Pandoc sólo
-  // acepta la lista por archivo de metadatos, así que se deja junto al resto de
-  // artefactos del build.
   const keywords = keywordsFromFm(fm);
   if (keywords.length > 0 && cwd !== undefined) {
     const metaPath = join(cwd, '.iteraciones', 'epub', `${doc.relativePath.replace(/[\\/]/g, '-')}.yaml`);

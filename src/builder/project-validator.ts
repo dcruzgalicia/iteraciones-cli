@@ -36,6 +36,7 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'site-title',
   'tagline',
   'theme',
+  'accent',
   'css',
   'extratitle',
   'frontispiece',

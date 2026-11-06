@@ -13,12 +13,6 @@ export interface MarkdownCleanOptions {
   check?: boolean;
 }
 
-/**
- * Limpia el cuerpo de un markdown con las mismas reglas que el export:
- * quita shrink/stretch/runt y text-nowrap, normaliza los espacios duros y
- * deja cada párrafo en una sola línea (`--wrap=none` en execPandoc).
- * El frontmatter se conserva tal cual.
- */
 export async function limpiaMarkdown(file: string, content: string): Promise<string> {
   const { yaml, body } = splitFrontmatter(content);
   if (body.trim() === '') return content;

@@ -98,7 +98,6 @@ function imageArgs(inputPath: string, spec: ImageProcessSpec, quality: number, i
   return args;
 }
 
-/** Ejecuta magick; si falla, avisa y devuelve false. */
 async function runMagick(inputPath: string, args: string[]): Promise<boolean> {
   try {
     const result = await exec('magick', args, { timeoutMs: MAGICK_TIMEOUT_MS });
@@ -160,11 +159,9 @@ function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | 
 
 export const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper', 'frontCover', 'backCover'] as const;
 
-/** Las imágenes de membrete van a 5 cm de alto por defecto, con el ancho que pidan. */
 export const LETTERHEAD_FIELD = 'letterhead';
 export const LETTERHEAD_HEIGHT_MM = 50;
 
-/** La altura del membrete: `5cm`, `50mm`, `2in` o un número en cm. */
 export function parseLetterheadHeight(value: unknown): number {
   if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? value * 10 : LETTERHEAD_HEIGHT_MM;
   if (typeof value !== 'string') return LETTERHEAD_HEIGHT_MM;
@@ -358,7 +355,6 @@ function warnMissingMagick(pdfxActive: boolean): void {
   }
 }
 
-/** Las imágenes declaradas en los campos del frontmatter (guardas, membrete…). */
 async function collectFieldSources(fm: Record<string, unknown>, docDir: string, push: (source: ImageSource) => void): Promise<void> {
   const alturaMembrete = parseLetterheadHeight(fm.letterheadHeight);
   for (const field of IMAGE_FIELDS) {
@@ -372,10 +368,6 @@ async function collectFieldSources(fm: Record<string, unknown>, docDir: string, 
   }
 }
 
-/**
- * Reúne todas las imágenes del documento, sin repetir y en orden de prioridad
- * (guardas, después páginas de título, después cuerpo).
- */
 export async function collectImageSources(
   content: string,
   fm: Record<string, unknown>,
@@ -436,8 +428,6 @@ function geometryFor(source: ImageSource, profile: ImageProfile, targets: Proces
 }
 
 function grayscaleFor(source: ImageSource, profile: ImageProfile): boolean {
-  // El membrete va siempre en gris, también en los perfiles de color: es una
-  // imagen de imprenta y no debe depender del formato que la procese.
   if (source.field === LETTERHEAD_FIELD) return true;
   if (!profile.grayscale) return false;
   if (profile.coverColor && source.cover && (source.field === 'frontCover' || source.field === 'backCover')) return false;
@@ -481,15 +471,10 @@ interface PreprocessArgs {
   dirs: { pdf: string; web: string; epub: string };
   wants: { pdf: boolean; web: boolean; epub: boolean };
 
-  /** Imágenes que no están en el cuerpo (tarjetas de una colección). */
   extraImages?: readonly string[];
   detector?: () => Promise<boolean>;
 }
 
-/**
- * Procesa las imágenes del documento en los perfiles pedidos: PDF (JPG a 300
- * dpi, gris) y web/EPUB (WebP o JPG ligeros, color, ancho máximo 1024).
- */
 export async function preprocessDocumentImages(args: PreprocessArgs): Promise<DocumentImages> {
   const detector = args.detector ?? detectMagick;
   if (!(await detector())) {
@@ -561,7 +546,6 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
   return result;
 }
 
-/** Las imágenes del cuerpo de una lista por defecto, en su versión web. */
 export async function processWebImages(
   inlineImages: string[],
   outputDir: string,

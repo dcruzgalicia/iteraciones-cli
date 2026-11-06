@@ -22,8 +22,6 @@
   }
 }
 
-/* El fondo del sitio: un papel muy claro teñido del acento. Lleva menos tinte
-   que las tarjetas para que éstas se lean como una superficie aparte. */
 @utility bg-paper {
   background-color: color-mix(in oklab, var(--color-accent-500) 8%, var(--color-stone-50));
 
@@ -32,14 +30,10 @@
   }
 }
 
-/* La superficie de las tarjetas: papel claro sobre el fondo, con su borde fino
-   y las marcas de esquina. La comparten todas las tarjetas del sitio, así que
-   el color vive aquí y no repetido en cada plantilla. */
 @utility tarjeta {
   background-color: color-mix(in oklab, var(--color-accent-500) 2%, color-mix(in srgb, #fff 95%, transparent));
   border-color: color-mix(in srgb, var(--color-stone-300) 90%, transparent);
 
-  /* El borde de acento al pasar el ratón: vale para todas las tarjetas. */
   &:hover {
     --tw-ring-color: color-mix(in srgb, var(--color-accent-500) 40%, transparent);
   }
@@ -49,8 +43,6 @@
     border-color: color-mix(in srgb, var(--color-stone-600) 40%, transparent);
   }
 
-  /* Las marcas de esquina: la firma técnica del sitio, en el acento y muy
-     tenues, para que no compitan con el texto ni con el borde. */
   &::before,
   &::after {
     pointer-events: none;
@@ -83,8 +75,6 @@
   }
 }
 
-/* Ningún enlace va subrayado por defecto: el subrayado aparece al pasar el
-   ratón, que es la señal de que se puede pulsar. */
 @layer base {
   a {
     text-decoration: none;
@@ -119,10 +109,6 @@
   animation-range: 150px 300px;
 }
 
-/* Lo contrario: se esconden al principio y aparecen cuando el scroll ya
-   llegó al final de la página. Sin scroll no hay nada que revelar, así que
-   se quedan a la vista (el animation-range no aplica si la página no
-   scrollea). */
 @utility scroll-reveal-at-end {
   animation: scroll-reveal linear both;
   animation-timeline: scroll();
@@ -155,8 +141,6 @@
   font-size: 0.95em;
   text-align: left;
 
-  /* La tipografía de Tailwind pone comillas a todo blockquote; el dictum va
-     en cursivas, sin comillas. El selector duplicado le gana a la tipografía. */
   && p:first-of-type::before,
   && p:last-of-type::after {
     content: none;
@@ -192,8 +176,6 @@
   text-align: left;
 }
 
-/* Los nombres que enlazan a la página de su creadora: con el acento, con una
-   línea debajo para que se note que son un enlace. */
 @utility nombres-enlazados {
   a {
     color: var(--color-accent-700);
@@ -207,8 +189,6 @@
   }
 }
 
-/* Lo mismo, pero en gris: para los nombres de creadora en las tarjetas de un
-   archivo individual, donde son información secundaria. */
 @utility nombres-enlazados-gris {
   a {
     color: var(--color-stone-600);
@@ -222,8 +202,6 @@
   }
 }
 
-/* La viñeta del listado de "También está en": un color sólido, no el gris
-   que trae la tipografía por defecto. */
 @utility tarjeta-extras {
   ul li::marker {
     color: var(--color-stone-700);
@@ -236,8 +214,6 @@
   }
 }
 
-/* La tipografía del cuerpo subraya los enlaces y gana a la base, así que la
-   regla va sin capa: en reposo no hay subrayado y en hover sí. */
 .prose :where(a):not(:where([class~="not-prose"] *)) {
   text-decoration: none;
 }

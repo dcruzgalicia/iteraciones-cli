@@ -64,7 +64,6 @@ function numero(valor: string | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Lee la salida de `pdftotext -bbox-layout`. */
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: parser de XML plano, sin dependencias
 export function parseBboxLayout(xml: string): PageBox[] {
   const pages: PageBox[] = [];
@@ -257,7 +256,6 @@ function riverDePagina(page: PageBox, lineas: LineBox[]): TypographyIncidence[] 
   return salida;
 }
 
-/** Las reglas de espaciado sobre cajas ya parseadas. */
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orquesta las tres reglas; los helpers ya están separados
 export function analyzeBoxes(pages: PageBox[], opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
   const pedidas = new Set<string>(opciones.reglas ?? GEOMETRY_RULES);
@@ -297,7 +295,6 @@ export function analyzeBoxes(pages: PageBox[], opciones: OpcionesAnalisis = {}):
   return salida;
 }
 
-/** Lee las cajas y las analiza. Usa el número de línea de las cajas. */
 export function analyzeBbox(xml: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
   return analyzeBoxes(parseBboxLayout(xml), opciones);
 }
