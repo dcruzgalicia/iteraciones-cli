@@ -1,5 +1,6 @@
 import { dirname } from 'node:path';
 import { BuildError } from '../lib/errors.js';
+import type { SlugComputer } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { DiscoveryEntry } from './types.js';
 
@@ -7,8 +8,6 @@ interface SlugChangeAccumulator {
   slugChangedEntries: Map<string, string>;
   changedPaths: string[];
 }
-
-type SlugComputer = (meta: { title: string; creator: string[] }, opts: { fallbackPath: string; maxCreators?: number }) => string;
 
 function entryFor(discoveryIndex: Map<string, DiscoveryEntry>, path: string): DiscoveryEntry {
   const entry = discoveryIndex.get(path);

@@ -124,12 +124,7 @@ export async function buildAssets(
 
 const DEFAULT_LOGO = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
 
-/** Cómo se muestra el logo del sitio en el HTML. */
-export type LogoAsset =
-  /** Va incrustado en el HTML: el SVG de fábrica o un raster sin ImageMagick. */
-  | { kind: 'inline'; html: string; favicon?: string }
-  /** Vive en `assets/`: el HTML lo referencia y el navegador lo cachea. */
-  | { kind: 'file'; path: string; favicon?: string };
+export type LogoAsset = { kind: 'file'; path: string; favicon?: string };
 
 /** El ancho en píxeles del logo: el doble del tamaño CSS, para pantallas 2×. */
 function logoPx(size: string | undefined): number {

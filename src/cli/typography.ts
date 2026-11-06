@@ -390,10 +390,6 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
 
 const ARCHIVO_HIFENACION = '15-hyphenation-rules.tex';
 
-function escapaRegex(texto: string): string {
-  return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /**
  * Agrega la palabra a `preamble/15-hyphenation-rules.tex`, creándolo si el
  * proyecto no lo tiene. Al crearlo se parte del archivo del paquete para no
@@ -413,7 +409,7 @@ async function agregaHifenacion(cwd: string, palabra: string): Promise<void> {
     const base = join(PKG_PREAMBLE_DIR, ARCHIVO_HIFENACION);
     contenido = (await Bun.file(base).exists()) ? await Bun.file(base).text() : '\\hyphenation{\n}\n';
   }
-  if (new RegExp(`^\\s*${escapaRegex(limpia)}\\s*$`, 'm').test(contenido)) return;
+  if (new RegExp(`^\\s*${RegExp.escape(limpia)}\\s*$`, 'm').test(contenido)) return;
   const abre = contenido.indexOf('\\hyphenation{');
   const cierra = abre < 0 ? -1 : contenido.indexOf('}', abre);
   let nuevo: string;
