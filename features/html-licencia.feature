@@ -87,18 +87,18 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
       Y el archivo "dist/files/index.html" dice "Algunos derechos reservados."
-      Y el archivo "dist/files/index.html" dice "Licencia de Producción y Reproducción Feminista"
+      Y el archivo "dist/files/index.html" dice "Licencia de Producción Feminista"
       Y el archivo "dist/files/index.html" dice "dar crédito a todas las personas que hicieron posible su creación"
       Y el archivo "dist/files/index.html" dice "materiales y archivos necesarios para su creación, modificación y reproducción deben ser de acceso público"
       Y el archivo "dist/files/index.html" dice "hegemonía epistemológica"
       Y el archivo "dist/files/index.html" no dice "labekka.red"
-      Y el archivo "dist/files/index.html" pone "assets/images/pf.webp" antes que "assets/images/f2f-atribucion.webp"
-      Y el archivo "dist/files/index.html" pone "assets/images/f2f-atribucion.webp" antes que "assets/images/pr.webp"
-      Y el archivo "dist/files/index.html" pone "assets/images/pr.webp" antes que "assets/images/f2f-feministanocapitalista.webp"
+      Y el archivo "dist/files/index.html" pone "assets/images/pf.webp" antes que "assets/images/ac.webp"
+      Y el archivo "dist/files/index.html" pone "assets/images/ac.webp" antes que "assets/images/pr.webp"
+      Y el archivo "dist/files/index.html" pone "assets/images/pr.webp" antes que "assets/images/fa.webp"
       Y el archivo "dist/files/assets/images/pf.webp" existe
-      Y el archivo "dist/files/assets/images/f2f-atribucion.webp" existe
+      Y el archivo "dist/files/assets/images/ac.webp" existe
       Y el archivo "dist/files/assets/images/pr.webp" existe
-      Y el archivo "dist/files/assets/images/f2f-feministanocapitalista.webp" existe
+      Y el archivo "dist/files/assets/images/fa.webp" existe
 
     Escenario: La clave license del nivel superior elige la licencia del proyecto
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -116,7 +116,7 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice "Licencia Creative Commons"
       Y el archivo "dist/files/index.html" dice "assets/images/cc.webp"
-      Y el archivo "dist/files/index.html" no dice "Licencia de Producción y Reproducción Feminista"
+      Y el archivo "dist/files/index.html" no dice "Licencia de Producción Feminista"
 
     Escenario: El frontmatter del documento gana sobre la licencia del sitio
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -143,4 +143,4 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/un-texto.html" dice "Licencia Creative Commons"
       Y el archivo "dist/files/un-texto.html" dice "assets/images/cc.webp"
-      Y el archivo "dist/files/index.html" dice "Licencia de Producción y Reproducción Feminista"
+      Y el archivo "dist/files/index.html" dice "Licencia de Producción Feminista"

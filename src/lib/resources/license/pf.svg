@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <title>Producción feminista</title>
-  <path fill="#000" fill-rule="evenodd" d="M256 33a223 223 0 1 0 0 446a223 223 0 1 0 0 -446Z M256 61a195 195 0 1 1 0 390a195 195 0 1 1 0 -390Z"/>
-  <path fill="#000" d="M178 160h34v192h-34z"/>
-  <path fill="#000" fill-rule="evenodd" d="M212 160h58a62 62 0 0 1 0 124h-58v-34h58a28 28 0 0 0 0 -56h-58z"/>
-  <path fill="#000" d="M320 160h72v34h-72z M320 160h34v192h-34z M320 250h62v34h-62z"/>
-</svg>

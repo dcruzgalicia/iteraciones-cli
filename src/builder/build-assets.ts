@@ -20,11 +20,10 @@ const LICENSE_ICONS = [
   { name: 'by', file: 'by.svg' },
   { name: 'nc', file: 'nc.svg' },
   { name: 'nd', file: 'nd.svg' },
-  { name: 'pf', file: 'pf.svg' },
-  { name: 'pr', file: 'pr.svg' },
-  { name: 'f2f-atribucion', file: 'f2f-atribucion.png' },
-  { name: 'f2f-compartirigual', file: 'f2f-compartirigual.png' },
-  { name: 'f2f-feministanocapitalista', file: 'f2f-feministanocapitalista.png' },
+  { name: 'pf', file: 'pf.png' },
+  { name: 'ac', file: 'ac.png' },
+  { name: 'pr', file: 'pr.png' },
+  { name: 'fa', file: 'fa.png' },
 ];
 const ICONS_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'icons');
 const ICON_FILES = [
