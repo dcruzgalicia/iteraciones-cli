@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
-import type { LogoAsset } from './build-assets.js';
 
 export const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
@@ -25,28 +24,6 @@ export async function loadCard(type: HtmlDocType, name: string): Promise<string>
   return (await own.exists()) ? own.text() : Bun.file(join(HTML_RESOURCES_DIR, 'file', name)).text();
 }
 
-type HtmlCardKey = 'header' | 'contenido' | 'formatos' | 'indice' | 'referencias' | 'footer';
-
-const HTML_ORDER: readonly HtmlCardKey[] = ['header', 'indice', 'formatos', 'contenido', 'referencias', 'footer'];
-
-const HTML_CARDS: Record<HtmlCardKey, string> = {
-  header: 'card-identity.html',
-  contenido: 'card-contenido.html',
-  formatos: 'card-formatos.html',
-  indice: 'card-indice.html',
-  referencias: 'card-referencias.html',
-  footer: 'card-identity.html',
-};
-
-const HTML_REGION: Record<HtmlCardKey, 'header' | 'main' | 'sidebar' | 'footer'> = {
-  header: 'header',
-  contenido: 'main',
-  formatos: 'sidebar',
-  indice: 'sidebar',
-  referencias: 'main',
-  footer: 'footer',
-};
-
 const IDENTITY_APERTURA = '    <div id="card-identity" class="min-w-0">\n\n';
 const FOOTER_APERTURA = '    <div id="card-identity-footer" class="min-w-0">\n';
 
@@ -69,18 +46,14 @@ function logoSizeCss(value: string | undefined): string {
  * referencia con una ruta relativa al nivel de la página; el SVG de fábrica va
  * incrustado para que herede el accent del tema.
  */
-export function logoBlockHtml(logo: LogoAsset, href: string, logoSize?: string): string {
-  const inner = logo.kind === 'inline' ? logo.html : `<img src="${href}" alt="" class="block h-auto w-full">`;
+export function logoBlockHtml(href: string, logoSize?: string): string {
+  const inner = `<img src="${href}" alt="" class="block h-auto w-full">`;
   return `<span class="flex shrink-0 text-accent-500 logo-fill" style="width:${logoSizeCss(logoSize)}">${inner}</span>`;
-}
-
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /** El retrato de la creadora como primera tarjeta de su cuadrícula. */
 export function creatorPortraitHtml(image: string, alt: string): string {
-  return `<div class="min-w-0"><figure class="relative m-0 h-[30rem] overflow-hidden rounded-tr-2xl rounded-bl-2xl tarjeta sm:h-[32rem] lg:h-[34rem]"><img src="${escapeHtml(image)}" alt="${escapeHtml(alt)}" class="block h-full w-full object-cover object-center"></figure></div>`;
+  return `<div class="min-w-0"><figure class="relative m-0 h-[30rem] overflow-hidden rounded-tr-2xl rounded-bl-2xl tarjeta sm:h-[32rem] lg:h-[34rem]"><img src="${Bun.escapeHTML(image)}" alt="${Bun.escapeHTML(alt)}" class="block h-full w-full object-cover object-center"></figure></div>`;
 }
 
 /**
@@ -97,7 +70,7 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
   const items = links
     .map(
       (link: { name: string; url: string }) =>
-        `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex h-7 items-center rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold text-stone-600 no-underline transition-colors duration-200 hover:border-stone-600 hover:bg-stone-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:bg-transparent dark:text-stone-300 dark:hover:bg-stone-500/10">${escapeHtml(link.name)}</a>`,
+        `<a href="${Bun.escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex h-7 items-center rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold text-stone-600 no-underline transition-colors duration-200 hover:border-stone-600 hover:bg-stone-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:bg-transparent dark:text-stone-300 dark:hover:bg-stone-500/10">${Bun.escapeHTML(link.name)}</a>`,
     )
     .join('');
   return `<nav aria-label="Redes" class="contents">${items}</nav>`;
@@ -127,21 +100,15 @@ function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: stri
 
 export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocType = 'file'): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
-  const mainCards: string[] = [];
-  const sidebarCards: string[] = [];
-  let identity = '';
-  let footerIdentity = '';
-  let metadata = '';
-  for (const key of HTML_ORDER) {
-    const card = await loadCard(type, HTML_CARDS[key]);
-    const region = HTML_REGION[key];
-    if (region === 'header') identity = card;
-    else if (region === 'footer') footerIdentity = comoFooter(card);
-    else if (region === 'main') mainCards.push(card);
-    else sidebarCards.push(card);
-    if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
-    if (key === 'formatos') sidebarCards.push(await loadCard('file', 'card-indice-coleccion.html'));
-  }
+  const identity = await loadCard(type, 'card-identity.html');
+  const footerIdentity = comoFooter(await loadCard(type, 'card-identity.html'));
+  const metadata = await loadCard(type, 'card-metadata.html');
+  const mainCards = [await loadCard(type, 'card-contenido.html'), await loadCard(type, 'card-referencias.html')];
+  const sidebarCards = [
+    await loadCard(type, 'card-indice.html'),
+    await loadCard(type, 'card-formatos.html'),
+    await loadCard('file', 'card-indice-coleccion.html'),
+  ];
 
   const redes = frecuenciasInline(siteConfig);
   const menuHeader = '$if(menu-header)$$menu-header$$endif$';

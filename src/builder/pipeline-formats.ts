@@ -253,7 +253,7 @@ function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | u
   if (logo === undefined) return {};
   const href = logo.kind === 'file' ? relativeHref(dir, logo.path) : '';
   return {
-    logoBlock: logoBlockHtml(logo, href, logoSize),
+    logoBlock: logoBlockHtml(href, logoSize),
     favicon: logo.favicon === undefined ? undefined : `<link rel="icon" href="${relativeHref(dir, logo.favicon)}">`,
   };
 }
@@ -1008,16 +1008,12 @@ function figuraDeTarjeta(href: string, enlace?: string): string {
 }
 
 function retratoDeCreadora(href: string, nombre: string, enlace?: string): string {
-  const img = `<img src="${href}" alt="Retrato de ${escaparHtml(nombre)}" class="${PORTRAIT_CLASSES}" style="width:100px;height:100px">`;
+  const img = `<img src="${href}" alt="Retrato de ${Bun.escapeHTML(nombre)}" class="${PORTRAIT_CLASSES}" style="width:100px;height:100px">`;
   const dentro =
     enlace === undefined
       ? img
-      : `<a href="${enlace}" aria-label="Ver la biografía de ${escaparHtml(nombre)}" class="${PORTRAIT_LINK_CLASSES}">${img}</a>`;
+      : `<a href="${enlace}" aria-label="Ver la biografía de ${Bun.escapeHTML(nombre)}" class="${PORTRAIT_LINK_CLASSES}">${img}</a>`;
   return `<div class="${PORTRAIT_WRAPPER_CLASSES}">${dentro}</div>`;
-}
-
-function escaparHtml(texto: string): string {
-  return texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /**
@@ -1031,7 +1027,7 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
   const items = imprimibles
     .map((entrada) => {
       const href = memberHrefs.get(entrada.file);
-      const titulo = escaparHtml(entrada.title || TITULO_POR_DEFECTO);
+      const titulo = Bun.escapeHTML(entrada.title || TITULO_POR_DEFECTO);
       return href === undefined
         ? `<li>${titulo}</li>`
         : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
@@ -1333,7 +1329,7 @@ function keywordChipsCard(keywords: { titulo: string; href: string; count?: numb
   const chips = keywords
     .map((keyword) => {
       const badge = keyword.count === undefined ? '' : `<span class="${KEYWORD_BADGE_CLASSES}">${keyword.count}</span>`;
-      return `<a href="${keyword.href}" class="${SIDEBAR_KEYWORD_CHIP_CLASSES}">${escaparHtml(keyword.titulo)}${badge}</a>`;
+      return `<a href="${keyword.href}" class="${SIDEBAR_KEYWORD_CHIP_CLASSES}">${Bun.escapeHTML(keyword.titulo)}${badge}</a>`;
     })
     .join('');
   const titulo =
@@ -1345,7 +1341,7 @@ function keywordChipsCard(keywords: { titulo: string; href: string; count?: numb
 
 /** La tarjeta de las palabras clave del documento o la colección. */
 export function keywordsCard(keywords: { titulo: string; href: string; count?: number }[], ownerLabel: string, titleHref?: string): string {
-  const ownerChip = `<span class="${EXTRA_PILL_OUTLINE_CLASSES}">${escaparHtml(ownerLabel)}</span>`;
+  const ownerChip = `<span class="${EXTRA_PILL_OUTLINE_CLASSES}">${Bun.escapeHTML(ownerLabel)}</span>`;
   return keywordChipsCard(keywords, ownerChip, titleHref);
 }
 
@@ -1364,8 +1360,8 @@ function siteKeywordsCard(
   }));
   const ownerChip =
     siteHref === undefined
-      ? `<span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</span>`
-      : `<a href="${siteHref}" class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(siteTitle)}</a>`;
+      ? `<span class="${CHIP_OUTLINE_CLASSES}">${Bun.escapeHTML(siteTitle)}</span>`
+      : `<a href="${siteHref}" class="${CHIP_OUTLINE_CLASSES}">${Bun.escapeHTML(siteTitle)}</a>`;
   return keywordChipsCard(keywords, ownerChip, titleHref);
 }
 
@@ -1391,7 +1387,7 @@ function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string):
     .map((ruta) => {
       const entry = discoveryIndex.get(ruta);
       const html = posix(join(dirname(ruta), `${htmlSlugFor(ruta, entry?.slug)}.html`));
-      return `<li><a href="${relativeHref(dir, html)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${escaparHtml(entry?.title ?? ruta)}</a></li>`;
+      return `<li><a href="${relativeHref(dir, html)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(entry?.title ?? ruta)}</a></li>`;
     })
     .join('');
   return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Recientes</h2></div><ul class="m-0 list-disc space-y-1 ps-5">${items}</ul></div>`;
@@ -1454,7 +1450,7 @@ function hrefDeMenu(url: string, dir: string): string {
 
 function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
   const attrs = esEnlaceExterno(enlace.url) ? ' target="_blank" rel="noopener noreferrer"' : '';
-  return `<a href="${escaparHtml(hrefDeMenu(enlace.url, dir))}" class="${MENU_LINK_CLASSES}"${attrs}>${escaparHtml(enlace.name)}</a>`;
+  return `<a href="${Bun.escapeHTML(hrefDeMenu(enlace.url, dir))}" class="${MENU_LINK_CLASSES}"${attrs}>${Bun.escapeHTML(enlace.name)}</a>`;
 }
 
 /** El botón del menú en el header: hamburguesa sutil, sin flecha. */
@@ -1622,7 +1618,7 @@ export function creatorLinksCard(nombre: string, links: { name: string; url: str
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
     '',
-    `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Redes</h2><span class="${CHIP_OUTLINE_CLASSES}">${escaparHtml(nombre)}</span></div>`,
+    `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Redes</h2><span class="${CHIP_OUTLINE_CLASSES}">${Bun.escapeHTML(nombre)}</span></div>`,
     '',
     items,
     '',
@@ -1739,7 +1735,7 @@ async function syncKeywordIndex(args: {
 
 /** El contenido de la página con todas las palabras clave del sitio. */
 function keywordIndexContent(listas: { slug: string; label: string }[]): string {
-  return listas.map(({ slug, label }) => `- [${escaparHtml(label)}](${keywordHref('.', slug)})`).join('\n');
+  return listas.map(({ slug, label }) => `- [${Bun.escapeHTML(label)}](${keywordHref('.', slug)})`).join('\n');
 }
 
 /** La página por defecto `keyword.html` con todas las palabras clave. */
@@ -1994,7 +1990,7 @@ function chipsDePertenencia(
   for (const ruta of contenedores) {
     const contenedor = discoveryIndex?.get(ruta);
     if (contenedor?.type !== 'collection' && contenedor?.type !== 'list') continue;
-    const titulo = escaparHtml(contenedor.title || ruta);
+    const titulo = Bun.escapeHTML(contenedor.title || ruta);
     if (ruta === pagePath) {
       chips.push(`<span class="${CHIP_OUTLINE_CLASSES}">${titulo}</span>`);
       continue;
@@ -2037,10 +2033,10 @@ function chipsDePagina(
   const chips: string[] = [];
   for (const contenedor of contenedores) {
     if (contenedor.type !== 'collection') continue;
-    chips.push(`<a href="${contenedor.href}" class="${PAGE_COLLECTION_CHIP_CLASSES}">${escaparHtml(contenedor.titulo)}</a>`);
+    chips.push(`<a href="${contenedor.href}" class="${PAGE_COLLECTION_CHIP_CLASSES}">${Bun.escapeHTML(contenedor.titulo)}</a>`);
   }
   for (const keyword of palabrasClave) {
-    chips.push(`<a href="${keyword.href}" class="${PAGE_KEYWORD_CHIP_CLASSES}">${escaparHtml(keyword.titulo)}</a>`);
+    chips.push(`<a href="${keyword.href}" class="${PAGE_KEYWORD_CHIP_CLASSES}">${Bun.escapeHTML(keyword.titulo)}</a>`);
   }
   return chips.join('');
 }
@@ -2160,7 +2156,7 @@ function collectionCard(
       ' style="mask-image:linear-gradient(to bottom,black 70%,transparent);-webkit-mask-image:linear-gradient(to bottom,black 70%,transparent)"';
     const previewHtml = [
       `<div class="tarjeta-preview-wrap min-h-0 flex-1 overflow-hidden"${estiloPreview}>`,
-      `<p class="tarjeta-preview">${parrafos.map((parrafo) => escaparHtml(parrafo).replace(/\n/g, '<br>')).join('<br><br>')}</p>`,
+      `<p class="tarjeta-preview">${parrafos.map((parrafo) => Bun.escapeHTML(parrafo).replace(/\n/g, '<br>')).join('<br><br>')}</p>`,
       '</div>',
     ].join('\n');
     contenido.push('', previewHtml);
