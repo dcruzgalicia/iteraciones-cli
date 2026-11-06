@@ -1244,7 +1244,7 @@ function licenciaLowertitleback(def: LicenciaDef, docDir: string): string {
       return `![](${posix(iconPath)}){width=15pt}`;
     })
     .join(' ');
-  return ['::: {line-height=1}', iconos, ':::', '', '::: {.text-xs}', licenciaTexto(def), ':::'].join('\n');
+  return ['::: {line-height=1}', iconos, '', ':::: {.text-xs}', licenciaTexto(def), '::::', ':::'].join('\n');
 }
 
 /**
