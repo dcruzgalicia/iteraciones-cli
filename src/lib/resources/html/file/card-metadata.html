@@ -1,4 +1,4 @@
-    <div class="min-w-0 space-y-3 text-center">
+    <div class="tarjeta tarjeta-encabezado relative min-w-0 space-y-3 rounded-tr-xl rounded-bl-xl p-4 text-center ring-1 ring-inset ring-stone-300/60 sm:p-6 lg:p-8 dark:ring-stone-600/40">
       $if(doc-chip)$
       <div class="mb-6 flex flex-wrap items-center justify-center gap-2 sm:mb-8">
         $if(doc-chip-href)$
@@ -12,21 +12,22 @@
       </div>
       $endif$
       $if(author-names)$
-      <p class="nombres-enlazados-gris text-base font-bold text-stone-900 sm:text-lg lg:text-xl dark:text-stone-100">$author-names$</p>
+      <p class="nombres-enlazados text-base font-semibold text-accent-700 sm:text-lg lg:text-xl dark:text-accent-300">$author-names$</p>
       $endif$
       $if(doc-title)$
-      <h1 class="text-2xl font-bold leading-tight text-stone-950 sm:text-3xl md:text-4xl lg:text-5xl dark:text-stone-50">$doc-title$</h1>
+      <h1 class="text-2xl font-bold leading-tight text-accent-900 sm:text-3xl md:text-4xl lg:text-5xl dark:text-accent-100">$doc-title$</h1>
       $endif$
       $if(subtitle)$
-      <p class="text-lg italic text-stone-800 sm:text-xl lg:text-2xl dark:text-stone-200">$subtitle$</p>
+      <p class="text-lg italic text-accent-800 sm:text-xl lg:text-2xl dark:text-accent-200">$subtitle$</p>
       $endif$
       $if(collection-creator-prefix)$
-      <p class="text-sm font-mono text-stone-700 dark:text-stone-300">$collection-creator-prefix$</p>
+      <p class="text-sm font-mono font-bold text-accent-600 dark:text-accent-400">$collection-creator-prefix$</p>
       $endif$
       $if(collection-creator-names)$
-      <p class="nombres-enlazados-gris text-base font-bold text-stone-900 sm:text-lg lg:text-xl dark:text-stone-100">$collection-creator-names$</p>
+      <p class="nombres-enlazados text-base font-semibold text-accent-800 sm:text-lg lg:text-xl dark:text-accent-200">$collection-creator-names$</p>
       $endif$
       <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs font-mono text-stone-600 sm:text-sm dark:text-stone-400">
         $if(publishers)$<span class="italic">$publishers$</span>$endif$
       </div>
+      <div id="block-intro"></div>
     </div>

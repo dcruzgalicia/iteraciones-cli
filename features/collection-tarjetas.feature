@@ -48,7 +48,7 @@ Característica: la tarjeta de cada miembro de una colección
       """
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML dice "tarjeta-fragmento"
-      Y el HTML dice "<h2 class=\"not-prose text-center text-sm sm:text-base\"><span class=\"whitespace-nowrap\">Autora A</span></h2>"
+      Y el HTML dice "<h2 class=\"not-prose text-center text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300\"><span class=\"whitespace-nowrap\">Autora A</span></h2>"
       Y el título de la tarjeta del miembro es un enlace
       Y el HTML dice "Contenido de doc."
       Y el HTML dice "Leer texto completo →"
@@ -109,15 +109,15 @@ Característica: la tarjeta de cada miembro de una colección
       Entonces el HTML dice "Leer texto completo →"
       Y el HTML dice "href=\"./documento-por-autora-a.html\""
 
-  Regla de negocio: El enlace de la creadora va en negro
+  Regla de negocio: El enlace de la creadora va en el accent
 
-    Escenario: El nombre de la creadora no usa el color del accent
+    Escenario: El nombre de la creadora usa el color del accent
       Dado que la colección tiene 1 miembros
       Y que la colección tiene el cuerpo propio:
       """
       """
       Cuando compogo las tarjetas de la página HTML
-      Entonces el nombre de la creadora de la tarjeta no usa el color del accent
+      Entonces el nombre de la creadora de la tarjeta usa el color del accent
 
   Regla de negocio: La tarjeta dice en qué posición de files[] está el archivo
     Escenario: El badge lleva la posición del archivo en files[]
