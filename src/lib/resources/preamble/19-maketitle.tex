@@ -1,7 +1,7 @@
-% Las páginas de título. Este archivo, preamble-collection/19-maketitle.tex son casi idénticos: lo único que cambia
-% entre ellos es el diseño (si el autor va antes o después del título, cuánto
-% espacio se deja). Cuando cambies el orden o el ritmo de las páginas, cambia
-% los tres.
+
+
+
+
 \usepackage{graphicx}
 \makeatletter
 \renewcommand{\subtitle}[1]{\gdef\@subtitle{%
@@ -74,10 +74,10 @@
   \ifnum\l@covercount>0
     \titlepageguardstrue
   \fi
-  % Las guardas de portada y contraportada ya tienen su página en blanco:
-  % la crea \coverblankpage, antes de este comando. Aquí sólo va la del
-  % startpaper, con su verso en blanco, para que el elemento siguiente caiga
-  % en página impar.
+
+
+
+
   \ifx\@startpaper\@empty\else
     \coverassign
     \titlepage@blankpage
@@ -86,8 +86,8 @@
     \titlepage@blankpage
   \fi
   \ifx\@extratitle\@empty\else
-    % El epígrafe va en un recto: si la página actual es par, su verso queda
-    % en blanco.
+
+
     \titlepage@oddpage
     \vspace*{7\baselineskip}%
     \titlepageblock

@@ -236,7 +236,6 @@ function crearLogo(nombre: string, color: string): void {
 }
 
 Given('un proyecto con un logo a color y un documento', () => {
-  // Un degradado tiene muchos colores: no se tiñe, conserva los suyos.
   const proc = Bun.spawnSync(['magick', '-size', '120x120', 'gradient:red-blue', join(world.root, 'logo.png')]);
   if (proc.exitCode !== 0) throw new Error('magick no pudo crear el logo');
   escribirEnProyecto('iteraciones.config.yaml', [...CONFIG_LOGO, '      logo: ./logo.png'].join('\n'));

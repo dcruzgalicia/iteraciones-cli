@@ -119,7 +119,7 @@ export function mergeConfigImages(
     if (configValue === undefined) continue;
     merged[field] = toAbsoluteImagePaths(configValue as string | string[], cwd);
   }
-  // Las guardas en color: si el frontmatter no lo dice, lo decide la config.
+
   if (merged.coverColor === undefined) {
     const enColor = formatCfg?.coverColor ?? siteConfig.coverColor;
     if (enColor !== undefined) merged.coverColor = enColor;
@@ -148,10 +148,6 @@ async function pushCoverImageMetadata(
     await resolveAndPushImage(extraArgs, 'publisherImage', value, doc, imageMap);
   }
 
-  // El membrete sólo tiene sentido en las interventions: una imagen por
-  // página, al pie y del lado exterior de la caja de texto. Va como variable
-  // de plantilla y no como metadato: pandoc escapa los guiones bajos de las
-  // rutas en los metadatos y el archivo se vuelve ilegible para LaTeX.
   if (doc.frontmatter.type === 'intervention') {
     const membrete = fmStringList(fm.letterhead) ?? [];
     for (const value of membrete) {
@@ -233,8 +229,6 @@ function prependFrontmatterYaml(content: string, overrides: Record<string, strin
   const yaml = lines.join('\n');
   const fmEnd = content.startsWith('---\n') ? content.indexOf('\n---\n') : -1;
   if (fmEnd >= 0) {
-    // El contenido ya trae frontmatter: los overrides se mezclan con él en vez
-    // de añadir un segundo bloque, que pandoc leería como texto del cuerpo.
     const original = content.slice(4, fmEnd);
     let mezclado: Record<string, unknown>;
     const overridesYaml = Object.fromEntries(
@@ -485,7 +479,6 @@ export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
   return tex;
 }
 
-/** El nivel de cada encabezado de LaTeX: el índice muestra los ≤ tocdepth. */
 const NIVEL_ENCABEZADO: Record<string, number> = {
   part: -1,
   chapter: 0,
@@ -496,21 +489,13 @@ const NIVEL_ENCABEZADO: Record<string, number> = {
   subparagraph: 5,
 };
 
-/**
- * El tocdepth que va a mandar: el último \setcounter{tocdepth} del .tex. El
- * preamble y los filtros de Lua van pegados al .tex, así que con escanearlo
- * sale el valor final, sin importar de dónde venga.
- */
 export function effectiveTocdepth(tex: string): number | undefined {
   const todos = [...tex.matchAll(/\\setcounter\s*\{\s*tocdepth\s*\}\s*\{\s*(-?\d+)\s*\}/g)];
   const ultimo = todos.at(-1);
   return ultimo === undefined ? undefined : Number(ultimo[1]);
 }
 
-/** El nivel del encabezado más alto del .tex: el más cercano a la parte. */
 export function minimoNivelEncabezado(tex: string): number | undefined {
-  // Sólo el cuerpo: en el preamble hay definiciones de comandos (biblatex
-  // define un \subsubsection{#1}) que no son encabezados del documento.
   const inicio = tex.indexOf('\\begin{document}');
   const cuerpo = inicio < 0 ? tex : tex.slice(inicio);
   let minimo: number | undefined;
@@ -521,14 +506,9 @@ export function minimoNivelEncabezado(tex: string): number | undefined {
   return minimo;
 }
 
-/**
- * Quita el índice cuando no hay nada que indizar. El índice sólo muestra los
- * encabezados de nivel menor o igual al tocdepth, así que si el documento no
- * tiene ninguno de ese nivel, la página saldría vacía.
- */
 export function removeEmptyToc(tex: string): string {
   const tocdepth = effectiveTocdepth(tex);
-  // Sin tocdepth explícito no se sabe qué entraría: mejor dejar el índice.
+
   if (tocdepth === undefined) return tex;
   const minimo = minimoNivelEncabezado(tex);
   if (minimo !== undefined && minimo <= tocdepth) return tex;

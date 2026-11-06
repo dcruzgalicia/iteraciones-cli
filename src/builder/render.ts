@@ -132,7 +132,6 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   extraArgs.push(...citationCompileArgs(bibOptions?.bibliography, bibOptions?.csl));
 
   const html = await execPandoc({
-    // En el sitio no hay espacios no separables: son cosa del PDF.
     input: espaciosNormales(content),
     sourcePath: doc.filePath,
     from: MD_READER,

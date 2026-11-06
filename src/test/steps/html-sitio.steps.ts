@@ -122,7 +122,6 @@ Given('un proyecto con un texto en una lista', () => {
   escribirEnProyecto('seleccion.md', '---\ntitle: Selección\ntype: list\n---\n\nElegidos.\n');
 });
 
-/** El chip de una etiqueta: el del tipo va en un h2; los demás, en a/span. */
 function chipDelHtml(archivo: string, etiqueta: string): string {
   const html = leer(`dist/files/${archivo}`);
   const patron = new RegExp(`<(h2|a|span)\\b[^>]*class="[^"]*rounded-full[^"]*"[^>]*>(?:<a\\b[^>]*>)?${escaparRegex(etiqueta)}(?:</a>)?</\\1>`);

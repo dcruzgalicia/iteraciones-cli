@@ -3,7 +3,6 @@ import { analyzeBbox } from './pdf-spacing.js';
 import { plural } from './plural.js';
 import { exec, ProcessSpawnError, type RunResult } from './run.js';
 
-/** El orden manda: detección, corrección y reportes van en esta secuencia. */
 export const TYPOGRAPHY_RULES = [
   'single-word-line',
   'repeated-last-letter',
@@ -42,14 +41,11 @@ interface RepeatedLetter extends Incidence {
   continuacion?: string;
 }
 
-/** Un nombre propio partido por el guion de corte al final de la línea. */
 export interface HyphenatedProperNoun extends Incidence {
   type: 'hyphenated-proper-noun';
 
-  /** El trozo de la palabra, sin el guion del corte. */
   word: string;
 
-  /** El trozo con el que sigue en la línea de abajo, sin guion. */
   continuation?: string;
 }
 
@@ -65,7 +61,6 @@ export interface ShrunkLine extends Incidence {
   ratio: number;
 }
 
-/** Un canal blanco de tres o más líneas consecutivas. */
 export interface River extends Incidence {
   type: 'river';
   from: number;
@@ -77,12 +72,10 @@ export interface River extends Incidence {
   lastText: string;
 }
 
-/** El nombre tal como se lee: los dos trozos con el guion del corte. */
 export function nombreCortado(incidencia: HyphenatedProperNoun): string {
   return `${incidencia.word}-${incidencia.continuation ?? ''}`;
 }
 
-/** La palabra completa, sin el guion del corte. */
 export function palabraSinCorte(incidencia: HyphenatedProperNoun): string {
   return `${incidencia.word}${incidencia.continuation ?? ''}`;
 }
@@ -241,44 +234,31 @@ function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: s
 }
 
 function sinAcentos(texto: string): string {
-  return (
-    texto
-      // Sólo se quitan los acentos de las vocales: la ñ es una letra propia y
-      // una línea que empieza con «ño» no repite la «n» de «no».
-      .replace(/[áàäâã]/gi, 'a')
-      .replace(/[éèëê]/gi, 'e')
-      .replace(/[íìïî]/gi, 'i')
-      .replace(/[óòöôõ]/gi, 'o')
-      .replace(/[úùüû]/gi, 'u')
-      .replace(/ç/gi, 'c')
-      .toLowerCase()
-  );
+  return texto
+    .replace(/[áàäâã]/gi, 'a')
+    .replace(/[éèëê]/gi, 'e')
+    .replace(/[íìïî]/gi, 'i')
+    .replace(/[óòöôõ]/gi, 'o')
+    .replace(/[úùüû]/gi, 'u')
+    .replace(/ç/gi, 'c')
+    .toLowerCase();
 }
 
-/**
- * La primera letra, sin contar los signos de apertura: «¿Y…» y «Y…» empiezan
- * igual, y «a-» cuenta como «a».
- */
 function letraInicial(linea: string): string | undefined {
-  // Los signos de apertura se saltan, pero un número no: «8 años» y «(8 años»
-  // empiezan por un número, no por la letra que viene después.
   const inicio = sinAcentos(linea)
     .trimStart()
     .replace(/^[^a-zñ0-9]+/, '');
   return /^[a-zñ]/.test(inicio) ? inicio.slice(0, 1) : undefined;
 }
 
-/** La última letra, sin contar los signos del final. */
 function letraFinal(linea: string): string | undefined {
   const texto = sinAcentos(linea).trimEnd();
-  // Un número al final no se salta: la línea termina en un número, no en la
-  // letra que viene antes («Ficción (2023).» no termina en «n»).
+
   if (/\d[^\p{L}\p{N}]*$/u.test(texto)) return undefined;
   const letras = texto.replace(/[^a-zñ]+$/, '');
   return letras === '' ? undefined : letras.slice(-1);
 }
 
-/** El signo con el que termina la línea, si termina en signo. */
 function marcaFinal(linea: string): string | undefined {
   const marca = linea.trimEnd().at(-1);
   return marca !== undefined && TERMINALS.has(marca) ? marca : undefined;
@@ -305,7 +285,6 @@ function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', linea
 }
 
 function consecutivePunctuationRuns(pages: string[][], lineas: number): ConsecutivePunctuation[] {
-  // Sólo cuenta el mismo signo: «…o.» y «…a-» no son una repetición.
   const clave = (linea: string): string | undefined => marcaFinal(linea);
   const hallados: ConsecutivePunctuation[] = [];
   for (const tirada of tiradasCoincidentes(pages, lineas, clave)) {
@@ -374,7 +353,6 @@ export function parseaExcepciones(texto: string): ExcepcionTipografia[] {
   return excepciones;
 }
 
-/** El bloque de texto de una incidencia, con el formato que lee el parser. */
 export function formateaExcepcion(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'single-word-line' || incidencia.type === 'stretched-line' || incidencia.type === 'shrunk-line') {
     return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${incidencia.text.trim()}`;
@@ -395,10 +373,6 @@ export function formateaExcepcion(incidencia: TypographyIncidence): string {
   return partes.join('\n');
 }
 
-/**
- * Agrega las incidencias al final del grupo del archivo en el texto de
- * excepciones. Si el grupo no existe, lo crea al final del archivo.
- */
 export function agregaExcepcionesAlTexto(texto: string, archivo: string, incidencias: readonly TypographyIncidence[]): string {
   if (incidencias.length === 0) return texto;
   const bloques = incidencias.map(formateaExcepcion);
@@ -514,7 +488,6 @@ export interface OpcionesAnalisis {
   primeraPagina?: number;
   ultimaPagina?: number;
 
-  /** Páginas pedidas, en tramos. Manda sobre el rango. */
   paginas?: readonly { desde: number; hasta: number }[];
   reglas?: readonly string[];
   lineasMinimas?: number;
@@ -522,7 +495,6 @@ export interface OpcionesAnalisis {
   archivo?: string;
 }
 
-/** Avisa si alguna página pedida no existe en el PDF. */
 function validaPaginasPedidas(pdfPath: string, opciones: OpcionesAnalisis, total: number): void {
   const desde = opciones.primeraPagina;
   if (desde !== undefined && desde > total) {
@@ -539,12 +511,10 @@ function validaPaginasPedidas(pdfPath: string, opciones: OpcionesAnalisis, total
 
 const ORDEN_REGLA = new Map(TYPOGRAPHY_RULES.map((regla, indice) => [regla, indice]));
 
-/** El informe va por página, después por línea y, a igual línea, por regla. */
 function porPaginaLineaYRegla(a: TypographyIncidence, b: TypographyIncidence): number {
   return a.page - b.page || a.line - b.line || (ORDEN_REGLA.get(a.type) ?? 99) - (ORDEN_REGLA.get(b.type) ?? 99);
 }
 
-/** Qué páginas entran: la lista pedida o el rango de siempre. */
 function filtroDePaginas(opciones: OpcionesAnalisis, total: number): (pagina: number) => boolean {
   if (opciones.paginas !== undefined) {
     const pedidas = new Set(paginasDeTramos(opciones.paginas));
@@ -567,8 +537,7 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
   const { lineasMinimas = 2, excepciones = [] } = opciones;
   const pedidas = new Set(opciones.reglas ?? TYPOGRAPHY_RULES);
   const pages = splitPages(stdout);
-  // Todas las líneas se comparan, sin importar su longitud: lo que no encaje se
-  // descarta con `.typography-exceptions`.
+
   const halladas: TypographyIncidence[] = [
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
     ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas) : []),

@@ -193,7 +193,7 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
       cwd,
       siteConfig,
       content: collectionScanContent(entries, src.text),
-      // El membrete de las interventions también se procesa en el merge.
+
       fm: {
         ...src.fm,
         letterhead: entries.flatMap((e) => (e.type === 'intervention' ? (e.letterhead ?? []) : [])),
@@ -206,8 +206,7 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     });
 
     const slugIndex = format === 'html' ? await loadSlugIndex(cwd) : new Map<string, DiscoveryEntry>();
-    // Las tarjetas del listado muestran a qué colecciones pertenece cada texto:
-    // hay que resolver las pertenencias igual que en el build.
+
     if (format === 'html') await postProcessCollections(slugIndex, cwd);
     const memberHrefs = format === 'html' ? memberHtmlHrefs(src.relativePath, entries, slugIndex) : new Map<string, string>();
     const hrefsCreadores = format === 'html' ? creatorHrefs(slugIndex, dirname(src.relativePath)) : new Map<string, string>();

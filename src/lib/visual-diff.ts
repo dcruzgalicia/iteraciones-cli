@@ -237,11 +237,6 @@ async function cropTo(source: string, dest: string, width: number, height: numbe
   }
 }
 
-/**
- * Compara dos PNG. Si no tienen el mismo tamaño, se recorta el área común
- * (para comparar la misma región) y se anota el cambio de tamaño: una página
- * que creció es un cambio, aunque el área compartida sea idéntica.
- */
 async function comparePngPair(args: PngPair): Promise<{ diffPercent: number; note?: string }> {
   const size = pngSize(await readFile(args.referencePng));
   if (size === null) throw new BuildError(`"${args.referencePng}" no es un PNG válido`);

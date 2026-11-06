@@ -162,8 +162,6 @@ async function emitLatexAndQueuePdf(
   });
   const xmp = renderCtx.pdfxActive ? xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig) : undefined;
 
-  // El índice se quita antes de meter el bloque de autoras: ese bloque es
-  // propio de la CLI y no cuenta como contenido del documento.
   const tex = removeEmptyToc(fullTex);
 
   if (latexOn) {
@@ -208,7 +206,6 @@ async function emitLatexAndQueuePdf(
   }
 }
 
-/** La URL en el HTML de las portadas, ya procesadas en su versión web. */
 function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<string, string>): { front?: string; back?: string } {
   const covers: { front?: string; back?: string } = {};
   for (const [field, key] of [
@@ -225,7 +222,6 @@ function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<
   return covers;
 }
 
-/** La ruta de la portada para el cover del EPUB, ya procesada en su versión EPUB. */
 function epubCoverPath(fm: Record<string, unknown>, docDir: string, epubMap: Map<string, string>): string | undefined {
   const raw = fm.frontCover;
   if (typeof raw !== 'string' || raw === '') return undefined;
@@ -248,7 +244,6 @@ function docChipHrefPara(dir: string, type: string | undefined, available?: Set<
   return defaultListHref(dir, type);
 }
 
-/** El logo y el favicon, con rutas relativas al nivel de la página. */
 function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | undefined): Pick<HtmlPageVars, 'logoBlock' | 'favicon'> {
   if (logo === undefined) return {};
   const href = logo.kind === 'file' ? relativeHref(dir, logo.path) : '';
@@ -258,12 +253,10 @@ function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | u
   };
 }
 
-/** Un valor opcional: las cadenas vacías no viajan a la plantilla. */
 function opcional(valor: string | undefined): string | undefined {
   return valor === '' ? undefined : valor;
 }
 
-/** Las tarjetas site-wide que dependen de la página: menú, anuncios y licencia. */
 function tarjetasDeSitio(args: {
   siteConfig: SiteConfig;
   dir: string;
@@ -517,20 +510,16 @@ export type CollectionEntry = {
   lineLength: number | undefined;
   pages: number | undefined;
 
-  /** Las imágenes del membrete, ya resueltas contra el directorio del archivo. */
   letterhead?: string[];
-  /** La altura del membrete en el frontmatter de la intervention (`5cm`, `50mm`…). */
+
   letterheadHeight?: string;
 
-  /** El directorio real del archivo miembro, para resolver sus imágenes. */
   dirAbs?: string;
 
-  /** El retrato de una creadora, relativo a su archivo. */
   image?: string;
   body: string;
 };
 
-/** Lee el primero de los candidatos que exista y devuelve su directorio. */
 async function readEntryText(candidates: string[], collectionPath: string, file: string): Promise<{ text: string; dir: string }> {
   for (const candidate of candidates) {
     try {
@@ -603,7 +592,6 @@ export async function writeDistMarkdown(p: {
   merge: boolean;
   entries: CollectionEntry[];
 
-  /** Las creadoras de la colección, para la sección de colaboradoras. */
   autoras?: CreatorDoc[];
 }): Promise<void> {
   const { label, outPath, outputDir, rootFiles, merge } = p;
@@ -636,8 +624,7 @@ export async function writeDistMarkdown(p: {
       ? [collectionBaseContent(p.entries, 'markdown', p.content, undefined, true), seccionAutoras].filter((t) => t !== '').join('\n\n')
       : p.content,
   );
-  // Las redes de la creadora viajan en el frontmatter (`links:`), no repetidas
-  // en el cuerpo: así el markdown re-procesado da el mismo HTML.
+
   await convertToMarkdown(rewriteImagePaths(base, p.relImageMap, p.docDir), outPath, p.exportDoc, mdFm, merge);
   recordSupportCommand('post', outPath, ['iteraciones', 'markdown', label, '-o', outPath]);
 }
@@ -667,8 +654,7 @@ function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean, membre
   const parts: string[] = [];
   if (e.type === 'intervention') {
     parts.push(interventionSectionRaw(e.lineLength));
-    // El \chapter de arriba ya saltó de página: encender el membrete antes
-    // pintaría también la página anterior, que se envía al hacer el salto.
+
     if (membrete.length > 0) {
       parts.push(`\\setlength{\\letterheadheight}{${parseLetterheadHeight(e.letterheadHeight)}mm}`);
       parts.push(`\\letterheadsetup{${membrete.join(',')}}`);
@@ -706,7 +692,6 @@ function buildCollectionSectionsLatex(entries: CollectionEntry[], pageNumber?: s
   return parts.join('\n\n');
 }
 
-/** Las imágenes de membrete de las interventions de una colección. */
 function collectionLetterheadFiles(entries: CollectionEntry[]): string[] {
   return entries.flatMap((e) => (e.type === 'intervention' ? (e.letterhead ?? []) : []));
 }
@@ -757,11 +742,6 @@ function printableEntries<T extends { type: string | undefined }>(entries: T[]):
   return entries.filter((e) => e.type !== 'intervention');
 }
 
-/**
- * De cada nombre de autora, la página de su documento `type: creator` (si lo
- * hay). El criterio es el mismo que usa la sección "Autoras y colaboradoras":
- * el `name` (o el `title`) del creator tiene que coincidir con el nombre.
- */
 export function creatorHrefs(discoveryIndex: Map<string, DiscoveryEntry>, fromDir: string): Map<string, string> {
   const hrefs = new Map<string, string>();
   for (const [ruta, entry] of discoveryIndex) {
@@ -781,7 +761,6 @@ function escapeMarkdown(texto: string): string {
   return texto.replace(/([[\]])/g, '\\$1');
 }
 
-/** El nombre tal como va en el metadato: con enlace si hay creator. */
 export function nombresEnlazados(nombres: string[], hrefs: Map<string, string>): string[] {
   return nombres.map((nombre) => {
     const href = hrefs.get(nombre);
@@ -790,7 +769,6 @@ export function nombresEnlazados(nombres: string[], hrefs: Map<string, string>):
   });
 }
 
-/** El nombre tal como va dentro de una tarjeta: HTML. */
 function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>, tono: 'accent' | 'gris' | 'plano' = 'accent'): string {
   const href = hrefs.get(nombre);
   if (href === undefined) return nombre;
@@ -836,7 +814,7 @@ export function collectionCardsContent(
   imagenes?: Map<string, string>,
 ): string {
   if (entries.length === 0) return content;
-  // Las páginas de la colección son hermanas, aunque vivan en un subdirectorio.
+
   const href = page?.outSlug === undefined ? undefined : `./${page.outSlug}.html`;
   return collectionCards(
     entries,
@@ -854,10 +832,6 @@ export function collectionCardsContent(
   );
 }
 
-/**
- * Reparte las tarjetas de la colección en páginas. La primera lleva el cuerpo
- * propio de la colección; el resto, sólo sus tarjetas.
- */
 export function collectionCardsPages(
   entries: CollectionEntry[],
   memberHrefs: Map<string, string>,
@@ -876,7 +850,6 @@ export function collectionCardsPages(
   const intro = splitFrontmatter(content).body.trim();
   const paginas: string[] = [];
   for (let desde = 0; desde < imprimibles.length; desde += pageSize) {
-    // Igual que el nav: las páginas son hermanas, no están en la raíz.
     const href = page?.outSlug === undefined ? undefined : `./${pageSlug(page.outSlug, paginas.length + 1)}.html`;
     paginas.push(
       collectionCards(
@@ -901,7 +874,6 @@ export function collectionCardsPages(
 const IMAGEN_EN_MD = /(!\[[^\]]*\]\(\s*<?)([^)\s>]+)/g;
 const IMAGEN_EN_HTML = /(<img\b[^>]*\bsrc\s*=\s*["'])([^"']+)/gi;
 
-/** Las imágenes de un miembro se resuelven contra su propio archivo. */
 function absolutizaImagenes(body: string, dirAbs: string | undefined): string {
   if (dirAbs === undefined) return body;
   const absoluta = (src: string): string => (isAbsolute(src) || /^[a-z]+:/i.test(src) ? src : resolve(dirAbs, src));
@@ -913,8 +885,7 @@ function absolutizaImagenes(body: string, dirAbs: string | undefined): string {
 export function collectionScanContent(entries: CollectionEntry[], content: string): string {
   if (entries.length === 0) return content;
   const body = splitFrontmatter(content).body;
-  // Sólo para escanear imágenes: cada cuerpo apunta a las suyas con ruta
-  // absoluta, porque el miembro puede vivir en otro directorio.
+
   const conImagenes = entries.map((entrada) => ({ ...entrada, body: absolutizaImagenes(entrada.body, entrada.dirAbs) }));
   const sections = collectionBaseContent(conImagenes, 'latex', content);
   return body.trim() === '' ? sections : `${sections}\n\n${body}`;
@@ -932,7 +903,6 @@ function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
 }
 
-/** La ventana de páginas: primera, última y el entorno de la actual. */
 function ventanaDePaginas(pagina: number, total: number): Array<number | '…'> {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const numeros = new Set([1, total, pagina - 1, pagina, pagina + 1]);
@@ -947,11 +917,6 @@ function ventanaDePaginas(pagina: number, total: number): Array<number | '…'> 
   return salida;
 }
 
-/**
- * La paginación estática al final del contenido: anterior, números de página
- * en ventana y siguiente. Las páginas son hermanas, aunque la colección viva
- * en un subdirectorio.
- */
 export function paginationNav(outSlug: string, pagina: number, total: number): string {
   if (total <= 1) return '';
   const enlace = (n: number, texto: string): string =>
@@ -965,8 +930,6 @@ export function paginationNav(outSlug: string, pagina: number, total: number): s
   return `<nav class="${PAGINATION_NAV_CLASSES}" aria-label="Paginación">${anterior}${numeros}${siguiente}</nav>`;
 }
 
-// `mt-0 mb-6` y `m-0`: el prose de la página mete márgenes a figure e img, y
-// esos márgenes quedarían dentro del enlace (área clickeable de más).
 const CARD_IMAGE_CLASSES = 'mt-0! mb-3! flex h-[100px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl sm:mb-4!';
 const CARD_IMAGE_IMG_CLASSES = 'm-0! block h-full w-full object-cover';
 const CARD_IMAGE_LINK_CLASSES = 'block h-full w-full rounded-tr-xl rounded-bl-xl';
@@ -977,7 +940,6 @@ const PORTRAIT_LINK_CLASSES = 'block overflow-hidden rounded-full [clip-path:cir
 const IMAGEN_MD_RE = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?/;
 const IMAGEN_HTML_RE = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i;
 
-/** La primera imagen del cuerpo, tal como viene en el markdown o el HTML. */
 export function primeraImagenDelCuerpo(body: string): string | undefined {
   const md = IMAGEN_MD_RE.exec(body);
   const html = IMAGEN_HTML_RE.exec(body);
@@ -987,10 +949,6 @@ export function primeraImagenDelCuerpo(body: string): string | undefined {
   return (md.index as number) <= (html.index as number) ? md[1] : html[1];
 }
 
-/**
- * De la ruta absoluta de una imagen a la que debe llevar la página: las
- * imágenes web viven en el `assets/images` del directorio de la página.
- */
 export function hrefsDeImagenes(imageMap: Map<string, string>, outputDir: string, dir: string): Map<string, string> {
   const base = join(outputDir, dir);
   const hrefs = new Map<string, string>();
@@ -1016,10 +974,6 @@ function retratoDeCreadora(href: string, nombre: string, enlace?: string): strin
   return `<div class="${PORTRAIT_WRAPPER_CLASSES}">${dentro}</div>`;
 }
 
-/**
- * La tarjeta de índice de una colección. La misma lista completa se repite en
- * todas las páginas: el índice no se corta por página.
- */
 function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, string>, pageSize: number): string[] {
   const imprimibles = printableEntries(entries);
   if (imprimibles.length === 0) return [];
@@ -1063,7 +1017,6 @@ function assertPaginasLibres(relativePath: string, dir: string, outSlug: string,
 
 const CARD_WRAPPER = '<div class="min-w-0">';
 
-/** Las tarjetas muestran sólo un aperitivo: 20 palabras como máximo. */
 const CARD_PREVIEW_MAX_WORDS = 150;
 
 const CARD_TEXT_CLASSES =
@@ -1076,17 +1029,12 @@ const PILL_BASE =
 
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
-// En las tarjetas extras el chip no deja espacio ni arriba ni abajo: es el
-// primero de la tarjeta y el h2 traería sus márgenes del navegador.
 const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 const EXTRA_PILL_OUTLINE_CLASSES =
   'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-transparent px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300';
 
-// El chip que abre una tarjeta extra deja aire antes del elemento que sigue.
 const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
-// El chip de pertenencia sólo lleva contorno: el relleno de acento queda para
-// el chip del tipo, que es el que dice qué es el documento.
 const MEMBER_BADGE_CLASSES =
   'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
@@ -1098,18 +1046,10 @@ const MEMBER_TYPE_LABEL: Record<string, string> = {
   announcement: 'Anuncio',
 };
 
-// El chip de un keyword va en gris y sólo con contorno: así no se confunde con
-// el del tipo (acento relleno) ni con el de una colección (acento con contorno).
-// El subrayado es la señal de que el chip es un enlace: sólo al pasar el ratón.
 const CHIP_HOVER_CLASSES = 'transition-colors duration-200 hover:underline';
 
 const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
 
-/**
- * El chip de tipo, con enlace a la lista por defecto de ese type. Si esa lista
- * es la página que se está armando, el chip se queda sin enlace: no tiene
- * sentido mandar a donde ya estás.
- */
 function chipHtml(
   label: string,
   type: string | undefined,
@@ -1128,8 +1068,6 @@ function chipHtml(
 const MEMBER_LINK_CLASSES =
   'no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current';
 
-// El CTA de las tarjetas y el «Ver más» del menú comparten el mismo botón:
-// pill con el acento, para que no divergan con el tiempo.
 const CARD_CTA_CLASSES =
   'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
 
@@ -1150,7 +1088,6 @@ const SIDEBAR_KEYWORD_CHIP_CLASSES =
 const KEYWORD_BADGE_CLASSES =
   'inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
 
-/** El texto del CTA según lo que hay al otro lado. */
 function ctaDeTarjeta(type: string | undefined): string {
   if (type === 'collection') return 'Ver colección completa';
   if (type === 'creator') return 'Ver página de la creadora';
@@ -1161,7 +1098,6 @@ function ctaDeTarjeta(type: string | undefined): string {
 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-4 text-xs! ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! ${CARD_TEXT_CLASSES}`;
 
-/** Las licencias que el sitio sabe pintar (iconos y texto). */
 interface LicenciaDef {
   iconos: readonly string[];
   parrafos: readonly string[];
@@ -1196,7 +1132,6 @@ interface LicenciaResuelta {
   def: LicenciaDef;
 }
 
-/** La licencia efectiva: frontmatter, HTML del sitio, raíz o la de por defecto. */
 function licenciaResuelta(siteConfig: SiteConfig, override?: string): LicenciaResuelta | undefined {
   const explicita =
     normalizarLicencia(override) ?? normalizarLicencia(siteConfig.format?.html?.site?.license) ?? normalizarLicencia(siteConfig.license);
@@ -1209,7 +1144,6 @@ function licenciaTexto(def: LicenciaDef): string {
   return def.parrafos.join('\n\n');
 }
 
-/** El bloque de licencia para EPUB y markdown. */
 function licenciaMarkdown(def: LicenciaDef): string {
   return `## Licencia\n\n${licenciaTexto(def).replace(/&nbsp;/g, ' ')}`;
 }
@@ -1219,20 +1153,17 @@ export function licenciaMarkdownPara(fm: Record<string, unknown>, siteConfig: Si
   return licencia === undefined ? undefined : licenciaMarkdown(licencia.def);
 }
 
-/** Los campos que llevan la licencia en el frontmatter del markdown. */
 export function licenciaFrontmatterPara(fm: Record<string, unknown>, siteConfig: SiteConfig): { license: string; rights: string } | undefined {
   const licencia = licenciaResuelta(siteConfig, fmTrimmedString(fm.license));
   return licencia === undefined ? undefined : { license: licencia.id, rights: licenciaTexto(licencia.def) };
 }
 
-/** Añade el bloque de licencia al final de un contenido de EPUB. */
 function conLicenciaAlFinal(base: string, fm: Record<string, unknown>, siteConfig: SiteConfig): string {
   const licencia = licenciaMarkdownPara(fm, siteConfig);
   if (licencia === undefined || base.includes('## Licencia')) return base;
   return `${base}\n\n${licencia}`;
 }
 
-/** La contraportada LaTeX con los iconos y el texto de la licencia. */
 function licenciaLowertitleback(def: LicenciaDef, docDir: string): string {
   const iconos = def.iconos
     .map((nombre) => {
@@ -1243,10 +1174,6 @@ function licenciaLowertitleback(def: LicenciaDef, docDir: string): string {
   return ['::: {line-height=1}', iconos, '', ':::: {.text-xs}', licenciaTexto(def), '::::', ':::'].join('\n');
 }
 
-/**
- * El lowertitleback de la licencia, sólo si ni el documento ni el proyecto
- * declararon uno propio.
- */
 export function licenciaLowertitlebackPorDefecto(
   fm: Record<string, unknown>,
   formatCfg: Record<string, unknown> | undefined,
@@ -1258,7 +1185,6 @@ export function licenciaLowertitlebackPorDefecto(
   return licencia === undefined ? undefined : licenciaLowertitleback(licencia.def, docDir);
 }
 
-/** La licencia del sitio o la del documento, dentro de la tarjeta del sidebar. */
 function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string): string | undefined {
   const licencia = licenciaResuelta(siteConfig, override);
   if (licencia === undefined) return undefined;
@@ -1275,7 +1201,6 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string): s
   ].join('');
 }
 
-/** La tarjeta con la biografía de una creadora. */
 export function creatorCard(
   doc: CreatorDoc,
   dir: string,
@@ -1299,10 +1224,6 @@ export function creatorCard(
   ].join('\n');
 }
 
-/**
- * La tarjeta con las colecciones y listas donde vive un documento. En vez de
- * un título, lleva un chip por cada tipo: Colecciones y Listas.
- */
 export function containersCard(
   contenedores: { titulo: string; href: string; type: string | undefined }[],
   dir: string,
@@ -1323,7 +1244,6 @@ export function containersCard(
   ].join('\n');
 }
 
-/** La tarjeta que lista los keywords del documento, cada uno con su lista. */
 function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], ownerChip: string, titleHref?: string): string {
   if (keywords.length === 0) return '';
   const chips = keywords
@@ -1339,13 +1259,11 @@ function keywordChipsCard(keywords: { titulo: string; href: string; count?: numb
   return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2">${titulo}${ownerChip}</div><div class="flex flex-wrap gap-2">${chips}</div></div>`;
 }
 
-/** La tarjeta de las palabras clave del documento o la colección. */
 export function keywordsCard(keywords: { titulo: string; href: string; count?: number }[], ownerLabel: string, titleHref?: string): string {
   const ownerChip = `<span class="${EXTRA_PILL_OUTLINE_CLASSES}">${Bun.escapeHTML(ownerLabel)}</span>`;
   return keywordChipsCard(keywords, ownerChip, titleHref);
 }
 
-/** La tarjeta con todas las palabras clave disponibles del sitio. */
 function siteKeywordsCard(
   discoveryIndex: Map<string, DiscoveryEntry>,
   dir: string,
@@ -1365,7 +1283,6 @@ function siteKeywordsCard(
   return keywordChipsCard(keywords, ownerChip, titleHref);
 }
 
-/** La página por defecto con todas las palabras clave, si hay al menos dos. */
 function keywordIndexAvailable(discoveryIndex: Map<string, DiscoveryEntry>): boolean {
   return keywordListsOf(discoveryIndex).length >= 2;
 }
@@ -1374,7 +1291,6 @@ function keywordIndexHref(dir: string, discoveryIndex: Map<string, DiscoveryEntr
   return keywordIndexAvailable(discoveryIndex) ? relativeHref(dir, `${KEYWORD_INDEX_SLUG}.html`) : undefined;
 }
 
-/** Las entradas más recientes del sitio, de la más nueva a la más vieja. */
 function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string): string {
   const recientes = miembrosDeUnType(discoveryIndex, 'all')
     .filter((ruta) => {
@@ -1398,7 +1314,6 @@ interface EnlaceMenu {
   url: string;
 }
 
-/** Los enlaces del único `type: menu` del proyecto. */
 function enlacesDelMenu(discoveryIndex: Map<string, DiscoveryEntry>): EnlaceMenu[] {
   const menus = [...discoveryIndex.entries()].filter(([, entry]) => entry.type === 'menu');
   if (menus.length > 1) {
@@ -1417,12 +1332,10 @@ function existeMenu(discoveryIndex: Map<string, DiscoveryEntry>): boolean {
   return [...discoveryIndex.values()].some((entry) => entry.type === 'menu');
 }
 
-/** El menú siempre abre con el nombre del sitio, que lleva al inicio. */
 function enlacesConInicio(links: EnlaceMenu[], siteTitle: string): EnlaceMenu[] {
   return [{ name: siteTitle, url: './index.html' }, ...links];
 }
 
-/** Los enlaces a las listas por defecto que sí existen. */
 function enlacesListasPorDefecto(available: Set<string>, conKeywords: boolean): EnlaceMenu[] {
   const enlaces = DEFAULT_LISTS.filter((lista) => lista.slug !== 'index' && available.has(lista.slug)).map((lista) => ({
     name: lista.title,
@@ -1431,7 +1344,6 @@ function enlacesListasPorDefecto(available: Set<string>, conKeywords: boolean): 
   return conKeywords ? [...enlaces, { name: 'Palabras clave', url: `./${KEYWORD_INDEX_SLUG}.html` }] : enlaces;
 }
 
-/** El menú del sitio: botón del header y enlaces del footer, si hay menú. */
 function menuDelSitio(discoveryIndex: Map<string, DiscoveryEntry>, siteTitle: string, dir: string): { header?: string; footer?: string } {
   if (!existeMenu(discoveryIndex)) return {};
   const links = enlacesConInicio(enlacesDelMenu(discoveryIndex), siteTitle);
@@ -1442,7 +1354,6 @@ function esEnlaceExterno(url: string): boolean {
   return /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(url);
 }
 
-/** Un enlace del menú, con la ruta relativa a la página que lo pinta. */
 function hrefDeMenu(url: string, dir: string): string {
   if (esEnlaceExterno(url) || /^(?:mailto|tel):/i.test(url) || url.startsWith('#')) return url;
   return relativeHref(dir, url.replace(/^\.?\//, ''));
@@ -1453,13 +1364,11 @@ function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
   return `<a href="${Bun.escapeHTML(hrefDeMenu(enlace.url, dir))}" class="${MENU_LINK_CLASSES}"${attrs}>${Bun.escapeHTML(enlace.name)}</a>`;
 }
 
-/** El botón del menú en el header: hamburguesa sutil, sin flecha. */
 function menuHeaderLink(links: EnlaceMenu[], dir: string): string | undefined {
   if (links.length === 0) return undefined;
   return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="Menú"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" class="h-4 w-4"><span>Menú</span></a>`;
 }
 
-/** El menú del footer: hamburguesa y hasta 10 enlaces, todos como chips. */
 function menuFooterContent(links: EnlaceMenu[], dir: string): string | undefined {
   if (links.length === 0) return undefined;
   const boton = menuHeaderLink(links, dir);
@@ -1477,7 +1386,6 @@ function tituloSidebarHtml(title: string, href: string | undefined): string {
     : `<h3 class="${clases}"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
 }
 
-/** La tarjeta de un anuncio, con la misma superficie y texto del sidebar. */
 function announcementCard(
   e: CollectionEntry,
   href: string | undefined,
@@ -1503,7 +1411,6 @@ function announcementCard(
   ].join('\n');
 }
 
-/** Las tarjetas de los anuncios, en HTML, para los slots del sitio. */
 async function renderAnuncios(args: {
   entries: CollectionEntry[];
   discoveryIndex: Map<string, DiscoveryEntry>;
@@ -1540,7 +1447,6 @@ async function renderAnuncios(args: {
   return minifyHtml(html);
 }
 
-/** Las tarjetas de anuncios que van en los slots de una página. */
 async function anunciosDeLaPagina(args: {
   discoveryIndex: Map<string, DiscoveryEntry>;
   cwd: string;
@@ -1575,7 +1481,6 @@ async function anunciosDeLaPagina(args: {
   return { top, bottom };
 }
 
-/** Procesa una sola vez las imágenes de cabecera de los anuncios. */
 export async function preparaImagenesDeAnuncios(args: {
   cwd: string;
   outputDir: string;
@@ -1593,7 +1498,6 @@ export async function preparaImagenesDeAnuncios(args: {
   return procesadas.imageMap;
 }
 
-/** Los anuncios del sitio, ordenados por fecha descendente. */
 async function readAnuncios(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<CollectionEntry[]> {
   const rutas = [...discoveryIndex.entries()].filter(([, entry]) => entry.type === 'announcement').map(([ruta]) => ruta);
   if (rutas.length === 0) return [];
@@ -1601,7 +1505,6 @@ async function readAnuncios(discoveryIndex: Map<string, DiscoveryEntry>, cwd: st
   return entries.sort((a, b) => fechaOrdenable(discoveryIndex.get(b.file)) - fechaOrdenable(discoveryIndex.get(a.file)));
 }
 
-/** El cuerpo de `menu.html`: todos los enlaces, en markdown. */
 function menuPageMarkdown(links: EnlaceMenu[], dir: string): string {
   return links
     .map((enlace) => {
@@ -1611,9 +1514,7 @@ function menuPageMarkdown(links: EnlaceMenu[], dir: string): string {
     .join('\n');
 }
 
-/** La tarjeta con las redes de la creadora, con su nombre como dueño. */
 export function creatorLinksCard(nombre: string, links: { name: string; url: string }[]): string {
-  // Fuera del sitio, igual que las redes del proyecto: se abren aparte.
   const items = links.map((l) => `- [${l.name}](<${l.url}>){target="_blank" rel="noopener noreferrer"}`).join('\n');
   return [
     `:::: {class="${EXTRA_CARD_CLASSES}"}`,
@@ -1626,13 +1527,6 @@ export function creatorLinksCard(nombre: string, links: { name: string; url: str
   ].join('\n');
 }
 
-/**
- * Las tarjetas que van después del texto: la biografía de cada creadora y las
- * colecciones donde vive el documento.
- *
- * Los bios son Markdown, así que se convierten aparte: si entraran en el
- * cuerpo del documento quedarían dentro de su tarjeta.
- */
 async function buildExtrasHtml(
   args: {
     tarjetas?: string;
@@ -1706,7 +1600,6 @@ async function leerKeywordCache(cwd: string): Promise<string[]> {
   }
 }
 
-/** Crea o borra `keyword.html` según cuántas palabras clave haya. */
 async function syncKeywordIndex(args: {
   cwd: string;
   outputDir: string;
@@ -1733,12 +1626,10 @@ async function syncKeywordIndex(args: {
   await emitKeywordIndex(args);
 }
 
-/** El contenido de la página con todas las palabras clave del sitio. */
 function keywordIndexContent(listas: { slug: string; label: string }[]): string {
   return listas.map(({ slug, label }) => `- [${Bun.escapeHTML(label)}](${keywordHref('.', slug)})`).join('\n');
 }
 
-/** La página por defecto `keyword.html` con todas las palabras clave. */
 async function emitKeywordIndex(args: {
   cwd: string;
   outputDir: string;
@@ -1807,10 +1698,6 @@ async function emitKeywordIndex(args: {
   );
 }
 
-/**
- * Las listas por keyword: una página en `keywords/` con los documentos que
- * declaran ese keyword. Las que dejan de existir se borran de la salida.
- */
 export async function emitKeywordLists(args: {
   cwd: string;
   outputDir: string;
@@ -1934,7 +1821,6 @@ export async function emitKeywordLists(args: {
   await syncKeywordIndex({ cwd, outputDir, renderCtx, exportCtx, discoveryIndex, listas });
 }
 
-/** Las creadoras de cada texto de la colección, sin repetir y en orden alfabético. */
 function creadoresDeArchivosDeColeccion(e: CollectionEntry, discoveryIndex: Map<string, DiscoveryEntry>): string[] {
   const coleccion = discoveryIndex.get(e.file);
   const nombres = new Set<string>();
@@ -1948,7 +1834,6 @@ function renderNombres(lista: string[], tono: 'accent' | 'gris' | 'plano', creat
   return lista.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`).join(', ');
 }
 
-/** Las partes de una tarjeta de colección: «Varias colaboradoras» y el título. */
 function partesDeColeccion(titleHtml: string): string[] {
   return ['<h2 class="not-prose text-center text-sm sm:text-base">Varias colaboradoras</h2>', '', titleHtml];
 }
@@ -1966,16 +1851,10 @@ function titleHtmlPara(title: string, href: string | undefined): string {
   return `<h3 class="not-prose mb-4 text-center text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
 }
 
-/**
- * Los chips de pertenencia de un miembro: una colección o lista por chip. Si el
- * contenedor es la página que se está armando, el chip se muestra sin enlace:
- * sirve para recordar a qué pertenece el texto, no para volver a sí mismo.
- */
-/** La página que se está armando: su ruta y, si se sabe, su slug de salida. */
 interface PageRef {
   path: string;
   outSlug?: string;
-  /** El slug del keyword cuando la página es la lista de ese keyword. */
+
   keywordSlug?: string;
 }
 
@@ -2001,7 +1880,6 @@ function chipsDePertenencia(
   return chips;
 }
 
-/** Los keywords del documento, uno por slug y en orden alfabético, con su lista. */
 function palabrasClaveDeRutas(
   rutas: string[],
   dir: string,
@@ -2065,7 +1943,7 @@ function imagenDeCabecera(e: CollectionEntry, tipo: string, imagenes: Map<string
   const imagen = imagenes?.get(abs);
   if (imagen === undefined) return undefined;
   if (tipo === 'creator') return retratoDeCreadora(imagen, e.title || TITULO_POR_DEFECTO, href);
-  // La imagen lleva al mismo destino que el título de la tarjeta.
+
   return figuraDeTarjeta(imagen, href);
 }
 
@@ -2103,7 +1981,6 @@ function cabeceraDeTarjeta(
   return { chips, cuerpo };
 }
 
-/** El fragmento en párrafos de texto plano, sin markdown ni bloques. */
 function parrafosPlanos(fragment: string): string[] {
   return fragment
     .split(/\n{2,}/)
@@ -2169,7 +2046,6 @@ function collectionCard(
   return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');
 }
 
-/** Baja los encabezados del cuerpo para que no compitan con los del merge. */
 function desplazaEncabezados(body: string, salto: number): string {
   let dentroDeCodigo = false;
   return body
@@ -2189,16 +2065,10 @@ function desplazaEncabezados(body: string, salto: number): string {
     .join('\n');
 }
 
-/**
- * El merge de una collection: cada texto con su autora y su título, sin las
- * interventions (no tienen contenido que leer) y con los encabezados del cuerpo
- * bajados, para que el `#` de la colección mande.
- */
 function buildCollectionSectionsMarkdown(entries: CollectionEntry[], merge: boolean): string {
   return buildCollectionSections(merge ? printableEntries(entries) : entries, MARKDOWN_HEADINGS, merge ? 4 : 0);
 }
 
-/** La sección de autoras y colaboradoras del markdown mergeado. */
 function buildAuthorsMarkdown(authoras: CreatorDoc[]): string {
   if (authoras.length === 0) return '';
   const partes: string[] = ['# Autoras y colaboradoras'];
@@ -2286,7 +2156,6 @@ interface CreatorDoc {
   relativePath: string;
   links: { name: string; url: string }[];
 
-  /** El retrato del frontmatter, resuelto contra el archivo de la creadora. */
   image?: string;
 }
 
@@ -2302,7 +2171,6 @@ export function creatorDocPathsFor(nombres: string[], discoveryIndex: Map<string
   return paths;
 }
 
-/** Los documentos de creator que corresponden a los nombres de un documento. */
 export async function resolveCreatorDocs(
   nombres: string[],
   discoveryIndex: Map<string, DiscoveryEntry>,
@@ -2424,18 +2292,15 @@ async function buildAuthorsLatex(
   numCreadoras: number,
 ): Promise<string> {
   if (creatorDocs.length === 0) return '';
-  // El nombre de cada creadora va centrado en el texto suelto; en la
-  // colección se mantiene a la izquierda, como estaba.
+
   const alineacion = esFile ? '\\centering' : '\\raggedright';
   const subsubsectionStyle = `\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{${alineacion}\\normalsize\\normalfont\\scshape}`;
   const subsubsectionReset =
     '\\RedeclareSectionCommand[beforeskip=\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\normalsize\\normalfont\\bfseries}';
-  // En un texto suelto la sección de autoras es una sección más; en una
-  // colección es una parte, porque el documento reúne muchas pieces.
+
   const nivel = esFile ? 'section' : 'part';
   const md: string[] = [];
-  // Con una sola creadora el encabezado «Autoras y colaboradoras» sobra: su
-  // nombre y su bio se quedan, pero sin el título de sección.
+
   if (!(esFile && numCreadoras < 2)) {
     md.push(`\\${nivel}{Autoras y colaboradoras}`);
   }
@@ -2489,12 +2354,10 @@ async function collectionPandocInput(
   return path;
 }
 
-/** Los nombres de las autoras de un documento: su creator y sus contributors. */
 export function nombresDeAutora(doc: BuildDocument, fm: Record<string, unknown>): string[] {
   return [...doc.frontmatter.creator, ...parseAuthors(fm.contributor)];
 }
 
-/** Las colecciones y listas donde vive un documento, con su enlace. */
 function contenedoresDe(
   doc: BuildDocument,
   dir: string,
@@ -2511,7 +2374,6 @@ function contenedoresDe(
   });
 }
 
-/** La fecha que ordena las tarjetas: `date`; sin fecha, al final. */
 function fechaDeContenido(entry: DiscoveryEntry | undefined): number {
   if (entry?.date !== undefined) {
     const fecha = Date.parse(entry.date);
@@ -2520,10 +2382,6 @@ function fechaDeContenido(entry: DiscoveryEntry | undefined): number {
   return Number.NEGATIVE_INFINITY;
 }
 
-/**
- * Los documentos donde participa la creadora del documento, como `creator` o
- * como `collectionCreator`: textos y colecciones. Lo más reciente primero.
- */
 function documentosDeLaCreadora(doc: BuildDocument, outputs: DocumentOutputs, discoveryIndex: Map<string, DiscoveryEntry>): string[] {
   if (doc.frontmatter.type !== 'creator') return [];
   const nombre = String(outputs.fm.name ?? outputs.fm.title ?? '');
@@ -2539,7 +2397,6 @@ function documentosDeLaCreadora(doc: BuildDocument, outputs: DocumentOutputs, di
   });
 }
 
-/** Las entradas completas de las tarjetas de una creadora. */
 async function entradasDeLaCreadora(
   doc: BuildDocument,
   outputs: DocumentOutputs,
@@ -2566,9 +2423,7 @@ async function preprocessDocImages(
   const lowertitlebackLicencia =
     active.latex || active.pdf ? licenciaLowertitlebackPorDefecto(outputs.fm, formatCfg?.pdf, ctx.siteConfig, dirname(doc.filePath)) : undefined;
   const fmConLicencia = lowertitlebackLicencia === undefined ? fmBase : { ...fmBase, lowertitleback: lowertitlebackLicencia };
-  // La colección junta las interventions: sus imágenes de membrete también se
-  // procesan aquí para que el PDF las pueda usar. En un texto suelto manda su
-  // propio frontmatter.
+
   const membreteColeccion = collectionLetterheadFiles(collectionEntries);
   const alturaMembrete = collectionEntries
     .filter((e) => e.type === 'intervention')
@@ -2576,7 +2431,7 @@ async function preprocessDocImages(
   return preprocessDocumentImages({
     content: [
       collectionScanContent(collectionEntries, content),
-      // El retrato de la creadora vive en su frontmatter, no en el cuerpo.
+
       ...creatorDocs.flatMap((c) => (c.image === undefined ? [c.body] : [`![](${c.image})`, c.body])),
     ].join('\n\n'),
     fm: membreteColeccion.length > 0 ? { ...fmConLicencia, letterhead: membreteColeccion, letterheadHeight: `${alturaMembrete}mm` } : fmConLicencia,
@@ -2591,7 +2446,7 @@ async function preprocessDocImages(
       epub: join(ctx.cwd, '.iteraciones', 'tmp', 'epub-images', outputs.dir === '.' ? '' : outputs.dir, outputs.outSlug),
     },
     wants: { pdf: active.latex || active.pdf, web: active.html || active.epub || active.markdown, epub: active.epub },
-    // Las imágenes de las tarjetas de una colección no viven en su cuerpo.
+
     extraImages: [
       ...(collectionEntries.length > 0 || extraEntries.length > 0 ? imagenesDeLasTarjetas([...collectionEntries, ...extraEntries], ctx.cwd) : []),
       ...(doc.frontmatter.type === 'creator' ? retratoDeLaPagina(outputs.fm, dirname(doc.filePath)) : []),
@@ -2599,7 +2454,6 @@ async function preprocessDocImages(
   });
 }
 
-/** Las páginas de una autora: la bio sola y las tarjetas aparte. */
 function paginasDeLaPagina(args: Parameters<typeof paginasDeDocumento>[0]): { paginas: string[]; tarjetasPaginas: string[] } {
   if (args.doc.frontmatter.type !== 'creator') return { paginas: paginasDeDocumento(args), tarjetasPaginas: [] };
   if (args.entradas.length === 0) return { paginas: [args.pageContent], tarjetasPaginas: [] };
@@ -2619,7 +2473,6 @@ function paginasDeLaPagina(args: Parameters<typeof paginasDeDocumento>[0]): { pa
   return { paginas: [args.pageContent, ...tarjetasPaginas.slice(1).map(() => '')], tarjetasPaginas };
 }
 
-/** Los extras de cada página: las tarjetas de la autora, o los de siempre. */
 async function extrasDeLaPagina(
   comunes: Omit<Parameters<typeof buildExtrasHtml>[0], 'tarjetas'>,
   tarjetasPaginas: string[],
@@ -2630,7 +2483,6 @@ async function extrasDeLaPagina(
   return Promise.all(tarjetasPaginas.map((tarjetas) => buildExtrasHtml({ ...comunes, tarjetas }, 'main')));
 }
 
-/** Las páginas de un documento: la bio y las tarjetas, o las tarjetas solas. */
 function paginasDeDocumento(args: {
   doc: BuildDocument;
   outSlug: string;
@@ -2761,7 +2613,7 @@ async function emitCollectionHtml(
   const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas, 'main');
   const sidebarExtras = (await extrasDeLaPagina(extrasComunes, [], 'sidebar')) as string;
   const pageChips = chipsDePagina(extrasComunes.contenedores, extrasComunes.palabrasClave);
-  // Las redes de la creadora van en su tarjeta, no al inicio del cuerpo.
+
   const contenidos = paginas;
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
   const indices = indicesDeColeccion(doc, outputs, collectionEntries, memberHrefs, pageSize, ctx.siteConfig);
@@ -2954,7 +2806,6 @@ function tipoDe(entry: DiscoveryEntry): string {
   return entry.type ?? (entry.files && entry.files.length > 0 ? 'collection' : 'file');
 }
 
-/** La fecha del `date` del frontmatter o, si no existe, la última modificación del archivo. */
 function placementDe(entry: CollectionEntry, discoveryIndex: Map<string, DiscoveryEntry>): 'top' | 'bottom' {
   return discoveryIndex.get(entry.file)?.fm?.placement === 'bottom' ? 'bottom' : 'top';
 }
@@ -2967,12 +2818,11 @@ function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
   return entry?.mtime ?? 0;
 }
 
-/** Las listas por defecto se ordenan de lo más reciente a lo más antiguo. */
 function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
   const rutas = [...discoveryIndex.entries()]
     .filter(([, entry]) => (type === 'all' ? tipoDe(entry) !== 'menu' && tipoDe(entry) !== 'announcement' : tipoDe(entry) === type))
     .map(([ruta]) => ruta);
-  // Las creadoras van siempre por nombre, sin importar la fecha.
+
   if (type === 'creator') {
     const nombre = (ruta: string): string => discoveryIndex.get(ruta)?.title ?? ruta;
     return rutas.sort((a, b) => nombre(a).localeCompare(nombre(b), 'es') || a.localeCompare(b));
@@ -2983,7 +2833,6 @@ function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: str
   });
 }
 
-/** El retrato declarado en el frontmatter de una creadora, ya resuelto. */
 function retratoDeLaPagina(fm: Record<string, unknown>, docDir: string): string[] {
   const retrato = fmTrimmedString(fm.image);
   if (retrato === undefined) return [];
@@ -3011,7 +2860,7 @@ function imagenesDeLasTarjetas(entradas: CollectionEntry[], cwd: string): string
     const dir = entrada.dirAbs ?? dirname(join(cwd, entrada.file));
     const fragmento = extractFragment(entrada.body, CARD_PREVIEW_MAX_WORDS);
     if (fragmento !== '') imagenes.push(...scanInlineImages(fragmento, dir));
-    // La imagen de cabecera ya no vive en el fragmento: se procesa aparte.
+
     const src = primeraImagenDelCuerpo(entrada.body);
     if (src !== undefined) imagenes.push(isAbsolute(src) ? src : resolve(dir, src));
     if (entrada.type === 'creator' && entrada.image !== undefined) {
@@ -3021,10 +2870,6 @@ function imagenesDeLasTarjetas(entradas: CollectionEntry[], cwd: string): string
   return imagenes;
 }
 
-/**
- * Las listas por defecto: una página por type, con los documentos de ese type
- * como tarjetas. Se escriben en la raíz de la salida, sin archivo fuente.
- */
 export async function emitDefaultLists(args: {
   cwd: string;
   outputDir: string;
@@ -3058,7 +2903,6 @@ export async function emitDefaultLists(args: {
   );
 
   for (const { slug, title, type, miembros, entradas, description } of listas) {
-    // Las listas por defecto sólo existen si hay al menos dos elementos.
     if (type === 'all' ? miembros.length === 0 : miembros.length < 2) continue;
     const dueno = htmlOwner(discoveryIndex, '.', slug);
     if (dueno !== undefined) {
@@ -3086,7 +2930,7 @@ export async function emitDefaultLists(args: {
       },
       hrefsDeImagenes(procesadas.imageMap, outputDir, '.'),
     );
-    // La paginación la inserta emitHtmlPage; no debe duplicarse aquí.
+
     const contenidos = paginas;
 
     const doc: BuildDocument = {
@@ -3145,10 +2989,6 @@ export async function emitDefaultLists(args: {
   }
 }
 
-/**
- * El archivo de rutas de imágenes de una lista por defecto. No usa el nombre
- * del documento (que no existe) para no pisar el de un documento de verdad.
- */
 async function writeListImagePaths(cwd: string, slug: string, imageMap: Map<string, string>): Promise<string> {
   const path = join(cwd, '.iteraciones', 'paths', `_lista-${slug}.html.json`);
   await mkdir(dirname(path), { recursive: true });
@@ -3169,7 +3009,7 @@ export async function processDocumentFormats(
 
   const entry = discoveryIndex.get(doc.relativePath);
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
-  // El menú del sitio vive siempre en menu.html.
+
   const outSlug = doc.frontmatter.type === 'menu' ? 'menu' : htmlSlugFor(doc.relativePath, slug);
   const dir = dirname(doc.relativePath);
 

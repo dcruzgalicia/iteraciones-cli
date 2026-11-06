@@ -74,8 +74,6 @@ Then('el LaTeX del libro tiene {string}', (texto: string) => {
 });
 
 Then('el LaTeX del libro llama a {string}', (macro: string) => {
-  // La llamada va sola en su línea; la definición y la llamada interna viven
-  // dentro de \setstartpaper.
   const llamada = new RegExp(`^${macro.replace(/\\/g, '\\\\')}\\{`, 'm');
   if (!llamada.test(world.tex)) {
     throw new Error(`el .tex no llama a ${JSON.stringify(macro)}`);
