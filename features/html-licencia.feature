@@ -90,7 +90,7 @@ Característica: la tarjeta de licencia del sitio
       Y el archivo "dist/files/index.html" dice "Licencia de Producción Feminista"
       Y el archivo "dist/files/index.html" dice "dar crédito a todas las personas que hicieron posible su creación"
       Y el archivo "dist/files/index.html" dice "materiales y archivos necesarios para su creación, modificación y reproducción deben ser de acceso público"
-      Y el archivo "dist/files/index.html" dice "principios feministas y anticapitalistas"
+      Y el archivo "dist/files/index.html" dice "principios feministas, anticapitalistas, antirracistas y decoloniales"
       Y el archivo "dist/files/index.html" no dice "hegemonía epistemológica"
       Y el archivo "dist/files/index.html" no dice "labekka.red"
       Y el archivo "dist/files/index.html" pone "assets/images/pf.webp" antes que "assets/images/ac.webp"
