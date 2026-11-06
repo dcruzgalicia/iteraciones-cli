@@ -10,6 +10,7 @@ import { ASSETS_IMAGES_DIR } from '../builder/output-layout.js';
 import {
   collectionBaseContent,
   getCreatorLinks,
+  licenciaFrontmatterPara,
   memberSlugMap,
   readCollectionEntries,
   resolveCollectionCreatorDocs,
@@ -70,13 +71,15 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
       outSlug: basename(output, '.md'),
       format: 'markdown',
     });
+    const licenciaFm = licenciaFrontmatterPara(fm, siteConfig);
+    const fmSalida = { ...rewriteFmImagePaths(fm, relImageMap, docDir), ...(licenciaFm ?? {}) };
 
     await writeDistMarkdown({
       label: relativePath,
       content,
       outPath: output,
       outputDir: outputRootFor(output, dir),
-      fm: rewriteFmImagePaths(fm, relImageMap, docDir),
+      fm: fmSalida,
       exportDoc: assembleExportDocument(
         { filePath: inputPath, relativePath, frontmatter: fm } as unknown as BuildDocument,
         siteConfig.language ?? DEFAULT_SITE_CONFIG.language,

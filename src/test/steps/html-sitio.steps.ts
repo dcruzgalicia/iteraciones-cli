@@ -148,6 +148,14 @@ Then('el EPUB {string} declara la clave {string} con el valor {string}', async (
   }
 });
 
+Then('el EPUB {string} contiene {string}', async (archivo: string, texto: string) => {
+  const epub = join(world.root, 'dist', 'files', `${archivo}.epub`);
+  const proc = Bun.spawn(['unzip', '-p', epub], { stdout: 'pipe', stderr: 'pipe' });
+  const [salida, errores, codigo] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  if (codigo !== 0) throw new Error(`unzip falló con ${archivo}.epub: ${errores}`);
+  if (!salida.includes(texto)) throw new Error(`el EPUB ${archivo} no contiene ${JSON.stringify(texto)}`);
+});
+
 Then('el chip {string} del HTML de {string} sólo se subraya al pasar el ratón', (etiqueta: string, archivo: string) => {
   const chip = chipDelHtml(archivo, etiqueta);
   if (!/class="[^"]*no-underline/.test(chip)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no lleva no-underline`);

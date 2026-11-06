@@ -141,6 +141,8 @@ async function emitLatexAndQueuePdf(
   const latexOn = plan.activeFormats.latex;
   const pdfOn = plan.activeFormats.pdf;
   const { dir, outBase, outSlug, fm } = outputs;
+  const lowertitlebackLicencia = licenciaLowertitlebackPorDefecto(fm, formatCfg?.pdf, ctx.siteConfig, dirname(doc.filePath));
+  const pdfCfg = lowertitlebackLicencia === undefined ? formatCfg?.pdf : { ...(formatCfg?.pdf ?? {}), lowertitleback: lowertitlebackLicencia };
   const texDistPath = outBase(`${outSlug}${primaryOutputExtension('latex')}`);
 
   const imagePaths = await writeImagePaths(doc, ctx.cwd, 'latex', images.imageMap, dirname(doc.filePath), false);
@@ -152,7 +154,7 @@ async function emitLatexAndQueuePdf(
     templatePath: exportCtx.templates[latexKindFor(doc.frontmatter.type)],
     fm,
     siteConfig: ctx.siteConfig,
-    formatCfg: formatCfg?.pdf,
+    formatCfg: pdfCfg,
     biblatexAvailable: exportCtx.biblatexAvailable,
     warnedLangs,
     images: { imageMap: images.imageMap, processedImages: images.processedFiles },
@@ -1185,25 +1187,91 @@ const LICENCIAS: Record<string, LicenciaDef> = {
   },
 };
 
-const LICENCIA_POR_DEFECTO = 'PF-AC-PR-FA-1.0';
+const LICENCIA_POR_DEFECTO = 'CC-BY-NC-ND-4.0';
+const LICENSE_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/license');
 
 function normalizarLicencia(valor: string | undefined): string | undefined {
   const limpio = valor?.trim().toLocaleUpperCase('es');
   return limpio === undefined || limpio === '' ? undefined : limpio;
 }
 
-/** La licencia del sitio o la del documento, dentro de la tarjeta del sidebar. */
-function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string): string | undefined {
+interface LicenciaResuelta {
+  id: string;
+  def: LicenciaDef;
+}
+
+/** La licencia efectiva: frontmatter, HTML del sitio, raíz o la de por defecto. */
+function licenciaResuelta(siteConfig: SiteConfig, override?: string): LicenciaResuelta | undefined {
   const explicita =
     normalizarLicencia(override) ?? normalizarLicencia(siteConfig.format?.html?.site?.license) ?? normalizarLicencia(siteConfig.license);
-  const licencia = LICENCIAS[explicita ?? LICENCIA_POR_DEFECTO];
+  const id = explicita ?? LICENCIA_POR_DEFECTO;
+  const def = LICENCIAS[id];
+  return def === undefined ? undefined : { id, def };
+}
+
+function licenciaTexto(def: LicenciaDef): string {
+  return def.parrafos.join('\n\n');
+}
+
+/** El bloque de licencia para EPUB y markdown. */
+function licenciaMarkdown(def: LicenciaDef): string {
+  return `## Licencia\n\n${licenciaTexto(def).replace(/&nbsp;/g, ' ')}`;
+}
+
+export function licenciaMarkdownPara(fm: Record<string, unknown>, siteConfig: SiteConfig): string | undefined {
+  const licencia = licenciaResuelta(siteConfig, fmTrimmedString(fm.license));
+  return licencia === undefined ? undefined : licenciaMarkdown(licencia.def);
+}
+
+/** Los campos que llevan la licencia en el frontmatter del markdown. */
+export function licenciaFrontmatterPara(fm: Record<string, unknown>, siteConfig: SiteConfig): { license: string; rights: string } | undefined {
+  const licencia = licenciaResuelta(siteConfig, fmTrimmedString(fm.license));
+  return licencia === undefined ? undefined : { license: licencia.id, rights: licenciaTexto(licencia.def) };
+}
+
+/** Añade el bloque de licencia al final de un contenido de EPUB. */
+function conLicenciaAlFinal(base: string, fm: Record<string, unknown>, siteConfig: SiteConfig): string {
+  const licencia = licenciaMarkdownPara(fm, siteConfig);
+  if (licencia === undefined || base.includes('## Licencia')) return base;
+  return `${base}\n\n${licencia}`;
+}
+
+/** La contraportada LaTeX con los iconos y el texto de la licencia. */
+function licenciaLowertitleback(def: LicenciaDef, docDir: string): string {
+  const iconos = def.iconos
+    .map((nombre) => {
+      const iconPath = relative(docDir, join(LICENSE_RESOURCES_DIR, `${nombre}.svg`));
+      return `![](${posix(iconPath)}){width=15pt}`;
+    })
+    .join(' ');
+  return ['::: {line-height=1}', iconos, '', licenciaTexto(def), ':::'].join('\n');
+}
+
+/**
+ * El lowertitleback de la licencia, sólo si ni el documento ni el proyecto
+ * declararon uno propio.
+ */
+export function licenciaLowertitlebackPorDefecto(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  siteConfig: SiteConfig,
+  docDir: string,
+): string | undefined {
+  if (fm.lowertitleback !== undefined || formatCfg?.lowertitleback !== undefined || siteConfig.lowertitleback !== undefined) return undefined;
+  const licencia = licenciaResuelta(siteConfig, fmTrimmedString(fm.license));
+  return licencia === undefined ? undefined : licenciaLowertitleback(licencia.def, docDir);
+}
+
+/** La licencia del sitio o la del documento, dentro de la tarjeta del sidebar. */
+function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string): string | undefined {
+  const licencia = licenciaResuelta(siteConfig, override);
   if (licencia === undefined) return undefined;
-  const iconos = licencia.iconos
+  const iconos = licencia.def.iconos
     .map(
       (nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.webp`)}" alt="" class="block my-0!" style="width:32px;height:32px">`,
     )
     .join('');
-  const parrafos = licencia.parrafos.map((parrafo) => `<p class="m-0">${parrafo}</p>`).join('');
+  const parrafos = licencia.def.parrafos.map((parrafo) => `<p class="m-0">${parrafo}</p>`).join('');
   return [
     `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
     `<div class="mb-3 flex items-center gap-2">${iconos}</div>`,
@@ -2499,6 +2567,9 @@ async function preprocessDocImages(
   const { ctx, plan, formatCfg } = renderCtx;
   const active = plan.activeFormats;
   const fmBase = mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd);
+  const lowertitlebackLicencia =
+    active.latex || active.pdf ? licenciaLowertitlebackPorDefecto(outputs.fm, formatCfg?.pdf, ctx.siteConfig, dirname(doc.filePath)) : undefined;
+  const fmConLicencia = lowertitlebackLicencia === undefined ? fmBase : { ...fmBase, lowertitleback: lowertitlebackLicencia };
   // La colección junta las interventions: sus imágenes de membrete también se
   // procesan aquí para que el PDF las pueda usar. En un texto suelto manda su
   // propio frontmatter.
@@ -2512,7 +2583,7 @@ async function preprocessDocImages(
       // El retrato de la creadora vive en su frontmatter, no en el cuerpo.
       ...creatorDocs.flatMap((c) => (c.image === undefined ? [c.body] : [`![](${c.image})`, c.body])),
     ].join('\n\n'),
-    fm: membreteColeccion.length > 0 ? { ...fmBase, letterhead: membreteColeccion, letterheadHeight: `${alturaMembrete}mm` } : fmBase,
+    fm: membreteColeccion.length > 0 ? { ...fmConLicencia, letterhead: membreteColeccion, letterheadHeight: `${alturaMembrete}mm` } : fmConLicencia,
     docDir: dirname(doc.filePath),
     pageDimensions: renderCtx.pageDimensions ?? detectPageSize([]),
     cropActive: renderCtx.cropActive,
@@ -2796,10 +2867,11 @@ async function emitCollectionFormats(
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
     const base = collectionBaseContent(collectionEntries, 'html', content);
+    const baseConLicencia = conLicenciaAlFinal(base, outputs.fm, ctx.siteConfig);
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', epubMap, docDir, false);
     const epubCover = epubCoverPath(mergedFm, docDir, epubMap);
     await convertToEpub(
-      prependLinksMarkdown(base, creatorLinks),
+      prependLinksMarkdown(baseConLicencia, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
       exportDoc,
       exportCtx.filters,
@@ -2845,6 +2917,8 @@ async function emitCollectionMarkdown(
   if (!docProducesFormat(doc.frontmatter.type, 'markdown')) return;
 
   const { relImageMap, docDir, fmAssets } = assets;
+  const licenciaFm = licenciaFrontmatterPara(outputs.fm, ctx.siteConfig);
+  const fmConLicencia = licenciaFm === undefined ? fmAssets : { ...fmAssets, ...licenciaFm };
   const outPath = outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`);
   const isCollection = doc.frontmatter.type === 'collection';
   const rootFiles = isCollection ? (doc.frontmatter.files ?? []) : undefined;
@@ -2855,7 +2929,7 @@ async function emitCollectionMarkdown(
     content: outputs.content,
     outPath,
     outputDir: ctx.outputDir,
-    fm: fmAssets,
+    fm: fmConLicencia,
     exportDoc,
     relImageMap,
     docDir,

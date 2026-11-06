@@ -283,7 +283,9 @@ const CHEQUEOS: Record<string, Chequeo> = {
   },
   salidas: ({ script, falla }) => {
     if (!script.includes('.iteraciones/script/in-')) falla('falta la materialización de la entrada');
-    if (!/> *[^\n]*dist\/files\/[^\n]*\.tex\b/.test(script)) falla('no hay redirect a dist/files/*.tex');
+    if (!/(?:> *[^\n]*dist\/files\/[^\n]*\.tex\b|-o \S+dist\/files\/\S+\.tex\b)/.test(script)) {
+      falla('falta la salida .tex en dist/files');
+    }
     if (/> *[^\n]*dist\/files\/[^\n]*\.html\b/.test(script)) falla('el HTML no puede salir de un redirect: minify siempre lo cambia');
     if (!/^\s*iteraciones post html .* -o \S+dist\/files\/\S+\.html\b/m.test(script)) falla('falta `iteraciones post html … -o dist/files/….html`');
   },
@@ -370,12 +372,13 @@ Then('el script cumple este contrato:', async (tabla: { hashes: () => Record<str
   }
 });
 
-Then('el manifiesto de post-proceso tiene una entrada', async () => {
+Then('el manifiesto de post-proceso incluye la imagen del documento', async () => {
   const raw = await readFile(join(world.dir, '.iteraciones', 'post', 'ensayo.md.json'), 'utf8');
   const manifest = JSON.parse(raw) as { distribution?: Record<string, string> };
-
-  const n = Object.keys(manifest.distribution ?? {}).length;
-  if (n !== 1) throw new Error(`esperaba 1 entrada en el manifiesto y hay ${n}`);
+  const valores = Object.values(manifest.distribution ?? {});
+  if (!valores.some((valor) => valor.endsWith('ensayo-foto.jpg'))) {
+    throw new Error(`el manifiesto no incluye la imagen procesada: ${JSON.stringify(valores)}`);
+  }
 });
 
 Then('el archivo de dist existe', async () => {
