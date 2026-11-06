@@ -212,9 +212,12 @@ function yamlScalar(value: string): string {
   if (!value.includes('\n')) {
     return stringify({ v: value }, { defaultStringType: 'QUOTE_SINGLE', defaultKeyType: 'PLAIN' }).replace(/^v: /, '').trimEnd();
   }
-  return stringify({ v: `${value.replace(/\n+$/, '')}\n` }, { defaultStringType: 'BLOCK_LITERAL', defaultKeyType: 'PLAIN' })
-    .replace(/^v: /, '')
-    .trimEnd();
+  const lineas = value
+    .replace(/\n+$/, '')
+    .split('\n')
+    .map((linea) => `  ${linea}`)
+    .join('\n');
+  return `|\n${lineas}`;
 }
 
 function prependFrontmatterYaml(content: string, overrides: Record<string, string>): string {
@@ -234,14 +237,17 @@ function prependFrontmatterYaml(content: string, overrides: Record<string, strin
     // de añadir un segundo bloque, que pandoc leería como texto del cuerpo.
     const original = content.slice(4, fmEnd);
     let mezclado: Record<string, unknown>;
+    const overridesYaml = Object.fromEntries(
+      Object.entries(overrides).map(([clave, valor]) => [clave, valor.includes('\n') && !valor.endsWith('\n') ? `${valor}\n` : valor]),
+    );
     try {
       const parseado: unknown = parse(original);
       mezclado = {
         ...(typeof parseado === 'object' && parseado !== null && !Array.isArray(parseado) ? (parseado as Record<string, unknown>) : {}),
-        ...overrides,
+        ...overridesYaml,
       };
     } catch {
-      mezclado = { ...overrides };
+      mezclado = { ...overridesYaml };
     }
     return `---\n${stringify(mezclado)}---\n${content.slice(fmEnd + 5)}`;
   }
