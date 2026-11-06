@@ -75,6 +75,87 @@
   }
 }
 
+@utility tarjeta-encabezado {
+  &.tarjeta {
+    background-color: color-mix(in oklab, var(--color-accent-500) 1%, color-mix(in srgb, #fff 72%, transparent));
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+
+    &:where([data-theme="dark"], [data-theme="dark"] *) {
+      background-color: color-mix(in oklab, var(--color-accent-500) 2%, color-mix(in srgb, var(--color-stone-900) 62%, transparent));
+    }
+  }
+}
+
+@utility contenido-tamano {
+  font-size: 16px;
+
+  @media (min-width: 640px) {
+    font-size: 17px;
+  }
+
+  @media (min-width: 768px) {
+    font-size: 18px;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: 19px;
+  }
+
+  @media (min-width: 1280px) {
+    font-size: 20px;
+  }
+
+  & :where(p, li, blockquote, td, th) {
+    font-size: inherit;
+  }
+
+  &.prose {
+    font-size: 16px;
+  }
+
+  @media (min-width: 640px) {
+    &.prose {
+      font-size: 17px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    &.prose {
+      font-size: 18px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    &.prose {
+      font-size: 19px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    &.prose {
+      font-size: 20px;
+    }
+  }
+
+  &.prose :where(p, li, blockquote, td, th) {
+    font-size: inherit;
+  }
+}
+
+@utility contenido-compacto {
+  line-height: 1.25;
+
+  & :where(p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6) {
+    line-height: 1.25;
+  }
+
+  &.prose,
+  &.prose :where(p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6) {
+    line-height: 1.25;
+  }
+}
+
 @layer base {
   a {
     text-decoration: none;
@@ -185,19 +266,6 @@
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     a {
       color: var(--color-accent-300);
-    }
-  }
-}
-
-@utility nombres-enlazados-gris {
-  a {
-    color: var(--color-stone-600);
-    text-underline-offset: 0.25em;
-  }
-
-  &:where([data-theme="dark"], [data-theme="dark"] *) {
-    a {
-      color: var(--color-stone-400);
     }
   }
 }

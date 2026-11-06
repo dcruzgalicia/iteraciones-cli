@@ -987,7 +987,7 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
         : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
     })
     .join('');
-  const indice = `<div class="min-w-0" id="indice-completo"><nav class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
+  const indice = `<div class="min-w-0" id="indice-completo"><nav class="contenido-tamano contenido-compacto relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
   return Array.from({ length: total }, () => indice);
 }
 
@@ -1020,7 +1020,7 @@ const CARD_WRAPPER = '<div class="min-w-0">';
 const CARD_PREVIEW_MAX_WORDS = 150;
 
 const CARD_TEXT_CLASSES =
-  'prose prose-base dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-lg md:prose-xl lg:prose-2xl';
+  'prose prose-base dark:prose-invert max-w-none contenido-tamano contenido-compacto [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-lg md:prose-xl lg:prose-2xl';
 
 const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[30rem] flex-col overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-4 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_h3]:line-clamp-2 [&>h2]:line-clamp-1 sm:h-[32rem] sm:p-5 lg:h-[34rem] lg:p-6 ${CARD_TEXT_CLASSES}`;
 
@@ -1215,7 +1215,7 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string | f
   return [
     `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
     `<div class="mb-3 flex items-center gap-2">${iconos}</div>`,
-    `<div class="space-y-3 text-xs leading-relaxed sm:text-xs md:text-sm lg:text-base">${parrafos}</div>`,
+    `<div class="contenido-tamano contenido-compacto space-y-3">${parrafos}</div>`,
   ].join('');
 }
 
@@ -1853,14 +1853,18 @@ function renderNombres(lista: string[], tono: 'accent' | 'gris' | 'plano', creat
 }
 
 function partesDeColeccion(titleHtml: string): string[] {
-  return ['<h2 class="not-prose text-center text-sm sm:text-base">Varias colaboradoras</h2>', '', titleHtml];
+  return [
+    '<h2 class="not-prose text-center text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">Varias colaboradoras</h2>',
+    '',
+    titleHtml,
+  ];
 }
 
 function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, DiscoveryEntry>): { tono: 'accent' | 'gris'; nombres?: string[] } {
   const tipo = e.type ?? 'file';
   if (tipo === 'creator') return { tono: 'accent' };
   if (tipo === 'collection') return { tono: 'gris', nombres: discoveryIndex === undefined ? [] : creadoresDeArchivosDeColeccion(e, discoveryIndex) };
-  return { tono: 'gris', nombres: e.creator };
+  return { tono: 'accent', nombres: e.creator };
 }
 
 function titleHtmlPara(title: string, href: string | undefined): string {
@@ -1993,7 +1997,8 @@ function cabeceraDeTarjeta(
   }
   const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
   const creator = nombres === undefined ? '' : nombres.length > 0 ? renderNombres(nombres, tono, creatorHrefs) : AUTORA_POR_DEFECTO;
-  if (creator !== '') cuerpo.push(`<h2 class="not-prose text-center text-sm sm:text-base">${creator}</h2>`, '');
+  if (creator !== '')
+    cuerpo.push(`<h2 class="not-prose text-center text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`, '');
   cuerpo.push(titleHtml);
   if (e.subtitle) cuerpo.push('', `<h4 class="text-center text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
   return { chips, cuerpo };
