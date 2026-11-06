@@ -20,10 +20,10 @@ const LICENSE_ICONS = [
   { name: 'by', file: 'by.svg' },
   { name: 'nc', file: 'nc.svg' },
   { name: 'nd', file: 'nd.svg' },
-  { name: 'pf', file: 'pf.png' },
-  { name: 'ac', file: 'ac.png' },
-  { name: 'pr', file: 'pr.png' },
-  { name: 'fa', file: 'fa.png' },
+  { name: 'pf', file: 'pf.svg' },
+  { name: 'ac', file: 'ac.svg' },
+  { name: 'pr', file: 'pr.svg' },
+  { name: 'fa', file: 'fa.svg' },
 ];
 const ICONS_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'icons');
 const ICON_FILES = [
