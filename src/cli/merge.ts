@@ -140,7 +140,13 @@ async function composeFor(
 ): Promise<string> {
   if (format === 'latex') {
     const pageNumber = (src.fm.pageNumber ?? siteConfig.format?.pdf?.pageNumber ?? siteConfig.pageNumber) as string | undefined;
-    const lowertitleback = licenciaLowertitlebackPorDefecto(src.fm, siteConfig.format?.pdf, siteConfig, dirname(src.inputPath));
+    const lowertitleback = licenciaLowertitlebackPorDefecto(
+      src.fm,
+      siteConfig.format?.pdf,
+      siteConfig,
+      dirname(src.inputPath),
+      src.fm.type as string | undefined,
+    );
     const formatCfg = lowertitleback === undefined ? siteConfig.format?.pdf : { ...(siteConfig.format?.pdf ?? {}), lowertitleback };
     return buildLatexPandocContent(collectionBaseContent(entries, 'latex', src.text, pageNumber, undefined, ctx.relImageMap), ctx.doc, {
       fm: src.fm,

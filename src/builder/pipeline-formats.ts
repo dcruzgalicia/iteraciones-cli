@@ -141,7 +141,7 @@ async function emitLatexAndQueuePdf(
   const latexOn = plan.activeFormats.latex;
   const pdfOn = plan.activeFormats.pdf;
   const { dir, outBase, outSlug, fm } = outputs;
-  const lowertitlebackLicencia = licenciaLowertitlebackPorDefecto(fm, formatCfg?.pdf, ctx.siteConfig, dirname(doc.filePath));
+  const lowertitlebackLicencia = licenciaLowertitlebackPorDefecto(fm, formatCfg?.pdf, ctx.siteConfig, dirname(doc.filePath), doc.frontmatter.type);
   const pdfCfg = lowertitlebackLicencia === undefined ? formatCfg?.pdf : { ...(formatCfg?.pdf ?? {}), lowertitleback: lowertitlebackLicencia };
   const texDistPath = outBase(`${outSlug}${primaryOutputExtension('latex')}`);
 
@@ -260,7 +260,7 @@ function opcional(valor: string | undefined): string | undefined {
 function tarjetasDeSitio(args: {
   siteConfig: SiteConfig;
   dir: string;
-  license?: string;
+  license?: string | false;
   menuHeader?: string;
   menuFooterPlain?: string;
   announcementsTop?: string;
@@ -392,7 +392,7 @@ function htmlVars(args: {
     ...tarjetasDeSitio({
       siteConfig: ctx.siteConfig,
       dir,
-      license: fmTrimmedString(fm.license),
+      license: licenciaOverride(fm),
       menuHeader,
       menuFooterPlain,
       announcementsTop,
@@ -1127,15 +1127,29 @@ function normalizarLicencia(valor: string | undefined): string | undefined {
   return limpio === undefined || limpio === '' ? undefined : limpio;
 }
 
+function licenciaOverride(fm: Record<string, unknown>): string | false | undefined {
+  const raw = fm.license;
+  if (raw === false) return false;
+  return typeof raw === 'string' ? raw : undefined;
+}
+
+function licenciaExplicita(override: string | false | undefined, siteConfig: SiteConfig): string | false | undefined {
+  for (const valor of [override, siteConfig.format?.html?.site?.license, siteConfig.license]) {
+    if (valor === false) return false;
+    if (typeof valor === 'string' && valor.trim() !== '') return valor;
+  }
+  return undefined;
+}
+
 interface LicenciaResuelta {
   id: string;
   def: LicenciaDef;
 }
 
-function licenciaResuelta(siteConfig: SiteConfig, override?: string): LicenciaResuelta | undefined {
-  const explicita =
-    normalizarLicencia(override) ?? normalizarLicencia(siteConfig.format?.html?.site?.license) ?? normalizarLicencia(siteConfig.license);
-  const id = explicita ?? LICENCIA_POR_DEFECTO;
+function licenciaResuelta(siteConfig: SiteConfig, override?: string | false): LicenciaResuelta | undefined {
+  const explicita = licenciaExplicita(override, siteConfig);
+  if (explicita === false) return undefined;
+  const id = normalizarLicencia(explicita) ?? LICENCIA_POR_DEFECTO;
   const def = LICENCIAS[id];
   return def === undefined ? undefined : { id, def };
 }
@@ -1149,12 +1163,12 @@ function licenciaMarkdown(def: LicenciaDef): string {
 }
 
 export function licenciaMarkdownPara(fm: Record<string, unknown>, siteConfig: SiteConfig): string | undefined {
-  const licencia = licenciaResuelta(siteConfig, fmTrimmedString(fm.license));
+  const licencia = licenciaResuelta(siteConfig, licenciaOverride(fm));
   return licencia === undefined ? undefined : licenciaMarkdown(licencia.def);
 }
 
 export function licenciaFrontmatterPara(fm: Record<string, unknown>, siteConfig: SiteConfig): { license: string; rights: string } | undefined {
-  const licencia = licenciaResuelta(siteConfig, fmTrimmedString(fm.license));
+  const licencia = licenciaResuelta(siteConfig, licenciaOverride(fm));
   return licencia === undefined ? undefined : { license: licencia.id, rights: licenciaTexto(licencia.def) };
 }
 
@@ -1179,13 +1193,17 @@ export function licenciaLowertitlebackPorDefecto(
   formatCfg: Record<string, unknown> | undefined,
   siteConfig: SiteConfig,
   docDir: string,
+  docType?: string,
 ): string | undefined {
+  if (docType === 'intervention') return undefined;
   if (fm.lowertitleback !== undefined || formatCfg?.lowertitleback !== undefined || siteConfig.lowertitleback !== undefined) return undefined;
-  const licencia = licenciaResuelta(siteConfig, fmTrimmedString(fm.license));
+  const uppertitleback = resolveStringField(fm, formatCfg, siteConfig, 'uppertitleback');
+  if (uppertitleback === undefined || uppertitleback.trim() === '') return undefined;
+  const licencia = licenciaResuelta(siteConfig, licenciaOverride(fm));
   return licencia === undefined ? undefined : licenciaLowertitleback(licencia.def, docDir);
 }
 
-function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string): string | undefined {
+function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string | false): string | undefined {
   const licencia = licenciaResuelta(siteConfig, override);
   if (licencia === undefined) return undefined;
   const iconos = licencia.def.iconos
@@ -2421,7 +2439,9 @@ async function preprocessDocImages(
   const active = plan.activeFormats;
   const fmBase = mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd);
   const lowertitlebackLicencia =
-    active.latex || active.pdf ? licenciaLowertitlebackPorDefecto(outputs.fm, formatCfg?.pdf, ctx.siteConfig, dirname(doc.filePath)) : undefined;
+    active.latex || active.pdf
+      ? licenciaLowertitlebackPorDefecto(outputs.fm, formatCfg?.pdf, ctx.siteConfig, dirname(doc.filePath), doc.frontmatter.type)
+      : undefined;
   const fmConLicencia = lowertitlebackLicencia === undefined ? fmBase : { ...fmBase, lowertitleback: lowertitlebackLicencia };
 
   const membreteColeccion = collectionLetterheadFiles(collectionEntries);

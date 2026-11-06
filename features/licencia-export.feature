@@ -12,6 +12,7 @@ Característica: la licencia en los formatos exportados
       Y que el archivo "iteraciones.config.yaml" tiene este contenido
         """
         language: es-MX
+        uppertitleback: "Arriba"
         format:
           latex:
             generate: true
@@ -36,6 +37,83 @@ Característica: la licencia en los formatos exportados
       Y el archivo "dist/files/documento.md" dice "license: CC-BY-NC-ND-4.0"
       Y el archivo "dist/files/documento.md" dice "rights: Algunos derechos reservados."
       Y el EPUB "documento" contiene "Algunos derechos reservados"
+
+    Escenario: Sin uppertitleback no se agrega el lowertitleback de licencia
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        format:
+          latex:
+            generate: true
+        """
+      Y que el archivo "documento.md" tiene este contenido
+        """
+        ---
+        title: Documento
+        ---
+
+        Cuerpo.
+        """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/documento.tex" no dice "Algunos derechos reservados"
+
+    Escenario: license false apaga la licencia en todos los formatos
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        license: false
+        uppertitleback: "Arriba"
+        format:
+          html:
+            generate: true
+          latex:
+            generate: true
+          epub:
+            generate: true
+          markdown:
+            generate: true
+        """
+      Y que el archivo "documento.md" tiene este contenido
+        """
+        ---
+        title: Documento
+        ---
+
+        Cuerpo.
+        """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/documento.html" no dice ">Licencia</h2>"
+      Y el archivo "dist/files/documento.tex" no dice "Algunos derechos reservados"
+      Y el archivo "dist/files/documento.md" no dice "license:"
+      Y el archivo "dist/files/documento.md" no dice "rights:"
+      Y el EPUB "documento" no contiene "Algunos derechos reservados"
+
+    Escenario: El intervention individual no lleva lowertitleback de licencia
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        uppertitleback: "Arriba"
+        format:
+          latex:
+            generate: true
+        """
+      Y que el archivo "intervencion.md" tiene este contenido
+        """
+        ---
+        title: Intervención
+        type: intervention
+        ---
+
+        Texto.
+        """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/intervencion.tex" no dice "Algunos derechos reservados"
 
   Regla de negocio: Un lowertitleback propio no se sustituye
 
@@ -93,6 +171,7 @@ Característica: la licencia en los formatos exportados
         """
         language: es-MX
         license: PF-AC-PR-FA-1.0
+        uppertitleback: "Arriba"
         format:
           latex:
             generate: true

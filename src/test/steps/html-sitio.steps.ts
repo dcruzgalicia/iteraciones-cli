@@ -137,6 +137,14 @@ Then('el chip {string} del HTML de {string} no es un enlace', (etiqueta: string,
   }
 });
 
+Then('el EPUB {string} no contiene {string}', async (archivo: string, texto: string) => {
+  const epub = join(world.root, 'dist', 'files', `${archivo}.epub`);
+  const proc = Bun.spawn(['unzip', '-p', epub], { stdout: 'pipe', stderr: 'pipe' });
+  const [salida, errores, codigo] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  if (codigo !== 0) throw new Error(`unzip falló con ${archivo}.epub: ${errores}`);
+  if (salida.includes(texto)) throw new Error(`el EPUB ${archivo} contiene ${JSON.stringify(texto)} y no debería`);
+});
+
 Then('el EPUB {string} declara la clave {string} con el valor {string}', async (archivo: string, clave: string, valor: string) => {
   const epub = join(world.root, 'dist', 'files', `${archivo}.epub`);
   const proc = Bun.spawn(['unzip', '-p', epub, 'EPUB/content.opf'], { stdout: 'pipe', stderr: 'pipe' });
