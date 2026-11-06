@@ -20,6 +20,8 @@ const LICENSE_ICONS = [
   { name: 'by', file: 'by.svg' },
   { name: 'nc', file: 'nc.svg' },
   { name: 'nd', file: 'nd.svg' },
+  { name: 'pf', file: 'pf.svg' },
+  { name: 'pr', file: 'pr.svg' },
   { name: 'f2f-atribucion', file: 'f2f-atribucion.png' },
   { name: 'f2f-compartirigual', file: 'f2f-compartirigual.png' },
   { name: 'f2f-feministanocapitalista', file: 'f2f-feministanocapitalista.png' },

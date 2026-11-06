@@ -1173,16 +1173,21 @@ const TEXTO_CC_BY_NC_ND = [
   'Algunos derechos reservados. Esta obra está bajo una Licencia Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional. Usted es libre de compartir, copiar y redistribuir el material en cualquier medio o formato, pero debe dar crédito de manera adecuada, brindar un enlace a la&nbsp;licencia e indicar si se han realizado cambios. No puede hacer uso de esta obra con propósitos comerciales, ni remezclar, transformar o crear obras derivadas, ni distribuir el material modificado.',
 ] as const;
 
-const TEXTO_F2F = [
-  'Algunos derechos reservados. Esta obra está bajo una Licencia de Producción de Pares Feministas. Usted es libre de compartir, copiar, distribuir, ejecutar o comunicar públicamente la obra y de hacer obras derivadas, pero debe reconocer los créditos de la obra de la manera especificada por la autora o las autoras, o por la licencianta o las licenciantas, y no de una manera que sugiera que ellas apoyan o respaldan el uso que usted hace de su obra. Si modifica o transforma esta obra, o produce una obra derivada, solo puede distribuir la obra generada bajo una licencia idéntica a esta. La explotación comercial de esta obra solo está permitida a cooperativas, organizaciones, colectivas y redes sin fines de lucro, así como a organizaciones de trabajadoras autogestionadas, que se identifiquen y organicen bajo principios feministas. Todo excedente o plusvalía obtenido por el ejercicio de los derechos concedidos por esta licencia sobre la obra no puede ser acumulado ni utilizado para la especulación y debe ser reinvertido en la lucha contra el cisheteropatriarcado, el falologocentrismo y el capitalismo.',
+const TEXTO_PF = [
+  '<strong>Algunos derechos reservados.</strong> Esta obra está bajo una Licencia de Producción y Reproducción Feminista. Usted es libre de compartir, copiar, distribuir y adaptar este material en cualquier medio o formato, pero debe dar crédito a todas las personas que hicieron posible su creación, reconocer sus contribuciones e indicar si ha realizado cambios.',
+  'Si remezcla, transforma o crea a partir de esta obra, debe distribuir la obra derivada bajo esta misma licencia; además, los materiales y archivos necesarios para su creación, modificación y reproducción deben ser de acceso público, de modo que cualquiera pueda consultar, modificar y reutilizar la obra derivada.',
+  'La explotación comercial solo está permitida a cooperativas, organizaciones, colectivas y redes autogestivas que se identifiquen y organicen bajo principios feministas. El uso de esta licencia no debe reproducir relaciones de explotación ni apropiación injusta del trabajo colectivo, sino buscar que los beneficios, las obras y los recursos generados mediante su uso fortalezcan las resistencias y luchas colectivas contra el cisheteropatriarcado, el capitalismo y la hegemonía epistemológica.',
 ] as const;
 
 const LICENCIAS: Record<string, LicenciaDef> = {
   'CC-BY-NC-ND-4.0': { iconos: ['cc', 'by', 'nc', 'nd'], parrafos: TEXTO_CC_BY_NC_ND },
-  F2F: { iconos: ['f2f-atribucion', 'f2f-compartirigual', 'f2f-feministanocapitalista'], parrafos: TEXTO_F2F },
+  'PF-AC-PR-FA-1.0': {
+    iconos: ['pf', 'f2f-atribucion', 'pr', 'f2f-feministanocapitalista'],
+    parrafos: TEXTO_PF,
+  },
 };
 
-const LICENCIA_POR_DEFECTO = 'F2F';
+const LICENCIA_POR_DEFECTO = 'PF-AC-PR-FA-1.0';
 
 function normalizarLicencia(valor: string | undefined): string | undefined {
   const limpio = valor?.trim().toLocaleUpperCase('es');

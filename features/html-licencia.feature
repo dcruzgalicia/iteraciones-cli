@@ -80,23 +80,24 @@ Característica: la tarjeta de licencia del sitio
       Entonces el archivo "dist/files/convocatorias/antologia.html" dice "src=\"./../assets/images/cc.webp\""
       Y el archivo "dist/files/convocatorias/antologia.html" dice "width:32px;height:32px"
 
-    Escenario: Sin licencia configurada se muestra la F2F por defecto
+    Escenario: Sin licencia configurada se muestra la licencia PF por defecto
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
-      Y el archivo "dist/files/index.html" dice "Licencia de Producción de Pares Feministas"
-      Y el archivo "dist/files/index.html" dice "pero debe reconocer los créditos de la obra de la manera especificada por la autora o las autoras, o por la licencianta o las licenciantas, y no de una manera que sugiera"
-      Y el archivo "dist/files/index.html" dice "colectivas y redes sin fines de lucro"
-      Y el archivo "dist/files/index.html" dice "trabajadoras autogestionadas"
-      Y el archivo "dist/files/index.html" dice "cisheteropatriarcado, el falologocentrismo"
+      Y el archivo "dist/files/index.html" dice "Algunos derechos reservados."
+      Y el archivo "dist/files/index.html" dice "Licencia de Producción y Reproducción Feminista"
+      Y el archivo "dist/files/index.html" dice "dar crédito a todas las personas que hicieron posible su creación"
+      Y el archivo "dist/files/index.html" dice "materiales y archivos necesarios para su creación, modificación y reproducción deben ser de acceso público"
+      Y el archivo "dist/files/index.html" dice "hegemonía epistemológica"
       Y el archivo "dist/files/index.html" no dice "labekka.red"
-      Y el archivo "dist/files/index.html" dice "assets/images/f2f-atribucion.webp"
-      Y el archivo "dist/files/index.html" dice "assets/images/f2f-compartirigual.webp"
-      Y el archivo "dist/files/index.html" dice "assets/images/f2f-feministanocapitalista.webp"
+      Y el archivo "dist/files/index.html" pone "assets/images/pf.webp" antes que "assets/images/f2f-atribucion.webp"
+      Y el archivo "dist/files/index.html" pone "assets/images/f2f-atribucion.webp" antes que "assets/images/pr.webp"
+      Y el archivo "dist/files/index.html" pone "assets/images/pr.webp" antes que "assets/images/f2f-feministanocapitalista.webp"
+      Y el archivo "dist/files/assets/images/pf.webp" existe
       Y el archivo "dist/files/assets/images/f2f-atribucion.webp" existe
-      Y el archivo "dist/files/assets/images/f2f-compartirigual.webp" existe
+      Y el archivo "dist/files/assets/images/pr.webp" existe
       Y el archivo "dist/files/assets/images/f2f-feministanocapitalista.webp" existe
 
     Escenario: La clave license del nivel superior elige la licencia del proyecto
@@ -115,14 +116,14 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice "Licencia Creative Commons"
       Y el archivo "dist/files/index.html" dice "assets/images/cc.webp"
-      Y el archivo "dist/files/index.html" no dice "Licencia de Producción de Pares Feministas"
+      Y el archivo "dist/files/index.html" no dice "Licencia de Producción y Reproducción Feminista"
 
     Escenario: El frontmatter del documento gana sobre la licencia del sitio
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y que el archivo "iteraciones.config.yaml" tiene este contenido
         """
         language: es-MX
-        license: F2F
+        license: PF-AC-PR-FA-1.0
         format:
           html:
             generate: true
@@ -142,4 +143,4 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/un-texto.html" dice "Licencia Creative Commons"
       Y el archivo "dist/files/un-texto.html" dice "assets/images/cc.webp"
-      Y el archivo "dist/files/index.html" dice "Licencia de Producción de Pares Feministas"
+      Y el archivo "dist/files/index.html" dice "Licencia de Producción y Reproducción Feminista"
