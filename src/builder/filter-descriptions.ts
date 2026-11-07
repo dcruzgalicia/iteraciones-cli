@@ -41,6 +41,8 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
     'Genera código QR como imagen JPG 300dpi a partir de ::: {qr=Xcm}…:::. Imagen generada en .iteraciones/processed-images/ del proyecto (content-addressed por hash MD5). Requiere: zxing-wasm (bun add zxing-wasm) y ImageMagick (magick).',
   'semantic/ast/04-image-paths':
     'Reescribe en el AST las rutas de imagen que el preproceso movió a assets/images (#2460). El mapa llega por fichero (ITERACIONES_PATHS_JSON), nunca por argv: crece con el número de imágenes. Va después de 03-qr-url (orden del directorio) y, si no hay mapa, no toca nada.',
+  'semantic/ast/05-nbsp-span':
+    'Convierte el span vacío []{n=N} en N espacios duros: &nbsp; en HTML/EPUB y ~ en LaTeX. En markdown se conserva el span. Valores no enteros o menores que 1 se ignoran con aviso.',
 };
 
 export const DESCRIPCIONES_PREAMBLE: Record<string, string> = {
