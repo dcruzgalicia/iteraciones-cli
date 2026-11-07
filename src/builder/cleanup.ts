@@ -74,11 +74,6 @@ interface CleanupEntry {
   slug: string | undefined;
 }
 
-/**
- * El documento que escribe un HTML con este nombre en este directorio, si
- * alguno. Lo usan las páginas paginadas de las colecciones, que se nombran
- * `<slug>-N.html` y podrían pisar el archivo de otro documento.
- */
 export function htmlOwner(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, nombre: string): string | undefined {
   for (const [ruta, entry] of discoveryIndex) {
     if (dirname(ruta) !== dir) continue;
@@ -87,10 +82,6 @@ export function htmlOwner(discoveryIndex: Map<string, DiscoveryEntry>, dir: stri
   return undefined;
 }
 
-/**
- * Borra las páginas que sobraron de una colección que se encogió. No toca las
- * que pertenezcan a otro documento.
- */
 export async function removeExtraHtmlPages(
   outputDir: string,
   dir: string,
@@ -114,7 +105,6 @@ export async function removeExtraHtmlPages(
   return removed;
 }
 
-/** Borra las listas por defecto (y sus páginas) de la salida. */
 export async function removeDefaultLists(outputDir: string): Promise<number> {
   let removed = 0;
   const keywordsDir = join(outputDir, KEYWORDS_DIR);
@@ -165,7 +155,6 @@ async function removeHtmlAssets(outputDir: string): Promise<void> {
   }
 }
 
-/** Borra las imágenes de un documento de las carpetas indicadas. */
 async function removeDocImages(outputDir: string, dir: string, outSlug: string, bases: string[]): Promise<number> {
   let removed = 0;
   const prefix = `${outSlug}-`;

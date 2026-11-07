@@ -22,12 +22,7 @@ const CARDS = [
 ];
 
 function sinMarco(type: string, card: string): boolean {
-  return (
-    card === 'card-referencias.html' ||
-    card === 'card-identity.html' ||
-    card === 'card-metadata.html' ||
-    (type === 'collection' && card === 'card-contenido.html')
-  );
+  return card === 'card-referencias.html' || card === 'card-identity.html' || (type === 'collection' && card === 'card-contenido.html');
 }
 
 async function readCard(type: string, card: string): Promise<string> {
@@ -170,14 +165,16 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
   const expected = [
     'bg-paper',
     'bg-paper-grid',
+    'contenido-compacto',
+    'contenido-tamano',
     'dictum',
     'logo-fill',
     'nombres-enlazados',
-    'nombres-enlazados-gris',
     'scroll-reveal',
     'scroll-reveal-at-end',
     'smallcaps',
     'tarjeta',
+    'tarjeta-encabezado',
     'tarjeta-extras',
     'verse',
   ];

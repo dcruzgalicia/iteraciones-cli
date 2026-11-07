@@ -44,11 +44,6 @@ function killGroups(signal: NodeJS.Signals): void {
   }
 }
 
-/**
- * Los hijos se lanzan en su propio grupo de procesos, así que el Ctrl-C de la
- * terminal ya no les llega: hay que reenviarles la señal. Si ya hay otro
- * manejador (el de preview), ese manda y el proceso sigue su curso.
- */
 export function forwardSignalsToChildren(): void {
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     const handler = () => {

@@ -122,7 +122,6 @@ Given('un proyecto con un texto en una lista', () => {
   escribirEnProyecto('seleccion.md', '---\ntitle: Selección\ntype: list\n---\n\nElegidos.\n');
 });
 
-/** El chip de una etiqueta: el del tipo va en un h2; los demás, en a/span. */
 function chipDelHtml(archivo: string, etiqueta: string): string {
   const html = leer(`dist/files/${archivo}`);
   const patron = new RegExp(`<(h2|a|span)\\b[^>]*class="[^"]*rounded-full[^"]*"[^>]*>(?:<a\\b[^>]*>)?${escaparRegex(etiqueta)}(?:</a>)?</\\1>`);
@@ -136,6 +135,14 @@ Then('el chip {string} del HTML de {string} no es un enlace', (etiqueta: string,
   if (chip.startsWith('<a') || chip.includes('<a ')) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} es un enlace y no debería`);
   }
+});
+
+Then('el EPUB {string} no contiene {string}', async (archivo: string, texto: string) => {
+  const epub = join(world.root, 'dist', 'files', `${archivo}.epub`);
+  const proc = Bun.spawn(['unzip', '-p', epub], { stdout: 'pipe', stderr: 'pipe' });
+  const [salida, errores, codigo] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  if (codigo !== 0) throw new Error(`unzip falló con ${archivo}.epub: ${errores}`);
+  if (salida.includes(texto)) throw new Error(`el EPUB ${archivo} contiene ${JSON.stringify(texto)} y no debería`);
 });
 
 Then('el EPUB {string} declara la clave {string} con el valor {string}', async (archivo: string, clave: string, valor: string) => {

@@ -1,6 +1,5 @@
 import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
-import slugifyLib from 'slugify';
 import { BuildError } from '../lib/errors.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -31,7 +30,12 @@ interface DiscoverResult {
 
 export function slugify(text: string): string {
   const mapped = text.replace(/&/g, ' y ').replace(/%/g, ' por-ciento');
-  return slugifyLib(mapped, { lower: true, strict: true });
+  return mapped
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 export function computeSlug(

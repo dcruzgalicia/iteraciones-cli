@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/config-schema.js';
@@ -124,14 +124,8 @@ export async function buildAssets(
 
 const DEFAULT_LOGO = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
 
-/** Cómo se muestra el logo del sitio en el HTML. */
-export type LogoAsset =
-  /** Va incrustado en el HTML: el SVG de fábrica o un raster sin ImageMagick. */
-  | { kind: 'inline'; html: string; favicon?: string }
-  /** Vive en `assets/`: el HTML lo referencia y el navegador lo cachea. */
-  | { kind: 'file'; path: string; favicon?: string };
+export type LogoAsset = { kind: 'file'; path: string; favicon?: string };
 
-/** El ancho en píxeles del logo: el doble del tamaño CSS, para pantallas 2×. */
 function logoPx(size: string | undefined): number {
   const match = (size ?? '').trim().match(/^(\d+(?:\.\d+)?)px$/);
   return Math.round(Number(match?.[1] ?? Number.parseFloat(DEFAULT_HTML_FORMAT.site.logoSize)) * 2);
@@ -146,11 +140,6 @@ async function runMagick(args: string[]): Promise<boolean> {
   }
 }
 
-/**
- * Convierte un `oklch()` de Tailwind a `#rrggbb`. ImageMagick no interpreta
- * bien el oklch —ni el porcentaje ni el `-fill`—, así que la cuenta se hace
- * aquí. El resultado es sRGB, apenas más apagado que el color en pantalla.
- */
 function oklchToHex(value: string): string | undefined {
   const match = /^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)(?:\s+([\d.]+))?\s*\)/.exec(value.trim());
   if (match === null) return undefined;
@@ -178,7 +167,6 @@ function oklchToHex(value: string): string | undefined {
   return `#${hex}`;
 }
 
-/** El accent-500 del tema, en hex. */
 async function accent500(color: string | undefined): Promise<string | undefined> {
   try {
     const css = await Bun.file(fileURLToPath(import.meta.resolve('tailwindcss/theme.css'))).text();
@@ -189,24 +177,17 @@ async function accent500(color: string | undefined): Promise<string | undefined>
   }
 }
 
-/** Cuenta los colores de una muestra: un logo plano se puede teñir. */
 async function colorCount(src: string): Promise<number> {
   const proc = Bun.spawn(['magick', src, '-resize', '64x64', '-alpha', 'off', '-format', '%k', 'info:'], { stdout: 'pipe', stderr: 'ignore' });
   const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
   return code === 0 ? Number.parseInt(out.trim(), 10) || 0 : 0;
 }
 
-/**
- * Deja el logo raster en `assets/images/logo.webp`, al doble del tamaño CSS y sin
- * pérdida, con su favicon PNG de 32 px. Un logo de uno o dos colores se tiñe
- * con el accent del tema; uno a color conserva los suyos.
- */
 async function rasterLogo(src: string, outputDir: string, size: number, accent: string | undefined): Promise<boolean> {
   const webp = join(outputDir, ASSETS_LOGO_WEBP);
   await mkdir(dirname(webp), { recursive: true });
   const args = [src, '-resize', `${size}x>`, '-strip', '-define', 'webp:lossless=true'];
-  // ponytail: cuenta colores sobre una muestra de 64 px; un logo con antialias
-  // o degradados nunca baja de 2 y se queda con sus colores, que es lo seguro.
+
   if (accent !== undefined && (await colorCount(src)) <= 2) args.push('-fill', accent, '-colorize', '100');
   args.push(webp);
   if (!(await runMagick(args))) return false;
@@ -214,10 +195,6 @@ async function rasterLogo(src: string, outputDir: string, size: number, accent: 
   return true;
 }
 
-/**
- * Resuelve el logo del sitio y lo deja en `assets/images/logo.webp`.
- * El SVG de fábrica también se rasteriza: el HTML no lleva SVG incrustado.
- */
 export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig: SiteConfig): Promise<LogoAsset | undefined> {
   const logo = siteConfig.format?.html?.site?.logo?.trim();
   const html = siteConfig.format?.html;
@@ -246,7 +223,6 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
   return undefined;
 }
 
-/** Convierte un SVG a WebP con el tamaño indicado, conservando la transparencia. */
 async function iconAWebp(src: string, dest: string, size: number, tint?: string): Promise<boolean> {
   await mkdir(dirname(dest), { recursive: true });
   const args = ['-background', 'none', src, '-resize', `${size}x${size}`, '-strip', '-define', 'webp:lossless=true'];
@@ -255,7 +231,6 @@ async function iconAWebp(src: string, dest: string, size: number, tint?: string)
   return runMagick(args);
 }
 
-/** Genera los iconos de interfaz como WebP, sin SVG dentro del HTML. */
 async function writeIconAssets(outputDir: string, siteConfig: SiteConfig): Promise<void> {
   const accent = await accent500(siteConfig.format?.html?.site?.color);
   for (const icon of ICON_FILES) {
@@ -267,7 +242,6 @@ async function writeIconAssets(outputDir: string, siteConfig: SiteConfig): Promi
   }
 }
 
-/** Convierte los iconos de las licencias a WebP de 32 px. */
 async function copyLicenseIcons(outputDir: string): Promise<void> {
   for (const icon of LICENSE_ICONS) {
     const src = join(LICENSE_DIR, icon.file);
@@ -282,4 +256,14 @@ export async function copyStaticAssets(outputDir: string, cwd: string, siteConfi
   await writeLogoAssets(cwd, outputDir, siteConfig);
   await copyLicenseIcons(outputDir);
   await writeIconAssets(outputDir, siteConfig);
+}
+
+/** Copia la carpeta `admin/` de Sveltia al sitio publicado, si existe. */
+export async function copyAdminSite(cwd: string, outputDir: string): Promise<void> {
+  const src = join(cwd, 'admin');
+  if (!(await isDir(src))) return;
+  if (!(await Bun.file(join(src, 'index.html')).exists())) return;
+  const dest = join(outputDir, 'admin');
+  await rm(dest, { recursive: true, force: true });
+  await cp(src, dest, { recursive: true });
 }

@@ -33,7 +33,6 @@ async function readConfigText(cwd: string): Promise<{ configPath: string; raw: s
   }
 }
 
-/** El error de claves desconocidas, con la pista de las claves que se movieron. */
 function unknownKeysMessage(issues: { path: (string | number | symbol)[]; keys: string[] }[]): string {
   const details = issues
     .map((issue) => {

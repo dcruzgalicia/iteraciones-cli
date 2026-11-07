@@ -212,7 +212,7 @@ Then('el membrete se enciende después del salto de página de la intervention',
 
 Then('el .tex de la colección apaga el membrete después de la intervention', () => {
   const tex = readFileSync(join(world.root, 'dist', 'files', 'antologia.tex'), 'utf8');
-  // Sólo el cuerpo: en el preamble están las definiciones de los comandos.
+
   const cuerpo = tex.slice(tex.indexOf('\\begin{document}'));
   const enciende = cuerpo.indexOf('\\letterheadsetup{');
   const apaga = cuerpo.indexOf('\\letterheadclear');
@@ -235,7 +235,6 @@ Then('el .tex de la intervention llama al membrete con {string}, {string} y {str
   }
 });
 
-/** La caja de la imagen de membrete: va en la banda inferior de la hoja. */
 interface Membrete {
   x: number;
   w: number;
@@ -288,7 +287,7 @@ Then('la página {int} lleva el membrete a la {word} y abajo', (pagina: number, 
   const m = membreteDe(pagina);
   const derecha = m.x + m.w;
   const borde = lado === 'derecha' ? derecha : m.x;
-  // Carta a 150 dpi: márgenes de 2.54 cm = 150 px.
+
   if (Math.abs(borde - (lado === 'derecha' ? 1125 : 150)) > 12) {
     throw new Error(`el membrete de la página ${pagina} queda en x=${borde} y debía quedar a la ${lado}`);
   }

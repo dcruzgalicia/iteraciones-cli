@@ -179,7 +179,6 @@ function normalizaParrafo(text: string): string {
     .trim();
 }
 
-/** Recorta una lista de párrafos sin romper los saltos entre ellos. */
 function recortaParrafos(partes: string[], maxWords: number): string {
   let usadas = 0;
   const salida: string[] = [];
@@ -217,8 +216,6 @@ function pasoDeFragmento(lines: string[], i: number): PasoDeFragmento {
 }
 
 export function extractFragment(body: string, maxWords: number = COLLECTION_FRAGMENT_MAX_WORDS): string {
-  // Los divs de diseño (fechas, avisos, columnas) no cortan el preview: se
-  // quitan las cercas y su texto sigue sumando párrafos hasta el máximo.
   const lines = body.split(/\r?\n/).filter((line) => !DIV_OPENER_RE.test(line) && !DIV_CLOSER_RE.test(line));
   let i = 0;
   const partes: string[] = [];

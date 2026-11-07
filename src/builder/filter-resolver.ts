@@ -18,10 +18,8 @@ const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> 
   { dir: 'html', target: 'html' },
 ];
 
-/** El orden de ejecución dentro de un grupo: el número del nombre manda. */
 function compareFilterNames(dir: string, a: string, b: string): number {
   if (dir === 'latex') {
-    // 16-runt necesita ir antes de los filtros de textls (14 y 15).
     const textls = new Set(['14-shrink', '15-stretch']);
     if (a === '16-runt' && textls.has(b)) return -1;
     if (textls.has(a) && b === '16-runt') return 1;
@@ -29,11 +27,6 @@ function compareFilterNames(dir: string, a: string, b: string): number {
   return a.localeCompare(b);
 }
 
-/**
- * El grupo que declara la ruta de un filtro del proyecto, si la nombra: en
- * `filters/latex/99-algo.lua` el grupo es `latex`, así que el filtro sólo se
- * aplica a ese formato. Sin grupo, el filtro es global (todos los formatos).
- */
 export function groupOfFilterPath(rel: string): { group: string; name: string } | undefined {
   const partes = rel
     .replace(/\\/g, '/')
@@ -83,7 +76,6 @@ function builtinNamesForGroup(dir: string): string[] {
   return builtinNamesCache[dir] ?? [];
 }
 
-/** Los filtros del proyecto que declaran grupo en la ruta, por grupo y nombre. */
 async function projectGroupFilters(cwd: string | undefined, configFilters: string[] | undefined): Promise<Map<string, Map<string, string>>> {
   const porGrupo = new Map<string, Map<string, string>>();
   for (const rel of configFilters ?? []) {
@@ -98,7 +90,6 @@ async function projectGroupFilters(cwd: string | undefined, configFilters: strin
   return porGrupo;
 }
 
-/** Los filtros de un grupo por nombre: los del paquete y, encima, los del proyecto. */
 async function groupEntries(
   dir: string,
   excluded: Set<string>,
@@ -111,8 +102,7 @@ async function groupEntries(
     const path = await resolveLuaFilter(dir, name, cwd);
     if (path !== undefined) porNombre.set(name, path);
   }
-  // Un filtro del proyecto con grupo manda: si se llama igual que uno del
-  // paquete lo sobrescribe y, si no, se suma en el orden de su número.
+
   for (const [name, path] of extras.get(dir) ?? []) {
     if (!excluded.has(`${dir}/${name}`)) porNombre.set(name, path);
   }
@@ -154,7 +144,6 @@ export function suggestFilterName(name: string): string | undefined {
   return getBuiltinFilterNames().find((n) => n.endsWith(`/${name}`));
 }
 
-/** Los nombres `grupo/nombre` de los filtros que el proyecto declara. */
 export function projectFilterNames(configFilters: string[] | undefined): string[] {
   const nombres: string[] = [];
   for (const rel of configFilters ?? []) {
@@ -181,7 +170,6 @@ export function validateDisabledFilters(disabled: string[] | undefined, configPa
 export async function resolveUserLuaFilters(cwd: string, siteConfig: SiteConfig): Promise<string[]> {
   const resolved: string[] = [];
   for (const rel of siteConfig.luaFilters ?? []) {
-    // Los que declaran grupo ya entraron en su capa, no se repiten como globales.
     if (groupOfFilterPath(rel) !== undefined) continue;
     const abs = join(cwd, rel);
     if (await Bun.file(abs).exists()) resolved.push(abs);

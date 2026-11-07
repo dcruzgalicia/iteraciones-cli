@@ -122,11 +122,6 @@ export function listOrder(fm: Record<string, unknown>): string {
   return typeof order === 'string' ? order : 'date-desc';
 }
 
-/**
- * Los documentos que entran en una lista: todo el proyecto menos las
- * interventions (no tienen contenido que mostrar) y la lista misma, filtrado
- * por los criterios del frontmatter y ordenado.
- */
 export function selectListMembers(relativePath: string, fm: Record<string, unknown>, discoveryIndex: Map<string, DiscoveryEntry>): string[] {
   const filtro = parseListFilter(fm);
   const elegidos: { ruta: string; entry: DiscoveryEntry }[] = [];

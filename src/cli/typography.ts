@@ -42,7 +42,6 @@ interface RangoPaginas {
 
 const RANGO_PAGINAS = /^(\d+)(?:\s*-\s*(\d+))?$/;
 
-/** Acepta `6`, `6-13` y una lista: `6,7,10,20` o `6-8,10,20-22`. */
 function interpretaPaginas(spec: string): RangoPaginas[] {
   const tramos: RangoPaginas[] = [];
   for (const parte of spec.split(',').map((p) => p.trim())) {
@@ -87,7 +86,6 @@ function interpretaReglas(spec: string): string[] {
   return pedidas;
 }
 
-/** `3,5`: las incidencias elegidas del informe. */
 function seleccionaIncidencias(spec: string, total: number, opcion: string): number[] {
   const partes = spec.split(',').map((parte) => parte.trim());
   if (partes.some((parte) => parte === '')) {
@@ -180,15 +178,12 @@ function cargarExcepciones(cwd: string, options: TypographyOptions, crear = fals
   return contenido === undefined ? [] : parseaExcepciones(contenido);
 }
 
-/** `3,5`, lo que entienden --fix y --ignore; cualquier otra cosa es una ruta. */
 function esSeleccion(spec: string): boolean {
   return /^\d+(\s*,\s*\d+)*$/.test(spec.trim());
 }
 
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
-    // Sin números es todo; si el valor no es una selección, es una ruta que
-    // commander se comió al pasar el argumento opcional.
     for (const opcion of ['ignore', 'clean', 'fix'] as const) {
       const valor = options[opcion];
       if (typeof valor === 'string' && !esSeleccion(valor)) {
@@ -390,18 +385,7 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
 
 const ARCHIVO_HIFENACION = '15-hyphenation-rules.tex';
 
-function escapaRegex(texto: string): string {
-  return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Agrega la palabra a `preamble/15-hyphenation-rules.tex`, creándolo si el
- * proyecto no lo tiene. Al crearlo se parte del archivo del paquete para no
- * perder las reglas que ya traía.
- */
 async function agregaHifenacion(cwd: string, palabra: string): Promise<void> {
-  // \hyphenation sólo acepta letras: la puntuación que arrastra la línea del
-  // PDF (una coma, un punto) rompe LaTeX con "Not a letter".
   const limpia = palabra.replace(/[^\p{L}]/gu, '');
   if (limpia === '') return;
   const dir = join(cwd, 'preamble');
@@ -413,7 +397,7 @@ async function agregaHifenacion(cwd: string, palabra: string): Promise<void> {
     const base = join(PKG_PREAMBLE_DIR, ARCHIVO_HIFENACION);
     contenido = (await Bun.file(base).exists()) ? await Bun.file(base).text() : '\\hyphenation{\n}\n';
   }
-  if (new RegExp(`^\\s*${escapaRegex(limpia)}\\s*$`, 'm').test(contenido)) return;
+  if (new RegExp(`^\\s*${RegExp.escape(limpia)}\\s*$`, 'm').test(contenido)) return;
   const abre = contenido.indexOf('\\hyphenation{');
   const cierra = abre < 0 ? -1 : contenido.indexOf('}', abre);
   let nuevo: string;
@@ -591,11 +575,6 @@ export function envuelveParrafoContenedor(content: string, inc: TypographyIncide
 const ABRE_FENCE = /^:{3,}\s*\S/;
 const CIERRA_FENCE = /^:{3,}\s*$/;
 
-/**
- * Un párrafo que ya vive dentro de un fenced div (`shrink`, `stretch`, etc.) no
- * se puede envolver por fuera: el `runt` se anida para no romper el div que ya
- * estaba.
- */
 function envuelveEnFencedDiv(content: string, inc: TypographyIncidence): string | undefined {
   const wordNorm = normalizaParaBusqueda(inc.text.trim());
   const { body } = splitFrontmatter(content);
@@ -633,10 +612,10 @@ function envuelveEnFencedDiv(content: string, inc: TypographyIncidence): string 
     const conMarca = candidatos.filter((g) => normalizaParaBusqueda(textoDe(g)).includes(marca));
     if (conMarca.length === 1) elegido = conMarca[0] as { ini: number; fin: number };
   }
-  // Ya envuelto: el párrafo viene justo después de un div con runt.
+
   const anterior = (lineas[elegido.ini - 1] ?? '').trim();
   if (ABRE_FENCE.test(anterior) && /\brunt[ \t]*=/.test(anterior)) return undefined;
-  // Un div de QR no se toca: su contenido es la imagen.
+
   for (let j = elegido.ini - 1; j >= 0; j--) {
     const linea = lineas[j] ?? '';
     if (CIERRA_FENCE.test(linea)) break;
@@ -965,7 +944,6 @@ function cierraDiv(linea: string): boolean {
   return /^[ \t]*:::+[ \t]*$/.test(linea);
 }
 
-/** Los bloques de texto separados por líneas en blanco. */
 function bloquesDeTexto(content: string): { inicio: number; fin: number }[] {
   const bloques: { inicio: number; fin: number }[] = [];
   let inicio = 0;
@@ -977,7 +955,6 @@ function bloquesDeTexto(content: string): { inicio: number; fin: number }[] {
   return bloques;
 }
 
-/** Extiende el rango del párrafo a los fenced divs de ajuste que lo envuelven. */
 function extiendeAFences(content: string, inicio: number, fin: number): { inicio: number; fin: number } {
   const lineas = content.split('\n');
   const offsets: number[] = [];
@@ -1011,7 +988,6 @@ function extiendeAFences(content: string, inicio: number, fin: number): { inicio
   };
 }
 
-/** El párrafo del hallazgo, con sus divs de ajuste, si se puede identificar. */
 function parrafoDeIncidencia(content: string, incidencia: TypographyIncidence): { inicio: number; fin: number } | undefined {
   const frases = cadenasDeBusqueda(incidencia).filter((frase) => frase.length >= 6);
   const puntajes = bloquesDeTexto(content).map((bloque) => {
@@ -1026,7 +1002,6 @@ function parrafoDeIncidencia(content: string, incidencia: TypographyIncidence): 
   return extiendeAFences(content, elegido.inicio, elegido.fin);
 }
 
-/** Deja el párrafo sin &nbsp;, sin .text-nowrap y sin runt/shrink/stretch. */
 export function limpiaParrafo(texto: string): string {
   let limpio = texto.replace(/&nbsp;|&#160;|&#xa0;|\u00a0/gi, ' ');
   limpio = limpio.replace(/\[([^\]]+)\]\{([^}]*\.text-(?:nowrap|no-wrap)[^}]*)\}/g, '$1');
@@ -1166,7 +1141,6 @@ async function arreglaTypografia(
     porPdf.set(pdf, { incidences, estado: new Map<TypographyIncidence, MotivoIncidencia>() });
   }
 
-  // Con números, `--fix` elige por el número que trae el informe, igual que `--ignore`.
   if (typeof options.fix === 'string') {
     const planas = [...porPdf.values()].flatMap((resultado) => resultado.incidences);
     const numeros = seleccionaIncidencias(options.fix, planas.length, '--fix');
@@ -1179,7 +1153,6 @@ async function arreglaTypografia(
   }
 
   for (const [pdf, { incidences, estado }] of porPdf) {
-    // Los nombres cortados no se corrigen en el Markdown: van al preamble.
     const cortadas = incidences.filter((inc) => inc.type === 'hyphenated-proper-noun');
     for (const inc of cortadas) {
       await agregaHifenacion(cwd, palabraSinCorte(inc));

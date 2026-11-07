@@ -17,7 +17,7 @@ import { outputKeyFor } from '../builder/slug-resolver.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { ConfigError, translateSystemError } from '../lib/errors.js';
-import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
+import { applyCreatorTitle, parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logError, logInfo, logWarning, writeJson } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 
@@ -74,6 +74,7 @@ function validateParsedFrontmatter(
       slugs.set(outputKey, entry);
     }
   }
+  applyCreatorTitle(parsed);
   if (parsed.title === undefined || parsed.title === '') {
     warnings.push({ file: entry, message: MISSING_TITLE_WARNING.message });
   }

@@ -67,7 +67,7 @@ Característica: las portadas del PDF
       Y el libro lleva la portada "backCover"
       Y el libro lleva la portada "startpaper"
       Y el proyecto compila el PDF
-      Entonces el PDF del libro tiene 7 páginas
+      Entonces el PDF del libro tiene 5 páginas
       Y la página 1 del PDF es "frontCover"
       Y la página 2 del PDF es "backCover"
       Y la página 3 del PDF es "startpaper"
@@ -77,7 +77,7 @@ Característica: las portadas del PDF
       Y el proyecto tiene un libro
       Y el libro lleva la portada "startpaper"
       Y el proyecto compila el PDF
-      Entonces el PDF del libro tiene 5 páginas
+      Entonces el PDF del libro tiene 3 páginas
       Y la página 1 del PDF es "startpaper"
 
     Escenario: El epígrafe no se monta encima de las guardas

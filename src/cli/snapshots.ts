@@ -46,7 +46,6 @@ type ComparedHtml = { html: string; entry: { referenceLabel: string; result: Vis
 
 const SITE_MAP_FILE = 'site-map.txt';
 
-/** El prefijo de las capturas del HTML: no chocan con las del PDF. */
 const HTML_SUFFIX = '--html';
 
 function htmlStemFor(htmlPath: string, outputDir: string): string {
@@ -221,10 +220,6 @@ async function saveSnapshots(cwd: string, run: SnapshotRun): Promise<void> {
   if (batch) await saveSiteMap(cwd, outputDir);
 }
 
-/**
- * Captura cada página del sitio y la guarda como línea base. Sin navegador no
- * hay capturas: se avisa una vez y se sigue con los PDF.
- */
 async function saveHtmlSnapshots(cwd: string, outputDir: string, htmlFiles: string[], store: string): Promise<number> {
   if (htmlFiles.length === 0) return 0;
   await mkdir(store, { recursive: true });
@@ -266,7 +261,7 @@ async function seleccionaComparables(
   }
 
   const wanted = new Set(targets.map((pdf) => snapshotStemFor(pdf, outputDir)));
-  // Las capturas del HTML tienen su propio prefijo: no son un PDF que se fue.
+
   const borrados = batch ? [...guardados.keys()].filter((stem) => !wanted.has(stem) && !stem.endsWith(HTML_SUFFIX)) : [];
 
   if (agregados.length > 0) {
@@ -364,10 +359,6 @@ function reportVerdict(cwd: string, compared: Compared[]): void {
   logSuccess(`sin diferencias visuales en ${compared.length} PDFs`, 'snapshots');
 }
 
-/**
- * Compara cada página del sitio con su captura de la línea base. Sin
- * navegador (o sin línea base) se avisa y se sigue: los PDF siguen mandando.
- */
 async function checkHtmlSnapshots(cwd: string, outputDir: string): Promise<ComparedHtml[]> {
   const htmlFiles = await listHtmlFiles(outputDir);
   if (htmlFiles.length === 0) return [];
@@ -388,7 +379,7 @@ async function checkHtmlSnapshots(cwd: string, outputDir: string): Promise<Compa
       if (captura === undefined) continue;
       const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(html));
       await mkdir(dirname(workDir), { recursive: true });
-      // La captura va fuera del directorio de trabajo: compareVisual lo borra.
+
       const generada = join(dirname(workDir), 'generada.png');
       await writeFile(generada, captura.png);
       const result = await compareVisual({

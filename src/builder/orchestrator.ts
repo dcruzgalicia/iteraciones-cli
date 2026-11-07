@@ -11,7 +11,7 @@ import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { posix } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import { abortScriptCapture, beginScriptCapture, commitScriptCapture } from '../lib/script-recorder.js';
-import { buildAssets } from './build-assets.js';
+import { buildAssets, copyAdminSite } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, FORMAT_TO_WORK, type WorkSets } from './build-planner.js';
 import { writeBundle } from './bundle-dist.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, hasLegacyAssetLayout } from './cleanup.js';
@@ -305,10 +305,6 @@ async function resolveCollectionMembers(
   }
 }
 
-/**
- * Las creadoras de un documento: las del frontmatter. Se usa para saber qué
- * documentos hay que rehacer cuando cambia una creadora.
- */
 function creatorDocsDe(entry: DiscoveryEntry, discoveryIndex: Map<string, DiscoveryEntry>): string[] {
   const type = entry.type ?? 'file';
   if (type !== 'file') return [];
@@ -389,10 +385,6 @@ function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, ch
   }
 }
 
-/**
- * Una lista depende del proyecto entero: si cualquier documento cambia, se
- * agrega, se borra o cambia de fecha, la lista se vuelve a hacer.
- */
 function expandListChanges(discoveryIndex: Map<string, DiscoveryEntry>, changed: Set<string>): void {
   if (changed.size === 0) return;
   for (const [ruta, entry] of discoveryIndex) {
@@ -716,6 +708,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   logInvalidations(plan, log);
 
   const ctx = await prepareEnvironment(cwd, options, siteConfig, plan, progress);
+  if (ctx.needsCss) await copyAdminSite(ctx.cwd, ctx.outputDir);
 
   const { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries, pendingState, selection } = await discoverDocuments(
     cwd,

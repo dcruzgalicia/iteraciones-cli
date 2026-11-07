@@ -45,7 +45,7 @@ const DublinCoreFieldsSchema = {
   relation: z.union([z.string(), z.array(z.string())]).optional(),
   coverage: z.string().optional(),
   rights: z.string().optional(),
-  license: z.string().optional(),
+  license: z.union([z.string(), z.literal(false)]).optional(),
   doi: z.string().optional(),
   isbn: z.string().optional(),
   abstract: z.string().optional(),
@@ -80,7 +80,7 @@ const HtmlSiteSchema = z
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
     color: z.enum(ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.site.color),
     links: z.array(z.object({ name: z.string(), url: z.string() }).strict()).optional(),
-    license: z.string().optional(),
+    license: z.union([z.string(), z.literal(false)]).optional(),
   })
   .strict();
 

@@ -19,6 +19,7 @@ import type { CheckResult } from './doctor/system-checks.js';
 import { checksOk, collectChecks, doctorEnvironment } from './doctor.js';
 import { listFilters, type RunFiltersOptions } from './filters.js';
 import { initProject } from './init.js';
+import { initSveltia } from './init-sveltia.js';
 import { ProgressTracker } from './progress.js';
 import { validateProject } from './validate.js';
 
@@ -192,8 +193,11 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   return rows.map(([label, value]) => `  ${label.padEnd(labelWidth)} ${value}`);
 }
 
-export async function runInit(cwd: string): Promise<void> {
-  await runCliCommand(cwd, 'init', () => initProject(cwd), { createRoot: true });
+export async function runInit(cwd: string, tipo?: string): Promise<void> {
+  if (tipo !== undefined && tipo !== 'sveltia') {
+    throw new ConfigError(`tipo de init desconocido: "${tipo}"; el único tipo es "sveltia"`, cwd);
+  }
+  await runCliCommand(cwd, 'init', () => (tipo === 'sveltia' ? initSveltia(cwd) : initProject(cwd)), { createRoot: true });
 }
 
 export async function runValidate(cwd: string, options: { json?: boolean } = {}): Promise<void> {
