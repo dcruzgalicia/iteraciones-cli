@@ -1,8 +1,16 @@
 {
   "name": "iteraciones-cli",
   "description": "escribir, compartir, re-existir",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "type": "module",
+  "files": [
+    "src",
+    "!src/test"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dcruzgalicia/iteraciones-cli.git"
+  },
   "bin": {
     "iteraciones": "src/bin.ts"
   },
@@ -12,7 +20,6 @@
   "scripts": {
     "test": "bun run gherkin",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky",
     "gherkin": "bun tools/gherkin.ts"
   },
   "devDependencies": {
@@ -26,6 +33,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
+    "@sveltia/cms": "0.261.0",
     "@tailwindcss/cli": "4.3.3",
     "@tailwindcss/typography": "0.5.20",
     "commander": "^15.0.0",

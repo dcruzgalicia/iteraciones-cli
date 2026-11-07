@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/config-schema.js';
@@ -256,4 +256,14 @@ export async function copyStaticAssets(outputDir: string, cwd: string, siteConfi
   await writeLogoAssets(cwd, outputDir, siteConfig);
   await copyLicenseIcons(outputDir);
   await writeIconAssets(outputDir, siteConfig);
+}
+
+/** Copia la carpeta `admin/` de Sveltia al sitio publicado, si existe. */
+export async function copyAdminSite(cwd: string, outputDir: string): Promise<void> {
+  const src = join(cwd, 'admin');
+  if (!(await isDir(src))) return;
+  if (!(await Bun.file(join(src, 'index.html')).exists())) return;
+  const dest = join(outputDir, 'admin');
+  await rm(dest, { recursive: true, force: true });
+  await cp(src, dest, { recursive: true });
 }

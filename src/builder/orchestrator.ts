@@ -11,7 +11,7 @@ import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { posix } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import { abortScriptCapture, beginScriptCapture, commitScriptCapture } from '../lib/script-recorder.js';
-import { buildAssets } from './build-assets.js';
+import { buildAssets, copyAdminSite } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, FORMAT_TO_WORK, type WorkSets } from './build-planner.js';
 import { writeBundle } from './bundle-dist.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, hasLegacyAssetLayout } from './cleanup.js';
@@ -708,6 +708,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   logInvalidations(plan, log);
 
   const ctx = await prepareEnvironment(cwd, options, siteConfig, plan, progress);
+  if (ctx.needsCss) await copyAdminSite(ctx.cwd, ctx.outputDir);
 
   const { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries, pendingState, selection } = await discoverDocuments(
     cwd,
