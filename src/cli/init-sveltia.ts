@@ -292,10 +292,6 @@ interface Paquete {
   [clave: string]: unknown;
 }
 
-function githubDelPaquete(): string | undefined {
-  return `github:dcruzgalicia/iteraciones-cli#v${(require('../../package.json') as { version: string }).version}`;
-}
-
 function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paquete; cambios: string[] } {
   const paquete: Paquete = existente ?? { name: basename(cwd), private: true };
   const cambios: string[] = [];
@@ -303,23 +299,12 @@ function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paq
   paquete.scripts ??= {};
   for (const [nombre, comando] of [
     ['build', 'iteraciones build'],
-    ['preview', 'iteraciones preview'],
+    ['dev', 'iteraciones preview'],
   ] as const) {
     if (paquete.scripts[nombre] === undefined) {
       paquete.scripts[nombre] = comando;
       cambios.push(`scripts.${nombre}`);
     }
-  }
-
-  paquete.devDependencies ??= {};
-  if (paquete.devDependencies['@sveltia/cms'] === undefined) {
-    paquete.devDependencies['@sveltia/cms'] = '0.261.0';
-    cambios.push('devDependencies.@sveltia/cms');
-  }
-  const github = githubDelPaquete();
-  if (github !== undefined && paquete.name !== 'iteraciones-cli' && paquete.devDependencies['iteraciones-cli'] === undefined) {
-    paquete.devDependencies['iteraciones-cli'] = github;
-    cambios.push('devDependencies.iteraciones-cli');
   }
 
   return { paquete, cambios };
@@ -432,5 +417,5 @@ export async function initSveltia(cwd: string): Promise<void> {
     logSuccess(cambios.length === 0 ? 'package.json sin cambios' : `actualizado package.json (${cambios.join(', ')})`, 'init');
   }
 
-  logSuccess("admin de Sveltia listo. Ejecuta 'bun install', ajusta admin/config.yml y publica en Netlify.", 'init');
+  logSuccess("admin de Sveltia listo. Copia el tarball de iteraciones-cli a vendor/ y ejecuta 'bun install'.", 'init');
 }
