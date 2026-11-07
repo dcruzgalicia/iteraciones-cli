@@ -87,6 +87,21 @@ Característica: validate revisa el proyecto y dice qué corregir
       Y el error dice 'sin-clave.md: no tiene título en el frontmatter; se usará "Sin título"'
       Y el error dice 'titulo-vacio.md: no tiene título en el frontmatter; se usará "Sin título"'
 
+    Escenario: Una creadora con name no avisa falta de título
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Dado que el archivo "autora.md" tiene este contenido
+      """
+      ---
+      type: creator
+      name: Susana del Ángel
+      ---
+
+      Bio.
+      """
+      Cuando corro "validate"
+      Entonces el comando termina con el código de salida 0
+      Y el error no dice "no tiene título"
+
   Regla de negocio: La configuración inválida se informa traducida
 
     Escenario: Una configuración con una lista sin cerrar

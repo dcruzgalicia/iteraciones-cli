@@ -11,15 +11,16 @@ Característica: los filtros Lua del paquete, por capa
       Dado que la raíz del proyecto está vacía
       Y que la disabled list de filtros es '[]'
       Cuando resuelvo los filtros del paquete por capa
-      Entonces la capa "semantic" tiene 2 filtros
+      Entonces la capa "semantic" tiene 3 filtros
       Y el filtro 1 de la capa "semantic" acaba en "semantic/ast/03-qr-url.lua"
       Y el filtro 2 de la capa "semantic" acaba en "semantic/ast/04-image-paths.lua"
+      Y el filtro 3 de la capa "semantic" acaba en "semantic/ast/05-nbsp-span.lua"
 
     Escenario: Un filtro desactivado desaparece de la lista y de los nombres
       Dado que la raíz del proyecto está vacía
       Y que la disabled list de filtros es '["semantic/ast/03-qr-url"]'
       Cuando resuelvo los filtros del paquete por capa
-      Entonces la capa "semantic" tiene 1 filtros
+      Entonces la capa "semantic" tiene 2 filtros
       Y la capa "semantic" no trae "semantic/ast/03-qr-url.lua"
       Y el nombre "semantic/ast/03-qr-url" no quedó resuelto
 
@@ -30,9 +31,10 @@ Característica: los filtros Lua del paquete, por capa
       Y que el proyecto sobrescribe el filtro "filters/semantic/ast/03-qr-url.lua"
       Y que la disabled list de filtros es '[]'
       Cuando resuelvo los filtros del paquete por capa
-      Entonces la capa "semantic" tiene 2 filtros
+      Entonces la capa "semantic" tiene 3 filtros
       Y el filtro 1 de la capa "semantic" es el del proyecto
       Y el filtro 2 de la capa "semantic" acaba en "semantic/ast/04-image-paths.lua"
+      Y el filtro 3 de la capa "semantic" acaba en "semantic/ast/05-nbsp-span.lua"
 
     Escenario: El grupo del build usa el mismo override
       Dado que la raíz del proyecto está vacía
