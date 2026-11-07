@@ -109,3 +109,7 @@ Then('el sitio generado tiene {string} con {string}', (relativa: string, texto: 
   const contenido = readFileSync(dist(relativa), 'utf8');
   if (!contenido.includes(texto)) throw new Error(`${relativa} no contiene ${JSON.stringify(texto)}`);
 });
+
+Then('el paquete no declara la dependencia {string}', (nombre: string) => {
+  if (dependencias(paquete())[nombre] !== undefined) throw new Error(`package.json no debería declarar la dependencia ${JSON.stringify(nombre)}`);
+});
