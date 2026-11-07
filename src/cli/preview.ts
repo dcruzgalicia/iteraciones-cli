@@ -27,6 +27,12 @@ export async function previewInputs(cwd: string): Promise<string[]> {
     }
   }
 
+  try {
+    for await (const file of new Bun.Glob('admin/**/*').scan({ cwd })) entradas.push(join(cwd, file));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+
   return [...new Set(entradas.filter(Boolean))];
 }
 

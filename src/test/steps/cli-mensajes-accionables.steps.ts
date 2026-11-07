@@ -26,6 +26,7 @@ const COMMANDS: Record<string, (root: string) => Promise<unknown>> = {
   clean: runClean,
   'list-filters': runFilters,
   init: runInit,
+  'init sveltia': (root) => runInit(root, 'sveltia'),
 };
 
 Given('que la raíz del proyecto no existe', () => {
