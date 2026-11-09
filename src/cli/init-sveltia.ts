@@ -29,25 +29,31 @@ const ADMIN_INDEX = [
 ].join('\n');
 
 const LICENCIAS = [
-  { label: 'Usar la licencia del proyecto', value: '' },
+  { label: 'Usar la licencia global', value: '' },
   { label: 'CC BY-NC-ND 4.0', value: 'CC-BY-NC-ND-4.0' },
-  { label: 'Producción Feminista 1.0', value: 'PF-AC-PR-FA-1.0' },
+  { label: 'PF-AC-PR-FA-1.0', value: 'PF-AC-PR-FA-1.0' },
 ];
+
+const IDIOMAS: Record<string, string> = {
+  'es-MX': 'Español (México)',
+  es: 'Español',
+  en: 'English',
+};
 
 function campo(name: string, label: string, widget: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return { name, label, widget, ...extra };
 }
 
 function campoFecha(name = 'date', label = 'Fecha'): Record<string, unknown> {
-  return campo(name, label, 'datetime', { date_format: 'YYYY-MM-DD', time_format: false, required: false });
+  return campo(name, label, 'datetime', { type: 'date', required: false });
 }
 
 function campoIdioma(idioma: string): Record<string, unknown> {
   return campo('language', 'Idioma', 'select', {
     required: false,
     options: [
-      { label: 'Usar el idioma del proyecto', value: '' },
-      { label: idioma, value: idioma },
+      { label: 'Usar el idioma global', value: '' },
+      { label: IDIOMAS[idioma] ?? idioma, value: idioma },
     ],
   });
 }
@@ -56,12 +62,43 @@ function campoLicencia(): Record<string, unknown> {
   return campo('license', 'Licencia', 'select', { required: false, options: LICENCIAS });
 }
 
-const CAMPO_SLUG = campo('slug', 'Identificador', 'string', {
-  required: false,
-  hint: 'Minúsculas, números y guiones. Si lo dejas vacío se genera desde el título.',
-});
+function campoSlug(): Record<string, unknown> {
+  return campo('slug', 'Slug', 'string', {
+    required: false,
+    pattern: ['^[a-z0-9]+(?:-[a-z0-9]+)*$', 'Solo minúsculas, números y guiones'],
+    hint: 'Opcional. Si lo dejas vacío, la CLI lo genera con el título.',
+  });
+}
 
-const CAMPO_CUERPO = campo('body', 'Contenido', 'markdown');
+function campoType(tipo: string): Record<string, unknown> {
+  return campo('type', 'Tipo', 'hidden', { default: tipo });
+}
+
+function campoRelacion(name: string, label: string, coleccion: string, multiple = true): Record<string, unknown> {
+  return campo(name, label, 'relation', {
+    collection: coleccion,
+    value_field: 'name',
+    search_fields: ['name'],
+    display_fields: ['name'],
+    ...(multiple ? { multiple: true } : {}),
+    required: false,
+  });
+}
+
+function campoCuerpo(label = 'Texto', required = true): Record<string, unknown> {
+  return campo('body', label, 'markdown', { modes: ['raw'], required });
+}
+
+function campoSubtitulo(): Record<string, unknown> {
+  return campo('subtitle', 'Subtítulo', 'string', { required: false });
+}
+
+function campoTitulo(): Record<string, unknown> {
+  return campo('title', 'Título', 'string', {
+    required: false,
+    hint: 'Si se deja vacío, la CLI usará «Sin título».',
+  });
+}
 
 function camposEnlaces(): Record<string, unknown> {
   return campo('links', 'Enlaces', 'list', {
@@ -72,7 +109,7 @@ function camposEnlaces(): Record<string, unknown> {
 }
 
 function configuracionSveltia(idioma: string): string {
-  const documentos = (tipo: string): Record<string, unknown> => campo('type', 'Tipo', 'hidden', { default: tipo });
+  const medios = { media_folder: '/assets/images', public_folder: '../assets/images' };
 
   const config = {
     backend: {
@@ -85,6 +122,12 @@ function configuracionSveltia(idioma: string): string {
     site_url: PLACEHOLDER_SITE,
     display_url: PLACEHOLDER_SITE,
     publish_mode: 'editorial_workflow',
+    slug: {
+      encoding: 'ascii',
+      clean_accents: true,
+      lowercase: true,
+      sanitize_replacement: '-',
+    },
     media_folder: 'assets/images',
     public_folder: 'assets/images',
     output: { omit_empty_optional_fields: true },
@@ -95,50 +138,24 @@ function configuracionSveltia(idioma: string): string {
         label_singular: 'Texto',
         folder: 'textos',
         create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'title',
+        ...medios,
         slug: '{{slug}}',
-        summary: '{{title}}',
-        media_folder: '/assets/images',
-        public_folder: '../assets/images',
+        summary: '{{title}} — {{creator}}',
+        sortable_fields: ['date', 'title', 'creator'],
         fields: [
-          documentos('file'),
-          campo('title', 'Título', 'string'),
+          campoTitulo(),
+          campoSubtitulo(),
+          campoRelacion('creator', 'Autora', 'creadoras'),
+          campoCuerpo(),
           campoFecha(),
-          campo('creator', 'Creadoras', 'list', { required: false, label_singular: 'Creadora' }),
-          campoIdioma(idioma),
-          campo('keywords', 'Palabras clave', 'list', { required: false, label_singular: 'Palabra clave' }),
-          CAMPO_SLUG,
+          campoRelacion('keywords', 'Palabras clave', 'palabras_clave'),
           campoLicencia(),
-          CAMPO_CUERPO,
-        ],
-      },
-      {
-        name: 'colecciones',
-        label: 'Colecciones',
-        label_singular: 'Colección',
-        folder: 'colecciones',
-        create: true,
-        slug: '{{slug}}',
-        summary: '{{title}}',
-        media_folder: '/assets/images',
-        public_folder: '../assets/images',
-        fields: [
-          documentos('collection'),
-          campo('title', 'Título', 'string'),
-          campoFecha(),
-          campo('collectionCreator', 'Creadoras de la colección', 'list', { required: false, label_singular: 'Creadora' }),
-          campo('collectionCreatorPrefix', 'Prefijo de creadoras', 'string', {
-            required: false,
-            hint: 'Por ejemplo: Coordinado por.',
-          }),
           campoIdioma(idioma),
-          CAMPO_SLUG,
-          campo('files', 'Textos de la colección', 'list', {
-            required: true,
-            label_singular: 'Texto',
-            hint: 'Rutas relativas al proyecto, por ejemplo: textos/mi-texto.md.',
-          }),
-          campoLicencia(),
-          CAMPO_CUERPO,
+          campoSlug(),
+          campoType('file'),
         ],
       },
       {
@@ -147,76 +164,50 @@ function configuracionSveltia(idioma: string): string {
         label_singular: 'Creadora',
         folder: 'creadoras',
         create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'name',
+        ...medios,
         slug: '{{slug}}',
         summary: '{{name}}',
-        media_folder: '/assets/images',
-        public_folder: '../assets/images',
-        fields: [documentos('creator'), campo('name', 'Nombre', 'string'), CAMPO_SLUG, camposEnlaces(), CAMPO_CUERPO],
-      },
-      {
-        name: 'intervenciones',
-        label: 'Intervenciones',
-        label_singular: 'Intervención',
-        folder: 'intervenciones',
-        create: true,
-        slug: '{{slug}}',
-        summary: '{{title}}',
-        media_folder: '/assets/images',
-        public_folder: '../assets/images',
         fields: [
-          documentos('intervention'),
-          campo('title', 'Título', 'string'),
-          campoFecha(),
-          campoIdioma(idioma),
-          CAMPO_SLUG,
-          campo('pages', 'Páginas', 'number', { required: false, min: 1, value_type: 'int' }),
-          campo('lineLength', 'Ancho de línea', 'number', { required: false, min: 0.1, max: 1, step: 0.1 }),
-          campo('letterhead', 'Membrete', 'image', { required: false }),
-          campo('letterheadHeight', 'Alto del membrete', 'string', { required: false, hint: 'Por ejemplo: 5cm.' }),
-          CAMPO_CUERPO,
+          campo('name', 'Nombre', 'string', { required: true }),
+          campoCuerpo('Semblanza'),
+          campo('image', 'Retrato', 'image', { required: false }),
+          camposEnlaces(),
+          campoSlug(),
+          campoType('creator'),
         ],
       },
       {
-        name: 'listas',
-        label: 'Listas',
-        label_singular: 'Lista',
-        folder: 'listas',
+        name: 'colecciones',
+        label: 'Colecciones',
+        label_singular: 'Colección',
+        folder: 'colecciones',
         create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'title',
+        ...medios,
         slug: '{{slug}}',
         summary: '{{title}}',
-        media_folder: '/assets/images',
-        public_folder: '../assets/images',
         fields: [
-          documentos('list'),
-          campo('title', 'Título', 'string'),
+          campoTitulo(),
+          campoSubtitulo(),
+          campo('collectionCreatorPrefix', 'Rol de la antologadora', 'string', { required: false }),
+          campoRelacion('collectionCreator', 'Antologadora', 'creadoras'),
+          campoCuerpo('Texto', false),
           campoFecha(),
-          campoIdioma(idioma),
-          CAMPO_SLUG,
-          campo('filter', 'Filtro', 'object', {
-            required: false,
-            fields: [
-              campo('type', 'Tipo', 'select', { required: false, options: ['file', 'collection', 'creator', 'list'] }),
-              campo('creator', 'Creadora', 'string', { required: false }),
-              campo('keyword', 'Palabra clave', 'string', { required: false }),
-              campo('path', 'Ruta', 'string', { required: false }),
-              campo('date', 'Rango de fechas', 'object', {
-                required: false,
-                fields: [campoFecha('from', 'Desde'), campoFecha('to', 'Hasta')],
-              }),
-            ],
-          }),
-          campo('order', 'Orden', 'select', {
-            required: false,
-            options: [
-              { label: 'Fecha descendente', value: 'date-desc' },
-              { label: 'Fecha ascendente', value: 'date-asc' },
-              { label: 'Título ascendente', value: 'title-asc' },
-              { label: 'Título descendente', value: 'title-desc' },
-              { label: 'Creadora ascendente', value: 'creator-asc' },
-            ],
-          }),
+          campoRelacion('keywords', 'Palabras clave', 'palabras_clave'),
           campoLicencia(),
-          CAMPO_CUERPO,
+          campoIdioma(idioma),
+          campo('files', 'Textos incluidos', 'list', {
+            required: true,
+            label_singular: 'Texto',
+            hint: 'Rutas relativas al repositorio, por ejemplo: textos/mi-texto.md.',
+          }),
+          campoSlug(),
+          campoType('collection'),
         ],
       },
       {
@@ -225,26 +216,88 @@ function configuracionSveltia(idioma: string): string {
         label_singular: 'Anuncio',
         folder: 'anuncios',
         create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'title',
+        ...medios,
         slug: '{{slug}}',
         summary: '{{title}}',
-        media_folder: '/assets/images',
-        public_folder: '../assets/images',
         fields: [
-          documentos('announcement'),
-          campo('title', 'Título', 'string'),
+          campoTitulo(),
+          campoCuerpo(),
           campoFecha(),
-          campo('creator', 'Creadora', 'string', { required: false }),
-          campo('placement', 'Ubicación', 'select', {
+          campo('placement', 'Ubicación', 'select', { required: false, options: ['top', 'bottom'] }),
+          campoIdioma(idioma),
+          campoSlug(),
+          campoType('announcement'),
+        ],
+      },
+      {
+        name: 'listas',
+        label: 'Listas',
+        label_singular: 'Lista',
+        folder: 'listas',
+        create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'title',
+        ...medios,
+        slug: '{{slug}}',
+        summary: '{{title}}',
+        fields: [
+          campoTitulo(),
+          campoSubtitulo(),
+          campoCuerpo(),
+          campo('filter', 'Filtro', 'object', {
             required: false,
-            options: [
-              { label: 'Arriba', value: 'top' },
-              { label: 'Abajo', value: 'bottom' },
+            fields: [
+              campo('type', 'Tipo de documento', 'select', { required: false, options: ['file', 'collection', 'creator', 'list'] }),
+              campoRelacion('creator', 'Autora', 'creadoras', false),
+              campo('date', 'Fecha', 'object', {
+                required: false,
+                fields: [campoFecha('from', 'Desde'), campoFecha('to', 'Hasta')],
+              }),
+              campoRelacion('keyword', 'Palabra clave', 'palabras_clave', false),
+              campo('path', 'Ruta', 'string', { required: false }),
             ],
           }),
-          campoIdioma(idioma),
-          CAMPO_SLUG,
+          campo('order', 'Orden', 'select', {
+            required: false,
+            options: ['date-desc', 'date-asc', 'title-asc', 'title-desc', 'creator-asc'],
+          }),
+          campoSlug(),
+          campoType('list'),
+        ],
+      },
+      {
+        name: 'intervenciones',
+        label: 'Intervenciones',
+        label_singular: 'Intervención',
+        folder: 'intervenciones',
+        create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'title',
+        ...medios,
+        slug: '{{slug}}',
+        summary: '{{title}}',
+        fields: [
+          campoTitulo(),
+          campoSubtitulo(),
+          campoRelacion('creator', 'Autora', 'creadoras'),
+          campoCuerpo('Texto', false),
+          campoFecha(),
+          campo('pages', 'Páginas', 'number', { required: false, min: 1, value_type: 'int' }),
+          campo('lineLength', 'Longitud de línea', 'number', { required: false, min: 0.1, max: 1, value_type: 'float' }),
+          campo('letterhead', 'Membrete', 'list', { required: false }),
+          campo('letterheadHeight', 'Altura del membrete', 'string', {
+            required: false,
+            hint: 'Ejemplo: 5cm, 50mm o 2in',
+          }),
           campoLicencia(),
-          CAMPO_CUERPO,
+          campoIdioma(idioma),
+          campoSlug(),
+          campoType('intervention'),
         ],
       },
       {
@@ -253,11 +306,48 @@ function configuracionSveltia(idioma: string): string {
         files: [
           {
             name: 'menu',
-            label: 'Menú del sitio',
+            label: 'Menú principal',
             file: 'menu.md',
-            fields: [campo('title', 'Título', 'string'), camposEnlaces()],
+            fields: [campoTitulo(), camposEnlaces(), campoType('menu')],
           },
         ],
+      },
+      {
+        name: 'inicio',
+        label: 'Inicio',
+        files: [
+          {
+            name: 'index',
+            label: 'Página de inicio',
+            file: 'index.md',
+            media_folder: '/assets/images',
+            public_folder: 'assets/images',
+            fields: [
+              campoTitulo(),
+              campoSubtitulo(),
+              campoCuerpo(),
+              campoFecha(),
+              campoRelacion('keywords', 'Palabras clave', 'palabras_clave'),
+              campoLicencia(),
+              campoIdioma(idioma),
+              campoSlug(),
+              campoType('file'),
+            ],
+          },
+        ],
+      },
+      {
+        name: 'palabras_clave',
+        label: 'Palabras clave',
+        label_singular: 'Palabra clave',
+        description: 'Vocabulario reutilizable para el campo «Palabras clave». No genera contenido en el sitio.',
+        folder: 'palabras-clave',
+        extension: 'json',
+        format: 'json',
+        identifier_field: 'name',
+        create: true,
+        editor: { preview: false },
+        fields: [campo('name', 'Palabra clave', 'string')],
       },
     ],
   };
@@ -333,7 +423,7 @@ export async function initSveltia(cwd: string): Promise<void> {
   const { language } = await loadSiteConfig(cwd);
 
   await Promise.all(
-    ['admin', 'admin/vendor', 'textos', 'creadoras', 'colecciones', 'listas', 'anuncios', 'intervenciones'].map((dir) =>
+    ['admin', 'admin/vendor', 'textos', 'creadoras', 'colecciones', 'listas', 'anuncios', 'intervenciones', 'palabras-clave'].map((dir) =>
       mkdir(join(cwd, dir), { recursive: true }),
     ),
   );
@@ -356,6 +446,7 @@ export async function initSveltia(cwd: string): Promise<void> {
   report(indexCreado, 'admin/index.html');
   report(configCreado, 'admin/config.yml');
   report(vendorCreado, 'admin/vendor/sveltia-cms.js');
+  report(await writeExclusive(join(cwd, 'palabras-clave', '.gitkeep'), ''), 'palabras-clave/.gitkeep');
 
   const ejemplo = join(cwd, 'textos', 'ejemplo.md');
   const docs: Array<[string, string]> = [

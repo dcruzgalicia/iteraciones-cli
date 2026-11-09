@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { stringify } from 'yaml';
 import { writeExclusive } from '../builder/pipeline-io.js';
@@ -66,6 +67,7 @@ const DEFAULT_GITIGNORE = [
   '# Generados por iteraciones (build y caché)',
   'dist/',
   '.iteraciones/',
+  'node_modules/',
 
   'build.sh',
   '.DS_Store',
@@ -74,6 +76,25 @@ const DEFAULT_GITIGNORE = [
   'diff/',
   '',
 ].join('\n');
+
+type GitignoreResult = 'creado' | 'actualizado' | 'sin-cambios';
+
+async function ensureGitignore(cwd: string): Promise<GitignoreResult> {
+  const ruta = join(cwd, '.gitignore');
+  const existente = await Bun.file(ruta)
+    .text()
+    .catch(() => null);
+  if (existente === null) {
+    await writeFile(ruta, DEFAULT_GITIGNORE);
+    return 'creado';
+  }
+  const lineas = existente.split(/\r?\n/).map((linea) => linea.trim());
+  if (lineas.includes('node_modules/') || lineas.includes('node_modules')) return 'sin-cambios';
+  const eol = existente.includes('\r\n') ? '\r\n' : '\n';
+  const base = existente === '' || existente.endsWith('\n') ? existente : `${existente}${eol}`;
+  await writeFile(ruta, `${base}node_modules/${eol}`);
+  return 'actualizado';
+}
 
 export async function initProject(cwd: string): Promise<void> {
   const DEFAULT_BIB = [
@@ -86,11 +107,11 @@ export async function initProject(cwd: string): Promise<void> {
     '',
   ].join('\n');
 
-  const [configCreated, indexCreated, bibCreated, gitignoreCreated] = await Promise.all([
+  const [configCreated, indexCreated, bibCreated, gitignore] = await Promise.all([
     writeExclusive(join(cwd, 'iteraciones.config.yaml'), buildDefaultConfig()),
     writeExclusive(join(cwd, 'index.md'), DEFAULT_INDEX),
     writeExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
-    writeExclusive(join(cwd, '.gitignore'), DEFAULT_GITIGNORE),
+    ensureGitignore(cwd),
   ]);
 
   const report = (created: boolean, file: string): void => {
@@ -100,6 +121,7 @@ export async function initProject(cwd: string): Promise<void> {
   report(configCreated, 'iteraciones.config.yaml');
   report(indexCreated, 'index.md');
   report(bibCreated, 'bibliography.bib');
-  report(gitignoreCreated, '.gitignore');
+  if (gitignore === 'actualizado') logSuccess('actualizado .gitignore (node_modules/)', 'init');
+  else report(gitignore === 'creado', '.gitignore');
   logSuccess("proyecto inicializado. Ejecuta 'iteraciones build' para generar los documentos.", 'init');
 }
