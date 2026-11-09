@@ -90,6 +90,10 @@ configura el proveedor OAuth de GitHub en Netlify.
 
 ```bash
 bun install
+bun run hooks      # instala los git hooks de husky (una vez por clon)
 bun run typecheck
 bun run test
 ```
+
+`bun pm pack` no ejecuta hooks de desarrollo; por eso `prepare` no está en los
+scripts del paquete.
