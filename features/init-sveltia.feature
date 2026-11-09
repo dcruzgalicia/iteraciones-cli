@@ -83,7 +83,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el campo "slug" de la colección "textos" no es obligatorio
 
     Escenario: Configura Netlify y las herramientas del build
-      Dado que la raíz del proyecto está vacía
+      Dado que la raíz del proyecto se llama "segunda-iteracion"
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "netlify.toml" dice "[build]"
@@ -93,11 +93,14 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "netlify.toml" dice "netlify-plugin-cache"
       Y el archivo "netlify.toml" dice ".iteraciones"
       Y el archivo "Brewfile.netlify" dice "brew \"pandoc\""
-      Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
       Y el archivo "Brewfile.netlify" dice "brew \"minify\""
-      Y el archivo "Brewfile.netlify" dice "brew \"poppler\""
+      Y el archivo "Brewfile.netlify" no dice "imagemagick"
+      Y el archivo "Brewfile.netlify" no dice "poppler"
       Y el archivo "Brewfile.netlify" no dice "texlive"
-      Y la configuración de Sveltia usa el dominio "TU-SITIO.netlify.app"
+      Y la configuración de Sveltia usa el repositorio "OWNER/segunda-iteracion"
+      Y la configuración de Sveltia usa el dominio "segunda-iteracion.netlify.app"
+      Y el archivo "admin/config.yml" dice "site_url: https://segunda-iteracion.netlify.app"
+      Y el archivo "admin/config.yml" dice "display_url: https://segunda-iteracion.netlify.app"
 
     Escenario: Agrega TeX al Brewfile cuando el proyecto genera PDF o LaTeX
       Dado que la raíz del proyecto está vacía
@@ -105,6 +108,8 @@ Característica: init sveltia deja un proyecto listo para el admin
         """
         language: es-MX
         format:
+          html:
+            generate: false
           latex:
             generate: true
         """
@@ -112,6 +117,38 @@ Característica: init sveltia deja un proyecto listo para el admin
       Entonces el comando termina con el código de salida 0
       Y el archivo "Brewfile.netlify" dice "brew \"texlive\""
       Y el archivo "Brewfile.netlify" dice "brew \"biber\""
+      Y el archivo "Brewfile.netlify" dice "brew \"poppler\""
+      Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
+      Y el archivo "Brewfile.netlify" no dice "minify"
+
+    Escenario: Normaliza el nombre con acentos
+      Dado que la raíz del proyecto se llama "Histórikas"
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y la configuración de Sveltia usa el repositorio "OWNER/historikas"
+      Y la configuración de Sveltia usa el dominio "historikas.netlify.app"
+
+    Escenario: No genera Brewfile sin formatos activos
+      Dado que la raíz del proyecto está vacía
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        format:
+          html:
+            generate: false
+          latex:
+            generate: false
+          pdf:
+            generate: false
+          epub:
+            generate: false
+          markdown:
+            generate: false
+        """
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "Brewfile.netlify" no existe
+      Y el error dice "no hay formatos activos"
 
     Escenario: Detecta el repo y la rama
       Dado que la raíz del proyecto está vacía
@@ -126,7 +163,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Dado que la raíz del proyecto está vacía
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
-      Y el archivo "admin/config.yml" dice "OWNER/REPO"
+      Y el archivo "admin/config.yml" dice "OWNER/"
       Y el paquete no declara la dependencia "iteraciones-cli"
       Y el error dice "no encontré un remoto de GitHub"
 
