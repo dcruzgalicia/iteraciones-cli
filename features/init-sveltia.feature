@@ -113,36 +113,33 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "Brewfile.netlify" dice "brew \"texlive\""
       Y el archivo "Brewfile.netlify" dice "brew \"biber\""
 
-    Escenario: Detecta el repo, la rama y el tarball
+    Escenario: Detecta el repo y la rama
       Dado que la raíz del proyecto está vacía
       Y el proyecto tiene un remoto de GitHub "git@github.com:acme/sitio.git" en la rama "produccion"
-      Y el proyecto tiene un tarball de la CLI "iteraciones-cli-0.27.0.tgz"
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
       Y la configuración de Sveltia usa el repositorio "acme/sitio"
       Y la configuración de Sveltia usa la rama "produccion"
-      Y el paquete declara la dependencia "iteraciones-cli" con el valor "file:vendor/iteraciones-cli-0.27.0.tgz"
+      Y el paquete no declara la dependencia "iteraciones-cli"
 
-    Escenario: Sin remoto ni tarball avisa y deja placeholders
+    Escenario: Sin remoto deja placeholders y avisa
       Dado que la raíz del proyecto está vacía
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "OWNER/REPO"
       Y el paquete no declara la dependencia "iteraciones-cli"
       Y el error dice "no encontré un remoto de GitHub"
-      Y el error dice "no encontré vendor/iteraciones-cli-*.tgz"
 
     Escenario: Ejecutar dos veces no duplica ni cambia valores
       Dado que la raíz del proyecto está vacía
       Y el proyecto tiene un remoto de GitHub "git@github.com:acme/sitio.git"
-      Y el proyecto tiene un tarball de la CLI "iteraciones-cli-0.27.0.tgz"
       Cuando corro "init sveltia"
       Y corro "init sveltia"
       Entonces el comando termina con el código de salida 0
       Y la configuración de Sveltia usa el repositorio "acme/sitio"
       Y la configuración de Sveltia usa la rama "main"
       Y el archivo "admin/config.yml" menciona "acme/sitio" una sola vez
-      Y el paquete declara la dependencia "iteraciones-cli" con el valor "file:vendor/iteraciones-cli-0.27.0.tgz"
+      Y el paquete no declara la dependencia "iteraciones-cli"
 
     Escenario: El paquete conserva lo existente y agrega lo mínimo
       Dado que la raíz del proyecto está vacía
