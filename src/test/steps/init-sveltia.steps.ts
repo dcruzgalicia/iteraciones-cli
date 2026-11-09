@@ -6,6 +6,13 @@ import { world } from './cli-world.steps.js';
 
 interface Campo {
   name?: string;
+  label?: string;
+  widget?: string;
+  collection?: string;
+  value_field?: string;
+  multiple?: boolean;
+  required?: boolean;
+  default?: unknown;
   options?: Array<string | { value?: string }>;
 }
 
@@ -112,4 +119,67 @@ Then('el sitio generado tiene {string} con {string}', (relativa: string, texto: 
 
 Then('el paquete no declara la dependencia {string}', (nombre: string) => {
   if (dependencias(paquete())[nombre] !== undefined) throw new Error(`package.json no debería declarar la dependencia ${JSON.stringify(nombre)}`);
+});
+
+function coleccion(nombre: string): Coleccion {
+  const col = config().collections?.find((c) => c.name === nombre);
+  if (col === undefined) throw new Error(`no existe la colección ${JSON.stringify(nombre)}`);
+  return col;
+}
+
+function campoDe(nombre: string, col: string): Campo {
+  const campo = camposDe(coleccion(col)).find((f) => f.name === nombre);
+  if (campo === undefined) throw new Error(`la colección ${JSON.stringify(col)} no declara el campo ${JSON.stringify(nombre)}`);
+  return campo;
+}
+
+Then('el campo {string} de la colección {string} es de tipo {string}', (nombre: string, col: string, widget: string) => {
+  const campo = campoDe(nombre, col);
+  if (campo.widget !== widget) throw new Error(`el campo ${nombre} usa widget=${JSON.stringify(campo.widget)} y debía ser ${JSON.stringify(widget)}`);
+});
+
+Then('el campo {string} de la colección {string} es una relación con {string}', (nombre: string, col: string, objetivo: string) => {
+  const campo = campoDe(nombre, col);
+  if (campo.widget !== 'relation' || campo.collection !== objetivo || campo.value_field !== 'name') {
+    throw new Error(
+      `el campo ${nombre} no es una relación con ${objetivo} por name: ${JSON.stringify({ widget: campo.widget, collection: campo.collection, value_field: campo.value_field })}`,
+    );
+  }
+});
+
+Then('el campo {string} de la colección {string} tiene la etiqueta {string}', (nombre: string, col: string, etiqueta: string) => {
+  const campo = campoDe(nombre, col);
+  if (campo.label !== etiqueta)
+    throw new Error(`el campo ${nombre} tiene label=${JSON.stringify(campo.label)} y debía ser ${JSON.stringify(etiqueta)}`);
+});
+
+Then('el campo {string} de la colección {string} es obligatorio', (nombre: string, col: string) => {
+  if (campoDe(nombre, col).required === false) throw new Error(`el campo ${nombre} no es obligatorio`);
+});
+
+Then('el campo {string} de la colección {string} no es obligatorio', (nombre: string, col: string) => {
+  if (campoDe(nombre, col).required !== false) throw new Error(`el campo ${nombre} sí es obligatorio`);
+});
+
+Then('el campo {string} de la colección {string} está oculto con el valor {string}', (nombre: string, col: string, valor: string) => {
+  const campo = campoDe(nombre, col);
+  if (campo.widget !== 'hidden' || campo.default !== valor) {
+    throw new Error(
+      `el campo ${nombre} no está oculto con ${JSON.stringify(valor)}: ${JSON.stringify({ widget: campo.widget, default: campo.default })}`,
+    );
+  }
+});
+
+Then('la colección {string} tiene los campos {string}', (nombre: string, esperados: string) => {
+  const nombres = camposDe(coleccion(nombre)).map((f) => f.name);
+  const esperado = esperados.split(',').map((s) => s.trim());
+  if (JSON.stringify(nombres) !== JSON.stringify(esperado)) {
+    throw new Error(`los campos de ${nombre} son ${JSON.stringify(nombres)} y debían ser ${JSON.stringify(esperado)}`);
+  }
+});
+
+Then('el archivo {string} menciona {string} una sola vez', (relativa: string, texto: string) => {
+  const contenido = readFileSync(join(world.root, relativa), 'utf8');
+  const veces = contenido.split(texto).length - 1;
+  if (veces !== 1) throw new Error(`${relativa} menciona ${JSON.stringify(texto)} ${veces} veces y debía ser una`);
 });
