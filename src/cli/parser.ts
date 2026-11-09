@@ -413,12 +413,12 @@ empezar en otro punto. El folio sí se usa, para no reportarlo como línea de un
 
   program
     .command('init [tipo]')
-    .description('crea iteraciones.config.yaml, index.md, bibliography.bib y .gitignore mínimos; con "sveltia" agrega el admin')
+    .description('crea iteraciones.config.yaml y .gitignore mínimos; con "sveltia" agrega el admin')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones init           crea la estructura mínima del proyecto en el directorio actual
+  iteraciones init           crea la configuración mínima del proyecto en el directorio actual
   iteraciones init sveltia   agrega el admin de Sveltia y el layout para publicarlo
 `,
     )

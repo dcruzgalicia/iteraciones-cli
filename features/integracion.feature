@@ -5,12 +5,13 @@ Característica: init, build y validate funcionan de punta a punta
   Quiero que el CLI cree el proyecto y lo construya sin pasos manuales
   Para que el primer build de una persona nueva funcione
 
-  Escenario: Genera HTML después de init y build
+  Escenario: init deja un proyecto vacío y build no falla
     Dado un directorio vacío
     Cuando inicializo el proyecto
-    Entonces el proyecto tiene configuración y documento inicial
+    Entonces el proyecto tiene configuración
     Cuando compilo el proyecto entero desde cero
-    Entonces dist tiene al menos un HTML
+    Entonces el comando termina con el código de salida 0
+    Y la salida dice "No se encontraron documentos Markdown"
 
   Escenario: El build incremental reutiliza los documentos sin cambios
     Dado un proyecto con el documento inicial de prueba
@@ -28,6 +29,7 @@ Característica: init, build y validate funcionan de punta a punta
   Escenario: El build genera un HTML por documento
     Dado un directorio vacío
     Cuando inicializo el proyecto
+    Y creo el índice
     Y creo los capítulos uno y dos
     Y compilo el proyecto entero desde cero
     Entonces dist tiene un HTML para el índice y para cada capítulo

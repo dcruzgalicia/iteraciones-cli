@@ -4,7 +4,6 @@ import { basename, dirname, join } from 'node:path';
 import { stringify } from 'yaml';
 import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { todayIso } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { logInfo, logSuccess, logWarning } from '../lib/logger.js';
 import { initProject } from './init.js';
@@ -108,14 +107,15 @@ function camposEnlaces(): Record<string, unknown> {
   });
 }
 
-function configuracionSveltia(idioma: string): string {
+function configuracionSveltia(idioma: string, repo: string, rama: string): string {
   const medios = { media_folder: '/assets/images', public_folder: '../assets/images' };
 
   const config = {
     backend: {
       name: 'github',
-      repo: 'OWNER/REPO',
-      branch: 'main',
+      repo,
+      branch: rama,
+      site_domain: 'TU-SITIO.netlify.app',
       auth_scope: 'public_repo',
       open_authoring: true,
     },
@@ -387,7 +387,11 @@ function versionSveltia(): string {
   return propio.dependencies?.['@sveltia/cms'] ?? '0.261.0';
 }
 
-function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paquete; cambios: string[] } {
+function fusionarPaquete(
+  existente: Paquete | null,
+  cwd: string,
+  tarball: string | undefined,
+): { paquete: Paquete; cambios: string[]; faltaCli: boolean } {
   const paquete: Paquete = existente ?? { name: basename(cwd), private: true };
   const cambios: string[] = [];
 
@@ -408,19 +412,71 @@ function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paq
     cambios.push('devDependencies.@sveltia/cms');
   }
 
-  return { paquete, cambios };
+  const tieneCli = paquete.dependencies?.['iteraciones-cli'] !== undefined || paquete.devDependencies['iteraciones-cli'] !== undefined;
+  if (tarball !== undefined && !tieneCli) {
+    paquete.dependencies ??= {};
+    paquete.dependencies['iteraciones-cli'] = `file:${tarball}`;
+    cambios.push('dependencies.iteraciones-cli');
+  }
+
+  return { paquete, cambios, faltaCli: tarball === undefined && !tieneCli };
 }
 
-const DOC_EJEMPLO = (frontmatter: string[], cuerpo: string): string => ['---', ...frontmatter, '---', '', cuerpo, ''].join('\n');
+function salidaGit(cwd: string, args: string[]): string | undefined {
+  const proc = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'ignore' });
+  if (proc.exitCode !== 0) return undefined;
+  const salida = new TextDecoder().decode(proc.stdout).trim();
+  return salida === '' ? undefined : salida;
+}
 
-function fecha(): string {
-  return todayIso();
+function detectarRepo(cwd: string): string | undefined {
+  const url = salidaGit(cwd, ['remote', 'get-url', 'origin']);
+  if (url === undefined) return undefined;
+  const match = /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/.exec(url);
+  return match?.[1] !== undefined && match[2] !== undefined ? `${match[1]}/${match[2]}` : undefined;
+}
+
+function detectarRama(cwd: string): string {
+  return salidaGit(cwd, ['branch', '--show-current']) ?? 'main';
+}
+
+async function detectarTarball(cwd: string): Promise<string | undefined> {
+  const encontrados: string[] = [];
+  for await (const archivo of new Bun.Glob('vendor/iteraciones-cli-*.tgz').scan({ cwd })) encontrados.push(archivo);
+  return encontrados.sort()[0];
+}
+
+function netlifyToml(): string {
+  return [
+    '[build]',
+    '  command = "bun run build"',
+    '  publish = "dist/files"',
+    '',
+    '  [build.environment]',
+    `    BUN_VERSION = "${Bun.version}"`,
+    '',
+    '[[plugins]]',
+    '  package = "netlify-plugin-cache"',
+    '  [plugins.inputs]',
+    '    paths = [".iteraciones", "dist"]',
+    '',
+  ].join('\n');
+}
+
+function brewfile(usaTex: boolean): string {
+  const formulas = ['pandoc', 'imagemagick', 'minify', 'poppler'];
+  if (usaTex) formulas.push('biber', 'texlive');
+  return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
 }
 
 export async function initSveltia(cwd: string): Promise<void> {
   await initProject(cwd);
 
-  const { language } = await loadSiteConfig(cwd);
+  const { language, format } = await loadSiteConfig(cwd);
+  const repo = detectarRepo(cwd);
+  const rama = detectarRama(cwd);
+  const tarball = await detectarTarball(cwd);
+  const usaTex = format?.pdf?.generate === true || format?.latex?.generate === true;
 
   await Promise.all(
     ['admin', 'admin/vendor', 'textos', 'creadoras', 'colecciones', 'listas', 'anuncios', 'intervenciones', 'palabras-clave'].map((dir) =>
@@ -439,7 +495,7 @@ export async function initSveltia(cwd: string): Promise<void> {
 
   const [indexCreado, configCreado] = await Promise.all([
     writeExclusive(adminIndex, ADMIN_INDEX),
-    writeExclusive(adminConfig, configuracionSveltia(language)),
+    writeExclusive(adminConfig, configuracionSveltia(language, repo ?? 'OWNER/REPO', rama)),
   ]);
   const vendorCreado = await copiarVendorSveltia(vendor);
 
@@ -447,59 +503,9 @@ export async function initSveltia(cwd: string): Promise<void> {
   report(configCreado, 'admin/config.yml');
   report(vendorCreado, 'admin/vendor/sveltia-cms.js');
   report(await writeExclusive(join(cwd, 'palabras-clave', '.gitkeep'), ''), 'palabras-clave/.gitkeep');
-
-  const ejemplo = join(cwd, 'textos', 'ejemplo.md');
-  const docs: Array<[string, string]> = [
-    [
-      ejemplo,
-      DOC_EJEMPLO(
-        ['title: "Texto de ejemplo"', `date: "${fecha()}"`, 'type: file', `language: ${language}`, 'creator:', '  - "Creadora de ejemplo"'],
-        'Este es un texto de ejemplo. Reemplázalo o bórralo desde el admin.',
-      ),
-    ],
-    [
-      join(cwd, 'creadoras', 'ejemplo.md'),
-      DOC_EJEMPLO(['type: creator', 'name: "Creadora de ejemplo"', 'slug: creadora-de-ejemplo'], 'Una semblanza breve de la creadora.'),
-    ],
-    [
-      join(cwd, 'colecciones', 'ejemplo.md'),
-      DOC_EJEMPLO(
-        [
-          'title: "Colección de ejemplo"',
-          `date: "${fecha()}"`,
-          'type: collection',
-          'collectionCreator:',
-          '  - "Creadora de ejemplo"',
-          'files:',
-          '  - textos/ejemplo.md',
-        ],
-        'Una colección de ejemplo.',
-      ),
-    ],
-    [
-      join(cwd, 'listas', 'ejemplo.md'),
-      DOC_EJEMPLO(
-        ['title: "Lista de ejemplo"', `date: "${fecha()}"`, 'type: list', 'filter:', '  type: file', 'order: date-desc'],
-        'Una lista de ejemplo.',
-      ),
-    ],
-    [
-      join(cwd, 'anuncios', 'ejemplo.md'),
-      DOC_EJEMPLO(['title: "Anuncio de ejemplo"', `date: "${fecha()}"`, 'type: announcement', 'placement: top'], 'Un anuncio de ejemplo.'),
-    ],
-    [
-      join(cwd, 'intervenciones', 'ejemplo.md'),
-      DOC_EJEMPLO(
-        ['title: "Intervención de ejemplo"', `date: "${fecha()}"`, 'type: intervention', 'pages: 1', 'lineLength: 0.7'],
-        'Una intervención de ejemplo.',
-      ),
-    ],
-    [join(cwd, 'menu.md'), ['---', 'type: menu', 'title: "Menú"', 'links:', '  - name: Inicio', '    url: ./index.html', '---', ''].join('\n')],
-  ];
-
-  for (const [ruta, contenido] of docs) {
-    report(await writeExclusive(ruta, contenido), ruta.slice(cwd.length + 1));
-  }
+  report(await writeExclusive(join(cwd, 'netlify.toml'), netlifyToml()), 'netlify.toml');
+  report(await writeExclusive(join(cwd, 'Brewfile.netlify'), brewfile(usaTex)), 'Brewfile.netlify');
+  if (repo === undefined) logWarning('no encontré un remoto de GitHub; admin/config.yml conserva OWNER/REPO', 'init');
 
   const paquetePath = join(cwd, 'package.json');
   const crudo = await Bun.file(paquetePath)
@@ -514,9 +520,10 @@ export async function initSveltia(cwd: string): Promise<void> {
     }
   }
   if (crudo === null || existente !== null) {
-    const { paquete, cambios } = fusionarPaquete(existente, cwd);
+    const { paquete, cambios, faltaCli } = fusionarPaquete(existente, cwd, tarball);
     await writeFile(paquetePath, `${JSON.stringify(paquete, null, 2)}\n`);
     logSuccess(cambios.length === 0 ? 'package.json sin cambios' : `actualizado package.json (${cambios.join(', ')})`, 'init');
+    if (faltaCli) logWarning('no encontré vendor/iteraciones-cli-*.tgz; agrega el tarball de la CLI antes de publicar en Netlify', 'init');
   }
 
   logSuccess('admin de Sveltia listo. Ajusta admin/config.yml y ejecuta el build.', 'init');

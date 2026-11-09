@@ -10,36 +10,7 @@ import {
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
 } from '../config/site-config.js';
-import { todayIso } from '../lib/date.js';
 import { logInfo, logSuccess } from '../lib/logger.js';
-
-const DEFAULT_INDEX = [
-  '---',
-  'title: "Inicio"',
-  `date: "${todayIso()}"`,
-  '---',
-  '',
-  '# Inicio',
-  '',
-  'Este es el documento de inicio de tu proyecto: se convierte en `index.html`,',
-  'la página que enlazan las tarjetas de identidad del resto de documentos.',
-  '',
-  '## Epígrafe (dictum)',
-  '',
-  '::: {.dictum}',
-  'La ciencia se compone de errores, que a su vez son los pasos',
-  'hacia la verdad.',
-  '',
-  '::: {.author}',
-  'Julio Verne',
-  ':::',
-  ':::',
-  '',
-  '## Cita bibliográfica',
-  '',
-  'Según @ejemplo2024, el uso de citekeys facilita la gestión de referencias.',
-  '',
-].join('\n');
 
 function buildDefaultConfig(): string {
   return stringify({
@@ -97,20 +68,8 @@ async function ensureGitignore(cwd: string): Promise<GitignoreResult> {
 }
 
 export async function initProject(cwd: string): Promise<void> {
-  const DEFAULT_BIB = [
-    '@book{ejemplo2024,',
-    '  author    = {Autor, Nombre del},',
-    '  title     = {Título del libro de ejemplo},',
-    '  year      = {2024},',
-    '  publisher = {Editorial de ejemplo},',
-    '}',
-    '',
-  ].join('\n');
-
-  const [configCreated, indexCreated, bibCreated, gitignore] = await Promise.all([
+  const [configCreated, gitignore] = await Promise.all([
     writeExclusive(join(cwd, 'iteraciones.config.yaml'), buildDefaultConfig()),
-    writeExclusive(join(cwd, 'index.md'), DEFAULT_INDEX),
-    writeExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
     ensureGitignore(cwd),
   ]);
 
@@ -119,9 +78,7 @@ export async function initProject(cwd: string): Promise<void> {
     else logInfo(`omitido ${file} (ya existe)`, 'init');
   };
   report(configCreated, 'iteraciones.config.yaml');
-  report(indexCreated, 'index.md');
-  report(bibCreated, 'bibliography.bib');
   if (gitignore === 'actualizado') logSuccess('actualizado .gitignore (node_modules/)', 'init');
   else report(gitignore === 'creado', '.gitignore');
-  logSuccess("proyecto inicializado. Ejecuta 'iteraciones build' para generar los documentos.", 'init');
+  logSuccess("proyecto inicializado. Crea un archivo .md y ejecuta 'iteraciones build'.", 'init');
 }

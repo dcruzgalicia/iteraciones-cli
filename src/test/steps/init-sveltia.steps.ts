@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Then } from '@cucumber/cucumber';
+import { Given, Then } from '@cucumber/cucumber';
 import { parse } from 'yaml';
 import { world } from './cli-world.steps.js';
 
@@ -24,7 +24,7 @@ interface Coleccion {
 }
 
 interface ConfigSveltia {
-  backend?: { name?: string };
+  backend?: { name?: string; repo?: string; branch?: string; site_domain?: string };
   collections?: Coleccion[];
 }
 
@@ -182,4 +182,47 @@ Then('el archivo {string} menciona {string} una sola vez', (relativa: string, te
   const contenido = readFileSync(join(world.root, relativa), 'utf8');
   const veces = contenido.split(texto).length - 1;
   if (veces !== 1) throw new Error(`${relativa} menciona ${JSON.stringify(texto)} ${veces} veces y debía ser una`);
+});
+
+function git(cwd: string, args: string[]): void {
+  const proc = Bun.spawnSync(['git', ...args], { cwd, stdout: 'ignore', stderr: 'ignore' });
+  if (proc.exitCode !== 0) throw new Error(`git ${args.join(' ')} falló en ${cwd}`);
+}
+
+Given('el proyecto tiene un remoto de GitHub {string}', (url: string) => {
+  git(world.root, ['init', '-b', 'main']);
+  git(world.root, ['remote', 'add', 'origin', url]);
+});
+
+Given('el proyecto tiene un remoto de GitHub {string} en la rama {string}', (url: string, rama: string) => {
+  git(world.root, ['init', '-b', rama]);
+  git(world.root, ['remote', 'add', 'origin', url]);
+});
+
+Given('el proyecto tiene un tarball de la CLI {string}', (nombre: string) => {
+  mkdirSync(join(world.root, 'vendor'), { recursive: true });
+  writeFileSync(join(world.root, 'vendor', nombre), '');
+});
+
+Then('la configuración de Sveltia usa el repositorio {string}', (repo: string) => {
+  if (config().backend?.repo !== repo) {
+    throw new Error(`el repo es ${JSON.stringify(config().backend?.repo)} y debía ser ${JSON.stringify(repo)}`);
+  }
+});
+
+Then('la configuración de Sveltia usa la rama {string}', (rama: string) => {
+  if (config().backend?.branch !== rama) {
+    throw new Error(`la rama es ${JSON.stringify(config().backend?.branch)} y debía ser ${JSON.stringify(rama)}`);
+  }
+});
+
+Then('la configuración de Sveltia usa el dominio {string}', (dominio: string) => {
+  if (config().backend?.site_domain !== dominio) {
+    throw new Error(`el dominio es ${JSON.stringify(config().backend?.site_domain)} y debía ser ${JSON.stringify(dominio)}`);
+  }
+});
+
+Then('el paquete declara la dependencia {string} con el valor {string}', (nombre: string, valor: string) => {
+  const actual = dependencias(paquete())[nombre];
+  if (actual !== valor) throw new Error(`la dependencia ${nombre} vale ${JSON.stringify(actual)} y debía ser ${JSON.stringify(valor)}`);
 });
