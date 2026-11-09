@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { build } from '../../builder/orchestrator.js';
 import { runBuild, runClean, runValidate } from '../../cli/dispatcher.js';
 import { buildProgram } from '../../cli/parser.js';
 import { capture, jsonSalida, tempRoot, world } from './cli-world.steps.js';
@@ -103,7 +102,7 @@ When('construyo el proyecto en limpio y con detalle', async () => {
 });
 
 When('compilo el proyecto recién creado', async () => {
-  await capture(() => build(world.root, {}));
+  await capture(() => runBuild(world.root));
 });
 
 When('devuelvo los permisos de {string}', async (relativa: string) => {

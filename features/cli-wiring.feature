@@ -12,9 +12,9 @@ Característica: El argv llega entero hasta el comando
       Cuando parseo el comando "init" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" existe
-      Y el archivo "index.md" existe
-      Y el archivo "bibliography.bib" existe
       Y el archivo ".gitignore" existe
+      Y el archivo "index.md" no existe
+      Y el archivo "bibliography.bib" no existe
 
     Escenario: El .gitignore de init cubre lo que el build genera
       Dado que la raíz del proyecto está vacía
@@ -67,9 +67,10 @@ Característica: El argv llega entero hasta el comando
       Entonces el comando termina con el código de salida 0
       Y la salida dice "creado el directorio"
       Y el archivo "iteraciones.config.yaml" existe
-      Y el archivo "index.md" existe
+      Y el archivo "index.md" no existe
       Y compilo el proyecto recién creado
-      Y el directorio "dist/files" tiene al menos 1 archivo .html
+      Y el comando termina con el código de salida 0
+      Y la salida dice "No se encontraron documentos Markdown"
 
   Regla de negocio: new con --title por argv
 

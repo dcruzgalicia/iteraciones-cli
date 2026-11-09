@@ -2,28 +2,32 @@
 Característica: init sveltia deja un proyecto listo para el admin
 
   Como quien publica un sitio con Sveltia
-  Quiero que la CLI cree el admin y el layout de contenido
-  Para no configurar Sveltia a mano
+  Quiero que la CLI cree el admin, el layout y la configuración de Netlify
+  Para no configurar Sveltia ni el despliegue a mano
 
   Regla de negocio: init sveltia crea el admin y el layout sin sobrescribir
 
-    Escenario: Crea el admin, las carpetas y el package.json
+    Escenario: Crea el admin y las carpetas sin contenido de ejemplo
       Dado que la raíz del proyecto está vacía
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" existe
-      Y el archivo "index.md" existe
-      Y el archivo "menu.md" existe
+      Y el archivo ".gitignore" existe
       Y el archivo "admin/index.html" existe
       Y el archivo "admin/config.yml" existe
       Y el archivo "admin/vendor/sveltia-cms.js" existe
-      Y el archivo "textos/ejemplo.md" existe
-      Y el archivo "creadoras/ejemplo.md" existe
-      Y el archivo "colecciones/ejemplo.md" existe
-      Y el archivo "listas/ejemplo.md" existe
-      Y el archivo "anuncios/ejemplo.md" existe
-      Y el archivo "intervenciones/ejemplo.md" existe
       Y el archivo "palabras-clave/.gitkeep" existe
+      Y el archivo "netlify.toml" existe
+      Y el archivo "Brewfile.netlify" existe
+      Y el archivo "index.md" no existe
+      Y el archivo "menu.md" no existe
+      Y el archivo "bibliography.bib" no existe
+      Y el archivo "textos/ejemplo.md" no existe
+      Y el archivo "creadoras/ejemplo.md" no existe
+      Y el archivo "colecciones/ejemplo.md" no existe
+      Y el archivo "listas/ejemplo.md" no existe
+      Y el archivo "anuncios/ejemplo.md" no existe
+      Y el archivo "intervenciones/ejemplo.md" no existe
 
     Escenario: La configuración de Sveltia cubre todos los types
       Dado que la raíz del proyecto está vacía
@@ -37,6 +41,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la configuración de Sveltia declara la colección "listas" en la carpeta "listas"
       Y la configuración de Sveltia declara la colección "anuncios" en la carpeta "anuncios"
       Y la configuración de Sveltia declara el archivo "menu.md"
+      Y la configuración de Sveltia declara el archivo "index.md"
       Y la configuración de Sveltia declara el campo "collectionCreator" en la colección "colecciones"
       Y la configuración de Sveltia declara el campo "placement" en la colección "anuncios"
       Y la configuración de Sveltia ofrece la licencia "CC-BY-NC-ND-4.0"
@@ -46,7 +51,6 @@ Característica: init sveltia deja un proyecto listo para el admin
       Dado que la raíz del proyecto está vacía
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
-      Y la configuración de Sveltia declara el archivo "index.md"
       Y el campo "type" de la colección "menu" está oculto con el valor "menu"
       Y el campo "type" de la colección "inicio" está oculto con el valor "file"
       Y el campo "image" de la colección "creadoras" es de tipo "image"
@@ -78,6 +82,68 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el campo "title" de la colección "textos" no es obligatorio
       Y el campo "slug" de la colección "textos" no es obligatorio
 
+    Escenario: Configura Netlify y las herramientas del build
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "netlify.toml" dice "[build]"
+      Y el archivo "netlify.toml" dice "command = \"bun run build\""
+      Y el archivo "netlify.toml" dice "publish = \"dist/files\""
+      Y el archivo "netlify.toml" dice "BUN_VERSION"
+      Y el archivo "netlify.toml" dice "netlify-plugin-cache"
+      Y el archivo "netlify.toml" dice ".iteraciones"
+      Y el archivo "Brewfile.netlify" dice "brew \"pandoc\""
+      Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
+      Y el archivo "Brewfile.netlify" dice "brew \"minify\""
+      Y el archivo "Brewfile.netlify" dice "brew \"poppler\""
+      Y el archivo "Brewfile.netlify" no dice "texlive"
+      Y la configuración de Sveltia usa el dominio "TU-SITIO.netlify.app"
+
+    Escenario: Agrega TeX al Brewfile cuando el proyecto genera PDF o LaTeX
+      Dado que la raíz del proyecto está vacía
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        format:
+          latex:
+            generate: true
+        """
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "Brewfile.netlify" dice "brew \"texlive\""
+      Y el archivo "Brewfile.netlify" dice "brew \"biber\""
+
+    Escenario: Detecta el repo, la rama y el tarball
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un remoto de GitHub "git@github.com:acme/sitio.git" en la rama "produccion"
+      Y el proyecto tiene un tarball de la CLI "iteraciones-cli-0.27.0.tgz"
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y la configuración de Sveltia usa el repositorio "acme/sitio"
+      Y la configuración de Sveltia usa la rama "produccion"
+      Y el paquete declara la dependencia "iteraciones-cli" con el valor "file:vendor/iteraciones-cli-0.27.0.tgz"
+
+    Escenario: Sin remoto ni tarball avisa y deja placeholders
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "admin/config.yml" dice "OWNER/REPO"
+      Y el paquete no declara la dependencia "iteraciones-cli"
+      Y el error dice "no encontré un remoto de GitHub"
+      Y el error dice "no encontré vendor/iteraciones-cli-*.tgz"
+
+    Escenario: Ejecutar dos veces no duplica ni cambia valores
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un remoto de GitHub "git@github.com:acme/sitio.git"
+      Y el proyecto tiene un tarball de la CLI "iteraciones-cli-0.27.0.tgz"
+      Cuando corro "init sveltia"
+      Y corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y la configuración de Sveltia usa el repositorio "acme/sitio"
+      Y la configuración de Sveltia usa la rama "main"
+      Y el archivo "admin/config.yml" menciona "acme/sitio" una sola vez
+      Y el paquete declara la dependencia "iteraciones-cli" con el valor "file:vendor/iteraciones-cli-0.27.0.tgz"
+
     Escenario: El paquete conserva lo existente y agrega lo mínimo
       Dado que la raíz del proyecto está vacía
       Y que el archivo "package.json" tiene este contenido
@@ -93,7 +159,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el paquete declara la dependencia "@sveltia/cms"
       Y el paquete no declara la dependencia "iteraciones-cli"
 
-    Escenario: No sobrescribe el admin existente
+    Escenario: No sobrescribe el admin, Netlify ni el Brewfile existentes
       Dado que la raíz del proyecto está vacía
       Y que el archivo "admin/config.yml" tiene este contenido
         """
@@ -101,10 +167,22 @@ Característica: init sveltia deja un proyecto listo para el admin
           name: github
           repo: mio/proyecto
         """
+      Y que el archivo "netlify.toml" tiene este contenido
+        """
+        [build]
+          command = "otro"
+        """
+      Y que el archivo "Brewfile.netlify" tiene este contenido
+        """
+        brew "pandoc"
+        """
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "mio/proyecto"
       Y el archivo "admin/config.yml" no dice "OWNER/REPO"
+      Y el archivo "netlify.toml" dice "otro"
+      Y el archivo "netlify.toml" no dice "bun run build"
+      Y el archivo "Brewfile.netlify" no dice "imagemagick"
 
     Escenario: El build publica el admin
       Dado que la raíz del proyecto está vacía

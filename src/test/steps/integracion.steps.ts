@@ -3,10 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
-import { runNew } from '../../cli/dispatcher.js';
+import { runBuild, runNew } from '../../cli/dispatcher.js';
 import { initProject } from '../../cli/init.js';
 import { validateProject } from '../../cli/validate.js';
 import { initTestProject } from '../helpers.js';
+import { capture } from './cli-world.steps.js';
 
 interface IntWorld {
   dir: string;
@@ -52,14 +53,20 @@ When('inicializo el proyecto', async () => {
   await initProject(world.dir);
 });
 
+When('creo el índice', async () => {
+  await runNew(world.dir, 'index.md', { title: 'Inicio' });
+});
+
 When('creo los capítulos uno y dos', async () => {
   await runNew(world.dir, 'capitulo-1.md', { title: 'Capítulo 1' });
   await runNew(world.dir, 'capitulo-2.md', { title: 'Capítulo 2' });
 });
 
 When('compilo el proyecto entero desde cero', async () => {
-  process.exitCode = 0;
-  await build(world.dir, { full: true });
+  await capture(async () => {
+    process.exitCode = 0;
+    await runBuild(world.dir, { full: true });
+  });
 
   const statePath = join(world.dir, '.iteraciones', 'state.json');
   if (await Bun.file(statePath).exists()) {
@@ -112,10 +119,8 @@ When('valido el proyecto', async () => {
   process.exitCode = 0;
 });
 
-Then('el proyecto tiene configuración y documento inicial', async () => {
-  for (const archivo of ['iteraciones.config.yaml', 'index.md']) {
-    if (!(await Bun.file(join(world.dir, archivo)).exists())) throw new Error(`init no creó ${archivo}`);
-  }
+Then('el proyecto tiene configuración', async () => {
+  if (!(await Bun.file(join(world.dir, 'iteraciones.config.yaml')).exists())) throw new Error('init no creó la configuración');
 });
 
 Then('dist tiene al menos un HTML', async () => {
