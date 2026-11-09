@@ -258,7 +258,6 @@ export async function copyStaticAssets(outputDir: string, cwd: string, siteConfi
   await writeIconAssets(outputDir, siteConfig);
 }
 
-/** Copia la carpeta `admin/` de Sveltia al sitio publicado, si existe. */
 export async function copyAdminSite(cwd: string, outputDir: string): Promise<void> {
   const src = join(cwd, 'admin');
   if (!(await isDir(src))) return;

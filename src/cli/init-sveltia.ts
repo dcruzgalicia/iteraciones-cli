@@ -428,5 +428,5 @@ export async function initSveltia(cwd: string): Promise<void> {
     logSuccess(cambios.length === 0 ? 'package.json sin cambios' : `actualizado package.json (${cambios.join(', ')})`, 'init');
   }
 
-  logSuccess("admin de Sveltia listo. Copia el tarball de iteraciones-cli a vendor/ y ejecuta 'bun install'.", 'init');
+  logSuccess('admin de Sveltia listo. Ajusta admin/config.yml y ejecuta el build.', 'init');
 }
