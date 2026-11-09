@@ -26,6 +26,8 @@ const ADMIN_INDEX = [
   '',
 ].join('\n');
 
+const NETLIFY_CACHE_VERSION = '1.0.3';
+
 const LICENCIAS = [
   { label: 'Usar la licencia global', value: '' },
   { label: 'CC BY-NC-ND 4.0', value: 'CC-BY-NC-ND-4.0' },
@@ -387,7 +389,7 @@ function versionSveltia(): string {
   return propio.dependencies?.['@sveltia/cms'] ?? '0.261.0';
 }
 
-function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paquete; cambios: string[] } {
+function fusionarPaquete(existente: Paquete | null, cwd: string, conCache: boolean): { paquete: Paquete; cambios: string[] } {
   const paquete: Paquete = existente ?? { name: basename(cwd), private: true };
   const cambios: string[] = [];
 
@@ -406,6 +408,10 @@ function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paq
   if (paquete.devDependencies['@sveltia/cms'] === undefined) {
     paquete.devDependencies['@sveltia/cms'] = versionSveltia();
     cambios.push('devDependencies.@sveltia/cms');
+  }
+  if (conCache && paquete.devDependencies['netlify-plugin-cache'] === undefined) {
+    paquete.devDependencies['netlify-plugin-cache'] = NETLIFY_CACHE_VERSION;
+    cambios.push('devDependencies.netlify-plugin-cache');
   }
 
   return { paquete, cambios };
@@ -493,7 +499,16 @@ export async function initSveltia(cwd: string): Promise<void> {
   report(configCreado, 'admin/config.yml');
   report(vendorCreado, 'admin/vendor/sveltia-cms.js');
   report(await writeExclusive(join(cwd, 'palabras-clave', '.gitkeep'), ''), 'palabras-clave/.gitkeep');
-  report(await writeExclusive(join(cwd, 'netlify.toml'), netlifyToml()), 'netlify.toml');
+  const netlifyPath = join(cwd, 'netlify.toml');
+  const netlifyCreado = await writeExclusive(netlifyPath, netlifyToml());
+  const conCache =
+    netlifyCreado ||
+    (
+      await Bun.file(netlifyPath)
+        .text()
+        .catch(() => '')
+    ).includes('netlify-plugin-cache');
+  report(netlifyCreado, 'netlify.toml');
   const brew = brewfile(format);
   if (brew === undefined) logWarning('no hay formatos activos; no se generó Brewfile.netlify', 'init');
   else report(await writeExclusive(join(cwd, 'Brewfile.netlify'), brew), 'Brewfile.netlify');
@@ -512,7 +527,7 @@ export async function initSveltia(cwd: string): Promise<void> {
     }
   }
   if (crudo === null || existente !== null) {
-    const { paquete, cambios } = fusionarPaquete(existente, cwd);
+    const { paquete, cambios } = fusionarPaquete(existente, cwd, conCache);
     await writeFile(paquetePath, `${JSON.stringify(paquete, null, 2)}\n`);
     logSuccess(cambios.length === 0 ? 'package.json sin cambios' : `actualizado package.json (${cambios.join(', ')})`, 'init');
   }

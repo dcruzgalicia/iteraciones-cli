@@ -101,6 +101,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la configuración de Sveltia usa el dominio "segunda-iteracion.netlify.app"
       Y el archivo "admin/config.yml" dice "site_url: https://segunda-iteracion.netlify.app"
       Y el archivo "admin/config.yml" dice "display_url: https://segunda-iteracion.netlify.app"
+      Y el paquete declara la dependencia "netlify-plugin-cache" con el valor "1.0.3"
 
     Escenario: Agrega TeX al Brewfile cuando el proyecto genera PDF o LaTeX
       Dado que la raíz del proyecto está vacía
@@ -177,12 +178,13 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la configuración de Sveltia usa la rama "main"
       Y el archivo "admin/config.yml" menciona "acme/sitio" una sola vez
       Y el paquete no declara la dependencia "iteraciones-cli"
+      Y el paquete declara la dependencia "netlify-plugin-cache" con el valor "1.0.3"
 
     Escenario: El paquete conserva lo existente y agrega lo mínimo
       Dado que la raíz del proyecto está vacía
       Y que el archivo "package.json" tiene este contenido
         """
-        {"name":"mi-sitio","scripts":{"test":"echo ok"},"devDependencies":{"otra":"1.0.0"}}
+        {"name":"mi-sitio","scripts":{"test":"echo ok"},"devDependencies":{"otra":"1.0.0","netlify-plugin-cache":"0.9.0"}}
         """
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
@@ -191,6 +193,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el paquete declara el script "build"
       Y el paquete declara el script "dev"
       Y el paquete declara la dependencia "@sveltia/cms"
+      Y el paquete declara la dependencia "netlify-plugin-cache" con el valor "0.9.0"
       Y el paquete no declara la dependencia "iteraciones-cli"
 
     Escenario: No sobrescribe el admin, Netlify ni el Brewfile existentes
@@ -217,6 +220,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "netlify.toml" dice "otro"
       Y el archivo "netlify.toml" no dice "bun run build"
       Y el archivo "Brewfile.netlify" no dice "imagemagick"
+      Y el paquete no declara la dependencia "netlify-plugin-cache"
 
     Escenario: El build publica el admin
       Dado que la raíz del proyecto está vacía
