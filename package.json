@@ -20,6 +20,7 @@
   "scripts": {
     "test": "bun run gherkin",
     "typecheck": "tsc --noEmit",
+    "hooks": "husky",
     "gherkin": "bun tools/gherkin.ts"
   },
   "devDependencies": {
