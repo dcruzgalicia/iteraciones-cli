@@ -67,9 +67,10 @@ iteraciones validate        # revisa configuración y frontmatter
 
 `iteraciones init sveltia` crea `admin/` con Sveltia vendorizado, el layout de
 contenido (`textos/`, `creadoras/`, `colecciones/`, `listas/`, `anuncios/`,
-`intervenciones/`, `menu.md`) y los scripts `build` y `dev` del `package.json`.
+`intervenciones/`, `menu.md`), agrega `@sveltia/cms` —que sí está publicado— y
+los scripts `build` y `dev` del `package.json`.
 No ejecuta `bun install`, no agrega la dependencia de la CLI ni sobrescribe
-archivos existentes: el proyecto vendoriza su propio tarball.
+archivos existentes: el proyecto vendoriza su propio tarball de `iteraciones-cli`.
 
 El build copia `admin/` a `dist/files/admin/` automáticamente cuando el formato
 HTML está activo.
