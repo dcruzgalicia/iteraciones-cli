@@ -292,6 +292,11 @@ interface Paquete {
   [clave: string]: unknown;
 }
 
+function versionSveltia(): string {
+  const propio = require('../../package.json') as { dependencies?: Record<string, string> };
+  return propio.dependencies?.['@sveltia/cms'] ?? '0.261.0';
+}
+
 function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paquete; cambios: string[] } {
   const paquete: Paquete = existente ?? { name: basename(cwd), private: true };
   const cambios: string[] = [];
@@ -305,6 +310,12 @@ function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paq
       paquete.scripts[nombre] = comando;
       cambios.push(`scripts.${nombre}`);
     }
+  }
+
+  paquete.devDependencies ??= {};
+  if (paquete.devDependencies['@sveltia/cms'] === undefined) {
+    paquete.devDependencies['@sveltia/cms'] = versionSveltia();
+    cambios.push('devDependencies.@sveltia/cms');
   }
 
   return { paquete, cambios };

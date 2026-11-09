@@ -53,8 +53,8 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el paquete conserva la dependencia "otra"
       Y el paquete declara el script "build"
       Y el paquete declara el script "dev"
+      Y el paquete declara la dependencia "@sveltia/cms"
       Y el paquete no declara la dependencia "iteraciones-cli"
-      Y el paquete no declara la dependencia "@sveltia/cms"
 
     Escenario: No sobrescribe el admin existente
       Dado que la raíz del proyecto está vacía
