@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then } from '@cucumber/cucumber';
 import { parse } from 'yaml';
@@ -197,11 +197,6 @@ Given('el proyecto tiene un remoto de GitHub {string}', (url: string) => {
 Given('el proyecto tiene un remoto de GitHub {string} en la rama {string}', (url: string, rama: string) => {
   git(world.root, ['init', '-b', rama]);
   git(world.root, ['remote', 'add', 'origin', url]);
-});
-
-Given('el proyecto tiene un tarball de la CLI {string}', (nombre: string) => {
-  mkdirSync(join(world.root, 'vendor'), { recursive: true });
-  writeFileSync(join(world.root, 'vendor', nombre), '');
 });
 
 Then('la configuración de Sveltia usa el repositorio {string}', (repo: string) => {

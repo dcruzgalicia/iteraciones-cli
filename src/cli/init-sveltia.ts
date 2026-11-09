@@ -387,11 +387,7 @@ function versionSveltia(): string {
   return propio.dependencies?.['@sveltia/cms'] ?? '0.261.0';
 }
 
-function fusionarPaquete(
-  existente: Paquete | null,
-  cwd: string,
-  tarball: string | undefined,
-): { paquete: Paquete; cambios: string[]; faltaCli: boolean } {
+function fusionarPaquete(existente: Paquete | null, cwd: string): { paquete: Paquete; cambios: string[] } {
   const paquete: Paquete = existente ?? { name: basename(cwd), private: true };
   const cambios: string[] = [];
 
@@ -412,14 +408,7 @@ function fusionarPaquete(
     cambios.push('devDependencies.@sveltia/cms');
   }
 
-  const tieneCli = paquete.dependencies?.['iteraciones-cli'] !== undefined || paquete.devDependencies['iteraciones-cli'] !== undefined;
-  if (tarball !== undefined && !tieneCli) {
-    paquete.dependencies ??= {};
-    paquete.dependencies['iteraciones-cli'] = `file:${tarball}`;
-    cambios.push('dependencies.iteraciones-cli');
-  }
-
-  return { paquete, cambios, faltaCli: tarball === undefined && !tieneCli };
+  return { paquete, cambios };
 }
 
 function salidaGit(cwd: string, args: string[]): string | undefined {
@@ -438,12 +427,6 @@ function detectarRepo(cwd: string): string | undefined {
 
 function detectarRama(cwd: string): string {
   return salidaGit(cwd, ['branch', '--show-current']) ?? 'main';
-}
-
-async function detectarTarball(cwd: string): Promise<string | undefined> {
-  const encontrados: string[] = [];
-  for await (const archivo of new Bun.Glob('vendor/iteraciones-cli-*.tgz').scan({ cwd })) encontrados.push(archivo);
-  return encontrados.sort()[0];
 }
 
 function netlifyToml(): string {
@@ -475,7 +458,6 @@ export async function initSveltia(cwd: string): Promise<void> {
   const { language, format } = await loadSiteConfig(cwd);
   const repo = detectarRepo(cwd);
   const rama = detectarRama(cwd);
-  const tarball = await detectarTarball(cwd);
   const usaTex = format?.pdf?.generate === true || format?.latex?.generate === true;
 
   await Promise.all(
@@ -520,10 +502,9 @@ export async function initSveltia(cwd: string): Promise<void> {
     }
   }
   if (crudo === null || existente !== null) {
-    const { paquete, cambios, faltaCli } = fusionarPaquete(existente, cwd, tarball);
+    const { paquete, cambios } = fusionarPaquete(existente, cwd);
     await writeFile(paquetePath, `${JSON.stringify(paquete, null, 2)}\n`);
     logSuccess(cambios.length === 0 ? 'package.json sin cambios' : `actualizado package.json (${cambios.join(', ')})`, 'init');
-    if (faltaCli) logWarning('no encontré vendor/iteraciones-cli-*.tgz; agrega el tarball de la CLI antes de publicar en Netlify', 'init');
   }
 
   logSuccess('admin de Sveltia listo. Ajusta admin/config.yml y ejecuta el build.', 'init');
