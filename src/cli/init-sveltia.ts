@@ -2,13 +2,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, join } from 'node:path';
 import { stringify } from 'yaml';
+import { slugify } from '../builder/discover.js';
 import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { BuildError } from '../lib/errors.js';
 import { logInfo, logSuccess, logWarning } from '../lib/logger.js';
 import { initProject } from './init.js';
-
-const PLACEHOLDER_SITE = 'https://TU-SITIO.netlify.app';
 
 const require = createRequire(import.meta.url);
 
@@ -107,7 +106,8 @@ function camposEnlaces(): Record<string, unknown> {
   });
 }
 
-function configuracionSveltia(idioma: string, repo: string, rama: string): string {
+function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string): string {
+  const dominio = `${slug}.netlify.app`;
   const medios = { media_folder: '/assets/images', public_folder: '../assets/images' };
 
   const config = {
@@ -115,12 +115,12 @@ function configuracionSveltia(idioma: string, repo: string, rama: string): strin
       name: 'github',
       repo,
       branch: rama,
-      site_domain: 'TU-SITIO.netlify.app',
+      site_domain: dominio,
       auth_scope: 'public_repo',
       open_authoring: true,
     },
-    site_url: PLACEHOLDER_SITE,
-    display_url: PLACEHOLDER_SITE,
+    site_url: `https://${dominio}`,
+    display_url: `https://${dominio}`,
     publish_mode: 'editorial_workflow',
     slug: {
       encoding: 'ascii',
@@ -446,9 +446,17 @@ function netlifyToml(): string {
   ].join('\n');
 }
 
-function brewfile(usaTex: boolean): string {
-  const formulas = ['pandoc', 'imagemagick', 'minify', 'poppler'];
-  if (usaTex) formulas.push('biber', 'texlive');
+function brewfile(format: Awaited<ReturnType<typeof loadSiteConfig>>['format']): string | undefined {
+  const html = format?.html?.generate === true;
+  const pdf = format?.pdf?.generate === true;
+  const latex = format?.latex?.generate === true;
+  const epub = format?.epub?.generate === true;
+  const markdown = format?.markdown?.generate === true;
+  if (!html && !pdf && !latex && !epub && !markdown) return undefined;
+
+  const formulas = ['pandoc'];
+  if (html) formulas.push('minify');
+  if (pdf || latex) formulas.push('texlive', 'biber', 'poppler', 'imagemagick');
   return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
 }
 
@@ -456,9 +464,9 @@ export async function initSveltia(cwd: string): Promise<void> {
   await initProject(cwd);
 
   const { language, format } = await loadSiteConfig(cwd);
-  const repo = detectarRepo(cwd);
+  const slug = slugify(basename(cwd)) || 'iteraciones';
+  const repo = detectarRepo(cwd) ?? `OWNER/${slug}`;
   const rama = detectarRama(cwd);
-  const usaTex = format?.pdf?.generate === true || format?.latex?.generate === true;
 
   await Promise.all(
     ['admin', 'admin/vendor', 'textos', 'creadoras', 'colecciones', 'listas', 'anuncios', 'intervenciones', 'palabras-clave'].map((dir) =>
@@ -477,7 +485,7 @@ export async function initSveltia(cwd: string): Promise<void> {
 
   const [indexCreado, configCreado] = await Promise.all([
     writeExclusive(adminIndex, ADMIN_INDEX),
-    writeExclusive(adminConfig, configuracionSveltia(language, repo ?? 'OWNER/REPO', rama)),
+    writeExclusive(adminConfig, configuracionSveltia(language, repo, rama, slug)),
   ]);
   const vendorCreado = await copiarVendorSveltia(vendor);
 
@@ -486,8 +494,10 @@ export async function initSveltia(cwd: string): Promise<void> {
   report(vendorCreado, 'admin/vendor/sveltia-cms.js');
   report(await writeExclusive(join(cwd, 'palabras-clave', '.gitkeep'), ''), 'palabras-clave/.gitkeep');
   report(await writeExclusive(join(cwd, 'netlify.toml'), netlifyToml()), 'netlify.toml');
-  report(await writeExclusive(join(cwd, 'Brewfile.netlify'), brewfile(usaTex)), 'Brewfile.netlify');
-  if (repo === undefined) logWarning('no encontré un remoto de GitHub; admin/config.yml conserva OWNER/REPO', 'init');
+  const brew = brewfile(format);
+  if (brew === undefined) logWarning('no hay formatos activos; no se generó Brewfile.netlify', 'init');
+  else report(await writeExclusive(join(cwd, 'Brewfile.netlify'), brew), 'Brewfile.netlify');
+  if (repo.startsWith('OWNER/')) logWarning(`no encontré un remoto de GitHub; admin/config.yml usa ${repo}`, 'init');
 
   const paquetePath = join(cwd, 'package.json');
   const crudo = await Bun.file(paquetePath)

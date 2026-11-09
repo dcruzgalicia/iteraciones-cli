@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then } from '@cucumber/cucumber';
 import { parse } from 'yaml';
-import { world } from './cli-world.steps.js';
+import { tempRoot, world } from './cli-world.steps.js';
 
 interface Campo {
   name?: string;
@@ -220,4 +220,9 @@ Then('la configuración de Sveltia usa el dominio {string}', (dominio: string) =
 Then('el paquete declara la dependencia {string} con el valor {string}', (nombre: string, valor: string) => {
   const actual = dependencias(paquete())[nombre];
   if (actual !== valor) throw new Error(`la dependencia ${nombre} vale ${JSON.stringify(actual)} y debía ser ${JSON.stringify(valor)}`);
+});
+
+Given('que la raíz del proyecto se llama {string}', (nombre: string) => {
+  world.root = join(tempRoot('iteraciones-cli-nombre-'), nombre);
+  mkdirSync(world.root, { recursive: true });
 });
