@@ -90,6 +90,7 @@ function campoRelacion(name: string, label: string, coleccion: string, multiple 
     value_field: 'name',
     search_fields: ['name'],
     display_fields: ['name'],
+    dropdown_threshold: 0,
     ...(multiple ? { multiple: true } : {}),
     required: false,
   });
@@ -344,19 +345,21 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
                   { label: 'Texto', value: 'file' },
                   { label: 'Lista', value: 'list' },
                   { label: 'Colección', value: 'collection' },
-                  { label: 'Intervención', value: 'intervention' },
-                  { label: 'Anuncio', value: 'announcement' },
+                  { label: 'Creadora', value: 'creator' },
                 ],
                 hint: 'Elige el tipo de página y completa sólo los campos que correspondan.',
               }),
               campoTitulo(),
               campoSubtitulo(),
               campoRelacion('creator', 'Autora', 'creadoras'),
+              campo('name', 'Nombre', 'string', { required: false, hint: 'Sólo para type: creator. La CLI lo requiere.' }),
               campo('body', 'Texto', 'markdown', {
                 modes: ['raw'],
                 required: false,
-                hint: 'En file, list y announcement es obligatorio; en collection e intervention es opcional.',
+                hint: 'En file, list y creator es obligatorio; en collection es opcional. En creator es la semblanza.',
               }),
+              campo('image', 'Retrato', 'image', { required: false, hint: 'Sólo para type: creator.' }),
+              camposEnlaces(),
               campoFecha(),
               campoRelacion('keywords', 'Palabras clave', 'palabras_clave'),
               campo('collectionCreatorPrefix', 'Rol de la antologadora', 'string', {
@@ -371,24 +374,6 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
               }),
               campoFiltro(),
               campoOrden(),
-              campo('pages', 'Páginas', 'number', { required: false, min: 1, value_type: 'int', hint: 'Sólo para type: intervention.' }),
-              campo('lineLength', 'Longitud de línea', 'number', {
-                required: false,
-                min: 0.1,
-                max: 1,
-                value_type: 'float',
-                hint: 'Sólo para type: intervention.',
-              }),
-              campo('letterhead', 'Membrete', 'list', { required: false, hint: 'Sólo para type: intervention.' }),
-              campo('letterheadHeight', 'Altura del membrete', 'string', {
-                required: false,
-                hint: 'Sólo para type: intervention. Ejemplo: 5cm, 50mm o 2in.',
-              }),
-              campo('placement', 'Ubicación', 'select', {
-                required: false,
-                options: ['top', 'bottom'],
-                hint: 'Sólo para type: announcement.',
-              }),
               campoLicencia(),
               campoIdioma(idioma),
               campoSlug(),
@@ -412,7 +397,31 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
     ],
   };
 
+  ocultarDespuesDelBody(config.collections);
+
   return stringify(config, { lineWidth: 0 });
+}
+
+interface ColeccionConfig {
+  fields?: Record<string, unknown>[];
+  files?: Array<{ fields?: Record<string, unknown>[] }>;
+}
+
+function ocultarDespuesDelBody(collections: unknown): void {
+  for (const col of collections as ColeccionConfig[]) {
+    if (col.fields !== undefined) ocultarCamposDespuesDelBody(col.fields);
+    for (const file of col.files ?? []) {
+      if (file.fields !== undefined) ocultarCamposDespuesDelBody(file.fields);
+    }
+  }
+}
+
+function ocultarCamposDespuesDelBody(fields: Record<string, unknown>[]): void {
+  const indice = fields.findIndex((field) => field.name === 'body');
+  if (indice < 0) return;
+  for (const field of fields.slice(indice + 1)) {
+    if (field.widget !== 'hidden') field.preview = false;
+  }
 }
 
 async function copiarVendorSveltia(destino: string): Promise<boolean> {

@@ -49,6 +49,21 @@ Característica: El home y la bibliografía se resuelven antes de publicar
       Y el archivo "dist/files/test-document.html" contiene 'href="./index.html"'
       Y el archivo "dist/files/index.html" existe
 
+    Escenario: index.md puede ser una creadora
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Dado que el archivo "index.md" tiene este contenido
+      """
+      ---
+      type: creator
+      name: Ana Ejemplo
+      ---
+
+      Semblanza de Ana.
+      """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/index.html" dice "Ana Ejemplo"
+
     Escenario: Desde un subdirectorio el enlace sube un nivel
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Dado que el archivo "index.md" tiene este contenido
