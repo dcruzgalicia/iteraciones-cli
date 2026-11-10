@@ -80,6 +80,11 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el campo "body" de la colección "listas" es obligatorio
       Y el campo "body" de la colección "colecciones" no es obligatorio
       Y el campo "body" de la colección "intervenciones" no es obligatorio
+      Y el campo "license" de la colección "textos" no usa radio buttons ni checkboxes
+      Y el campo "language" de la colección "textos" no usa radio buttons ni checkboxes
+      Y el campo "type" de la colección "inicio" no usa radio buttons ni checkboxes
+      Y el campo "order" de la colección "listas" no usa radio buttons ni checkboxes
+      Y el campo "placement" de la colección "anuncios" no usa radio buttons ni checkboxes
       Y el campo "creator" de la colección "textos" no usa radio buttons ni checkboxes
       Y el campo "keywords" de la colección "textos" no usa radio buttons ni checkboxes
       Y el campo "collectionCreator" de la colección "colecciones" no usa radio buttons ni checkboxes
