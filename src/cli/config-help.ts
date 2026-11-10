@@ -7,7 +7,8 @@ export function configHelp(): string {
   const d = DEFAULT_SITE_CONFIG;
   const html = d.format.html;
   return `
-iteraciones.config.yaml — todo se pone aquí (un archivo vacío vale todos los defaults):
+iteraciones.config.yaml — opcional; sólo pon aquí lo que quieras sobrescribir.
+Si no existe, se usan estos valores por defecto:
 
   language: ${d.language}                   código BCP 47 del documento
   toc: ${d.toc}                            índice en PDF, LaTeX, HTML y EPUB
