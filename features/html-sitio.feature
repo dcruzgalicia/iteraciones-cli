@@ -67,6 +67,23 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Cuando hago un build del proyecto
       Entonces los enlaces de Formatos abren en otra pestaña
 
+    Escenario: Los formatos de un texto anidado enlazan junto a su HTML
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html y markdown
+      Dado que el archivo "posts/anidado.md" tiene este contenido
+      """
+      ---
+      title: Anidado
+      date: 2026-01-01
+      ---
+
+      Contenido.
+      """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/posts/anidado.html" contiene 'href="./anidado.md"'
+      Y el archivo "dist/files/posts/anidado.html" no contiene 'href="./../anidado.md"'
+
   Regla de negocio: El índice de una colección es completo en todas las páginas
 
     Escenario: El índice completo aparece en todas las páginas

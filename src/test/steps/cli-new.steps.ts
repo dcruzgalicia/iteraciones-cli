@@ -98,6 +98,17 @@ Then('el archivo {string} contiene {string}', async (nombre: string, texto: stri
   }
 });
 
+Then('el archivo {string} pone {string} antes de {string}', async (nombre: string, primero: string, segundo: string) => {
+  const contenido = await archivo(nombre);
+  const posicionPrimero = contenido.indexOf(primero);
+  const posicionSegundo = contenido.indexOf(segundo);
+  if (posicionPrimero === -1) throw new Error(`${nombre} no contiene ${JSON.stringify(primero)}`);
+  if (posicionSegundo === -1) throw new Error(`${nombre} no contiene ${JSON.stringify(segundo)}`);
+  if (posicionPrimero > posicionSegundo) {
+    throw new Error(`${nombre} pone ${JSON.stringify(segundo)} antes de ${JSON.stringify(primero)}`);
+  }
+});
+
 Then('el frontmatter de {string} no menciona {string}', async (nombre: string, texto: string) => {
   const yaml = frontmatter(await archivo(nombre));
   if (yaml.includes(texto)) {
