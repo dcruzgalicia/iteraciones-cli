@@ -108,8 +108,10 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const esArchivo = type === 'file';
   const esCreador = type === 'creator';
   const main = esCreador
-    ? `<div class="grid gap-4 sm:gap-6 main-grid lg:gap-8">${mainCards[0] ?? ''}${'$if(extras)$$extras$$endif$'}${mainCards[1] ?? ''}${portadas}${'$if(pagination)$$pagination$$endif$'}</div>`
+    ? `<div class="grid gap-4 sm:gap-6 creator-grid lg:gap-8">${mainCards[0] ?? ''}${'$if(extras)$$extras$$endif$'}${mainCards[1] ?? ''}${portadas}${'$if(pagination)$$pagination$$endif$'}</div>`
     : [portadas, ...mainCards, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
+  const pageGridClass = esCreador ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3';
+  const mainColClass = esCreador ? '' : 'lg:col-span-2';
   const related = esArchivo ? relatedCards.join('\n') : '';
   const sidebar = [
     '$if(announcements-top)$$announcements-top$$endif$',
@@ -123,6 +125,8 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     related === '' ? relatedSlot : `<div id="slot-related" class="min-w-0 space-y-4 sm:space-y-6 empty:hidden lg:space-y-8">${related}</div>`;
 
   return skeleton
+    .replace('$page-grid-class$', pageGridClass)
+    .replace('$main-col-class$', mainColClass)
     .replace(slot('header'), () => header)
     .replace(slot('page-header'), () => metadata)
     .replace(slot('main'), () => main)
