@@ -248,7 +248,7 @@ function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | u
   if (logo === undefined) return {};
   const href = logo.kind === 'file' ? relativeHref(dir, logo.path) : '';
   return {
-    logoBlock: logoBlockHtml(href, logoSize),
+    logoBlock: logoBlockHtml(href, logoSize, logo.kind === 'inline' ? logo.svg : undefined),
     favicon: logo.favicon === undefined ? undefined : `<link rel="icon" href="${relativeHref(dir, logo.favicon)}">`,
   };
 }
@@ -1577,7 +1577,7 @@ async function buildExtrasHtml(
     sourcePath: string;
     dir: string;
   },
-  parte: 'main' | 'sidebar' = 'main',
+  parte: 'main' | 'sidebar' | 'creator' = 'main',
 ): Promise<string> {
   const extraArgs = ['--shift-heading-level-by=4'];
   for (const f of [...args.filters.semantic, ...args.filters.user, ...args.filters.flags, ...args.filters.html]) {
@@ -1596,10 +1596,11 @@ async function buildExtrasHtml(
     return minifyHtml(html);
   };
 
-  if (parte === 'main') {
+  if (parte === 'main' || parte === 'creator') {
     const retrato = args.creatorImage === undefined ? '' : creatorPortraitHtml(args.creatorImage, args.creatorAlt ?? '');
     if (args.tarjetas === undefined || args.tarjetas === '') return retrato;
     const tarjetasHtml = await render([args.tarjetas]);
+    if (parte === 'creator') return `${retrato}${tarjetasHtml}`;
     return `<div class="grid gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-6">${retrato}${tarjetasHtml}</div>`;
   }
 
@@ -2513,9 +2514,13 @@ function paginasDeLaPagina(args: Parameters<typeof paginasDeDocumento>[0]): { pa
 async function extrasDeLaPagina(
   comunes: Omit<Parameters<typeof buildExtrasHtml>[0], 'tarjetas'>,
   tarjetasPaginas: string[],
-  parte: 'main' | 'sidebar' = 'main',
+  parte: 'main' | 'sidebar' | 'creator' = 'main',
 ): Promise<string | string[]> {
   if (parte === 'sidebar') return buildExtrasHtml({ ...comunes, tarjetas: '' }, 'sidebar');
+  if (parte === 'creator') {
+    if (tarjetasPaginas.length === 0) return buildExtrasHtml({ ...comunes, tarjetas: '' }, 'creator');
+    return Promise.all(tarjetasPaginas.map((tarjetas) => buildExtrasHtml({ ...comunes, tarjetas }, 'creator')));
+  }
   if (tarjetasPaginas.length === 0) return buildExtrasHtml({ ...comunes, tarjetas: '' }, 'main');
   return Promise.all(tarjetasPaginas.map((tarjetas) => buildExtrasHtml({ ...comunes, tarjetas }, 'main')));
 }
@@ -2547,6 +2552,10 @@ function paginasDeDocumento(args: {
     { path: args.doc.relativePath, outSlug: args.outSlug },
     args.imagenes,
   );
+}
+
+function parteDeExtras(type: string | undefined): 'creator' | 'main' {
+  return type === 'creator' ? 'creator' : 'main';
 }
 
 async function emitCollectionHtml(
@@ -2647,7 +2656,7 @@ async function emitCollectionHtml(
     dir: outputs.dir,
     available,
   };
-  const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas, 'main');
+  const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas, parteDeExtras(doc.frontmatter.type));
   const sidebarExtras = (await extrasDeLaPagina(extrasComunes, [], 'sidebar')) as string;
   const pageChips = chipsDePagina(extrasComunes.contenedores, extrasComunes.palabrasClave);
 

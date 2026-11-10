@@ -14,7 +14,8 @@ Característica: los assets de la salida
       Entonces en los assets hay:
         """
         assets/css/styles.css
-        assets/images/favicon.png
+        assets/images/favicon.svg
+        assets/images/logo.svg
         """
       Y en los assets NO hay:
         """
@@ -58,6 +59,25 @@ Característica: los assets de la salida
       Y el HTML del documento no incrusta imágenes en base64
 
     @requires-magick
+    Escenario: El logo por defecto usa el accent y conserva transparencia
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto produce html
+      Y que el archivo "doc.md" tiene este contenido
+        """
+        ---
+        title: Doc
+        ---
+
+        Hola.
+        """
+      Cuando hago un build del proyecto
+      Entonces el build deja el archivo "assets/images/logo.svg"
+      Y el build deja el archivo "assets/images/favicon.svg"
+      Y el HTML del documento incrusta el logo svg
+      Y el HTML del documento referencia "assets/images/favicon.svg"
+      Y el logo svg está teñido con el accent
+
+    @requires-magick
     Escenario: Un logo de un solo color se tiñe con el accent
       Dado que la raíz del proyecto está vacía
       Y un proyecto con un logo de un color y un documento
@@ -67,31 +87,32 @@ Característica: los assets de la salida
 
   Regla de negocio: El logo no se reescribe si no cambió
 
-    Escenario: Una segunda llamada mantiene el logo en WebP
+    Escenario: Una segunda llamada mantiene el logo en SVG
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Cuando construyo los assets
       Y construyo los assets otra vez
       Entonces en los assets hay:
         """
-        assets/images/logo.webp
-        assets/images/favicon.png
+        assets/images/logo.svg
+        assets/images/favicon.svg
         """
 
-    Escenario: Un logo propio se convierte a WebP
+    Escenario: Un logo propio SVG se usa como SVG
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Y un proyecto con un logo propio
       Cuando construyo los assets con el logo del proyecto
       Entonces en los assets hay:
         """
-        assets/images/logo.webp
-        assets/images/favicon.png
+        assets/images/logo.svg
+        assets/images/favicon.svg
         """
       Y en los assets NO hay:
         """
         assets/mi-logo.svg
-        assets/images/favicon.svg
+        assets/images/logo.webp
+        assets/images/favicon.png
         """
 
   Regla de negocio: Una salida vieja se reconoce

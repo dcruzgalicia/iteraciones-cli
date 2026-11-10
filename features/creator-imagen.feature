@@ -47,10 +47,21 @@ Característica: el retrato de la creadora en sus tarjetas
       Y un texto de "Ana García"
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/ana-garcia.html" pone "xl:grid-cols-2 xl:gap-6" antes que "Retrato de Ana García"
+      Y el archivo "dist/files/ana-garcia.html" pone "grid gap-4 sm:gap-6 main-grid" antes que "Retrato de Ana García"
+      Y el archivo "dist/files/ana-garcia.html" pone "Bio de Ana García." antes que "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "tarjeta-fragmento"
       Y el archivo "dist/files/ana-garcia.html" dice "h-[30rem]"
       Y el archivo "dist/files/ana-garcia.html" dice "object-cover object-center"
+
+    Escenario: Sin retrato el primer texto va al lado de la biografía
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y una creadora llamada "Ana García"
+      Y un texto de "Ana García"
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/ana-garcia.html" dice "grid gap-4 sm:gap-6 main-grid"
+      Y el archivo "dist/files/ana-garcia.html" pone "Bio de Ana García." antes que "tarjeta-fragmento"
 
     Escenario: Sin retrato la tarjeta sigue igual
       Dado que la raíz del proyecto tiene un proyecto de prueba

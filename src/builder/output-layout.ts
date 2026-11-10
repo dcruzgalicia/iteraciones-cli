@@ -16,6 +16,7 @@ export const ASSETS_CSS_FILE = 'assets/css/styles.css';
 export const ASSETS_FONTS_DIR = 'assets/fonts';
 
 export const ASSETS_LOGO_WEBP = 'assets/images/logo.webp';
+export const ASSETS_LOGO_SVG = 'assets/images/logo.svg';
 
 export const ASSETS_FAVICON_PNG = 'assets/images/favicon.png';
 
