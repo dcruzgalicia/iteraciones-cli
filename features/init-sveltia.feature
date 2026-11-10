@@ -41,7 +41,6 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la configuración de Sveltia declara la colección "listas" en la carpeta "listas"
       Y la configuración de Sveltia declara la colección "anuncios" en la carpeta "anuncios"
       Y la configuración de Sveltia declara el archivo "menu.md"
-      Y la configuración de Sveltia declara el archivo "index.md"
       Y la configuración de Sveltia declara el campo "collectionCreator" en la colección "colecciones"
       Y la configuración de Sveltia declara el campo "placement" en la colección "anuncios"
       Y la configuración de Sveltia ofrece la licencia "CC-BY-NC-ND-4.0"
@@ -52,8 +51,6 @@ Característica: init sveltia deja un proyecto listo para el admin
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
       Y el campo "type" de la colección "menu" está oculto con el valor "menu"
-      Y el campo "type" de la colección "inicio" es de tipo "select"
-      Y el campo "type" de la colección "inicio" ofrece las opciones "file, list, collection, creator"
       Y el campo "image" de la colección "creadoras" es de tipo "image"
       Y el campo "creator" de la colección "textos" es una relación con "creadoras"
       Y el campo "collectionCreator" de la colección "colecciones" es una relación con "creadoras"
@@ -67,7 +64,6 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la colección "listas" tiene los campos "title, subtitle, body, filter, order, slug, type"
       Y la colección "intervenciones" tiene los campos "title, subtitle, creator, body, date, pages, lineLength, letterhead, letterheadHeight, license, language, slug, type"
       Y la colección "menu" tiene los campos "links, type"
-      Y la colección "inicio" tiene los campos "type, title, subtitle, creator, name, body, image, links, date, keywords, collectionCreatorPrefix, collectionCreator, files, filter, order, license, language, slug"
       Y el campo "body" de la colección "textos" tiene la etiqueta "Texto"
       Y el campo "body" de la colección "creadoras" tiene la etiqueta "Semblanza"
       Y el campo "collectionCreatorPrefix" de la colección "colecciones" tiene la etiqueta "Rol de la antologadora"
@@ -82,14 +78,12 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el campo "body" de la colección "intervenciones" no es obligatorio
       Y el campo "license" de la colección "textos" no usa radio buttons ni checkboxes
       Y el campo "language" de la colección "textos" no usa radio buttons ni checkboxes
-      Y el campo "type" de la colección "inicio" no usa radio buttons ni checkboxes
       Y el campo "order" de la colección "listas" no usa radio buttons ni checkboxes
       Y el campo "placement" de la colección "anuncios" no usa radio buttons ni checkboxes
       Y el campo "creator" de la colección "textos" no usa radio buttons ni checkboxes
       Y el campo "keywords" de la colección "textos" no usa radio buttons ni checkboxes
       Y el campo "collectionCreator" de la colección "colecciones" no usa radio buttons ni checkboxes
       Y el campo "creator" de la colección "intervenciones" no usa radio buttons ni checkboxes
-      Y el campo "keywords" de la colección "inicio" no usa radio buttons ni checkboxes
       Y el campo "date" de la colección "textos" no aparece en la vista previa
       Y el campo "keywords" de la colección "textos" no aparece en la vista previa
       Y el campo "slug" de la colección "textos" no aparece en la vista previa
@@ -100,9 +94,6 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el campo "filter" de la colección "listas" no aparece en la vista previa
       Y el campo "pages" de la colección "intervenciones" no aparece en la vista previa
       Y el campo "letterhead" de la colección "intervenciones" no aparece en la vista previa
-      Y el campo "image" de la colección "inicio" no aparece en la vista previa
-      Y el campo "filter" de la colección "inicio" no aparece en la vista previa
-      Y el campo "slug" de la colección "inicio" no aparece en la vista previa
       Y el campo "title" de la colección "textos" no es obligatorio
       Y el campo "slug" de la colección "textos" no es obligatorio
 
