@@ -30,6 +30,16 @@
   }
 }
 
+@utility creator-grid {
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    > :only-child {
+      grid-column: span 2;
+    }
+  }
+}
+
 @utility main-grid {
   @media (min-width: 1024px) {
     grid-template-columns: repeat(auto-fit, minmax(0, 1fr));

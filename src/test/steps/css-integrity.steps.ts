@@ -167,6 +167,7 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
     'bg-paper-grid',
     'contenido-compacto',
     'contenido-tamano',
+    'creator-grid',
     'dictum',
     'logo-fill',
     'main-grid',
