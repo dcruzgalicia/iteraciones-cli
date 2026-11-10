@@ -116,6 +116,22 @@ Característica: el menú del sitio
       Y el archivo "dist/files/index.html" dice "href=\"https://www.facebook.com/Historikasmx\""
       Y el archivo "dist/files/index.html" dice "target=\"_blank\" rel=\"noopener noreferrer\""
 
+    Escenario: Un menú sin title sigue generando la página
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y que el archivo "menu.md" tiene este contenido
+        """
+        ---
+        type: menu
+        links:
+          - name: Inicio
+            url: ./index.html
+        ---
+        """
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/menu.html" existe
+      Y el archivo "dist/files/index.html" dice ">Menú<"
+
   Regla de negocio: Un solo menú por proyecto
 
     Escenario: Dos menús son un error claro

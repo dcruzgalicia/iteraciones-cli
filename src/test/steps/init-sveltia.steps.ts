@@ -226,3 +226,12 @@ Given('que la raíz del proyecto se llama {string}', (nombre: string) => {
   world.root = join(tempRoot('iteraciones-cli-nombre-'), nombre);
   mkdirSync(world.root, { recursive: true });
 });
+
+Then('el campo {string} de la colección {string} ofrece las opciones {string}', (nombre: string, col: string, lista: string) => {
+  const campo = campoDe(nombre, col);
+  const opciones = (campo.options ?? []).map((opcion) => (typeof opcion === 'string' ? opcion : (opcion.value ?? '')));
+  const esperadas = lista.split(',').map((s) => s.trim());
+  if (JSON.stringify(opciones) !== JSON.stringify(esperadas)) {
+    throw new Error(`las opciones de ${nombre} son ${JSON.stringify(opciones)} y debían ser ${JSON.stringify(esperadas)}`);
+  }
+});

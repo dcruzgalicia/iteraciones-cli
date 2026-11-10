@@ -118,6 +118,31 @@ function camposEnlaces(): Record<string, unknown> {
   });
 }
 
+function campoFiltro(): Record<string, unknown> {
+  return campo('filter', 'Filtro', 'object', {
+    required: false,
+    hint: 'Sólo para type: list.',
+    fields: [
+      campo('type', 'Tipo de documento', 'select', { required: false, options: ['file', 'collection', 'creator', 'list'] }),
+      campoRelacion('creator', 'Autora', 'creadoras', false),
+      campo('date', 'Fecha', 'object', {
+        required: false,
+        fields: [campoFecha('from', 'Desde'), campoFecha('to', 'Hasta')],
+      }),
+      campoRelacion('keyword', 'Palabra clave', 'palabras_clave', false),
+      campo('path', 'Ruta', 'string', { required: false }),
+    ],
+  });
+}
+
+function campoOrden(): Record<string, unknown> {
+  return campo('order', 'Orden', 'select', {
+    required: false,
+    hint: 'Sólo para type: list.',
+    options: ['date-desc', 'date-asc', 'title-asc', 'title-desc', 'creator-asc'],
+  });
+}
+
 function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string): string {
   const dominio = `${slug}.netlify.app`;
   const medios = { media_folder: '/assets/images', public_folder: '../assets/images' };
@@ -256,30 +281,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         ...medios,
         slug: '{{slug}}',
         summary: '{{title}}',
-        fields: [
-          campoTitulo(),
-          campoSubtitulo(),
-          campoCuerpo(),
-          campo('filter', 'Filtro', 'object', {
-            required: false,
-            fields: [
-              campo('type', 'Tipo de documento', 'select', { required: false, options: ['file', 'collection', 'creator', 'list'] }),
-              campoRelacion('creator', 'Autora', 'creadoras', false),
-              campo('date', 'Fecha', 'object', {
-                required: false,
-                fields: [campoFecha('from', 'Desde'), campoFecha('to', 'Hasta')],
-              }),
-              campoRelacion('keyword', 'Palabra clave', 'palabras_clave', false),
-              campo('path', 'Ruta', 'string', { required: false }),
-            ],
-          }),
-          campo('order', 'Orden', 'select', {
-            required: false,
-            options: ['date-desc', 'date-asc', 'title-asc', 'title-desc', 'creator-asc'],
-          }),
-          campoSlug(),
-          campoType('list'),
-        ],
+        fields: [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFiltro(), campoOrden(), campoSlug(), campoType('list')],
       },
       {
         name: 'intervenciones',
@@ -320,7 +322,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
             name: 'menu',
             label: 'Menú principal',
             file: 'menu.md',
-            fields: [campoTitulo(), camposEnlaces(), campoType('menu')],
+            fields: [camposEnlaces(), campoType('menu')],
           },
         ],
       },
@@ -335,15 +337,61 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
             media_folder: '/assets/images',
             public_folder: 'assets/images',
             fields: [
+              campo('type', 'Tipo', 'select', {
+                required: true,
+                default: 'file',
+                options: [
+                  { label: 'Texto', value: 'file' },
+                  { label: 'Lista', value: 'list' },
+                  { label: 'Colección', value: 'collection' },
+                  { label: 'Intervención', value: 'intervention' },
+                  { label: 'Anuncio', value: 'announcement' },
+                ],
+                hint: 'Elige el tipo de página y completa sólo los campos que correspondan.',
+              }),
               campoTitulo(),
               campoSubtitulo(),
-              campoCuerpo(),
+              campoRelacion('creator', 'Autora', 'creadoras'),
+              campo('body', 'Texto', 'markdown', {
+                modes: ['raw'],
+                required: false,
+                hint: 'En file, list y announcement es obligatorio; en collection e intervention es opcional.',
+              }),
               campoFecha(),
               campoRelacion('keywords', 'Palabras clave', 'palabras_clave'),
+              campo('collectionCreatorPrefix', 'Rol de la antologadora', 'string', {
+                required: false,
+                hint: 'Sólo para type: collection.',
+              }),
+              campoRelacion('collectionCreator', 'Antologadora', 'creadoras'),
+              campo('files', 'Textos incluidos', 'list', {
+                required: false,
+                label_singular: 'Texto',
+                hint: 'Sólo para type: collection. Rutas relativas al repositorio, por ejemplo: textos/mi-texto.md.',
+              }),
+              campoFiltro(),
+              campoOrden(),
+              campo('pages', 'Páginas', 'number', { required: false, min: 1, value_type: 'int', hint: 'Sólo para type: intervention.' }),
+              campo('lineLength', 'Longitud de línea', 'number', {
+                required: false,
+                min: 0.1,
+                max: 1,
+                value_type: 'float',
+                hint: 'Sólo para type: intervention.',
+              }),
+              campo('letterhead', 'Membrete', 'list', { required: false, hint: 'Sólo para type: intervention.' }),
+              campo('letterheadHeight', 'Altura del membrete', 'string', {
+                required: false,
+                hint: 'Sólo para type: intervention. Ejemplo: 5cm, 50mm o 2in.',
+              }),
+              campo('placement', 'Ubicación', 'select', {
+                required: false,
+                options: ['top', 'bottom'],
+                hint: 'Sólo para type: announcement.',
+              }),
               campoLicencia(),
               campoIdioma(idioma),
               campoSlug(),
-              campoType('file'),
             ],
           },
         ],

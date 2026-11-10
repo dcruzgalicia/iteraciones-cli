@@ -25,6 +25,15 @@ Característica: El type list, una colección que se arma sola
       Cuando descubro y post-proceso el proyecto
       Entonces los miembros de "lista.md" son "b.md, a.md"
 
+    Escenario: index.md puede ser una lista
+      Dado que la raíz del proyecto está vacía
+      Y que el proyecto tiene:
+      """
+      {"index.md": "---\ntitle: Publicaciones\ntype: list\n---\n", "a.md": "---\ntitle: A\ndate: 2020-01-01\n---\n\nCuerpo.\n"}
+      """
+      Cuando descubro y post-proceso el proyecto
+      Entonces los miembros de "index.md" son "a.md"
+
   Regla de negocio: Cada filtro acota
 
     Esquema del escenario: El filtro decide qué entra
