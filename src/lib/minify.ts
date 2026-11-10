@@ -3,6 +3,8 @@ import { logWarning } from './logger.js';
 const BIN = 'minify';
 
 let available: boolean | null = null;
+let warnedMissing = false;
+let warnedFailure = false;
 
 async function minifyAvailable(): Promise<boolean> {
   if (available !== null) return available;
@@ -29,18 +31,39 @@ export async function checkMinify(): Promise<{ label: string; ok: boolean; detai
 
 export async function minifyHtml(html: string): Promise<string> {
   if (!(await minifyAvailable())) {
-    logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
+    if (!warnedMissing) {
+      logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
+      warnedMissing = true;
+    }
     return html;
   }
-  const proc = Bun.spawn([BIN, '--type', 'html', '--html-keep-quotes'], {
-    stdin: new Blob([html]),
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+
+  const proc = (() => {
+    try {
+      return Bun.spawn([BIN, '--type', 'html', '--html-keep-quotes'], {
+        stdin: new Blob([html]),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+    } catch {
+      return undefined;
+    }
+  })();
+  if (proc === undefined) {
+    if (!warnedMissing) {
+      logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
+      warnedMissing = true;
+    }
+    return html;
+  }
+
   const [salida, error] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
   const code = await proc.exited;
   if (code !== 0) {
-    logWarning(`minify falló; el HTML sale sin minificar. stderr: ${error.trim()}`, 'html');
+    if (!warnedFailure) {
+      logWarning(`minify falló; el HTML sale sin minificar. stderr: ${error.trim()}`, 'html');
+      warnedFailure = true;
+    }
     return html;
   }
   return salida;

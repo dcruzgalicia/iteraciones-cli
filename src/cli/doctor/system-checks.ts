@@ -212,7 +212,7 @@ export async function checkMagick(): Promise<CheckResult> {
 export function checkBiber(): CheckResult {
   const path = Bun.which('biber');
   if (path) {
-    return { label: 'biber disponible', ok: true, detail: path, warn: true };
+    return { label: 'biber disponible', ok: true, detail: path };
   }
   return {
     label: 'biber disponible',

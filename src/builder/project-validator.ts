@@ -53,6 +53,7 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'frontCover',
   'backCover',
   'coverColor',
+  'coverImage',
   'courtesyPage',
   'type',
   'files',

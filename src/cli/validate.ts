@@ -14,6 +14,7 @@ import {
   validateFrontmatterFields,
 } from '../builder/project-validator.js';
 import { outputKeyFor } from '../builder/slug-resolver.js';
+import { assertBuildTools } from '../builder/tool-preflight.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { ConfigError, translateSystemError } from '../lib/errors.js';
@@ -196,6 +197,15 @@ async function collectConfigIssues(
   return { errors, warnings };
 }
 
+async function collectToolIssues(cwd: string, config: Awaited<ReturnType<typeof loadSiteConfig>>): Promise<ValidationError[]> {
+  try {
+    await assertBuildTools(cwd, config);
+    return [];
+  } catch (err) {
+    return [{ file: 'sistema', message: err instanceof Error ? err.message : String(err) }];
+  }
+}
+
 async function collectValidation(cwd: string): Promise<{ summary: ValidationSummary; disabledFiltersCount: number; luaFiltersCount: number }> {
   const configErrors: ValidationError[] = [];
   const configWarnings: ValidationError[] = [];
@@ -203,6 +213,7 @@ async function collectValidation(cwd: string): Promise<{ summary: ValidationSumm
   let luaFiltersCount = 0;
   try {
     const config = await loadSiteConfig(cwd);
+    configErrors.push(...(await collectToolIssues(cwd, config)));
     disabledFiltersCount = config.disabledFilters?.length ?? 0;
     luaFiltersCount = config.luaFilters?.length ?? 0;
     const { errors, warnings } = await collectConfigIssues(cwd, config);

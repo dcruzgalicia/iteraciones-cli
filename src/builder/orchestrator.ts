@@ -6,6 +6,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError, ConfigError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
+import { resolveBooleanField } from '../lib/frontmatter-fields.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { posix } from '../lib/paths.js';
@@ -26,9 +27,9 @@ import { documentPipeline } from './pipeline.js';
 import { collectionCreatorDocPaths, creatorDocPathsFor, resolveCollectionCreatorDocs } from './pipeline-formats.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths, validateConfigRules } from './project-validator.js';
-
 import type { BuildState } from './state-serialize.js';
 import { loadStateFile, persistCompletedState } from './state-serialize.js';
+import { assertBuildTools } from './tool-preflight.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 
 const silentReporter: BuildReporter = {
@@ -718,6 +719,12 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     ctx,
     progress,
   );
+
+  const necesitaPoppler =
+    siteConfig.format?.pdf?.generate === true &&
+    (siteConfig.format?.pdf?.coverImage === true ||
+      [...discoveryIndex.values()].some((entry) => resolveBooleanField(entry.fm ?? {}, siteConfig.format?.pdf, siteConfig, 'coverImage') === true));
+  await assertBuildTools(cwd, siteConfig, { necesitaPoppler });
 
   const needsAssets = ctx.needsCss;
 
