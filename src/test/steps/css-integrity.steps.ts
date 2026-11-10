@@ -169,12 +169,12 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
     'contenido-tamano',
     'dictum',
     'logo-fill',
+    'main-grid',
     'nombres-enlazados',
     'scroll-reveal',
     'scroll-reveal-at-end',
     'smallcaps',
     'tarjeta',
-    'tarjeta-encabezado',
     'tarjeta-extras',
     'verse',
   ];

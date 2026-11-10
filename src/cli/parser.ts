@@ -182,14 +182,16 @@ Ejemplos:
     .command('assets')
     .description('copia al directorio de salida las fuentes del paquete y el logo que referencia el HTML')
     .requiredOption('-o, --output <path>', 'directorio de salida')
+    .option('--licenses <nombres>', 'iconos de licencia a copiar, separados por coma')
     .addHelpText(
       'after',
       `
 Ejemplos:
   iteraciones assets -o dist/files
+  iteraciones assets -o dist/files --licenses cc,by,nc,nd
 `,
     )
-    .action(async (opts: { output: string }) => {
+    .action(async (opts: { output: string; licenses?: string }) => {
       await runAssets(projectRoot(), opts);
     });
 

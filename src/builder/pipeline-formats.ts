@@ -1154,6 +1154,18 @@ function licenciaResuelta(siteConfig: SiteConfig, override?: string | false): Li
   return def === undefined ? undefined : { id, def };
 }
 
+export function licenciaEfectiva(fm: Record<string, unknown>, siteConfig: SiteConfig): string | undefined {
+  return licenciaResuelta(siteConfig, licenciaOverride(fm))?.id;
+}
+
+export function iconosDeLicencias(ids: Iterable<string>): Set<string> {
+  const iconos = new Set<string>();
+  for (const id of ids) {
+    for (const icono of LICENCIAS[id]?.iconos ?? []) iconos.add(icono);
+  }
+  return iconos;
+}
+
 function licenciaTexto(def: LicenciaDef): string {
   return def.parrafos.join('\n\n');
 }

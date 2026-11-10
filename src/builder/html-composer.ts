@@ -92,33 +92,37 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const footerIdentity = comoFooter(await loadCard(type, 'card-identity.html'));
   const metadata = await loadCard(type, 'card-metadata.html');
   const mainCards = [await loadCard(type, 'card-contenido.html'), await loadCard(type, 'card-referencias.html')];
-  const sidebarCards = [
+  const relatedCards = [
+    '$if(sidebar-extras)$$sidebar-extras$$endif$',
     await loadCard(type, 'card-indice.html'),
     await loadCard(type, 'card-formatos.html'),
     await loadCard('file', 'card-indice-coleccion.html'),
   ];
+  const siteCards = ['$if(recientes)$$recientes$$endif$', '$if(site-keywords)$$site-keywords$$endif$', await loadCard('file', 'card-licencia.html')];
 
   const redes = frecuenciasInline(siteConfig);
   const menuHeader = '$if(menu-header)$$menu-header$$endif$';
   const menuFooterPlain = '$if(menu-footer-plain)$$menu-footer-plain$$endif$';
   const header = headerHtml(identity, menuHeader, redes);
   const portadas = await loadCard('file', 'card-portadas.html');
-  const main = [portadas, ...mainCards, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
+  const esArchivo = type === 'file';
+  const main = [metadata, portadas, ...mainCards, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
+  const related = esArchivo ? relatedCards.join('\n') : '';
   const sidebar = [
     '$if(announcements-top)$$announcements-top$$endif$',
-    '$if(sidebar-extras)$$sidebar-extras$$endif$',
-    ...sidebarCards,
-    '$if(recientes)$$recientes$$endif$',
-    '$if(site-keywords)$$site-keywords$$endif$',
-    await loadCard('file', 'card-licencia.html'),
+    ...(esArchivo ? [] : relatedCards),
+    ...siteCards,
     '$if(announcements-bottom)$$announcements-bottom$$endif$',
   ].join('\n');
   const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
+  const relatedSlot = '<div id="slot-related" class="min-w-0 space-y-4 sm:space-y-6 empty:hidden lg:space-y-8"></div>';
+  const relatedHtml =
+    related === '' ? relatedSlot : `<div id="slot-related" class="min-w-0 space-y-4 sm:space-y-6 empty:hidden lg:space-y-8">${related}</div>`;
 
   return skeleton
     .replace(slot('header'), () => header)
-    .replace(slot('page-header'), () => metadata)
     .replace(slot('main'), () => main)
+    .replace(relatedSlot, () => relatedHtml)
     .replace(slot('sidebar'), () => sidebar)
     .replace(slot('footer'), () => footer);
 }

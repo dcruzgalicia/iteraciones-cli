@@ -110,9 +110,12 @@ export async function buildAssets(
   siteConfig: SiteConfig,
   prevCssHash?: string,
   prevCssFileCache?: CssFileCache,
+  licenseIcons?: Set<string>,
 ): Promise<{ cssHash: string; cssFileCache: CssFileCache }> {
-  await copyStaticAssets(outputDir, cwd, siteConfig);
-  recordSupportCommand('resources', outputDir, ['iteraciones', 'assets', '-o', outputDir]);
+  await copyStaticAssets(outputDir, cwd, siteConfig, licenseIcons);
+  const assetsArgv = ['iteraciones', 'assets', '-o', outputDir];
+  if (licenseIcons !== undefined) assetsArgv.push('--licenses', [...licenseIcons].sort().join(','));
+  recordSupportCommand('resources', outputDir, assetsArgv);
   const { hash: cssHash, cache: cssFileCache } = await computeCssHash(outputDir, siteConfig, prevCssFileCache);
   const cssExists = await Bun.file(join(outputDir, ASSETS_CSS_FILE)).exists();
   if (prevCssHash !== cssHash || !cssExists) {
@@ -186,12 +189,39 @@ async function colorCount(src: string): Promise<number> {
 async function rasterLogo(src: string, outputDir: string, size: number, accent: string | undefined): Promise<boolean> {
   const webp = join(outputDir, ASSETS_LOGO_WEBP);
   await mkdir(dirname(webp), { recursive: true });
-  const args = [src, '-resize', `${size}x>`, '-strip', '-define', 'webp:lossless=true'];
+  const args = [
+    '-background',
+    'none',
+    '-density',
+    '300',
+    '-units',
+    'PixelsPerInch',
+    src,
+    '-resize',
+    `${size}x>`,
+    '-strip',
+    '-define',
+    'webp:lossless=true',
+  ];
 
-  if (accent !== undefined && (await colorCount(src)) <= 2) args.push('-fill', accent, '-colorize', '100');
+  if (accent !== undefined && (await colorCount(src)) <= 2) {
+    args.push('-channel', 'RGB', '-fill', accent, '-colorize', '100', '+channel');
+  }
   args.push(webp);
   if (!(await runMagick(args))) return false;
-  await runMagick([src, '-resize', '32x32>', '-strip', join(outputDir, ASSETS_FAVICON_PNG)]);
+  await runMagick([
+    '-background',
+    'none',
+    '-density',
+    '300',
+    '-units',
+    'PixelsPerInch',
+    src,
+    '-resize',
+    '32x32>',
+    '-strip',
+    join(outputDir, ASSETS_FAVICON_PNG),
+  ]);
   return true;
 }
 
@@ -242,19 +272,23 @@ async function writeIconAssets(outputDir: string, siteConfig: SiteConfig): Promi
   }
 }
 
-async function copyLicenseIcons(outputDir: string): Promise<void> {
+async function copyLicenseIcons(outputDir: string, licenseIcons?: Set<string>): Promise<void> {
   for (const icon of LICENSE_ICONS) {
     const src = join(LICENSE_DIR, icon.file);
     const dest = join(outputDir, ASSETS_IMAGES_DIR, `${icon.name}.webp`);
+    if (licenseIcons !== undefined && !licenseIcons.has(icon.name)) {
+      await rm(dest, { force: true });
+      continue;
+    }
     if (!(await iconAWebp(src, dest, 32))) {
       throw new BuildError(`no se pudo convertir el icono de licencia "${icon.name}" a WebP`);
     }
   }
 }
 
-export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
+export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, licenseIcons?: Set<string>): Promise<void> {
   await writeLogoAssets(cwd, outputDir, siteConfig);
-  await copyLicenseIcons(outputDir);
+  await copyLicenseIcons(outputDir, licenseIcons);
   await writeIconAssets(outputDir, siteConfig);
 }
 

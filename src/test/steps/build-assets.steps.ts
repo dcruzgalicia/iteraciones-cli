@@ -252,6 +252,13 @@ When('compilo el sitio con su logo', async () => {
   await runBuild(world.root);
 });
 
+Then('el logo webp conserva transparencia', () => {
+  const ruta = join(salida(), 'assets/images/logo.webp');
+  const proc = Bun.spawnSync(['magick', 'identify', '-format', '%A', ruta], { stdout: 'pipe' });
+  const alpha = proc.stdout.toString().trim();
+  if (alpha !== 'Blend') throw new Error(`el logo webp no conserva transparencia: alpha=${JSON.stringify(alpha)}`);
+});
+
 Then('el build deja el archivo {string}', async (relativa: string) => {
   if (!(await Bun.file(join(salida(), relativa)).exists())) throw new Error(`el build no dejó ${relativa}`);
 });

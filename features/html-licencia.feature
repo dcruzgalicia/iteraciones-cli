@@ -32,6 +32,45 @@ Característica: la tarjeta de licencia del sitio
       Y el archivo "dist/files/assets/images/nc.webp" existe
       Y el archivo "dist/files/assets/images/nd.webp" existe
 
+    Escenario: Solo se copian los iconos de la licencia en uso
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/assets/images/cc.webp" existe
+      Y el archivo "dist/files/assets/images/pf.webp" no existe
+      Y el archivo "dist/files/assets/images/ac.webp" no existe
+
+    Escenario: Con dos licencias se copian todos los iconos
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y que el archivo "pf.md" tiene este contenido
+        """
+        ---
+        title: PF
+        license: PF-AC-PR-FA-1.0
+        ---
+
+        Cuerpo.
+        """
+      Cuando hago un build del proyecto
+      Entonces el archivo "dist/files/assets/images/cc.webp" existe
+      Y el archivo "dist/files/assets/images/pf.webp" existe
+      Y el archivo "dist/files/assets/images/ac.webp" existe
+
+    Escenario: Sin licencia no se copian iconos
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+        """
+        language: es-MX
+        license: false
+        format:
+          html:
+            generate: true
+        """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/assets/images/cc.webp" no existe
+
     Escenario: La licencia va en el sidebar antes de las redes
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y que el archivo "iteraciones.config.yaml" tiene este contenido
