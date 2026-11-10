@@ -244,9 +244,9 @@ Then('el campo {string} de la colección {string} no aparece en la vista previa'
 
 Then('el campo {string} de la colección {string} no usa radio buttons ni checkboxes', (nombre: string, col: string) => {
   const campo = campoDe(nombre, col);
-  if (campo.widget !== 'relation' || campo.dropdown_threshold !== 0) {
+  if ((campo.widget !== 'relation' && campo.widget !== 'select') || campo.dropdown_threshold !== 0) {
     throw new Error(
-      `el campo ${nombre} de ${col} no fuerza el desplegable de relación: ${JSON.stringify({ widget: campo.widget, dropdown_threshold: campo.dropdown_threshold })}`,
+      `el campo ${nombre} de ${col} no fuerza el desplegable: ${JSON.stringify({ widget: campo.widget, dropdown_threshold: campo.dropdown_threshold })}`,
     );
   }
 });

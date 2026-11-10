@@ -61,6 +61,7 @@ function campoFecha(name = 'date', label = 'Fecha'): Record<string, unknown> {
 function campoIdioma(idioma: string): Record<string, unknown> {
   return campo('language', 'Idioma', 'select', {
     required: false,
+    dropdown_threshold: 0,
     options: [
       { label: 'Usar el idioma global', value: '' },
       { label: IDIOMAS[idioma] ?? idioma, value: idioma },
@@ -69,7 +70,7 @@ function campoIdioma(idioma: string): Record<string, unknown> {
 }
 
 function campoLicencia(): Record<string, unknown> {
-  return campo('license', 'Licencia', 'select', { required: false, options: LICENCIAS });
+  return campo('license', 'Licencia', 'select', { required: false, dropdown_threshold: 0, options: LICENCIAS });
 }
 
 function campoSlug(): Record<string, unknown> {
@@ -124,7 +125,7 @@ function campoFiltro(): Record<string, unknown> {
     required: false,
     hint: 'Sólo para type: list.',
     fields: [
-      campo('type', 'Tipo de documento', 'select', { required: false, options: ['file', 'collection', 'creator', 'list'] }),
+      campo('type', 'Tipo de documento', 'select', { required: false, dropdown_threshold: 0, options: ['file', 'collection', 'creator', 'list'] }),
       campoRelacion('creator', 'Autora', 'creadoras', false),
       campo('date', 'Fecha', 'object', {
         required: false,
@@ -139,6 +140,7 @@ function campoFiltro(): Record<string, unknown> {
 function campoOrden(): Record<string, unknown> {
   return campo('order', 'Orden', 'select', {
     required: false,
+    dropdown_threshold: 0,
     hint: 'Sólo para type: list.',
     options: ['date-desc', 'date-asc', 'title-asc', 'title-desc', 'creator-asc'],
   });
@@ -264,7 +266,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoTitulo(),
           campoCuerpo(),
           campoFecha(),
-          campo('placement', 'Ubicación', 'select', { required: false, options: ['top', 'bottom'] }),
+          campo('placement', 'Ubicación', 'select', { required: false, dropdown_threshold: 0, options: ['top', 'bottom'] }),
           campoIdioma(idioma),
           campoSlug(),
           campoType('announcement'),
@@ -341,6 +343,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
               campo('type', 'Tipo', 'select', {
                 required: true,
                 default: 'file',
+                dropdown_threshold: 0,
                 options: [
                   { label: 'Texto', value: 'file' },
                   { label: 'Lista', value: 'list' },
