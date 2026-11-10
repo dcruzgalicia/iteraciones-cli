@@ -199,6 +199,37 @@ async function writeSvgLogo(src: string, outputDir: string, accent: string | und
   return { kind: 'inline', svg, favicon: ASSETS_FAVICON_SVG };
 }
 
+async function rasterSvgLogo(src: string, outputDir: string, size: number, accent: string | undefined): Promise<boolean> {
+  const rsvg = Bun.which('rsvg-convert');
+  if (rsvg === null) return false;
+
+  const webp = join(outputDir, ASSETS_LOGO_WEBP);
+  const favicon = join(outputDir, ASSETS_FAVICON_PNG);
+  await mkdir(dirname(webp), { recursive: true });
+
+  const svg = await readFile(src, 'utf8');
+  const conAcento = accent === undefined ? svg : svg.replaceAll('currentColor', accent);
+  const tempDir = await mkdtemp(join(tmpdir(), 'iteraciones-logo-'));
+  const svgPath = join(tempDir, 'logo.svg');
+  const pngPath = join(tempDir, 'logo.png');
+  await writeFile(svgPath, conAcento);
+
+  try {
+    const render = Bun.spawn([rsvg, '-w', String(size), '-h', String(size), '-o', pngPath, svgPath], {
+      stdout: 'ignore',
+      stderr: 'ignore',
+    });
+    if ((await render.exited) !== 0) return false;
+    if (!(await runMagick(['-background', 'none', pngPath, '-strip', '-define', 'webp:lossless=true', webp]))) return false;
+    await runMagick(['-background', 'none', pngPath, '-resize', '32x32>', '-strip', favicon]);
+    await rm(join(outputDir, ASSETS_LOGO_SVG), { force: true });
+    await rm(join(outputDir, ASSETS_FAVICON_SVG), { force: true });
+    return true;
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
+
 async function rasterLogo(src: string, outputDir: string, size: number, accent: string | undefined): Promise<boolean> {
   const webp = join(outputDir, ASSETS_LOGO_WEBP);
   await mkdir(dirname(webp), { recursive: true });
@@ -267,6 +298,9 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
   const accent = await accent500(html?.site?.color);
 
   if (!logo) {
+    if (await rasterSvgLogo(DEFAULT_LOGO, outputDir, size, accent)) {
+      return { kind: 'file', path: ASSETS_LOGO_WEBP, favicon: ASSETS_FAVICON_PNG };
+    }
     return writeSvgLogo(DEFAULT_LOGO, outputDir, accent);
   }
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
@@ -277,7 +311,12 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
     logWarning(`logo no encontrado: "${logo}"`, 'assets');
     return undefined;
   }
-  if (src.toLowerCase().endsWith('.svg')) return writeSvgLogo(src, outputDir, accent);
+  if (src.toLowerCase().endsWith('.svg')) {
+    if (await rasterSvgLogo(src, outputDir, size, accent)) {
+      return { kind: 'file', path: ASSETS_LOGO_WEBP, favicon: ASSETS_FAVICON_PNG };
+    }
+    return writeSvgLogo(src, outputDir, accent);
+  }
   if (await rasterLogo(src, outputDir, size, accent)) {
     return { kind: 'file', path: ASSETS_LOGO_WEBP, favicon: ASSETS_FAVICON_PNG };
   }

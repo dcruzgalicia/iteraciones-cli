@@ -110,7 +110,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const main = esCreador
     ? `<div class="grid gap-4 sm:gap-6 creator-grid lg:gap-8">${mainCards[0] ?? ''}${'$if(extras)$$extras$$endif$'}${mainCards[1] ?? ''}${portadas}${'$if(pagination)$$pagination$$endif$'}</div>`
     : [portadas, ...mainCards, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
-  const pageGridClass = esCreador ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3';
+  const pageGridClass = esCreador ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3';
   const mainColClass = esCreador ? '' : 'lg:col-span-2';
   const related = esArchivo ? relatedCards.join('\n') : '';
   const sidebar = [
