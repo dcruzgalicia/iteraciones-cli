@@ -1,4 +1,5 @@
-import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/config-schema.js';
@@ -8,7 +9,7 @@ import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
-import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_IMAGES_DIR, ASSETS_LOGO_WEBP } from './output-layout.js';
+import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_FAVICON_SVG, ASSETS_IMAGES_DIR, ASSETS_LOGO_SVG, ASSETS_LOGO_WEBP } from './output-layout.js';
 import { hashGlobbedFiles } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
 
@@ -127,7 +128,7 @@ export async function buildAssets(
 
 const DEFAULT_LOGO = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
 
-export type LogoAsset = { kind: 'file'; path: string; favicon?: string };
+export type LogoAsset = { kind: 'file'; path: string; favicon?: string } | { kind: 'inline'; svg: string; favicon?: string };
 
 function logoPx(size: string | undefined): number {
   const match = (size ?? '').trim().match(/^(\d+(?:\.\d+)?)px$/);
@@ -186,43 +187,77 @@ async function colorCount(src: string): Promise<number> {
   return code === 0 ? Number.parseInt(out.trim(), 10) || 0 : 0;
 }
 
+async function writeSvgLogo(src: string, outputDir: string, accent: string | undefined): Promise<LogoAsset> {
+  const svg = await readFile(src, 'utf8');
+  const conAcento = accent === undefined ? svg : svg.replaceAll('currentColor', accent);
+  const imagesDir = join(outputDir, ASSETS_IMAGES_DIR);
+  await mkdir(imagesDir, { recursive: true });
+  await writeFile(join(outputDir, ASSETS_LOGO_SVG), conAcento);
+  await writeFile(join(outputDir, ASSETS_FAVICON_SVG), conAcento);
+  await rm(join(outputDir, ASSETS_LOGO_WEBP), { force: true });
+  await rm(join(outputDir, ASSETS_FAVICON_PNG), { force: true });
+  return { kind: 'inline', svg, favicon: ASSETS_FAVICON_SVG };
+}
+
 async function rasterLogo(src: string, outputDir: string, size: number, accent: string | undefined): Promise<boolean> {
   const webp = join(outputDir, ASSETS_LOGO_WEBP);
   await mkdir(dirname(webp), { recursive: true });
-  const args = [
-    '-background',
-    'none',
-    '-density',
-    '300',
-    '-units',
-    'PixelsPerInch',
-    src,
-    '-resize',
-    `${size}x>`,
-    '-strip',
-    '-define',
-    'webp:lossless=true',
-  ];
+  await rm(join(outputDir, ASSETS_LOGO_SVG), { force: true });
+  await rm(join(outputDir, ASSETS_FAVICON_SVG), { force: true });
 
-  if (accent !== undefined && (await colorCount(src)) <= 2) {
-    args.push('-channel', 'RGB', '-fill', accent, '-colorize', '100', '+channel');
+  const isSvg = src.toLowerCase().endsWith('.svg');
+  const svg = isSvg ? await readFile(src, 'utf8') : '';
+  const soloCurrentColor = isSvg && svg.includes('currentColor') && !/#[0-9a-f]{3,8}\b/i.test(svg) && !/rgb\(/i.test(svg);
+
+  let input = src;
+  let tempDir: string | undefined;
+  if (isSvg && accent !== undefined && svg.includes('currentColor') && !soloCurrentColor) {
+    tempDir = await mkdtemp(join(tmpdir(), 'iteraciones-logo-'));
+    input = join(tempDir, 'logo.svg');
+    await writeFile(input, svg.replaceAll('currentColor', accent));
   }
-  args.push(webp);
-  if (!(await runMagick(args))) return false;
-  await runMagick([
-    '-background',
-    'none',
-    '-density',
-    '300',
-    '-units',
-    'PixelsPerInch',
-    src,
-    '-resize',
-    '32x32>',
-    '-strip',
-    join(outputDir, ASSETS_FAVICON_PNG),
-  ]);
-  return true;
+
+  const colorize =
+    accent !== undefined && (soloCurrentColor || (input === src && (await colorCount(src)) <= 2))
+      ? ['-channel', 'RGB', '-fill', accent, '-colorize', '100', '+channel']
+      : [];
+
+  try {
+    const args = [
+      '-background',
+      'none',
+      '-density',
+      '300',
+      '-units',
+      'PixelsPerInch',
+      input,
+      '-resize',
+      `${size}x>`,
+      '-strip',
+      '-define',
+      'webp:lossless=true',
+      ...colorize,
+    ];
+    args.push(webp);
+    if (!(await runMagick(args))) return false;
+    await runMagick([
+      '-background',
+      'none',
+      '-density',
+      '300',
+      '-units',
+      'PixelsPerInch',
+      input,
+      '-resize',
+      '32x32>',
+      '-strip',
+      ...colorize,
+      join(outputDir, ASSETS_FAVICON_PNG),
+    ]);
+    return true;
+  } finally {
+    if (tempDir !== undefined) await rm(tempDir, { recursive: true, force: true });
+  }
 }
 
 export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig: SiteConfig): Promise<LogoAsset | undefined> {
@@ -232,11 +267,7 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
   const accent = await accent500(html?.site?.color);
 
   if (!logo) {
-    if (await rasterLogo(DEFAULT_LOGO, outputDir, size, accent)) {
-      return { kind: 'file', path: ASSETS_LOGO_WEBP, favicon: ASSETS_FAVICON_PNG };
-    }
-    logWarning('no se pudo convertir el logo de fábrica a WebP', 'assets');
-    return undefined;
+    return writeSvgLogo(DEFAULT_LOGO, outputDir, accent);
   }
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
     throw new BuildError(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`);
@@ -246,6 +277,7 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
     logWarning(`logo no encontrado: "${logo}"`, 'assets');
     return undefined;
   }
+  if (src.toLowerCase().endsWith('.svg')) return writeSvgLogo(src, outputDir, accent);
   if (await rasterLogo(src, outputDir, size, accent)) {
     return { kind: 'file', path: ASSETS_LOGO_WEBP, favicon: ASSETS_FAVICON_PNG };
   }

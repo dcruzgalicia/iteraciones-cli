@@ -40,8 +40,8 @@ function logoSizeCss(value: string | undefined): string {
   return /^\d+(\.\d+)?(px|rem|em|vw|vh|%)$/.test(limpio) ? limpio : DEFAULT_HTML_FORMAT.site.logoSize;
 }
 
-export function logoBlockHtml(href: string, logoSize?: string): string {
-  const inner = `<img src="${href}" alt="" class="block h-auto w-full">`;
+export function logoBlockHtml(href: string, logoSize?: string, svg?: string): string {
+  const inner = svg ?? `<img src="${href}" alt="" class="block h-auto w-full">`;
   return `<span class="flex shrink-0 text-accent-500 logo-fill" style="width:${logoSizeCss(logoSize)}">${inner}</span>`;
 }
 
@@ -106,7 +106,10 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const header = headerHtml(identity, menuHeader, redes);
   const portadas = await loadCard('file', 'card-portadas.html');
   const esArchivo = type === 'file';
-  const main = [metadata, portadas, ...mainCards, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
+  const esCreador = type === 'creator';
+  const main = esCreador
+    ? `<div class="grid gap-4 sm:gap-6 main-grid lg:gap-8">${mainCards[0] ?? ''}${'$if(extras)$$extras$$endif$'}${mainCards[1] ?? ''}${portadas}${'$if(pagination)$$pagination$$endif$'}</div>`
+    : [portadas, ...mainCards, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
   const related = esArchivo ? relatedCards.join('\n') : '';
   const sidebar = [
     '$if(announcements-top)$$announcements-top$$endif$',
@@ -121,6 +124,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
 
   return skeleton
     .replace(slot('header'), () => header)
+    .replace(slot('page-header'), () => metadata)
     .replace(slot('main'), () => main)
     .replace(relatedSlot, () => relatedHtml)
     .replace(slot('sidebar'), () => sidebar)

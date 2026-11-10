@@ -252,6 +252,19 @@ When('compilo el sitio con su logo', async () => {
   await runBuild(world.root);
 });
 
+Then('el HTML del documento incrusta el logo svg', () => {
+  const html = readFileSync(join(salida(), 'doc.html'), 'utf8');
+  if (!/class="[^"]*logo-fill[^"]*"[^>]*>\s*<svg/.test(html)) {
+    throw new Error('el HTML no incrusta el logo SVG');
+  }
+});
+
+Then('el logo svg está teñido con el accent', () => {
+  const svg = readFileSync(join(salida(), 'assets', 'images', 'logo.svg'), 'utf8');
+  if (svg.includes('currentColor')) throw new Error('el logo SVG conserva currentColor y no se tiñó');
+  if (!/#[0-9a-f]{3,8}\b/i.test(svg)) throw new Error('el logo SVG no tiene un color de acento');
+});
+
 Then('el logo webp conserva transparencia', () => {
   const ruta = join(salida(), 'assets/images/logo.webp');
   const proc = Bun.spawnSync(['magick', 'identify', '-format', '%A', ruta], { stdout: 'pipe' });
