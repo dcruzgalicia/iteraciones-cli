@@ -431,13 +431,13 @@ Ejemplos:
 
   program
     .command('validate')
-    .description('valida iteraciones.config.yaml y el frontmatter de todos los documentos Markdown')
+    .description('valida el frontmatter de los documentos y, si existe, iteraciones.config.yaml')
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones validate         valida la configuración y el frontmatter del proyecto
+  iteraciones validate         valida el frontmatter y la configuración (opcional) del proyecto
   iteraciones validate --json  imprime el resultado como JSON en stdout
 `,
     )

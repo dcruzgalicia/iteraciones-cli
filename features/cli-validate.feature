@@ -13,6 +13,12 @@ Característica: validate revisa el proyecto y dice qué corregir
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin errores"
 
+    Escenario: Sin configuración y sin documentos
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "validate"
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin errores"
+
   Regla de negocio: Un proyecto bien formado pasa
 
     Escenario: Una configuración válida con documentos con frontmatter
