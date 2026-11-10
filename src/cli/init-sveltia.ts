@@ -460,9 +460,9 @@ function brewfile(format: Awaited<ReturnType<typeof loadSiteConfig>>['format']):
   const markdown = format?.markdown?.generate === true;
   if (!html && !pdf && !latex && !epub && !markdown) return undefined;
 
-  const formulas = ['pandoc'];
+  const formulas = ['pandoc', 'imagemagick'];
   if (html) formulas.push('minify');
-  if (pdf || latex) formulas.push('texlive', 'biber', 'poppler', 'imagemagick');
+  if (pdf || latex) formulas.push('texlive', 'biber', 'poppler');
   return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
 }
 

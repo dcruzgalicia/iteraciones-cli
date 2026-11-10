@@ -94,7 +94,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "netlify.toml" dice ".iteraciones"
       Y el archivo "Brewfile.netlify" dice "brew \"pandoc\""
       Y el archivo "Brewfile.netlify" dice "brew \"minify\""
-      Y el archivo "Brewfile.netlify" no dice "imagemagick"
+      Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
       Y el archivo "Brewfile.netlify" no dice "poppler"
       Y el archivo "Brewfile.netlify" no dice "texlive"
       Y la configuración de Sveltia usa el repositorio "OWNER/segunda-iteracion"
