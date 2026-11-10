@@ -441,10 +441,10 @@ export async function emitHtmlPage(
   contentChipOverride?: string,
 ): Promise<void> {
   const { ctx, plan } = renderCtx;
-  const { dir, outBase, outSlug, content } = outputs;
+  const { outBase, outSlug, content } = outputs;
   const cwd = ctx.cwd;
 
-  const formats = formatLinksFor(plan, dir, outSlug, doc.frontmatter.type);
+  const formats = formatLinksFor(plan, outSlug, doc.frontmatter.type);
   const hasHomePage = discoveryIndex.has('index.md') || discoveryIndex.size > 0;
   const available = availableDefaultListSlugs(discoveryIndex);
 
@@ -2857,8 +2857,9 @@ function placementDe(entry: CollectionEntry, discoveryIndex: Map<string, Discove
 }
 
 function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
-  if (entry?.date !== undefined) {
-    const fecha = Date.parse(entry.date);
+  const explicita = entry?.date ?? entry?.listDate;
+  if (explicita !== undefined) {
+    const fecha = Date.parse(explicita);
     if (!Number.isNaN(fecha)) return fecha;
   }
   return entry?.mtime ?? 0;

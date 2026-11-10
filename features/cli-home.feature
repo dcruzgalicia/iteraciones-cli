@@ -32,6 +32,33 @@ Característica: El home y la bibliografía se resuelven antes de publicar
       Y el archivo "dist/files/test-document.html" contiene 'href="./index.html"'
       Y el archivo "dist/files/index.html" existe
 
+    Escenario: La creadora del index comparte la fecha de su última publicación
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Dado que el archivo "autora.md" tiene este contenido
+      """
+      ---
+      type: creator
+      name: Ana
+      slug: autora
+      ---
+
+      Bio.
+      """
+      Dado que el archivo "texto.md" tiene este contenido
+      """
+      ---
+      title: Texto
+      slug: texto
+      creator: Ana
+      date: 2030-01-01
+      ---
+
+      Contenido.
+      """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/index.html" pone 'href="./autora.html"' antes de 'href="./texto.html"'
+
     Escenario: Con index.md la tarjeta identidad enlaza al home
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Dado que el archivo "index.md" tiene este contenido

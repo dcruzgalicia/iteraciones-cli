@@ -6,6 +6,7 @@ export interface DiscoveryEntry {
   creator: string[];
   aggregatedCreator?: string[];
   date?: string;
+  listDate?: string;
   slug?: string;
   manualSlug?: string;
   type?: 'file' | 'collection' | 'creator' | 'intervention' | 'list' | 'menu' | 'announcement';

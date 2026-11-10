@@ -76,7 +76,6 @@ type FormatLinkKey = keyof typeof FORMAT_LINK_META;
 
 export function formatLinksFor(
   plan: BuildMetadata,
-  dir: string,
   outSlug: string,
   type?: string,
 ): { href: string; key: FormatLinkKey; name: string; description: string }[] {
@@ -84,7 +83,7 @@ export function formatLinksFor(
     .filter((key) => plan.activeFormats[key])
     .filter((key) => docProducesFormat(type, key))
     .map((key) => ({
-      href: relativeHref(dir, `${outSlug}${primaryOutputExtension(key)}`),
+      href: `./${outSlug}${primaryOutputExtension(key)}`,
       key,
       ...FORMAT_LINK_META[key],
     }));

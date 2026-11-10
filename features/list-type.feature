@@ -72,6 +72,15 @@ Característica: El type list, una colección que se arma sola
         | title-desc | b.md, a.md |
         | creator-asc | b.md, a.md |
 
+    Escenario: La creadora se ordena con la fecha de su publicación más reciente
+      Dado que la raíz del proyecto está vacía
+      Y que el proyecto tiene:
+      """
+      {"lista.md": "---\ntitle: Todos\ntype: list\norder: date-asc\n---\n", "creadora.md": "---\ntype: creator\nname: Ana\n---\n\nBio.\n", "pub.md": "---\ntitle: Publicación\ncreator: Ana\ndate: 2026-06-01\n---\n\nCuerpo.\n", "otra.md": "---\ntitle: Otra\ndate: 2026-03-01\n---\n\nCuerpo.\n"}
+      """
+      Cuando descubro y post-proceso el proyecto
+      Entonces los miembros de "lista.md" son "otra.md, creadora.md, pub.md"
+
   Regla de negocio: El filtro se valida
 
     Escenario: Un criterio que no existe es error

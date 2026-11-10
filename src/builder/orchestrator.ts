@@ -332,21 +332,44 @@ function anotaCreadoras(
   }
 }
 
+function fechaMaxima(discoveryIndex: Map<string, DiscoveryEntry>, rutas: string[]): { texto: string; valor: number } | undefined {
+  let maxima: { texto: string; valor: number } | undefined;
+  for (const ruta of rutas) {
+    const fecha = discoveryIndex.get(ruta)?.date;
+    if (fecha === undefined) continue;
+    const valor = Date.parse(fecha);
+    if (Number.isNaN(valor)) continue;
+    if (maxima === undefined || valor > maxima.valor) maxima = { texto: fecha, valor };
+  }
+  return maxima;
+}
+
+function asignaListDate(discoveryIndex: Map<string, DiscoveryEntry>, creatorOwners: Map<string, string[]>): void {
+  for (const [creatorPath, entry] of discoveryIndex) {
+    if (entry.type !== 'creator') continue;
+    const maxima = fechaMaxima(discoveryIndex, creatorOwners.get(creatorPath) ?? []);
+    if (maxima === undefined) delete entry.listDate;
+    else entry.listDate = maxima.texto;
+  }
+}
+
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Map<string, string[]>> {
   const creatorOwners = new Map<string, string[]>();
   const owners = new Map<string, string[]>();
 
   for (const [relativePath, entry] of discoveryIndex) {
-    if (entry.type === 'list') {
-      resolveListMembers(relativePath, entry, discoveryIndex, owners);
-      continue;
-    }
     if (entry.type !== 'collection' || !entry.files) continue;
     await resolveCollectionMembers(relativePath, entry, discoveryIndex, cwd, creatorOwners, owners);
   }
 
   for (const [relativePath, entry] of discoveryIndex) {
     anotaCreadoras(relativePath, entry, discoveryIndex, creatorOwners);
+  }
+
+  asignaListDate(discoveryIndex, creatorOwners);
+
+  for (const [relativePath, entry] of discoveryIndex) {
+    if (entry.type === 'list') resolveListMembers(relativePath, entry, discoveryIndex, owners);
   }
 
   for (const [ruta, entry] of discoveryIndex) {

@@ -87,8 +87,9 @@ function cumple(ruta: string, entry: DiscoveryEntry, filtro: ListFilter): boolea
 }
 
 function fechaOrdenable(entry: DiscoveryEntry): number {
-  if (entry.date !== undefined) {
-    const fecha = Date.parse(entry.date);
+  const explicita = entry.date ?? entry.listDate;
+  if (explicita !== undefined) {
+    const fecha = Date.parse(explicita);
     if (!Number.isNaN(fecha)) return fecha;
   }
   return entry.mtime ?? 0;
