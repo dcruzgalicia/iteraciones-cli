@@ -46,7 +46,7 @@
     > :nth-child(2) .tarjeta-fragmento,
     > :nth-child(2) figure {
       height: 100%;
-      min-height: 30rem;
+      min-height: 34rem;
     }
 
     > :nth-child(2) img {
