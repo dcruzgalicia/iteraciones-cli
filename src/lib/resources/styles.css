@@ -30,6 +30,12 @@
   }
 }
 
+@utility main-grid {
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  }
+}
+
 @utility tarjeta {
   background-color: color-mix(in oklab, var(--color-accent-500) 2%, color-mix(in srgb, #fff 95%, transparent));
   border-color: color-mix(in srgb, var(--color-stone-300) 90%, transparent);
@@ -72,18 +78,6 @@
     right: 0.5rem;
     border-bottom-width: 1px;
     border-right-width: 1px;
-  }
-}
-
-@utility tarjeta-encabezado {
-  &.tarjeta {
-    background-color: color-mix(in oklab, var(--color-accent-500) 1%, color-mix(in srgb, #fff 72%, transparent));
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-
-    &:where([data-theme="dark"], [data-theme="dark"] *) {
-      background-color: color-mix(in oklab, var(--color-accent-500) 2%, color-mix(in srgb, var(--color-stone-900) 62%, transparent));
-    }
   }
 }
 

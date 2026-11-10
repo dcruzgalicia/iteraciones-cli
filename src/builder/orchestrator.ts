@@ -24,7 +24,13 @@ import { selectListMembers } from './list-filter.js';
 import { DIST_FILES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
-import { collectionCreatorDocPaths, creatorDocPathsFor, resolveCollectionCreatorDocs } from './pipeline-formats.js';
+import {
+  collectionCreatorDocPaths,
+  creatorDocPathsFor,
+  iconosDeLicencias,
+  licenciaEfectiva,
+  resolveCollectionCreatorDocs,
+} from './pipeline-formats.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths, validateConfigRules } from './project-validator.js';
 import type { BuildState } from './state-serialize.js';
@@ -695,6 +701,18 @@ async function pipelinePhases(
   return { processedCount, cachedCount, invalidations, pdfOutputs };
 }
 
+function licenciasUsadas(discoveryIndex: Map<string, DiscoveryEntry>, siteConfig: SiteConfig): Set<string> {
+  const licencias = new Set<string>();
+  const porDefecto = licenciaEfectiva({}, siteConfig);
+  if (porDefecto !== undefined) licencias.add(porDefecto);
+  for (const entry of discoveryIndex.values()) {
+    if (!docProducesFormat(entry.type, 'html')) continue;
+    const id = licenciaEfectiva(entry.fm ?? {}, siteConfig);
+    if (id !== undefined) licencias.add(id);
+  }
+  return licencias;
+}
+
 async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter, pandocVersion: string): Promise<BuildSummary> {
   const log = (msg: string) => progress.log(msg);
 
@@ -726,10 +744,19 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
       [...discoveryIndex.values()].some((entry) => resolveBooleanField(entry.fm ?? {}, siteConfig.format?.pdf, siteConfig, 'coverImage') === true));
   await assertBuildTools(cwd, siteConfig, { necesitaPoppler });
 
+  const licenseIcons = iconosDeLicencias(licenciasUsadas(discoveryIndex, siteConfig));
+
   const needsAssets = ctx.needsCss;
 
   const runAssets = async (): Promise<void> => {
-    const { cssHash, cssFileCache } = await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, prevState?.cssHash, prevState?.cssFileCache);
+    const { cssHash, cssFileCache } = await buildAssets(
+      ctx.outputDir,
+      ctx.cwd,
+      ctx.siteConfig,
+      prevState?.cssHash,
+      prevState?.cssFileCache,
+      licenseIcons,
+    );
     if (pendingState) {
       pendingState.cssHash = cssHash;
       if (cssFileCache !== undefined) pendingState.cssFileCache = cssFileCache;

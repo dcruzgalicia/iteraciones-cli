@@ -18,11 +18,14 @@
       <div id="slot-header"></div>
     </header>
 
-    <div id="slot-page-header"></div>
-
     <div class="grid items-start gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
-      <main id="contenido" class="min-w-0 space-y-4 sm:space-y-6 lg:col-span-2 lg:space-y-8">
-        <div id="slot-main"></div>
+      <main id="contenido" class="min-w-0 lg:col-span-2">
+        <div class="grid items-start gap-4 sm:gap-6 main-grid lg:gap-8">
+          <div class="min-w-0 space-y-4 sm:space-y-6 lg:space-y-8">
+            <div id="slot-main"></div>
+          </div>
+          <div id="slot-related" class="min-w-0 space-y-4 sm:space-y-6 empty:hidden lg:space-y-8"></div>
+        </div>
       </main>
       <aside aria-label="Información" class="min-w-0 space-y-4 sm:space-y-6 lg:col-span-1 lg:space-y-8">
         <div id="slot-sidebar"></div>

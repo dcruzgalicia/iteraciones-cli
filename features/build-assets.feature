@@ -63,6 +63,7 @@ Característica: los assets de la salida
       Y un proyecto con un logo de un color y un documento
       Cuando compilo el sitio con su logo
       Entonces el logo webp está teñido con el accent
+      Y el logo webp conserva transparencia
 
   Regla de negocio: El logo no se reescribe si no cambió
 
