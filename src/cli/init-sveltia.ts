@@ -40,6 +40,16 @@ const IDIOMAS: Record<string, string> = {
   en: 'English',
 };
 
+const TEXTO_EJEMPLO = [
+  '---',
+  'title: "Texto de ejemplo"',
+  'type: file',
+  '---',
+  '',
+  'Este es un texto de ejemplo. Reemplázalo o bórralo desde el admin.',
+  '',
+].join('\n');
+
 function campo(name: string, label: string, widget: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return { name, label, widget, ...extra };
 }
@@ -461,7 +471,6 @@ function brewfile(format: Awaited<ReturnType<typeof loadSiteConfig>>['format']):
   if (!html && !pdf && !latex && !epub && !markdown) return undefined;
 
   const formulas = ['pandoc', 'imagemagick'];
-  if (html) formulas.push('minify');
   if (pdf || latex) formulas.push('texlive', 'biber', 'poppler');
   return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
 }
@@ -499,6 +508,7 @@ export async function initSveltia(cwd: string): Promise<void> {
   report(configCreado, 'admin/config.yml');
   report(vendorCreado, 'admin/vendor/sveltia-cms.js');
   report(await writeExclusive(join(cwd, 'palabras-clave', '.gitkeep'), ''), 'palabras-clave/.gitkeep');
+  report(await writeExclusive(join(cwd, 'textos', 'ejemplo.md'), TEXTO_EJEMPLO), 'textos/ejemplo.md');
   const netlifyPath = join(cwd, 'netlify.toml');
   const netlifyCreado = await writeExclusive(netlifyPath, netlifyToml());
   const conCache =

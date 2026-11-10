@@ -199,13 +199,13 @@ export async function checkLatexEngine(): Promise<CheckResult> {
 export async function checkMagick(): Promise<CheckResult> {
   const ok = await detectMagick();
   if (ok) {
-    return { label: 'ImageMagick disponible', ok: true, warn: true };
+    return { label: 'ImageMagick disponible', ok: true };
   }
   return {
     label: 'ImageMagick disponible',
     ok: false,
-    detail: 'magick no encontrado en PATH. Instala ImageMagick (por ejemplo: brew install imagemagick). Las imágenes no se preprocesarán a CMYK.',
-    warn: true,
+    detail:
+      'magick no encontrado en PATH. Instálalo con brew install imagemagick; es necesario para convertir los SVG del logo y la licencia a WebP.',
   };
 }
 

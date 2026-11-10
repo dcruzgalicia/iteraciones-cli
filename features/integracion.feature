@@ -8,7 +8,7 @@ Característica: init, build y validate funcionan de punta a punta
   Escenario: init deja un proyecto vacío y build no falla
     Dado un directorio vacío
     Cuando inicializo el proyecto
-    Entonces el proyecto tiene configuración
+    Entonces el proyecto no tiene configuración
     Cuando compilo el proyecto entero desde cero
     Entonces el comando termina con el código de salida 0
     Y la salida dice "No se encontraron documentos Markdown"

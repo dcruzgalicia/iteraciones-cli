@@ -87,12 +87,7 @@ function parseConfig(raw: string, configPath: string): LoadedSiteConfig {
 
 export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSiteConfig> {
   const read = await readConfigText(cwd);
-  if (read === null) {
-    throw new ConfigError(
-      "falta el archivo de configuración del proyecto; ejecuta 'iteraciones init' para crearlo (un archivo vacío usa los valores por defecto)",
-      join(cwd, CONFIG_FILE),
-    );
-  }
+  if (read === null) return { config: SiteConfigSchema.parse({}), presentKeys: new Set() };
   return parseConfig(read.raw, read.configPath);
 }
 

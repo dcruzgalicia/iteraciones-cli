@@ -141,14 +141,13 @@ Característica: build y validate dicen lo mismo
       Entonces el comando termina con el código de salida 1
       Y el error dice 'disabledFilters: "latex/99-no-existe" no coincide con ningún filter'
 
-  Regla de negocio: build sin configuración sugiere init
+  Regla de negocio: build sin configuración usa los defaults
 
     Escenario: Un proyecto con documentos pero sin configuración
       Dado que la raíz del proyecto tiene un documento pero no la configuración
       Cuando hago un build del proyecto
-      Entonces el comando termina con el código de salida 1
-      Y el error dice "falta el archivo de configuración"
-      Y el error dice "ejecuta 'iteraciones init'"
+      Entonces el comando termina con el código de salida 0
+      Y el sitio generado tiene el archivo "doc.html"
 
   Regla de negocio: Los avisos son los mismos en los dos comandos
 

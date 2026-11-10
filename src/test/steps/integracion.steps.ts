@@ -119,8 +119,10 @@ When('valido el proyecto', async () => {
   process.exitCode = 0;
 });
 
-Then('el proyecto tiene configuración', async () => {
-  if (!(await Bun.file(join(world.dir, 'iteraciones.config.yaml')).exists())) throw new Error('init no creó la configuración');
+Then('el proyecto no tiene configuración', async () => {
+  if (await Bun.file(join(world.dir, 'iteraciones.config.yaml')).exists()) {
+    throw new Error('init no debería crear la configuración');
+  }
 });
 
 Then('dist tiene al menos un HTML', async () => {

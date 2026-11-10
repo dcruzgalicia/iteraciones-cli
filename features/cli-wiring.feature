@@ -11,7 +11,7 @@ Característica: El argv llega entero hasta el comando
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "iteraciones.config.yaml" existe
+      Y el archivo "iteraciones.config.yaml" no existe
       Y el archivo ".gitignore" existe
       Y el archivo "index.md" no existe
       Y el archivo "bibliography.bib" no existe
@@ -24,19 +24,13 @@ Característica: El argv llega entero hasta el comando
       Y el archivo ".gitignore" contiene "build.sh"
       Y el archivo ".gitignore" contiene "diff/"
 
-    Escenario: El config que genera init es mínimo y válido
+    Escenario: init no genera configuración
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el archivo "iteraciones.config.yaml" contiene "language: es-MX"
-      Y el archivo "iteraciones.config.yaml" contiene "theme: dark"
-      Y el archivo "iteraciones.config.yaml" tiene como máximo 25 líneas
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "iteraciones.config.yaml" no existe
       Y el proyecto recién creado pasa validate
       Y la salida de error no lleva ningún error
-
-    Escenario: El config de init deja los defaults en el código
-      Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el config del proyecto no declara "blocks"
 
   Regla de negocio: init no pisa lo que ya está
 
@@ -66,7 +60,7 @@ Característica: El argv llega entero hasta el comando
       Cuando parseo el comando "init" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la salida dice "creado el directorio"
-      Y el archivo "iteraciones.config.yaml" existe
+      Y el archivo "iteraciones.config.yaml" no existe
       Y el archivo "index.md" no existe
       Y compilo el proyecto recién creado
       Y el comando termina con el código de salida 0

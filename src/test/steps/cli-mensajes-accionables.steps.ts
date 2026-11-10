@@ -116,10 +116,3 @@ Then('ambos detalles dicen que la ruta no existe', () => {
     }
   }
 });
-
-Then('existe el archivo de configuración del proyecto', async () => {
-  const config = join(world.root, 'iteraciones.config.yaml');
-  if (!(await Bun.file(config).exists())) {
-    throw new Error(`init no creó ${config}`);
-  }
-});

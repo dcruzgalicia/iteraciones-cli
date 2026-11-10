@@ -8,6 +8,7 @@ import { DIST_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadStateFile } from '../builder/state-serialize.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
+import { SiteConfigSchema } from '../config/config-schema.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig, userWroteDisabledPreamble } from '../config/site-config.js';
 import { todayIso } from '../lib/date.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
@@ -158,10 +159,8 @@ function classifyAndReportError(err: unknown): void {
 
 async function buildProjectInfo(cwd: string): Promise<string[]> {
   const loaded = await loadSiteConfigIfPresent(cwd);
-  if (!loaded) {
-    return ["sin iteraciones.config.yaml — ejecuta 'iteraciones init' para crear la estructura del proyecto"];
-  }
-  const { config, presentKeys } = loaded;
+  const config = loaded?.config ?? SiteConfigSchema.parse({});
+  const presentKeys = loaded?.presentKeys ?? new Set<string>();
   const pandocVersion = await getPandocVersion().catch(() => 'no disponible');
   const state = await loadStateFile(cwd);
   const distDir = state?.outputDir ?? join(cwd, DIST_FILES_DIR);

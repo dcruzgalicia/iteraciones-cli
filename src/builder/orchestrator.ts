@@ -53,7 +53,7 @@ const silentReporter: BuildReporter = {
 export const EMPTY_PROJECT_WARNING_CODE = '[empty-project]';
 
 const EMPTY_PROJECT_WARNING_NO_DOCS = 'No se encontraron documentos Markdown en el proyecto.';
-const EMPTY_PROJECT_WARNING_INIT = "Crea un archivo .md con frontmatter o ejecuta 'iteraciones init.'";
+const EMPTY_PROJECT_WARNING_INIT = "Crea un archivo .md con frontmatter o ejecuta 'iteraciones init sveltia'.";
 
 export interface BuildOptions {
   outputDir?: string;

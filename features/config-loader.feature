@@ -61,26 +61,24 @@ Característica: la configuración del proyecto
       Y la configuración deja "format.pdf.disabledPreambleFilters" sin materializar
       Y la configuración tiene "toc" con el valor "false"
 
-  Regla de negocio: Un config que no existe se dice, no se rellena
+  Regla de negocio: Un config que no existe usa los valores por defecto
 
-    Escenario: Sin archivo de configuración el build se para
+    Escenario: Sin archivo de configuración se usan los defaults
       Dado que el proyecto no tiene archivo de configuración
       Cuando cargo la configuración del proyecto
-      Entonces la carga falla diciendo que:
-      """
-      ejecuta 'iteraciones init'
-      """
-      Y la carga falla con "un archivo vacío usa los valores por defecto"
+      Entonces la carga no falla
+      Y la configuración tiene "language" con el valor "es-MX"
 
     Escenario: Sin archivo, la carga opcional devuelve nada
       Dado que el proyecto no tiene archivo de configuración
       Cuando cargo la configuración si existe
       Entonces no hay archivo de configuración
 
-    Escenario: Sin archivo, la carga con presencia también falla
+    Escenario: Sin archivo, el conjunto de presencia queda vacío
       Dado que el proyecto no tiene archivo de configuración
       Cuando cargo la configuración con el conjunto de presencia
-      Entonces la carga falla con "iteraciones"
+      Entonces la carga no falla
+      Y el conjunto de presencia está vacío
 
   Regla de negocio: Un archivo vacío o inerte usa los valores por defecto
 

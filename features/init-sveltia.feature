@@ -7,11 +7,11 @@ Característica: init sveltia deja un proyecto listo para el admin
 
   Regla de negocio: init sveltia crea el admin y el layout sin sobrescribir
 
-    Escenario: Crea el admin y las carpetas sin contenido de ejemplo
+    Escenario: Crea el admin, las carpetas y un texto inicial
       Dado que la raíz del proyecto está vacía
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
-      Y el archivo "iteraciones.config.yaml" existe
+      Y el archivo "iteraciones.config.yaml" no existe
       Y el archivo ".gitignore" existe
       Y el archivo "admin/index.html" existe
       Y el archivo "admin/config.yml" existe
@@ -22,7 +22,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "index.md" no existe
       Y el archivo "menu.md" no existe
       Y el archivo "bibliography.bib" no existe
-      Y el archivo "textos/ejemplo.md" no existe
+      Y el archivo "textos/ejemplo.md" existe
       Y el archivo "creadoras/ejemplo.md" no existe
       Y el archivo "colecciones/ejemplo.md" no existe
       Y el archivo "listas/ejemplo.md" no existe
@@ -93,8 +93,8 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "netlify.toml" dice "netlify-plugin-cache"
       Y el archivo "netlify.toml" dice ".iteraciones"
       Y el archivo "Brewfile.netlify" dice "brew \"pandoc\""
-      Y el archivo "Brewfile.netlify" dice "brew \"minify\""
       Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
+      Y el archivo "Brewfile.netlify" no dice "minify"
       Y el archivo "Brewfile.netlify" no dice "poppler"
       Y el archivo "Brewfile.netlify" no dice "texlive"
       Y la configuración de Sveltia usa el repositorio "OWNER/segunda-iteracion"
@@ -230,3 +230,5 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el sitio generado tiene el archivo "admin/index.html"
       Y el sitio generado tiene el archivo "admin/config.yml"
       Y el sitio generado tiene el archivo "admin/vendor/sveltia-cms.js"
+      Y el sitio generado tiene el archivo "index.html"
+      Y el sitio generado tiene el archivo "textos/texto-de-ejemplo.html"

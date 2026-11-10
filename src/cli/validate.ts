@@ -257,7 +257,7 @@ export async function validateProject(cwd: string, options: { json?: boolean } =
     if (luaFiltersCount > 0) detail.push(`${plural(luaFiltersCount, 'lua-filter', 'lua-filters')}`);
     logInfo(`sin errores — ${detail.join(', ')}.`, 'validate');
     if (docCount === 0) {
-      logInfo("si estás empezando, ejecuta 'iteraciones init' para crear el documento inicial", 'validate');
+      logInfo("si estás empezando, ejecuta 'iteraciones init sveltia' para crear el admin y un texto inicial", 'validate');
     }
     return;
   }
