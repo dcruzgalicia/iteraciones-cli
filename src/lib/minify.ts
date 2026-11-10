@@ -6,9 +6,12 @@ let available: boolean | null = null;
 
 async function minifyAvailable(): Promise<boolean> {
   if (available !== null) return available;
-  available = await Bun.spawn([BIN, '-l'], { stdout: 'ignore', stderr: 'ignore' })
-    .exited.then((code) => code === 0)
-    .catch(() => false);
+  try {
+    const proc = Bun.spawn([BIN, '-l'], { stdout: 'ignore', stderr: 'ignore' });
+    available = (await proc.exited) === 0;
+  } catch {
+    available = false;
+  }
   return available;
 }
 
