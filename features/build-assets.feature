@@ -14,8 +14,7 @@ Característica: los assets de la salida
       Entonces en los assets hay:
         """
         assets/css/styles.css
-        assets/images/favicon.svg
-        assets/images/logo.svg
+        assets/images/favicon.png
         """
       Y en los assets NO hay:
         """
@@ -71,11 +70,11 @@ Característica: los assets de la salida
         Hola.
         """
       Cuando hago un build del proyecto
-      Entonces el build deja el archivo "assets/images/logo.svg"
-      Y el build deja el archivo "assets/images/favicon.svg"
-      Y el HTML del documento incrusta el logo svg
-      Y el HTML del documento referencia "assets/images/favicon.svg"
-      Y el logo svg está teñido con el accent
+      Entonces el build deja el archivo "assets/images/logo.webp"
+      Y el build deja el archivo "assets/images/favicon.png"
+      Y el HTML del documento referencia "src=\"./assets/images/logo.webp\""
+      Y el logo webp está teñido con el accent
+      Y el logo webp conserva transparencia
 
     @requires-magick
     Escenario: Un logo de un solo color se tiñe con el accent
@@ -87,32 +86,32 @@ Característica: los assets de la salida
 
   Regla de negocio: El logo no se reescribe si no cambió
 
-    Escenario: Una segunda llamada mantiene el logo en SVG
+    Escenario: Una segunda llamada mantiene el logo en WebP
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Cuando construyo los assets
       Y construyo los assets otra vez
       Entonces en los assets hay:
         """
-        assets/images/logo.svg
-        assets/images/favicon.svg
+        assets/images/logo.webp
+        assets/images/favicon.png
         """
 
-    Escenario: Un logo propio SVG se usa como SVG
+    Escenario: Un logo propio SVG se convierte a WebP
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Y un proyecto con un logo propio
       Cuando construyo los assets con el logo del proyecto
       Entonces en los assets hay:
         """
-        assets/images/logo.svg
-        assets/images/favicon.svg
+        assets/images/logo.webp
+        assets/images/favicon.png
         """
       Y en los assets NO hay:
         """
         assets/mi-logo.svg
-        assets/images/logo.webp
-        assets/images/favicon.png
+        assets/images/logo.svg
+        assets/images/favicon.svg
         """
 
   Regla de negocio: Una salida vieja se reconoce

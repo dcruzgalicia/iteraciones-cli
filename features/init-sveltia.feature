@@ -109,6 +109,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "netlify.toml" dice ".iteraciones"
       Y el archivo "Brewfile.netlify" dice "brew \"pandoc\""
       Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
+      Y el archivo "Brewfile.netlify" dice "brew \"librsvg\""
       Y el archivo "Brewfile.netlify" no dice "minify"
       Y el archivo "Brewfile.netlify" no dice "poppler"
       Y el archivo "Brewfile.netlify" no dice "texlive"
@@ -135,6 +136,7 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "Brewfile.netlify" dice "brew \"biber\""
       Y el archivo "Brewfile.netlify" dice "brew \"poppler\""
       Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
+      Y el archivo "Brewfile.netlify" dice "brew \"librsvg\""
       Y el archivo "Brewfile.netlify" no dice "minify"
 
     Escenario: Normaliza el nombre con acentos
