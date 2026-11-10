@@ -394,6 +394,11 @@ Then('la salida de error no lleva ningún aviso', () => {
   }
 });
 
+Then('la salida menciona {string} una sola vez', (texto: string) => {
+  const veces = world.stdout.split(texto).length - 1;
+  if (veces !== 1) throw new Error(`la salida menciona ${JSON.stringify(texto)} ${veces} veces y debía ser una`);
+});
+
 Then('la salida dice {string}', (esperado: string) => {
   if (!world.stdout.includes(esperado)) {
     throw new Error(`la salida no dice ${JSON.stringify(esperado)}. stdout: ${JSON.stringify(world.stdout)}`);

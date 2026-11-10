@@ -21,5 +21,6 @@ Característica: el build no requiere minify
       Cuando hago un build sin minify
       Entonces el comando termina con el código de salida 0
       Y la salida dice "minify no está en PATH"
+      Y la salida menciona "minify no está en PATH" una sola vez
       Y el sitio generado tiene el archivo "index.html"
       Y el sitio generado tiene el archivo "texto.html"

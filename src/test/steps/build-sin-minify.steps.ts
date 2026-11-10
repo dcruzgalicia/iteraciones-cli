@@ -4,12 +4,14 @@ import { join } from 'node:path';
 import { When } from '@cucumber/cucumber';
 import { world } from './cli-world.steps.js';
 
-When('hago un build sin minify', async () => {
-  const bin = mkdtempSync(join(tmpdir(), 'iteraciones-sin-minify-'));
-  for (const tool of ['pandoc', 'magick']) {
-    const ruta = Bun.which(tool);
-    if (ruta === null) throw new Error(`el escenario necesita ${tool} en PATH`);
-    symlinkSync(ruta, join(bin, tool));
+const HERRAMIENTAS = ['pandoc', 'magick', 'latexmk', 'pdflatex', 'biber', 'pdftoppm', 'minify'];
+
+async function buildConHerramientas(faltantes: string[]): Promise<void> {
+  const bin = mkdtempSync(join(tmpdir(), 'iteraciones-herramientas-'));
+  for (const herramienta of HERRAMIENTAS) {
+    if (faltantes.includes(herramienta)) continue;
+    const ruta = Bun.which(herramienta);
+    if (ruta !== null) symlinkSync(ruta, join(bin, herramienta));
   }
 
   const proc = Bun.spawn([process.execPath, join(import.meta.dir, '../../bin.ts'), 'build'], {
@@ -23,4 +25,12 @@ When('hago un build sin minify', async () => {
   world.stdout = stdout;
   world.stderr = stderr;
   world.exitCode = codigo;
+}
+
+When('hago un build sin minify', async () => {
+  await buildConHerramientas(['minify']);
+});
+
+When('hago un build sin {string}', async (faltante: string) => {
+  await buildConHerramientas([faltante]);
 });
