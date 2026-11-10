@@ -127,4 +127,4 @@ Característica: El CLI habla en español y dice qué hacer
       Dado que la raíz del proyecto no existe
       Cuando corro "init"
       Entonces el comando termina con el código de salida 0
-      Y existe el archivo de configuración del proyecto
+      Y el archivo ".gitignore" existe

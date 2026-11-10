@@ -25,8 +25,21 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando corro "doctor"
       Entonces la salida no dice "iteraciones-pdfcheck"
-      Y la salida no dice "ImageMagick"
       Y la salida no dice "biber"
+
+    @requires-magick
+    Escenario: Un proyecto de HTML sí verifica ImageMagick
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Cuando corro "doctor"
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "ImageMagick disponible"
+
+    @requires-magick
+    Escenario: Sin configuración doctor sigue en orden
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "doctor"
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "✔ iteraciones.config.yaml (opcional)"
 
     Escenario: El check de biber depende de que haya bibliografía
       Dado que la raíz del proyecto tiene un proyecto con PDF

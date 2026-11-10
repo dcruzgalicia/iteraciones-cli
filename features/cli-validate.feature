@@ -5,14 +5,13 @@ Característica: validate revisa el proyecto y dice qué corregir
   Quiero que validate me diga qué está mal, en español, con el archivo y la línea
   Para arreglarlo antes de compilar
 
-  Regla de negocio: Sin configuración, validate sugiere init
+  Regla de negocio: Sin configuración, validate usa los defaults
 
     Escenario: Un proyecto con documentos pero sin configuración
       Dado que la raíz del proyecto tiene un documento pero no la configuración
       Cuando corro "validate"
-      Entonces el comando termina con el código de salida 1
-      Y el error dice "falta el archivo de configuración"
-      Y el error dice "ejecuta 'iteraciones init'"
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin errores"
 
   Regla de negocio: Un proyecto bien formado pasa
 
@@ -32,7 +31,7 @@ Característica: validate revisa el proyecto y dice qué corregir
       """
       Cuando corro "validate"
       Entonces el comando termina con el código de salida 0
-      Y la salida dice "ejecuta 'iteraciones init'"
+      Y la salida dice "iteraciones init sveltia"
 
   Regla de negocio: Un documento sin contenido es un error
 

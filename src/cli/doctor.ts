@@ -20,9 +20,9 @@ import {
 } from './doctor/system-checks.js';
 
 function resolveConfigResult(loadedOrError: { loaded?: Awaited<ReturnType<typeof loadSiteConfigIfPresent>>; error?: string }) {
-  if ('error' in loadedOrError) return { siteConfig: null, ok: false, detail: loadedOrError.error } as const;
-  if (loadedOrError.loaded) return { siteConfig: loadedOrError.loaded.config, ok: true, detail: undefined } as const;
-  return { siteConfig: null, ok: false, detail: "no se encontró iteraciones.config.yaml; ejecuta 'iteraciones init' para crearlo" } as const;
+  if ('error' in loadedOrError) return { siteConfig: null, ok: false, detail: loadedOrError.error, missing: false } as const;
+  if (loadedOrError.loaded) return { siteConfig: loadedOrError.loaded.config, ok: true, detail: undefined, missing: false } as const;
+  return { siteConfig: null, ok: true, detail: undefined, missing: true } as const;
 }
 
 function resolveEffectiveDisabled(
@@ -38,7 +38,7 @@ export function checksOk(checks: CheckResult[]): boolean {
 }
 
 export async function collectChecks(cwd: string): Promise<CheckResult[]> {
-  const [loadedOrError, pandoc, read, write, minify] = await Promise.all([
+  const [loadedOrError, pandoc, read, write, minify, magick] = await Promise.all([
     loadSiteConfigIfPresent(cwd).then(
       (loaded) => ({ loaded }),
       (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) }),
@@ -47,14 +47,15 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
     checkMinify(),
+    checkMagick(),
   ]);
   const configResult = resolveConfigResult(loadedOrError);
   const needsLatex = configResult.siteConfig?.format?.pdf?.generate === true;
   const effectiveDisabled = resolveEffectiveDisabled(loadedOrError, configResult.siteConfig);
   const needsPdfx = needsLatex && !effectiveDisabled.includes('99-pdfx');
-  const [latex, pdfToPpm, pdfToText, magick] = needsLatex
-    ? await Promise.all([checkLatexEngine(), checkPdfToPpm(), checkPdfToText(), checkMagick()])
-    : [undefined, undefined, undefined, undefined];
+  const [latex, pdfToPpm, pdfToText] = needsLatex
+    ? await Promise.all([checkLatexEngine(), checkPdfToPpm(), checkPdfToText()])
+    : [undefined, undefined, undefined];
   const pdfCheck = needsPdfx ? await checkPdfCheck() : undefined;
   const bibDiscovered =
     configResult.siteConfig?.bibliography === undefined
@@ -71,13 +72,17 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     pandoc,
     minify,
     ...(pdfCheck ? [pdfCheck] : []),
-    { label: 'iteraciones.config.yaml', ok: configResult.ok, detail: configResult.detail },
+    {
+      label: configResult.missing ? 'iteraciones.config.yaml (opcional)' : 'iteraciones.config.yaml',
+      ok: configResult.ok,
+      detail: configResult.detail,
+    },
     read,
     write,
     ...(latex ? [latex] : []),
     ...(pdfToPpm ? [pdfToPpm] : []),
     ...(pdfToText ? [pdfToText] : []),
-    ...(magick ? [magick] : []),
+    magick,
     ...(biber ? [biber] : []),
     navegador,
   ];

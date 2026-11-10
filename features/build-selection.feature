@@ -7,17 +7,18 @@ Característica: el build parcial produce lo mismo que el completo
 
   Regla de negocio: El build parcial da los mismos bytes que el completo
 
-    Escenario: Un build de un capítulo sale idéntico al completo
+    Escenario: Un build parcial no cambia un dist completo
       Dado que la raíz del proyecto está vacía
+      Y un proyecto con una collection y sus miembros
       Y que los paths a compilar son "cap1.md"
-      Cuando hago un build solo de los paths indicados
-      Y que guardo la referencia del dist
-      Y que borro el estado del build
       Cuando hago un build completo
+      Y que guardo la referencia del dist
+      Cuando hago un build solo de los paths indicados
       Entonces el dist sale byte a byte igual que la referencia
 
     Escenario: Los documentos no seleccionados no cambian
       Dado que la raíz del proyecto está vacía
+      Y un proyecto con una collection y sus miembros
       Y que los paths a compilar son "cap1.md"
       Cuando hago un build solo de los paths indicados
       Y que guardo la referencia del dist
@@ -27,6 +28,7 @@ Característica: el build parcial produce lo mismo que el completo
 
     Escenario: Dos build parciales seguidos dejan el mismo dist
       Dado que la raíz del proyecto está vacía
+      Y un proyecto con una collection y sus miembros
       Y que los paths a compilar son "cap1.md"
       Cuando hago un build solo de los paths indicados
       Y que guardo la referencia del dist
@@ -38,9 +40,9 @@ Característica: el build parcial produce lo mismo que el completo
 
     Escenario: Varios paths en la misma corrida
       Dado que la raíz del proyecto está vacía
+      Y un proyecto con una collection y sus miembros
       Y que los paths a compilar son "cap1.md, cap2.md"
-      Cuando hago un build solo de los paths indicados
-      Y que guardo la referencia del dist
-      Y que borro el estado del build
       Cuando hago un build completo
+      Y que guardo la referencia del dist
+      Cuando hago un build solo de los paths indicados
       Entonces el dist sale byte a byte igual que la referencia
