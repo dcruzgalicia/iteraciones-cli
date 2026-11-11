@@ -22,6 +22,7 @@ import { listFilters, type RunFiltersOptions } from './filters.js';
 import { initProject } from './init.js';
 import { initSveltia } from './init-sveltia.js';
 import { ProgressTracker } from './progress.js';
+import { initTemplate, isTemplateName, TEMPLATE_NAMES } from './project-templates/index.js';
 import { validateProject } from './validate.js';
 
 async function assertProjectRoot(cwd: string): Promise<void> {
@@ -193,10 +194,19 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
 }
 
 export async function runInit(cwd: string, tipo?: string): Promise<void> {
-  if (tipo !== undefined && tipo !== 'sveltia') {
-    throw new ConfigError(`tipo de init desconocido: "${tipo}"; el único tipo es "sveltia"`, cwd);
-  }
-  await runCliCommand(cwd, 'init', () => (tipo === 'sveltia' ? initSveltia(cwd) : initProject(cwd)), { createRoot: true });
+  await runCliCommand(
+    cwd,
+    'init',
+    () => {
+      if (tipo === 'sveltia') return initSveltia(cwd);
+      if (tipo !== undefined && isTemplateName(tipo)) return initTemplate(cwd, tipo);
+      if (tipo !== undefined) {
+        throw new ConfigError(`tipo de init desconocido: "${tipo}"; los tipos son: sveltia, ${TEMPLATE_NAMES.join(', ')}`, cwd);
+      }
+      return initProject(cwd);
+    },
+    { createRoot: true },
+  );
 }
 
 export async function runValidate(cwd: string, options: { json?: boolean } = {}): Promise<void> {
