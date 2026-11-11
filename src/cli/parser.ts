@@ -6,7 +6,7 @@ import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
 import { configHelp } from './config-help.js';
 import { runCover } from './cover.js';
-import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
+import { isNewDocumentType, NEW_DOCUMENT_TYPES, runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 import { runMarkdown } from './markdown.js';
 import { runMarkdownClean } from './markdown-clean.js';
 import { runMerge } from './merge.js';
@@ -492,21 +492,30 @@ Ejemplos:
     });
 
   program
-    .command('new <path>')
-    .description(
-      'crea un archivo Markdown con frontmatter mínimo (el título se infiere del nombre del archivo, capitalizando cada palabra; usa --title para un título distinto)',
-    )
+    .command('new [tipoOrPath] [path]')
+    .description('crea un archivo Markdown con el frontmatter de su type; con una ruta suelta conserva el frontmatter mínimo')
     .option('-t, --title <title>', 'título del documento (por defecto: inferido del nombre del archivo)')
     .addHelpText(
       'after',
       `
+Types: ${NEW_DOCUMENT_TYPES.join(' | ')}
+
 Ejemplos:
-  iteraciones new posts/mi-articulo.md    crea el archivo con title, date y frontmatter
-  iteraciones new --title "Mi artículo" posts/mi-articulo.md   crea el archivo con un título explícito
+  iteraciones new texto                    crea texto.md con type file y date
+  iteraciones new creadora ana-ruiz        crea ana-ruiz.md con type creator y name
+  iteraciones new lista lectura            crea lectura.md con type list
+  iteraciones new posts/mi-articulo.md     crea el archivo con title, date y frontmatter mínimo
+  iteraciones new --title "Mi artículo" posts/mi-articulo.md   usa un título explícito
 `,
     )
-    .action(async (path: string, opts: { title?: string }) => {
-      await runNew(projectRoot(), path, { title: opts.title });
+    .action(async (tipoOrPath: string | undefined, path: string | undefined, opts: { title?: string }) => {
+      if (tipoOrPath === undefined) {
+        program.error("error: falta el argumento requerido 'path'");
+        return;
+      }
+      const type = isNewDocumentType(tipoOrPath) ? tipoOrPath : undefined;
+      const destino = type === undefined ? tipoOrPath : (path ?? `${type}.md`);
+      await runNew(projectRoot(), destino, { title: opts.title, type });
     });
 
   program
