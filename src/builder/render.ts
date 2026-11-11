@@ -62,6 +62,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     ['site-keywords', vars.siteKeywords],
     ['pagination', vars.pagination],
     ['social-meta', vars.socialMeta],
+    ['json-ld', vars.jsonLd],
   ];
   for (const [clave, valor] of bandas) {
     if (valor) args.push(`--variable=${clave}:${valor}`);

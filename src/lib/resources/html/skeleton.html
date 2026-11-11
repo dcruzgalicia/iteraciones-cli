@@ -6,6 +6,7 @@
   $if(meta-description)$<meta name="description" content="$meta-description$">$endif$
   $if(canonical)$<link rel="canonical" href="$canonical$">$endif$
   $if(social-meta)$$social-meta$$endif$
+  $if(json-ld)$<script type="application/ld+json">$json-ld$</script>$endif$
   <title>$title$$if(site-title)$ · $site-title$$endif$</title>
   $if(author-meta)$<meta name="author" content="$author-meta$">$endif$
   $if(css)$<link rel="stylesheet" href="$css$">$endif$

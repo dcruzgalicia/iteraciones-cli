@@ -396,6 +396,39 @@ export async function emitSitemap(args: { outputDir: string; siteUrl: string | u
   );
 }
 
+function jsonLdFor(args: {
+  type: string | undefined;
+  title: string;
+  description?: string;
+  creators: string[];
+  date?: string;
+  url?: string;
+}): string | undefined {
+  const base: Record<string, unknown> = { '@context': 'https://schema.org' };
+  if (args.type === 'creator') {
+    base['@type'] = 'Person';
+    base.name = args.title;
+    if (args.description !== undefined) base.description = args.description;
+    if (args.url !== undefined) base.url = args.url;
+  } else if (args.type === 'collection') {
+    base['@type'] = 'Book';
+    base.name = args.title;
+    if (args.description !== undefined) base.description = args.description;
+    if (args.creators.length > 0) base.author = args.creators.map((name) => ({ '@type': 'Person', name }));
+    if (args.url !== undefined) base.url = args.url;
+  } else if (args.type === undefined || args.type === 'file') {
+    base['@type'] = 'Article';
+    base.headline = args.title;
+    if (args.description !== undefined) base.description = args.description;
+    if (args.creators.length > 0) base.author = args.creators.map((name) => ({ '@type': 'Person', name }));
+    if (args.date !== undefined) base.datePublished = args.date;
+    if (args.url !== undefined) base.url = args.url;
+  } else {
+    return undefined;
+  }
+  return JSON.stringify(base).replace(/</g, '\\u003c');
+}
+
 function socialMetaTags(args: {
   title: string;
   description?: string;
@@ -523,6 +556,14 @@ function htmlVars(args: {
     url: canonical,
     image: socialImage,
   });
+  const jsonLd = jsonLdFor({
+    type: doc.frontmatter.type,
+    title: titulo,
+    description: metaDescription,
+    creators: doc.frontmatter.creator,
+    date: doc.frontmatter.date,
+    url: canonical,
+  });
   const esListaIndex = doc.relativePath === 'index.md' && doc.frontmatter.type === 'list';
   const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
   const esPaginaIndex = doc.relativePath === 'index.md';
@@ -534,6 +575,7 @@ function htmlVars(args: {
     metaDescription,
     canonical,
     socialMeta,
+    jsonLd,
     lang,
     theme: htmlConfig?.site?.theme,
     css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
