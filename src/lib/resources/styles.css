@@ -75,6 +75,12 @@
   }
 }
 
+@utility collection-grid {
+  @media (min-width: 1280px) {
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  }
+}
+
 @utility tarjeta {
   background-color: color-mix(in oklab, var(--color-accent-500) 2%, color-mix(in srgb, #fff 95%, transparent));
   border-color: color-mix(in srgb, var(--color-stone-300) 90%, transparent);
