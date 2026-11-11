@@ -453,23 +453,29 @@ Ejemplos:
 
   program
     .command('preview [paths...]')
-    .description('construye el proyecto y vuelve a construirlo con cada cambio; Ctrl+C para salir')
+    .description('construye, sirve el sitio y el admin en local, y reconstruye con cada cambio; Ctrl+C para salir')
     .option('--verbose', 'muestra información adicional de progreso')
+    .option('--port <puerto>', 'puerto del servidor local (por defecto: 4321)')
     .addHelpText(
       'after',
       `
-No levanta servidor: el build escribe los PDF en la salida y tu visor los muestra.
+El servidor sirve dist/files y /admin/; el navegador recarga cuando termina un build.
 Un cambio durante un build no se pierde: el build siguiente lo recoge.
 Acepta los mismos paths que build.
 
 Ejemplos:
-  iteraciones preview                 construye y reconstruye el proyecto entero
+  iteraciones preview                 construye, sirve y reconstruye el proyecto entero
   iteraciones preview posts/x.md      reconstruye solo ese documento
+  iteraciones preview --port 8080     sirve en otro puerto
   iteraciones preview --verbose       muestra el detalle de cada build
 `,
     )
-    .action(async (paths: string[], opts: { verbose?: boolean }) => {
-      await runPreview(projectRoot(), { verbose: opts.verbose, only: paths.length > 0 ? paths : undefined });
+    .action(async (paths: string[], opts: { verbose?: boolean; port?: string }) => {
+      const port = opts.port === undefined ? undefined : Number.parseInt(opts.port, 10);
+      if (port !== undefined && (!Number.isInteger(port) || port < 0 || port > 65535)) {
+        program.error(`puerto inválido: "${opts.port}"`);
+      }
+      await runPreview(projectRoot(), { verbose: opts.verbose, only: paths.length > 0 ? paths : undefined, port });
     });
 
   program
