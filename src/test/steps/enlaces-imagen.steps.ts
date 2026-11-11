@@ -21,10 +21,6 @@ When('genero una tarjeta de colección con imagen', () => {
   tarjeta = collectionCardsContent([entrada], hrefs, '', new Map(), '.', undefined, undefined, undefined, imagenes);
 });
 
-Then('el enlace de la imagen dice {string}', (etiqueta: string) => {
-  if (!tarjeta.includes(`aria-label="${etiqueta}"`)) throw new Error(`la tarjeta no tiene aria-label="${etiqueta}":\n${tarjeta.slice(0, 600)}`);
-});
-
-Then('la imagen sigue con alt vacío', () => {
-  if (!tarjeta.includes('alt=""')) throw new Error('la imagen dejó de ser decorativa');
+Then('la imagen dice {string}', (etiqueta: string) => {
+  if (!tarjeta.includes(`alt="${etiqueta}"`)) throw new Error(`la imagen no dice alt="${etiqueta}":\n${tarjeta.slice(0, 600)}`);
 });

@@ -6,5 +6,4 @@ Característica: nombre accesible de los enlaces de imagen
 
   Escenario: La tarjeta con imagen enlazada tiene nombre accesible
     Cuando genero una tarjeta de colección con imagen
-    Entonces el enlace de la imagen dice "Imagen de Documento"
-    Y la imagen sigue con alt vacío
+    Entonces la imagen dice "Ver imagen"
