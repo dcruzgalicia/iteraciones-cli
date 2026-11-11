@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { extractFragment } from '../../builder/collection-fragment.js';
+import { DEFAULT_HTML_FORMAT } from '../../config/site-config.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 function palabras(cuantas: number): string {
@@ -159,6 +160,13 @@ When('compogo las páginas de la colección con {int} por página', (pageSize: n
   const entradas = coleccion(world.miembros);
   const hrefs = memberHtmlHrefs(world.rutaColeccion, entradas, indiceDeSlugs());
   world.paginas = collectionCardsPages(entradas, hrefs, world.cuerpoColeccion, pageSize);
+  world.navs = world.paginas.map((_, indice) => paginationNav('antologia', indice + 1, world.paginas.length));
+});
+
+When('compogo las páginas de la colección con el pageSize por defecto', () => {
+  const entradas = coleccion(world.miembros);
+  const hrefs = memberHtmlHrefs(world.rutaColeccion, entradas, indiceDeSlugs());
+  world.paginas = collectionCardsPages(entradas, hrefs, world.cuerpoColeccion, DEFAULT_HTML_FORMAT.pageSize);
   world.navs = world.paginas.map((_, indice) => paginationNav('antologia', indice + 1, world.paginas.length));
 });
 

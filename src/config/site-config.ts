@@ -15,7 +15,7 @@ export const DEFAULT_HTML_FORMAT = {
     license: undefined as string | false | undefined,
   },
   generate: true,
-  pageSize: 10,
+  pageSize: 12,
 };
 
 export const DEFAULT_LATEX_FORMAT = {
