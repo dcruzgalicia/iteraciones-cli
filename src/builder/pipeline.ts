@@ -7,7 +7,7 @@ import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { generateCoverImages } from './export.js';
 import { PDF_WORK_BASE } from './output-layout.js';
 import { createPdfConsumer } from './pdf-pool.js';
-import { emitDefaultLists, emitKeywordLists, emitSitemap, preparaImagenesDeAnuncios, processDocumentFormats } from './pipeline-formats.js';
+import { emitDefaultLists, emitKeywordLists, emitRobots, emitSitemap, preparaImagenesDeAnuncios, processDocumentFormats } from './pipeline-formats.js';
 import {
   buildPoolContexts,
   type ExportContext,
@@ -118,7 +118,9 @@ export async function documentPipeline(
       exportCtx,
       discoveryIndex,
     });
-    await emitSitemap({ outputDir: ctx.outputDir, siteUrl: ctx.siteConfig.format?.html?.site?.url });
+    const siteUrl = ctx.siteConfig.format?.html?.site?.url;
+    await emitSitemap({ outputDir: ctx.outputDir, siteUrl });
+    await emitRobots({ outputDir: ctx.outputDir, siteUrl });
   }
 
   pdfConsumer.markProducerDone();

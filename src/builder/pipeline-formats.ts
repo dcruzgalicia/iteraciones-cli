@@ -308,6 +308,12 @@ function escapeXml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
+export async function emitRobots(args: { outputDir: string; siteUrl: string | undefined }): Promise<void> {
+  const base = args.siteUrl?.trim().replace(/\/+$/, '');
+  const sitemap = base === undefined || base === '' ? '' : `\nSitemap: ${base}/sitemap.xml\n`;
+  await writeOutput(join(args.outputDir, 'robots.txt'), `User-agent: *\nAllow: /\n${sitemap}`);
+}
+
 export async function emitSitemap(args: { outputDir: string; siteUrl: string | undefined }): Promise<void> {
   const base = args.siteUrl?.trim().replace(/\/+$/, '');
   if (base === undefined || base === '') return;
