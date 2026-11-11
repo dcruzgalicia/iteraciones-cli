@@ -743,6 +743,10 @@ function htmlVars(args: {
     backCover: covers?.back,
     creatorImage,
     creatorImageAlt: cuando(creatorImage !== undefined, `Retrato de ${titulo}`),
+    creatorPhoto:
+      doc.frontmatter.type === 'creator' && creatorImage !== undefined
+        ? creatorPortraitHtml(creatorImage, `Retrato de ${titulo}`)
+        : undefined,
     ...tarjetasDeSitio({
       siteConfig: ctx.siteConfig,
       dir,
@@ -1344,7 +1348,7 @@ export function hrefsDeImagenes(imageMap: Map<string, string>, outputDir: string
   return hrefs;
 }
 
-function figuraDeTarjeta(href: string, enlace: string | undefined, titulo: string, lazy = false): string {
+function figuraDeTarjeta(href: string, enlace: string | undefined, lazy = false): string {
   const carga = lazy ? ' loading="lazy" decoding="async"' : '';
   const img = `<img src="${href}" alt="Ver imagen"${carga} class="${CARD_IMAGE_IMG_CLASSES}">`;
   const dentro = enlace === undefined ? img : `<a href="${enlace}" class="${CARD_IMAGE_LINK_CLASSES}">${img}</a>`;
@@ -1966,9 +1970,9 @@ async function buildExtrasHtml(
 
   if (parte === 'main' || parte === 'creator') {
     const retrato = args.creatorImage === undefined ? '' : creatorPortraitHtml(args.creatorImage, args.creatorAlt ?? '');
-    if (args.tarjetas === undefined || args.tarjetas === '') return retrato;
+    if (args.tarjetas === undefined || args.tarjetas === '') return parte === 'creator' ? '' : retrato;
     const tarjetasHtml = await render([args.tarjetas]);
-    if (parte === 'creator') return `${retrato}${tarjetasHtml}`;
+    if (parte === 'creator') return tarjetasHtml;
     return `<div class="grid gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-6">${retrato}${tarjetasHtml}</div>`;
   }
 
@@ -2412,7 +2416,7 @@ function imagenDeCabecera(
   if (imagen === undefined) return undefined;
   if (tipo === 'creator') return retratoDeCreadora(imagen, e.title || TITULO_POR_DEFECTO, href);
 
-  return figuraDeTarjeta(imagen, href, e.title || TITULO_POR_DEFECTO, lazy);
+  return figuraDeTarjeta(imagen, href, lazy);
 }
 
 interface CabeceraTarjeta {

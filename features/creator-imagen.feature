@@ -47,7 +47,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Y un texto de "Ana García"
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/ana-garcia.html" pone "grid gap-4 sm:gap-6 creator-grid" antes que "Retrato de Ana García"
+      Y el archivo "dist/files/ana-garcia.html" pone "content-grid page-creator" antes que "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" pone "Bio de Ana García." antes que "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "tarjeta-fragmento"
       Y el archivo "dist/files/ana-garcia.html" dice "h-[30rem]"
@@ -60,7 +60,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Y un texto de "Ana García"
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/ana-garcia.html" dice "grid gap-4 sm:gap-6 creator-grid"
+      Y el archivo "dist/files/ana-garcia.html" dice "content-grid page-creator"
       Y el archivo "dist/files/ana-garcia.html" pone "Bio de Ana García." antes que "tarjeta-fragmento"
 
     Escenario: Sin retrato la tarjeta sigue igual
