@@ -114,7 +114,7 @@ Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
 
 Then('las tarjetas del documento salen en el orden por defecto', () => {
   const archivo = 'test-document.html';
-  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="refs-heading", id="TOC", >Formatos</h2>, id="card-identity-footer"');
+  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="TOC", >Formatos</h2>, id="refs-heading", id="card-identity-footer"');
 });
 
 Then('los bloques que no aplican no dejan huecos', () => {

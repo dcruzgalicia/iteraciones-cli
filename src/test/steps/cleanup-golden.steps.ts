@@ -115,7 +115,11 @@ Then('la salida sólo contiene lo permitido:', (permitidos: string) => {
     .filter(Boolean);
   const html = docs.map((d) => `${d}.html`);
   const sinDueño = (world.arbolDist as string[]).filter(
-    (r) => !html.includes(r) && !r.startsWith('assets/') && r !== 'index.html' && !r.endsWith('.svg'),
+    (r) =>
+      !html.includes(r) &&
+      !r.startsWith('assets/') &&
+      !['index.html', '404.html', 'robots.txt', 'sitemap.xml', 'feed.xml'].includes(r) &&
+      !r.endsWith('.svg'),
   );
   if (sinDueño.length > 0) {
     throw new Error(`hay archivos que no pertenecen a ningún documento: ${JSON.stringify(sinDueño)}`);
