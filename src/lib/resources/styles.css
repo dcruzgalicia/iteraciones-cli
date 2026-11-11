@@ -55,6 +55,11 @@
     grid-area: photo;
   }
 
+  & .page-publication-featured {
+    display: none;
+    grid-area: pub1;
+  }
+
   & .page-publications {
     grid-area: publications;
   }
@@ -74,6 +79,27 @@
   &.page-creator .page-main > div,
   &.page-creator .page-main article {
     height: 100%;
+  }
+
+  &.page-creator .page-photo {
+    align-self: stretch;
+  }
+
+  &.page-creator .page-photo > div,
+  &.page-creator .page-photo figure {
+    height: 100%;
+  }
+
+  &.page-creator .page-photo figure {
+    min-height: 30rem;
+
+    @media (min-width: 640px) {
+      min-height: 32rem;
+    }
+
+    @media (min-width: 1024px) {
+      min-height: 34rem;
+    }
   }
 
   &.page-file,
@@ -270,11 +296,18 @@
     }
 
     @media (min-width: 1536px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
       grid-template-areas:
-        "header header sidebar"
-        "main photo sidebar"
-        "publications publications sidebar";
+        "header header header sidebar"
+        "main photo pub1 sidebar"
+        "publications publications publications sidebar";
+
+      & .page-publication-featured {
+        display: block;
+      }
+
+      .page-publications > :first-child {
+        display: none;
+      }
     }
   }
 
@@ -351,11 +384,19 @@
     }
 
     @media (min-width: 1536px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-areas:
-        "header header sidebar"
-        "main main sidebar"
-        "publications publications sidebar";
+        "header header header sidebar"
+        "main main pub1 sidebar"
+        "publications publications publications sidebar";
+
+      & .page-publication-featured {
+        display: block;
+      }
+
+      & .page-publications > :first-child {
+        display: none;
+      }
     }
   }
 
@@ -389,6 +430,22 @@
       "header"
       "main"
       "publications";
+
+    @media (min-width: 1536px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "header header header"
+        "main main pub1"
+        "publications publications publications";
+
+      & .page-publication-featured {
+        display: block;
+      }
+
+      & .page-publications > :first-child {
+        display: none;
+      }
+    }
   }
 }
 

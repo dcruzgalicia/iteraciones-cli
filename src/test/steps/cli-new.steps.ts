@@ -92,6 +92,38 @@ Then('el archivo {string} contiene {int} veces {string}', async (nombre: string,
   if (cuenta !== veces) throw new Error(`${nombre} contiene ${texto} ${cuenta} veces y debería contenerlo ${veces}`);
 });
 
+function contenidoDeSlot(html: string, id: string): string {
+  const start = html.indexOf(`<div id="${id}"`);
+  if (start < 0) return '';
+  let depth = 0;
+  let i = start;
+  while (i < html.length) {
+    const open = html.indexOf('<div', i);
+    const close = html.indexOf('</div>', i);
+    if (close < 0) break;
+    if (open >= 0 && open < close) {
+      depth++;
+      i = open + 4;
+    } else {
+      depth--;
+      i = close + 6;
+      if (depth === 0) return html.slice(start, i);
+    }
+  }
+  return '';
+}
+
+Then(
+  'el archivo {string} contiene {int} veces en las publicaciones {string}',
+  async (nombre: string, veces: number, texto: string) => {
+    const contenido = contenidoDeSlot(await archivo(nombre), 'slot-publications');
+    const cuenta = contenido.split(texto).length - 1;
+    if (cuenta !== veces) {
+      throw new Error(`${nombre} contiene ${texto} ${cuenta} veces en las publicaciones y debería contenerlo ${veces}`);
+    }
+  },
+);
+
 Then('el archivo {string} contiene {string}', async (nombre: string, texto: string) => {
   if (!(await archivo(nombre)).includes(texto)) {
     throw new Error(`${nombre} no contiene ${JSON.stringify(texto)}`);

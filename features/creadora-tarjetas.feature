@@ -70,7 +70,7 @@ Característica: las tarjetas de textos y colecciones en la página de la autora
       Y el archivo "dist/files/autora-a.html" dice "Ver colección completa →"
       Y el archivo "dist/files/autora-a.html" dice ">Colección</a>"
       Y el archivo "dist/files/autora-a.html" contiene 1 veces "Texto 1"
-      Y el archivo "dist/files/autora-a.html" contiene 2 veces "Texto 2"
+      Y el archivo "dist/files/autora-a.html" contiene 1 veces en las publicaciones "Texto 2"
 
   Regla de negocio: Lo más reciente va primero
 

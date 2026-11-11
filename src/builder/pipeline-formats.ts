@@ -270,6 +270,27 @@ function opcional(valor: string | undefined): string | undefined {
   return valor === '' ? undefined : valor;
 }
 
+function splitFirstTopLevelDiv(html: string): { first?: string; rest: string } {
+  const start = html.indexOf('<div');
+  if (start < 0) return { rest: html };
+  let depth = 0;
+  let i = start;
+  while (i < html.length) {
+    const open = html.indexOf('<div', i);
+    const close = html.indexOf('</div>', i);
+    if (close < 0) return { rest: html };
+    if (open >= 0 && open < close) {
+      depth++;
+      i = open + 4;
+    } else {
+      depth--;
+      i = close + 6;
+      if (depth === 0) return { first: html.slice(start, i), rest: html.slice(0, start) + html.slice(i) };
+    }
+  }
+  return { rest: html };
+}
+
 function tarjetasDeSitio(args: {
   siteConfig: SiteConfig;
   dir: string;
@@ -649,6 +670,8 @@ function htmlVars(args: {
   const htmlConfig = formatCfg?.html;
   const { dir, slug, fm } = outputs;
   const titulo = doc.frontmatter.title || slug;
+  const creatorExtras = doc.frontmatter.type === 'creator' ? splitFirstTopLevelDiv(extras) : undefined;
+  const featuredPublication = creatorExtras?.first;
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
   const siteTitle = fmString(htmlConfig?.site?.title, 'iteraciones');
@@ -760,6 +783,7 @@ function htmlVars(args: {
     indiceColeccion,
     docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: opcional(extras),
+    featuredPublication: opcional(featuredPublication),
     sidebarExtras: opcional(sidebarExtras),
     recientes: opcional(esListaIndex ? '' : recentesCard(discoveryIndex, dir)),
     siteKeywords: opcional(

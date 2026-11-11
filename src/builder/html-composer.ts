@@ -132,6 +132,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     ? contenido
     : [portadas, contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
   const photo = esCreador ? '$if(creator-photo)$$creator-photo$$endif$' : '';
+  const featuredPublication = esCreador ? '$if(featured-publication)$$featured-publication$$endif$' : '';
   const publications = esCreador ? ['$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n') : '';
   const related = [...relatedCards, referencias, ...(esCreador ? [portadas] : [])].join('\n');
   const sidebar = [
@@ -148,6 +149,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   html = fillSlot(html, 'page-header', metadata);
   html = fillSlot(html, 'main', main);
   html = fillSlot(html, 'photo', photo);
+  html = fillSlot(html, 'publication-featured', featuredPublication);
   html = fillSlot(html, 'publications', publications);
   html = fillSlot(html, 'related', related);
   html = fillSlot(html, 'sidebar', sidebar);
@@ -194,6 +196,7 @@ export interface HtmlPageVars {
   creatorImage?: string;
   creatorImageAlt?: string;
   creatorPhoto?: string;
+  featuredPublication?: string;
   license?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
