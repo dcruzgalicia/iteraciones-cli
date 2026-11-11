@@ -54,3 +54,11 @@ Then('el EPUB {string} tiene al menos {int} capítulos XHTML', (nombre: string, 
   if (capitulos < minimo) throw new Error(`el EPUB ${nombre} tiene ${capitulos} capítulos XHTML y debía tener al menos ${minimo}`);
 });
 
+Then('el EPUB {string} tiene en el índice {string}', (nombre: string, texto: string) => {
+  const epub = join(world.root, 'dist', 'files', `${nombre}.epub`);
+  const resultado = Bun.spawnSync(['unzip', '-p', epub, 'EPUB/nav.xhtml']);
+  if (resultado.exitCode !== 0) throw new Error(`no se pudo leer el índice de ${nombre}.epub: ${resultado.stderr.toString()}`);
+  const nav = resultado.stdout.toString();
+  if (!nav.includes(texto)) throw new Error(`el índice de ${nombre} no incluye ${JSON.stringify(texto)}`);
+});
+
