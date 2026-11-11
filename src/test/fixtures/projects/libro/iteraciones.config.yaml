@@ -1,0 +1,18 @@
+language: es-MX
+toc: true
+format:
+  latex:
+    generate: true
+  html:
+    site:
+      title: "Libro de ejemplo"
+      description: "Fixture mínima de un libro"
+      theme: light
+      color: purple
+    generate: true
+  pdf:
+    generate: true
+  epub:
+    generate: true
+  markdown:
+    generate: true
