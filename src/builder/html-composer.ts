@@ -40,8 +40,14 @@ function logoSizeCss(value: string | undefined): string {
   return /^\d+(\.\d+)?(px|rem|em|vw|vh|%)$/.test(limpio) ? limpio : DEFAULT_HTML_FORMAT.site.logoSize;
 }
 
+function logoIntrinsicSize(logoSize?: string): number {
+  const px = Number.parseFloat(logoSizeCss(logoSize));
+  return Number.isNaN(px) ? 100 : Math.round(px * 2);
+}
+
 export function logoBlockHtml(href: string, logoSize?: string, svg?: string): string {
-  const inner = svg ?? `<img src="${href}" alt="" class="block h-auto w-full">`;
+  const size = logoIntrinsicSize(logoSize);
+  const inner = svg ?? `<img src="${href}" alt="" width="${size}" height="${size}" class="block h-auto w-full">`;
   return `<span class="flex shrink-0 text-accent-500 logo-fill" style="width:${logoSizeCss(logoSize)}">${inner}</span>`;
 }
 
