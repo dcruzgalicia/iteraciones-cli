@@ -80,6 +80,7 @@ const HtmlSiteSchema = z
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
     color: z.enum(ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.site.color),
     showDates: z.boolean().default(DEFAULT_HTML_FORMAT.site.showDates),
+    rss: z.boolean().default(DEFAULT_HTML_FORMAT.site.rss),
     links: z.array(z.object({ name: z.string(), url: z.string() }).strict()).optional(),
     license: z.union([z.string(), z.literal(false)]).optional(),
     url: z
