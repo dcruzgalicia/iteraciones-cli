@@ -304,11 +304,24 @@ function absoluteUrl(siteUrl: string | undefined, path: string): string | undefi
   return new URL(path, `${siteUrl.trim().replace(/\/+$/, '')}/`).href;
 }
 
+async function writeStatic(cwd: string, outputDir: string, name: string, content: string): Promise<void> {
+  const staging = join(cwd, '.iteraciones', 'seo', name);
+  await writeOutput(staging, content);
+  const destino = join(outputDir, name);
+  await writeOutput(destino, content);
+  recordSupportCommand('resources', name, ['cp', relative(cwd, staging), relative(cwd, destino)]);
+}
+
 function escapeXml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
-export async function emit404(args: { outputDir: string; renderCtx: RenderContext; discoveryIndex: Map<string, DiscoveryEntry> }): Promise<void> {
+export async function emit404(args: {
+  cwd: string;
+  outputDir: string;
+  renderCtx: RenderContext;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+}): Promise<void> {
   const { ctx, formatCfg } = args.renderCtx;
   const site = formatCfg?.html?.site;
   const siteTitle = site?.title ?? 'iteraciones';
@@ -368,10 +381,11 @@ export async function emit404(args: { outputDir: string; renderCtx: RenderContex
 </body>
 </html>
 `;
-  await writeOutput(join(args.outputDir, '404.html'), html);
+  await writeStatic(args.cwd, args.outputDir, '404.html', html);
 }
 
 export async function emitRss(args: {
+  cwd: string;
   outputDir: string;
   siteUrl: string | undefined;
   siteTitle: string;
@@ -399,16 +413,16 @@ export async function emitRss(args: {
     )
     .join('\n');
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>${escapeXml(args.siteTitle)}</title>\n    <link>${escapeXml(`${base}/`)}</link>\n    <description>${escapeXml(args.siteDescription)}</description>\n${xmlItems}\n  </channel>\n</rss>\n`;
-  await writeOutput(join(args.outputDir, 'feed.xml'), xml);
+  await writeStatic(args.cwd, args.outputDir, 'feed.xml', xml);
 }
 
-export async function emitRobots(args: { outputDir: string; siteUrl: string | undefined }): Promise<void> {
+export async function emitRobots(args: { cwd: string; outputDir: string; siteUrl: string | undefined }): Promise<void> {
   const base = args.siteUrl?.trim().replace(/\/+$/, '');
   const sitemap = base === undefined || base === '' ? '' : `\nSitemap: ${base}/sitemap.xml\n`;
-  await writeOutput(join(args.outputDir, 'robots.txt'), `User-agent: *\nAllow: /\n${sitemap}`);
+  await writeStatic(args.cwd, args.outputDir, 'robots.txt', `User-agent: *\nAllow: /\n${sitemap}`);
 }
 
-export async function emitSitemap(args: { outputDir: string; siteUrl: string | undefined }): Promise<void> {
+export async function emitSitemap(args: { cwd: string; outputDir: string; siteUrl: string | undefined }): Promise<void> {
   const base = args.siteUrl?.trim().replace(/\/+$/, '');
   if (base === undefined || base === '') return;
   const paths = [...new Bun.Glob('**/*.html').scanSync({ cwd: args.outputDir, onlyFiles: true })]
@@ -421,8 +435,10 @@ export async function emitSitemap(args: { outputDir: string; siteUrl: string | u
     const loc = `${base}/${path}`.replace(/index\.html$/, '');
     urls.push(`  <url>\n    <loc>${escapeXml(loc)}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`);
   }
-  await writeOutput(
-    join(args.outputDir, 'sitemap.xml'),
+  await writeStatic(
+    args.cwd,
+    args.outputDir,
+    'sitemap.xml',
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`,
   );
 }
@@ -473,7 +489,6 @@ function publicationMetaHtml(args: {
     ['ISBN', campo('isbn')],
     ['Editorial', campo('publisher')],
     ['Colaboradoras', campo('contributor')],
-    ['Derechos', campo('rights')],
     ['Identificador', campo('identifier')],
     ['Palabras clave', args.keywords.length > 0 ? args.keywords.join(', ') : undefined],
   ];

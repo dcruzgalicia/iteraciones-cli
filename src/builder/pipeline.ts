@@ -120,10 +120,11 @@ export async function documentPipeline(
     });
     const siteUrl = ctx.siteConfig.format?.html?.site?.url;
     const htmlSite = ctx.siteConfig.format?.html?.site;
-    await emitSitemap({ outputDir: ctx.outputDir, siteUrl });
-    await emitRobots({ outputDir: ctx.outputDir, siteUrl });
+    await emitSitemap({ cwd: ctx.cwd, outputDir: ctx.outputDir, siteUrl });
+    await emitRobots({ cwd: ctx.cwd, outputDir: ctx.outputDir, siteUrl });
     if (htmlSite?.rss === true) {
       await emitRss({
+        cwd: ctx.cwd,
         outputDir: ctx.outputDir,
         siteUrl,
         siteTitle: htmlSite.title ?? 'iteraciones',
@@ -131,7 +132,7 @@ export async function documentPipeline(
         discoveryIndex,
       });
     }
-    await emit404({ outputDir: ctx.outputDir, renderCtx, discoveryIndex });
+    await emit404({ cwd: ctx.cwd, outputDir: ctx.outputDir, renderCtx, discoveryIndex });
   }
 
   pdfConsumer.markProducerDone();

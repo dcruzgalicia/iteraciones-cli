@@ -278,7 +278,12 @@ const CHEQUEOS: Record<string, Chequeo> = {
     }
   },
   primitivas: ({ script, falla }) => {
-    const prohibidas = systemCommands(script).filter((c) => c !== 'cd');
+    const cpFuera = script
+      .split('\n')
+      .map((linea) => linea.trim())
+      .filter((linea) => /^cp\b/.test(linea) && !/^cp \.iteraciones\/seo\//.test(linea));
+    if (cpFuera.length > 0) falla(`usa cp fuera de .iteraciones/seo: ${JSON.stringify(cpFuera)}`);
+    const prohibidas = systemCommands(script).filter((c) => c !== 'cd' && c !== 'cp');
     if (prohibidas.length > 0) falla(`usa primitivas prohibidas: ${JSON.stringify(prohibidas)}`);
   },
   salidas: ({ script, falla }) => {
