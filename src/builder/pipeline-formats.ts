@@ -488,6 +488,55 @@ function publicationMetaHtml(args: {
   return `<dl class="m-0 grid gap-0">${html}</dl>`;
 }
 
+function citationBlockHtml(args: {
+  type: string | undefined;
+  title: string;
+  creators: string[];
+  date?: string;
+  publisher?: string;
+  url?: string;
+  slug: string;
+}): string | undefined {
+  if (args.creators.length === 0 && args.date === undefined) return undefined;
+  const anio = args.date?.slice(0, 4) || undefined;
+  const autoras = args.creators.join('; ');
+  const apa = [autoras, anio === undefined ? undefined : `(${anio})`, args.title, args.publisher, args.url].filter(Boolean).join('. ');
+  const tipoBib = args.type === 'collection' ? 'book' : 'misc';
+  const bibLineas = [
+    `@${tipoBib}{${args.slug},`,
+    autoras === '' ? undefined : `  author = {${autoras}},`,
+    `  title = {${args.title}},`,
+    anio === undefined ? undefined : `  year = {${anio}},`,
+    args.publisher === undefined ? undefined : `  publisher = {${args.publisher}},`,
+    args.url === undefined ? undefined : `  url = {${args.url}}`,
+    '}',
+  ].filter((linea) => linea !== undefined);
+  const risLineas = [
+    `TY  - ${args.type === 'collection' ? 'BOOK' : 'GEN'}`,
+    autoras === '' ? undefined : `AU  - ${autoras}`,
+    `TI  - ${args.title}`,
+    anio === undefined ? undefined : `PY  - ${anio}`,
+    args.publisher === undefined ? undefined : `PB  - ${args.publisher}`,
+    args.url === undefined ? undefined : `UR  - ${args.url}`,
+    'ER  -',
+  ].filter((linea) => linea !== undefined);
+  const bibtex = bibLineas.join('\n');
+  const ris = risLineas.join('\n');
+  const enlace = (nombre: string, contenido: string): string =>
+    `<a download="${nombre}" href="data:text/plain,${encodeURIComponent(contenido)}" class="inline-flex h-7 items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-3 text-xs font-semibold text-accent-800 no-underline hover:bg-accent-500/20 dark:text-accent-300">${nombre}</a>`;
+  return [
+    '<div class="min-w-0">',
+    '<section class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 text-xs! ring-1 ring-inset ring-stone-300/60 sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! dark:ring-stone-600/40">',
+    '<h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Cómo citar</h2>',
+    `<p class="m-0 text-stone-800 dark:text-stone-200">${Bun.escapeHTML(apa)}</p>`,
+    `<div class="mt-4 flex flex-wrap gap-2">${enlace('cita.bib', bibtex)}${enlace('cita.ris', ris)}</div>`,
+    `<details class="mt-4"><summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">BibTeX</summary><pre class="mt-2 overflow-x-auto rounded-lg bg-stone-100 p-3 text-xs dark:bg-stone-950/70">${Bun.escapeHTML(bibtex)}</pre></details>`,
+    `<details class="mt-2"><summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">RIS</summary><pre class="mt-2 overflow-x-auto rounded-lg bg-stone-100 p-3 text-xs dark:bg-stone-950/70">${Bun.escapeHTML(ris)}</pre></details>`,
+    '</section>',
+    '</div>',
+  ].join('');
+}
+
 function socialMetaTags(args: {
   title: string;
   description?: string;
@@ -619,6 +668,18 @@ function htmlVars(args: {
     doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection'
       ? publicationMetaHtml({ fm, formatCfg: htmlConfig, siteConfig: ctx.siteConfig, keywords })
       : undefined;
+  const citationBlock =
+    doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection'
+      ? citationBlockHtml({
+          type: doc.frontmatter.type,
+          title: titulo,
+          creators: doc.frontmatter.creator,
+          date: doc.frontmatter.date,
+          publisher: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publisher'),
+          url: canonical,
+          slug,
+        })
+      : undefined;
   const jsonLd = jsonLdFor({
     type: doc.frontmatter.type,
     title: titulo,
@@ -640,6 +701,7 @@ function htmlVars(args: {
     socialMeta,
     jsonLd,
     publicationMeta,
+    citationBlock,
     lang,
     theme: htmlConfig?.site?.theme,
     css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
