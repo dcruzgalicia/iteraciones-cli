@@ -1036,8 +1036,12 @@ function collectionCards(
 ): string {
   const cards: string[] = [];
   if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
-  for (const e of printableEntries(entries).slice(desde, hasta)) {
-    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes));
+  for (const [indice, e] of printableEntries(entries)
+    .slice(desde, hasta)
+    .entries()) {
+    cards.push(
+      collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, indice > 0),
+    );
   }
   return espaciosNormales(cards.join('\n\n'));
 }
@@ -1199,8 +1203,9 @@ export function hrefsDeImagenes(imageMap: Map<string, string>, outputDir: string
   return hrefs;
 }
 
-function figuraDeTarjeta(href: string, enlace: string | undefined, titulo: string): string {
-  const img = `<img src="${href}" alt="" class="${CARD_IMAGE_IMG_CLASSES}">`;
+function figuraDeTarjeta(href: string, enlace: string | undefined, titulo: string, lazy = false): string {
+  const carga = lazy ? ' loading="lazy" decoding="async"' : '';
+  const img = `<img src="${href}" alt=""${carga} class="${CARD_IMAGE_IMG_CLASSES}">`;
   const dentro =
     enlace === undefined
       ? img
@@ -1209,7 +1214,7 @@ function figuraDeTarjeta(href: string, enlace: string | undefined, titulo: strin
 }
 
 function retratoDeCreadora(href: string, nombre: string, enlace?: string): string {
-  const img = `<img src="${href}" alt="Retrato de ${Bun.escapeHTML(nombre)}" class="${PORTRAIT_CLASSES}" style="width:100px;height:100px">`;
+  const img = `<img src="${href}" alt="Retrato de ${Bun.escapeHTML(nombre)}" loading="lazy" decoding="async" class="${PORTRAIT_CLASSES}" style="width:100px;height:100px">`;
   const dentro =
     enlace === undefined
       ? img
@@ -1654,7 +1659,7 @@ function announcementCard(
   imagenes: Map<string, string>,
 ): string {
   const title = e.title || TITULO_POR_DEFECTO;
-  const imagen = imagenDeCabecera(e, 'announcement', imagenes, href);
+  const imagen = imagenDeCabecera(e, 'announcement', imagenes, href, true);
   const body = extractFragment(e.body, 150);
   return extraCard(
     [
@@ -2255,7 +2260,13 @@ function chipsDeCabecera(
   return `<div class="flex items-start justify-between gap-4"><div class="flex flex-wrap items-center gap-2 mb-6">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`;
 }
 
-function imagenDeCabecera(e: CollectionEntry, tipo: string, imagenes: Map<string, string> | undefined, href: string | undefined): string | undefined {
+function imagenDeCabecera(
+  e: CollectionEntry,
+  tipo: string,
+  imagenes: Map<string, string> | undefined,
+  href: string | undefined,
+  lazy = false,
+): string | undefined {
   const src = tipo === 'creator' ? e.image : primeraImagenDelCuerpo(e.body);
   if (src === undefined) return undefined;
   const abs = isAbsolute(src) ? src : resolve(e.dirAbs ?? '.', src);
@@ -2263,7 +2274,7 @@ function imagenDeCabecera(e: CollectionEntry, tipo: string, imagenes: Map<string
   if (imagen === undefined) return undefined;
   if (tipo === 'creator') return retratoDeCreadora(imagen, e.title || TITULO_POR_DEFECTO, href);
 
-  return figuraDeTarjeta(imagen, href, e.title || TITULO_POR_DEFECTO);
+  return figuraDeTarjeta(imagen, href, e.title || TITULO_POR_DEFECTO, lazy);
 }
 
 interface CabeceraTarjeta {
@@ -2282,10 +2293,11 @@ function cabeceraDeTarjeta(
   currentHref?: string,
   imagenes?: Map<string, string>,
   href?: string,
+  lazy = false,
 ): CabeceraTarjeta {
   const tipo = e.type ?? 'file';
   const chips = chipsDeCabecera(e, dir, available, discoveryIndex, page, currentHref);
-  const imagen = imagenDeCabecera(e, tipo, imagenes, href);
+  const imagen = imagenDeCabecera(e, tipo, imagenes, href, lazy);
   const cuerpo: string[] = [];
   if (imagen !== undefined) cuerpo.push(imagen, '');
   if (tipo === 'collection') {
@@ -2347,10 +2359,23 @@ function collectionCard(
   page?: PageRef,
   currentHref?: string,
   imagenes?: Map<string, string>,
+  lazy = false,
 ): string {
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body, CARD_PREVIEW_MAX_WORDS);
-  const cabecera = cabeceraDeTarjeta(e, titleHtmlPara(title, href), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, href);
+  const cabecera = cabeceraDeTarjeta(
+    e,
+    titleHtmlPara(title, href),
+    creatorHrefs,
+    dir,
+    available,
+    discoveryIndex,
+    page,
+    currentHref,
+    imagenes,
+    href,
+    lazy,
+  );
   const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
   if (cabecera.chips !== '') card.push(cabecera.chips, '');
   const contenido = [...cabecera.cuerpo];
