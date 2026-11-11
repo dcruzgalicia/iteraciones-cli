@@ -119,9 +119,51 @@ function capturarVivo(fn: () => Promise<void>): Promise<void> {
   });
 }
 
+Given('que el proyecto tiene un admin', () => {
+  escribirEnProyecto('admin/index.html', '<!doctype html><html><body>admin de prueba</body></html>');
+  escribirEnProyecto('admin/config.yml', 'backend:\n  name: github\n');
+});
+
 When('arranco preview', () => {
   raiz();
   world.previewListo = capturarVivo(() => runPreview(world.root, { pollMs: POLL_MS }));
+});
+
+When('arranco preview con servidor', () => {
+  raiz();
+  world.previewListo = capturarVivo(() => runPreview(world.root, { pollMs: POLL_MS, port: 0 }));
+});
+
+Then('preview anuncia una URL local', async () => {
+  await previewVigila();
+  const match = /servidor local: (http:\/\/\S+)/.exec(stdoutLimpio());
+  if (match?.[1] === undefined) throw new Error(`preview no anunció una URL local:\n${stdoutLimpio()}`);
+  world.previewUrl = match[1];
+});
+
+Then('el preview responde {string} con el código {int}', async (ruta: string, codigo: number) => {
+  if (world.previewUrl === '') throw new Error('preview no anunció una URL local');
+  const respuesta = await fetch(new URL(ruta, world.previewUrl));
+  if (respuesta.status !== codigo) {
+    throw new Error(`preview respondió ${respuesta.status} en ${ruta} y esperaba ${codigo}`);
+  }
+});
+
+Then('el preview sirve {string} con {string}', async (ruta: string, texto: string) => {
+  if (world.previewUrl === '') throw new Error('preview no anunció una URL local');
+  const respuesta = await fetch(new URL(ruta, world.previewUrl));
+  const contenido = await respuesta.text();
+  if (!contenido.includes(texto)) throw new Error(`preview no sirve ${JSON.stringify(texto)} en ${ruta}`);
+});
+
+Then('el servidor de preview ya no responde', async () => {
+  if (world.previewUrl === '') throw new Error('preview no anunció una URL local');
+  try {
+    await fetch(new URL('/', world.previewUrl));
+  } catch {
+    return;
+  }
+  throw new Error('el servidor de preview sigue respondiendo después de parar preview');
 });
 
 Then('preview construyó el proyecto una vez y quedó esperando', async () => {
