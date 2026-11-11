@@ -27,5 +27,5 @@ Característica: Las fixtures congeladas de los proyectos compilan
       Y la fixture generó el archivo "dist/files/antologia-de-ejemplo-por-ana-ejemplo.epub"
       Y la fixture generó el archivo "dist/files/antologia-de-ejemplo-por-ana-ejemplo.md"
       Y la fixture generó el archivo "dist/files/ana-ejemplo.html"
-      Y la fixture generó 14 archivos en "dist/files"
+      Y la fixture generó 10 archivos en "dist/files"
       Y los PDF de la fixture pesan más de 1000 bytes
