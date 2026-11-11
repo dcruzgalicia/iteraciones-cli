@@ -11,7 +11,7 @@ import { isInside, posix } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { COVER_IMAGE_FIELDS, parseLetterheadHeight, uniqueName } from './image-processor.js';
+import { COVER_IMAGE_FIELDS, type ProcessedImages, parseLetterheadHeight, uniqueName } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { ASSETS_PDF_IMAGES_DIR } from './output-layout.js';
 import { metadataArgs } from './pandoc-metadata.js';
@@ -77,13 +77,8 @@ interface LatexComposerOptions {
   formatCfg?: Record<string, unknown>;
   biblatexAvailable?: boolean;
   warnedLangs: Set<string>;
-  images?: ImagePreprocessResult;
+  images?: ProcessedImages;
   cwd?: string;
-}
-
-export interface ImagePreprocessResult {
-  imageMap: Map<string, string>;
-  processedImages: string[];
 }
 
 async function resolveAndPushImage(
@@ -351,7 +346,7 @@ export async function markdownToLatex(
     inputTarget: opts.inputTarget,
   });
 
-  return { tex, processedImages: images?.processedImages ?? [] };
+  return { tex, processedImages: images?.processedFiles ?? [] };
 }
 
 export function buildTexDistribution(processedImages: string[]): Map<string, string> {

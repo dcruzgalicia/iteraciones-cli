@@ -47,7 +47,6 @@ Característica: los assets de la salida
 
   Regla de negocio: El logo raster vive en assets y el HTML lo referencia
 
-    @requires-magick
     Escenario: Un logo a color se vuelve WebP y el HTML no lo incrusta
       Dado que la raíz del proyecto está vacía
       Y un proyecto con un logo a color y un documento
@@ -57,7 +56,6 @@ Característica: los assets de la salida
       Y el HTML del documento referencia "src=\"./assets/images/logo.webp\""
       Y el HTML del documento no incrusta imágenes en base64
 
-    @requires-magick
     Escenario: El logo por defecto usa el accent y conserva transparencia
       Dado que la raíz del proyecto está vacía
       Y el proyecto produce html
@@ -76,7 +74,6 @@ Característica: los assets de la salida
       Y el logo webp está teñido con el accent
       Y el logo webp conserva transparencia
 
-    @requires-magick
     Escenario: Un logo de un solo color se tiñe con el accent
       Dado que la raíz del proyecto está vacía
       Y un proyecto con un logo de un color y un documento

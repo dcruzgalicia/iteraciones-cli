@@ -7,9 +7,6 @@ Característica: index.md se llama index en todos los formatos
 
   Regla de negocio: El home se llama index en todos los formatos
 
-    @requires-pandoc
-    @requires-latex
-    @requires-unzip
     Escenario: index.md genera index.* y ningún inicio.*
       Dado que la raíz del proyecto tiene un proyecto con todos los formatos
       Dado que el archivo "index.md" tiene este contenido

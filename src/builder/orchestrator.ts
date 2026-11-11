@@ -40,7 +40,6 @@ import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from 
 
 const silentReporter: BuildReporter = {
   setFormats(): void {},
-  planPhases(): void {},
   startPhase(): void {},
   reportFile(): void {},
   completePhase(): void {},
@@ -97,25 +96,6 @@ interface BuildSummary {
   invalidations: string[];
 
   selected?: string[];
-}
-
-async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, options: BuildOptions): Promise<BuildContext> {
-  const defaultOutputDir = join(cwd, DIST_FILES_DIR);
-  const concurrency = Math.min(Math.max(1, cpus().length - 1), 16);
-  const ctx: BuildContext = {
-    siteConfig,
-    cwd,
-    outputDir: options.outputDir ?? defaultOutputDir,
-    needsCss: false,
-    concurrency,
-  };
-
-  if (options.full) {
-    await rm(ctx.outputDir, { recursive: true, force: true });
-    await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
-  }
-
-  return ctx;
 }
 
 export async function build(cwd: string, options: BuildOptions = {}, reporter: BuildReporter = silentReporter): Promise<void> {
@@ -603,8 +583,21 @@ async function prepareEnvironment(
     progress.log('--full: se eliminaron la caché y la salida anterior');
     progress.showCleanup();
   }
-  const ctx = await setupBuildEnvironment(cwd, siteConfig, options);
-  ctx.needsCss = plan.needsCss;
+  const defaultOutputDir = join(cwd, DIST_FILES_DIR);
+  const concurrency = Math.min(Math.max(1, cpus().length - 1), 16);
+  const ctx: BuildContext = {
+    siteConfig,
+    cwd,
+    outputDir: options.outputDir ?? defaultOutputDir,
+    needsCss: plan.needsCss,
+    concurrency,
+  };
+
+  if (options.full) {
+    await rm(ctx.outputDir, { recursive: true, force: true });
+    await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
+  }
+
   progress.setFormats([
     { phase: 'latex', active: plan.activeFormats.latex },
     { phase: 'pdf', active: plan.activeFormats.pdf },
@@ -684,16 +677,13 @@ async function pipelinePhases(
   allDocs: BuildDocument[],
   discoveryIndex: Map<string, DiscoveryEntry>,
   effectiveDisabledPreamble: string[],
-  formatCfg: SiteConfig['format'] | undefined,
   invalidations: string[],
   fallbackReason: string | null,
 ): Promise<{ processedCount: number; cachedCount: number; invalidations: string[]; pdfOutputs: string[] }> {
-  progress.planPhases(['discovery', 'render']);
-
   const workDocCount = work.workDocList.length;
 
   progress.startPhase('render', workDocCount);
-  const { processed, pdfOutputs } = await documentPipeline(progress, ctx, plan, work, formatCfg, discoveryIndex, effectiveDisabledPreamble);
+  const { processed, pdfOutputs } = await documentPipeline(progress, ctx, plan, work, discoveryIndex, effectiveDisabledPreamble);
 
   const totalDocs =
     plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex
@@ -824,17 +814,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   const fallbackReason = prevState === null ? (options.full ? 'build completo desde cero' : 'sin caché previa') : null;
   return finishBuild(
     closeDeps,
-    await pipelinePhases(
-      progress,
-      ctx,
-      plan,
-      work,
-      allDocs,
-      discoveryIndex,
-      effectiveDisabledPreamble,
-      siteConfig.format,
-      invalidations,
-      fallbackReason,
-    ),
+    await pipelinePhases(progress, ctx, plan, work, allDocs, discoveryIndex, effectiveDisabledPreamble, invalidations, fallbackReason),
   );
 }

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then } from '@cucumber/cucumber';
 import { parse } from 'yaml';
+import { distPath } from '../helpers.js';
 import { tempRoot, world } from './cli-world.steps.js';
 
 interface Campo {
@@ -102,20 +103,16 @@ Then('el paquete conserva la dependencia {string}', (nombre: string) => {
   if (dependencias(paquete())[nombre] === undefined) throw new Error(`package.json perdió la dependencia ${JSON.stringify(nombre)}`);
 });
 
-function dist(relativa: string): string {
-  return join(world.root, 'dist', 'files', relativa);
-}
-
 Then('el sitio generado tiene el archivo {string}', (relativa: string) => {
-  if (!existsSync(dist(relativa))) throw new Error(`dist/files no tiene ${JSON.stringify(relativa)}`);
+  if (!existsSync(distPath(world.root, relativa))) throw new Error(`dist/files no tiene ${JSON.stringify(relativa)}`);
 });
 
 Then('el sitio generado no tiene el archivo {string}', (relativa: string) => {
-  if (existsSync(dist(relativa))) throw new Error(`dist/files sí tiene ${JSON.stringify(relativa)} y no debería`);
+  if (existsSync(distPath(world.root, relativa))) throw new Error(`dist/files sí tiene ${JSON.stringify(relativa)} y no debería`);
 });
 
 Then('el sitio generado tiene {string} con {string}', (relativa: string, texto: string) => {
-  const contenido = readFileSync(dist(relativa), 'utf8');
+  const contenido = readFileSync(distPath(world.root, relativa), 'utf8');
   if (!contenido.includes(texto)) throw new Error(`${relativa} no contiene ${JSON.stringify(texto)}`);
 });
 
@@ -227,15 +224,6 @@ Then('el paquete declara la dependencia {string} con el valor {string}', (nombre
 Given('que la raíz del proyecto se llama {string}', (nombre: string) => {
   world.root = join(tempRoot('iteraciones-cli-nombre-'), nombre);
   mkdirSync(world.root, { recursive: true });
-});
-
-Then('el campo {string} de la colección {string} ofrece las opciones {string}', (nombre: string, col: string, lista: string) => {
-  const campo = campoDe(nombre, col);
-  const opciones = (campo.options ?? []).map((opcion) => (typeof opcion === 'string' ? opcion : (opcion.value ?? '')));
-  const esperadas = lista.split(',').map((s) => s.trim());
-  if (JSON.stringify(opciones) !== JSON.stringify(esperadas)) {
-    throw new Error(`las opciones de ${nombre} son ${JSON.stringify(opciones)} y debían ser ${JSON.stringify(esperadas)}`);
-  }
 });
 
 Then('el campo {string} de la colección {string} no aparece en la vista previa', (nombre: string, col: string) => {

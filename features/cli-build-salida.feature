@@ -14,7 +14,6 @@ Característica: El build dice qué hizo y por qué
       Entonces el comando termina con el código de salida 0
       Y la salida dice "(reutilizado)"
 
-    @requires-pandoc
     Escenario: Si borro un output cacheado el build lo regenera sin --full
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando hago un build del proyecto

@@ -61,16 +61,16 @@ export async function runClean(cwd: string, options: { json?: boolean } = {}): P
         try {
           const existed = await exists(dir);
           await rm(dir, { recursive: true, force: true });
-          return { removed: existed ? dir : null, error: null };
+          return { dir, removed: existed ? dir : null, error: null };
         } catch (err) {
-          return { removed: null, error: `${dir}: ${err instanceof Error ? err.message : String(err)}` };
+          return { dir, removed: null, error: err instanceof Error ? err.message : String(err) };
         }
       }),
     );
     const failures = results
-      .filter((r): r is { removed: null; error: string } => r.error !== null)
-      .map((r) => ({ dir: r.error.split(': ')[0], error: r.error.split(': ').slice(1).join(': ') }));
-    const removed = results.filter((r): r is { removed: string; error: null } => r.removed !== null).map((r) => r.removed);
+      .filter((r): r is { dir: string; removed: null; error: string } => r.error !== null)
+      .map(({ dir, error }) => ({ dir, error }));
+    const removed = results.filter((r): r is { dir: string; removed: string; error: null } => r.removed !== null).map((r) => r.removed);
 
     if (options.json) {
       writeJson({ ok: failures.length === 0, removed, failures });

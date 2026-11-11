@@ -5,6 +5,7 @@ import { stringify } from 'yaml';
 import { slugify } from '../builder/discover.js';
 import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { logInfo, logSuccess, logWarning } from '../lib/logger.js';
 import { initProject } from './init.js';
@@ -468,15 +469,11 @@ function netlifyToml(): string {
 }
 
 function brewfile(format: Awaited<ReturnType<typeof loadSiteConfig>>['format']): string | undefined {
-  const html = format?.html?.generate === true;
-  const pdf = format?.pdf?.generate === true;
-  const latex = format?.latex?.generate === true;
-  const epub = format?.epub?.generate === true;
-  const markdown = format?.markdown?.generate === true;
-  if (!html && !pdf && !latex && !epub && !markdown) return undefined;
+  const active = new Set(computeActiveFormats(format));
+  if (active.size === 0) return undefined;
 
   const formulas = ['pandoc', 'imagemagick', 'librsvg'];
-  if (pdf || latex) formulas.push('texlive', 'biber', 'poppler');
+  if (active.has('pdf') || active.has('latex')) formulas.push('texlive', 'biber', 'poppler');
   return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
 }
 

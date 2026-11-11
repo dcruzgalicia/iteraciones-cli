@@ -1,5 +1,4 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { runBuild, runClean, runValidate } from '../../cli/dispatcher.js';
@@ -135,20 +134,6 @@ Then('el directorio {string} existe', (relativa: string) => {
 Then('el directorio {string} no existe', (relativa: string) => {
   if (existsSync(ruta(relativa))) {
     throw new Error(`${relativa} no debería existir en ${world.root}`);
-  }
-});
-
-Then('el directorio {string} tiene al menos {int} archivo .html', async (relativa: string, minimo: number) => {
-  const archivos = (await readdir(ruta(relativa))).filter((f) => f.endsWith('.html'));
-  if (archivos.length < minimo) {
-    throw new Error(`${relativa} tiene ${archivos.length} archivos .html y esperaba al menos ${minimo}`);
-  }
-});
-
-Then('el archivo {string} tiene como máximo {int} líneas', (relativa: string, maximo: number) => {
-  const lineas = readFileSync(ruta(relativa), 'utf8').split('\n').length;
-  if (lineas > maximo) {
-    throw new Error(`${relativa} tiene ${lineas} líneas y el máximo es ${maximo}. Va:\n${readFileSync(ruta(relativa), 'utf8')}`);
   }
 });
 

@@ -40,8 +40,6 @@ export class ProgressTracker implements BuildReporter {
     if (this.verbose) this.stream.write(`[info] ${msg}\n`);
   }
 
-  planPhases(): void {}
-
   startPhase(phase: PipelinePhase, total: number = 0): void {
     const created = this.state.startPhase(phase, total);
     if (created) this.renderer.renderInactiveFormats(this.state);

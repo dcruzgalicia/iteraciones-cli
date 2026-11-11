@@ -3,7 +3,7 @@ import { type ActiveFormats, computeActiveFormats, type FormatKey, toActiveForma
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { computeBibHash, resolveBibOptions } from './state-bib.js';
 import { computeConfigHashes, computeFiltersHash } from './state-hash.js';
-import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from './state-serialize.js';
+import type { BuildState, FileCacheEntry, FileCacheMap } from './state-serialize.js';
 import type { BuildDocument } from './types.js';
 
 const WORK_FORMAT_SOURCES = {
@@ -30,10 +30,10 @@ export interface BuildMetadata {
   configHashes: Record<string, string>;
   configFileCache: Record<string, FileCacheEntry>;
   filtersHash: string;
-  filterFileCache: FilterFileCache;
+  filterFileCache: FileCacheMap;
   schemaFileCache: Record<string, FileCacheEntry>;
   bibHash: string;
-  bibFileCache: BibFileCache;
+  bibFileCache: FileCacheMap;
   formatInvalidated: Record<WorkFormatKey, boolean>;
   filtersInvalidated: boolean;
   bibInvalidated: boolean;
@@ -116,17 +116,8 @@ export async function computeBuildMetadata(
   };
 }
 
-interface ExportGroup {
-  key: WorkFormatKey;
-  enabled: boolean;
-}
-
 const emptyWorkSets = (): Record<WorkFormatKey, BuildDocument[]> =>
   Object.fromEntries(WORK_FORMATS.map((key) => [key, [] as BuildDocument[]])) as Record<WorkFormatKey, BuildDocument[]>;
-
-function exportGroupsFor(activeFormats: ActiveFormats): ExportGroup[] {
-  return WORK_FORMATS.map((key) => ({ key, enabled: WORK_FORMAT_SOURCES[key].some((fmt) => activeFormats[fmt]) }));
-}
 
 function collectWorkDocs(exportSets: Record<WorkFormatKey, BuildDocument[]>, docsChanged: Set<string>, allDocs: BuildDocument[]): BuildDocument[] {
   const workDocs = new Map<string, BuildDocument>();
@@ -164,8 +155,6 @@ export function computeWorkSets(
   outputDirChanged = false,
   selection?: Set<string>,
 ): WorkSets {
-  const groups = exportGroupsFor(meta.activeFormats);
-
   const docsChanged = computeDocsChanged(discoveredChanges, allDocs, meta.filtersInvalidated || outputDirChanged);
   applySelection(docsChanged, selection);
 
@@ -179,9 +168,9 @@ export function computeWorkSets(
       (meta.activeFormats.pdf || meta.activeFormats.latex || meta.activeFormats.html || meta.activeFormats.epub || meta.activeFormats.markdown));
 
   const exportSets = emptyWorkSets();
-  for (const group of groups) {
-    if (!group.enabled) continue;
-    exportSets[group.key] = allDocs.filter((d) => docsChanged.has(d.relativePath) || meta.formatInvalidated[group.key] || meta.bibInvalidated);
+  for (const key of WORK_FORMATS) {
+    if (!WORK_FORMAT_SOURCES[key].some((fmt) => meta.activeFormats[fmt])) continue;
+    exportSets[key] = allDocs.filter((d) => docsChanged.has(d.relativePath) || meta.formatInvalidated[key] || meta.bibInvalidated);
   }
 
   const workPaths = Object.fromEntries(WORK_FORMATS.map((key) => [key, new Set(exportSets[key].map((d) => d.relativePath))])) as Record<

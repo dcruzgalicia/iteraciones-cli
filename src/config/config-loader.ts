@@ -81,14 +81,8 @@ function parseConfig(raw: string, configPath: string): LoadedSiteConfig {
   return { config: result.data, wroteDisabledPreamble: wroteDisabledPreamble(root) };
 }
 
-export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSiteConfig> {
-  const read = await readConfigText(cwd);
-  if (read === null) return { config: SiteConfigSchema.parse({}), wroteDisabledPreamble: false };
-  return parseConfig(read.raw, read.configPath);
-}
-
 export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
-  return (await loadSiteConfigWithPresence(cwd)).config;
+  return (await loadSiteConfigIfPresent(cwd))?.config ?? SiteConfigSchema.parse({});
 }
 
 export async function loadSiteConfigIfPresent(cwd: string): Promise<LoadedSiteConfig | null> {

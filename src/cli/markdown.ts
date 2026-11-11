@@ -9,7 +9,6 @@ import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR } from '../builder/output-layout.js';
 import {
   collectionBaseContent,
-  getCreatorLinks,
   licenciaFrontmatterPara,
   memberSlugMap,
   readCollectionEntries,
@@ -89,7 +88,6 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
       ),
       relImageMap,
       docDir,
-      creatorLinks: fm.type === 'creator' ? getCreatorLinks(fm) : [],
       rootFiles: fm.type === 'collection' ? rootFiles : undefined,
       memberSlugs,
       merge: fm.type === 'collection' && siteConfig.format?.markdown?.merge === true,

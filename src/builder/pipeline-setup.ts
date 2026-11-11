@@ -17,27 +17,6 @@ import { disableBibliographyWithoutBibFiles, loadPreambleFilters, type PreambleD
 import type { resolveBibOptions } from './state-bib.js';
 import type { BuildContext } from './types.js';
 
-interface PipelineSetup {
-  bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
-  bibFiles: string[];
-  globalBibliography: string | undefined;
-  globalCsl: string | undefined;
-  lang: string;
-  logo: LogoAsset | undefined;
-}
-
-export async function resolvePipelineSetup(ctx: BuildContext, plan: BuildMetadata): Promise<PipelineSetup> {
-  const siteConfig = ctx.siteConfig;
-  return {
-    bibOptions: plan.bibOptions,
-    bibFiles: plan.bibFiles,
-    globalBibliography: plan.bibOptions?.bibliography,
-    globalCsl: siteConfig.csl?.trim() ? resolve(ctx.cwd, siteConfig.csl.trim()) : undefined,
-    lang: siteConfig.language ?? DEFAULT_SITE_CONFIG.language,
-    logo: plan.activeFormats.html ? await writeLogoAssets(ctx.cwd, ctx.outputDir, siteConfig) : undefined,
-  };
-}
-
 interface EffectiveTemplates {
   biblatexAvailable: boolean;
   pdfxActive: boolean;
@@ -46,7 +25,7 @@ interface EffectiveTemplates {
 
   templates: Record<TemplateKind, string>;
 
-  refsCardTemplates: Record<HtmlDocType, string>;
+  refsCardTemplates: Record<'file' | 'collection' | 'creator' | 'list', string>;
 }
 export type TemplateKind = 'html' | 'html-collection' | 'html-creator' | 'latex' | 'latex-collection' | 'latex-creator' | 'latex-intervention';
 
@@ -67,10 +46,7 @@ function htmlDocTypeOf(kind: TemplateKind): HtmlDocType | undefined {
   return undefined;
 }
 
-const TEMPLATE_SCOPES: Record<TemplateKind, PreambleDocType> = {
-  html: 'file',
-  'html-collection': 'collection',
-  'html-creator': 'creator',
+const PREAMBLE_SCOPES: Record<'latex' | 'latex-collection' | 'latex-creator' | 'latex-intervention', PreambleDocType> = {
   latex: 'file',
   'latex-collection': 'collection',
   'latex-creator': 'creator',
@@ -105,7 +81,7 @@ interface TemplateInput {
 export async function composeTemplate(kind: TemplateKind, input: TemplateInput): Promise<string> {
   const htmlType = htmlDocTypeOf(kind);
   if (htmlType !== undefined) return composeHtmlTemplate(input.siteConfig, htmlType);
-  const scope = TEMPLATE_SCOPES[kind];
+  const scope = PREAMBLE_SCOPES[kind as keyof typeof PREAMBLE_SCOPES];
   const filters = input.preambleFilters ?? (await loadPreambleFilters(input.effectiveDisabledPreamble, input.cwd, scope));
 
   const dims = detectPageSize(filters);
@@ -119,33 +95,27 @@ export async function composeTemplate(kind: TemplateKind, input: TemplateInput):
 export async function writeEffectiveTemplates(
   ctx: BuildContext,
   plan: BuildMetadata,
-  htmlOn: boolean,
-  siteConfig: SiteConfig,
-  bibFiles: string[],
   effectiveDisabledPreamble: string[],
 ): Promise<EffectiveTemplates> {
   const templatesDir = join(ctx.cwd, '.iteraciones', 'templates');
   await mkdir(templatesDir, { recursive: true });
+  const refsCardTemplates = {
+    file: await loadReferencesCardTemplate('file'),
+    collection: await loadReferencesCardTemplate('collection'),
+    creator: await loadReferencesCardTemplate('creator'),
+    list: await loadReferencesCardTemplate('collection'),
+  };
   const state: EffectiveTemplates = {
     biblatexAvailable: true,
     pdfxActive: false,
     cropActive: false,
     pageDimensions: undefined,
     templates: Object.fromEntries(TEMPLATE_KINDS.map((kind) => [kind, templatePathFor(kind, templatesDir)])) as Record<TemplateKind, string>,
-    refsCardTemplates: { file: '', collection: '', creator: '', list: '', menu: '', announcement: '' },
+    refsCardTemplates,
   };
 
-  state.refsCardTemplates = {
-    file: await loadReferencesCardTemplate('file'),
-    collection: await loadReferencesCardTemplate('collection'),
-    creator: await loadReferencesCardTemplate('creator'),
-    list: await loadReferencesCardTemplate('collection'),
-    menu: await loadReferencesCardTemplate('file'),
-    announcement: await loadReferencesCardTemplate('file'),
-  };
-
-  const disabledPreamble = disableBibliographyWithoutBibFiles(effectiveDisabledPreamble, bibFiles);
-  const tpl: TemplateInput = { cwd: ctx.cwd, siteConfig, bibFiles, effectiveDisabledPreamble: disabledPreamble };
+  const disabledPreamble = disableBibliographyWithoutBibFiles(effectiveDisabledPreamble, plan.bibFiles);
+  const tpl: TemplateInput = { cwd: ctx.cwd, siteConfig: ctx.siteConfig, bibFiles: plan.bibFiles, effectiveDisabledPreamble: disabledPreamble };
   const writeTemplate = async (kind: TemplateKind, preambleFilters?: PreambleFilter[]): Promise<void> => {
     const path = state.templates[kind];
     await writeIfChanged(path, await composeTemplate(kind, { ...tpl, preambleFilters }));
@@ -153,17 +123,17 @@ export async function writeEffectiveTemplates(
     recordSupportCommand('resources', path, ['iteraciones', 'template', kind, '-o', path]);
   };
 
-  if (htmlOn) {
+  if (plan.activeFormats.html) {
     await writeTemplate('html');
     await writeTemplate('html-collection');
     await writeTemplate('html-creator');
   }
   if (plan.generateLatex) {
     for (const kind of PREAMBLE_TEMPLATE_KINDS) {
-      const preambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, TEMPLATE_SCOPES[kind]);
+      const preambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, PREAMBLE_SCOPES[kind]);
       const pageDimensions = detectPageSize(preambleFilters);
 
-      if (TEMPLATE_SCOPES[kind] === 'file') {
+      if (PREAMBLE_SCOPES[kind] === 'file') {
         state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
         state.pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
         state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
@@ -215,18 +185,19 @@ export async function buildPoolContexts(
   ctx: BuildContext,
   plan: BuildMetadata,
   work: WorkSets,
-  formatCfg: SiteConfig['format'] | undefined,
-  setup: PipelineSetup,
   templates: EffectiveTemplates,
   pdfJobs: PdfJobSink,
 ): Promise<{ renderCtx: RenderContext; exportCtx: ExportContext; formatWorkSets: FormatWorkSets }> {
   const filters = await loadFilterGroups(ctx.siteConfig, ctx.siteConfig.disabledFilters, ctx.cwd);
+  const siteConfig = ctx.siteConfig;
+  const lang = siteConfig.language ?? DEFAULT_SITE_CONFIG.language;
+  const logo = plan.activeFormats.html ? await writeLogoAssets(ctx.cwd, ctx.outputDir, siteConfig) : undefined;
   const renderCtx: RenderContext = {
     ctx,
     plan,
-    formatCfg,
-    lang: setup.lang,
-    logo: setup.logo,
+    formatCfg: ctx.siteConfig.format,
+    lang,
+    logo,
     warnedLangs: new Set<string>(),
     pdfxActive: templates.pdfxActive,
     cropActive: templates.cropActive,
@@ -234,10 +205,10 @@ export async function buildPoolContexts(
   };
   const exportCtx: ExportContext = {
     filters,
-    bibOptions: setup.bibOptions,
-    bibFiles: setup.bibFiles,
-    globalBibliography: setup.globalBibliography,
-    globalCsl: setup.globalCsl,
+    bibOptions: plan.bibOptions,
+    bibFiles: plan.bibFiles,
+    globalBibliography: plan.bibOptions?.bibliography,
+    globalCsl: siteConfig.csl?.trim() ? resolve(ctx.cwd, siteConfig.csl.trim()) : undefined,
     pdfWorkDir: join(ctx.cwd, PDF_WORK_BASE),
     ...templates,
   };

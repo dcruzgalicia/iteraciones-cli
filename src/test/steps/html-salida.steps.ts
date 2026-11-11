@@ -1,31 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then } from '@cucumber/cucumber';
-import { initTestProject } from '../helpers.js';
+import { distPath, exigeTexto as exige, initTestProject, prohibeTexto as prohibe } from '../helpers.js';
 import { escribirEnProyecto, tempRoot, world } from './cli-world.steps.ts';
 
 function salida(relativa: string): string {
-  const ruta = join(world.root, 'dist', 'files', relativa);
+  const ruta = distPath(world.root, relativa);
   if (!existsSync(ruta)) {
     throw new Error(`el build no dejó ${relativa} en dist/files`);
   }
   return readFileSync(ruta, 'utf8');
-}
-
-function exige(html: string, archivo: string, textos: string[]): void {
-  for (const texto of textos) {
-    if (!html.includes(texto)) {
-      throw new Error(`${archivo} no dice ${JSON.stringify(texto)}`);
-    }
-  }
-}
-
-function prohibe(html: string, archivo: string, textos: string[]): void {
-  for (const texto of textos) {
-    if (html.includes(texto)) {
-      throw new Error(`${archivo} sí dice ${JSON.stringify(texto)} y no debería`);
-    }
-  }
 }
 
 function cuenta(html: string, archivo: string, texto: string, veces: number): void {
@@ -247,7 +231,7 @@ Then('la página trae el botón de volver al principio', () => {
 });
 
 Then('sin HTML activo no se copian las fuentes', () => {
-  const ruta = join(world.root, 'dist', 'files', 'fonts');
+  const ruta = distPath(world.root, 'fonts');
   if (existsSync(ruta)) {
     throw new Error('la salida tiene fonts y no debería: son assets de HTML');
   }

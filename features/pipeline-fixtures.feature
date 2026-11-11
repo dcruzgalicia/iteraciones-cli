@@ -1,5 +1,4 @@
 # language: es
-@requires-pandoc
 Característica: el pipeline avisa a quien lo embedda
 
   Como quien mete `build()` en otro programa en vez de usar el CLI
@@ -11,7 +10,7 @@ Característica: el pipeline avisa a quien lo embedda
     Escenario: build() con un reporter propio recorre discovery → render → cierre
       Dado un proyecto con LaTeX, EPUB y Markdown activados y HTML desactivado
       Cuando compilo el proyecto con un reporter que cuenta eventos
-      Entonces el reporter recibe setFormats, planPhases y finish, y ninguna fase de fallo
+      Entonces el reporter recibe setFormats y finish, y ninguna fase de fallo
       Y el reporter recibe las fases de discovery y de render
       Y el reporter declara el render con el total de documentos
       Y el reporter cierra con un documento procesado y ninguno en caché

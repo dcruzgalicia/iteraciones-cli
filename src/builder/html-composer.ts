@@ -202,10 +202,6 @@ export interface FormatsLink {
   description: string;
 }
 
-export function buildFormatsFlag(formats: FormatsLink[]): string | undefined {
-  return formats.length > 0 ? '1' : undefined;
-}
-
 export function buildFormatsArgs(formats: FormatsLink[]): string[] {
   return formats.map((f) => `--variable=fmt-${f.key}:${f.href}`);
 }

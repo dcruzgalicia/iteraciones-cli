@@ -98,6 +98,15 @@ function imageArgs(inputPath: string, spec: ImageProcessSpec, quality: number, i
   return args;
 }
 
+export async function spawnMagick(args: string[]): Promise<boolean> {
+  try {
+    const proc = Bun.spawn(['magick', ...args], { stdout: 'ignore', stderr: 'ignore' });
+    return (await proc.exited) === 0;
+  } catch {
+    return false;
+  }
+}
+
 async function runMagick(inputPath: string, args: string[]): Promise<boolean> {
   try {
     const result = await exec('magick', args, { timeoutMs: MAGICK_TIMEOUT_MS });

@@ -1,6 +1,6 @@
 import { spyOn } from 'bun:test';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { buildFormatsArgs, buildFormatsFlag, type FormatsLink } from '../../builder/html-composer.js';
+import { buildFormatsArgs, type FormatsLink } from '../../builder/html-composer.js';
 import { extractReferencesBlock, moveCollectionIntro, removeTocReferencesLink } from '../../builder/html-postprocess.js';
 import * as logger from '../../lib/logger.js';
 import { world } from './cli-world.steps.ts';
@@ -34,10 +34,6 @@ When('quito el enlace a referencias del índice', () => {
 
 Given('que los formatos son {string}', (lista: string) => {
   world.formatos = JSON.parse(lista) as FormatsLink[];
-});
-
-When('compongo el flag de formatos', () => {
-  world.flagFormatos = buildFormatsFlag(world.formatos);
 });
 
 When('compongo los argumentos de formatos', () => {
@@ -93,18 +89,6 @@ Then('el post-proceso avisa que {string}', (motivo: string) => {
   const avisos = (world.avisosHtml ?? []).join(' ');
   if (!avisos.includes(motivo)) {
     throw new Error(`el post-proceso no avisó ${JSON.stringify(motivo)}. Avisó: ${JSON.stringify(avisos)}`);
-  }
-});
-
-Then('el flag de formatos no existe', () => {
-  if (world.flagFormatos !== undefined) {
-    throw new Error(`el flag existe y no debería: ${JSON.stringify(world.flagFormatos)}`);
-  }
-});
-
-Then('el flag de formatos es {string}', (esperado: string) => {
-  if (world.flagFormatos !== esperado) {
-    throw new Error(`el flag es ${JSON.stringify(world.flagFormatos)} y debería ser ${JSON.stringify(esperado)}`);
   }
 });
 

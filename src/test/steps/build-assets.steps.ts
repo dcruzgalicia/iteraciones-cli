@@ -6,9 +6,10 @@ import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, hasLega
 import type { BuildContext, DiscoveryEntry } from '../../builder/types.js';
 import { runBuild } from '../../cli/dispatcher.js';
 import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
+import { distPath } from '../helpers.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-const salida = (): string => join(world.root, 'dist', 'files');
+const salida = (): string => distPath(world.root);
 
 function ctx(): BuildContext {
   return {

@@ -1,6 +1,4 @@
 # language: es
-@requires-pandoc
-@requires-magick
 Característica: Todo lo estático de dist vive dentro de un directorio assets
   Como quien mueve la salida de un build a otra máquina
   Quiero que dist no referencie rutas del proyecto fuente

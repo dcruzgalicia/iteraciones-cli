@@ -28,7 +28,6 @@ Característica: La clave script produce un build.sh portable y numerado de form
       Cuando leo la configuración del proyecto
       Entonces la lectura falla diciendo que hay que renombrar la clave
 
-  @requires-pandoc
   Regla de negocio: El .sh declara una sección por fase y usa subcomandos donde hay decisiones
     Escenario: El build.sh se escribe, es ejecutable y sólo contiene comandos
       Dado un proyecto de prueba con la clave script activada
@@ -52,7 +51,6 @@ Característica: La clave script produce un build.sh portable y numerado de form
       Entonces el código de salida es 0
       Y dist se reconstruye idéntico salvo los EPUB
 
-  @requires-pandoc
   Regla de negocio: Las colecciones entran por entradas materializadas y el replay las rehace
     Escenario: Las colecciones entran por collections y el replay sale idéntico
       Dado un proyecto con un documento y una colección que lo incluye
@@ -64,8 +62,6 @@ Característica: La clave script produce un build.sh portable y numerado de form
       Y dist se reconstruye idéntico salvo los EPUB
       Y las entradas de las colecciones se reconstruyen idénticas
 
-  @requires-pandoc
-  @requires-magick
   Regla de negocio: Las imágenes se procesan con ImageMagick y el replay las rehace
     Escenario: Incluye ImageMagick y las imágenes procesadas salen idénticas
       Dado un proyecto con una imagen y un documento que la referencia
@@ -82,8 +78,6 @@ Característica: La clave script produce un build.sh portable y numerado de form
       Entonces el código de salida es 0
       Y dist se reconstruye idéntico sin excepciones
 
-  @requires-pandoc
-  @requires-magick
   Regla de negocio: El post-proceso LaTeX viaja por manifiesto
     Escenario: El post-proceso latex viaja por manifiesto y el tex de dist sale idéntico
       Dado un proyecto con una imagen y un documento que la referencia en LaTeX
@@ -102,8 +96,6 @@ Característica: La clave script produce un build.sh portable y numerado de form
       Entonces el código de salida es 0
       Y dist se reconstruye idéntico sin excepciones
 
-  @requires-pandoc
-  @requires-latex
   Regla de negocio: El PDF se compila con latexmk y sus slots los prepara el CLI
     Escenario: Incluye latexmk con sus pasos de soporte y vuelve a dejar el PDF en dist
       Dado un proyecto con un documento y formato PDF
@@ -123,11 +115,6 @@ Característica: La clave script produce un build.sh portable y numerado de form
       Entonces el código de salida es 0
       Y el archivo de dist existe
 
-  @requires-pandoc
-  @requires-magick
-  @requires-latex
-  @requires-pdftotext
-  @requires-unzip
   Regla de negocio: build completo y bash build.sh producen el mismo dist
     Escenario: Deja el mismo dist salvo el contenido sustancial de PDF y EPUB
       Dado un proyecto con todos los formatos, una colección y una creadora

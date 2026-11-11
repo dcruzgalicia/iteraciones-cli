@@ -6,7 +6,7 @@ import { build } from '../../builder/orchestrator.js';
 import { runBuild, runNew } from '../../cli/dispatcher.js';
 import { initProject } from '../../cli/init.js';
 import { validateProject } from '../../cli/validate.js';
-import { initTestProject } from '../helpers.js';
+import { distPath, initTestProject } from '../helpers.js';
 import { capture } from './cli-world.steps.js';
 
 interface IntWorld {
@@ -31,10 +31,6 @@ After(async () => {
   process.exitCode = previousExitCode;
   await rm(world.dir, { recursive: true, force: true });
 });
-
-function distPath(...parts: string[]): string {
-  return join(world.dir, 'dist', 'files', ...parts);
-}
 
 Given('un directorio vacío', async () => {
   await mkdir(world.dir, { recursive: true });
@@ -76,7 +72,7 @@ When('compilo el proyecto entero desde cero', async () => {
 });
 
 When('recompilo sin tocar nada', async () => {
-  world.htmlMtime = (await stat(distPath('test-document.html'))).mtimeMs;
+  world.htmlMtime = (await stat(distPath(world.dir, 'test-document.html'))).mtimeMs;
   await build(world.dir);
 });
 
@@ -126,19 +122,19 @@ Then('el proyecto no tiene configuración', async () => {
 });
 
 Then('el HTML no se reescribe', async () => {
-  const despues = (await stat(distPath('test-document.html'))).mtimeMs;
+  const despues = (await stat(distPath(world.dir, 'test-document.html'))).mtimeMs;
   if (despues !== world.htmlMtime) {
     throw new Error(`el HTML se reescribió sin cambios: mtime ${world.htmlMtime} → ${despues}`);
   }
 });
 
 Then('el HTML sigue en dist', async () => {
-  if (!(await Bun.file(distPath('test-document.html')).exists())) throw new Error('el HTML desapareció de dist');
+  if (!(await Bun.file(distPath(world.dir, 'test-document.html')).exists())) throw new Error('el HTML desapareció de dist');
 });
 
 Then('dist tiene un HTML para el índice y para cada capítulo', async () => {
   for (const nombre of ['index.html', 'capitulo-1.html', 'capitulo-2.html']) {
-    if (!(await Bun.file(distPath(nombre)).exists())) throw new Error(`falta ${nombre} en dist`);
+    if (!(await Bun.file(distPath(world.dir, nombre)).exists())) throw new Error(`falta ${nombre} en dist`);
   }
 });
 
@@ -154,7 +150,7 @@ Then('el estado guardado sigue siendo el del build completo', async () => {
 });
 
 Then('dist vuelve a tener sus HTML', async () => {
-  const htmls = [...new Bun.Glob('*.html').scanSync({ cwd: distPath() })];
+  const htmls = [...new Bun.Glob('*.html').scanSync({ cwd: distPath(world.dir) })];
   if (htmls.length === 0) throw new Error('tras corregir la bibliografía dist no volvió a tener HTML');
 });
 

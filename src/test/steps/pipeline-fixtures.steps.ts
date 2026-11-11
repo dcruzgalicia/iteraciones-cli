@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
 import * as pandocRunner from '../../lib/pandoc-runner.js';
+import { fakeReporter } from '../helpers.js';
 
 const CONFIG = [
   'language: es-MX',
@@ -19,37 +20,9 @@ const CONFIG = [
   '    generate: true',
 ].join('\n');
 
-type ReporterCall = { method: string; args: unknown[] };
-
-function fakeReporter(calls: ReporterCall[]): Parameters<typeof build>[2] {
-  return {
-    setFormats: (formats: unknown[]) => void calls.push({ method: 'setFormats', args: [formats] }),
-    planPhases: (phases: string[]) => {
-      calls.push({ method: 'planPhases', args: [phases] });
-      return Promise.resolve();
-    },
-    startPhase: (phase: string, total?: number) => void calls.push({ method: 'startPhase', args: [phase, total] }),
-    reportFile: (file: unknown) => void calls.push({ method: 'reportFile', args: [file] }),
-    completePhase: (count?: number) => void calls.push({ method: 'completePhase', args: [count] }),
-    log: (message: string) => void calls.push({ method: 'log', args: [message] }),
-    addWarning: (message: string) => void calls.push({ method: 'warn', args: [message] }),
-    addSummaryLine: (line: string) => void calls.push({ method: 'summary', args: [line] }),
-    showCleanup: () => void calls.push({ method: 'cleanup', args: [] }),
-    startLightFormats: () => void calls.push({ method: 'light', args: [] }),
-    finish: (processed: number, cached: number) => {
-      calls.push({ method: 'finish', args: [processed, cached] });
-      return Promise.resolve();
-    },
-    fail: () => {
-      calls.push({ method: 'fail', args: [] });
-      return Promise.resolve();
-    },
-  } as unknown as Parameters<typeof build>[2];
-}
-
 interface PipelineWorld {
   dir: string;
-  calls: ReporterCall[];
+  calls: ReturnType<typeof fakeReporter>['calls'];
 }
 
 const world: PipelineWorld = { dir: '', calls: [] };
@@ -77,16 +50,18 @@ Before({ tags: '@spy-pipeline' }, () => {
 
 When('compilo el proyecto con un reporter que cuenta eventos', async () => {
   process.exitCode = 0;
-  await build(world.dir, {}, fakeReporter(world.calls));
+  const fake = fakeReporter();
+  world.calls = fake.calls;
+  await build(world.dir, {}, fake.reporter);
 });
 
 function methods(): string[] {
   return world.calls.map((c) => c.method);
 }
 
-Then('el reporter recibe setFormats, planPhases y finish, y ninguna fase de fallo', () => {
+Then('el reporter recibe setFormats y finish, y ninguna fase de fallo', () => {
   if (methods().includes('fail')) throw new Error('el reporter recibió una fase de fallo');
-  for (const esperado of ['setFormats', 'planPhases', 'finish']) {
+  for (const esperado of ['setFormats', 'finish']) {
     if (!methods().includes(esperado)) throw new Error(`el reporter nunca recibió ${esperado}. Recibió: ${JSON.stringify(methods())}`);
   }
 });

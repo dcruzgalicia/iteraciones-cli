@@ -1,6 +1,6 @@
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import { analyzeBoxes, type PageBox, parseBboxLayout, type WordBox } from '../../lib/pdf-spacing.js';
-import type { TypographyIncidence } from '../../lib/pdf-typography.js';
+import { describeIncidencia as describe } from '../helpers.js';
 
 type Estado = { paginas: PageBox[]; incidencias: string[] };
 
@@ -30,16 +30,6 @@ function paginaDe(lineas: Array<{ words: Array<[string, number, number]> }>): Pa
     };
   });
   return page;
-}
-
-function describe(incidencia: TypographyIncidence): string {
-  if (incidencia.type === 'stretched-line' || incidencia.type === 'shrunk-line') {
-    return `${incidencia.type} ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ratio ${incidencia.ratio.toFixed(2)} ;; gap ${incidencia.gapPt.toFixed(1)} ;; ${incidencia.text.trim()}`;
-  }
-  if (incidencia.type === 'river') {
-    return `river ;; pág ${incidencia.page} ;; líneas ${incidencia.from}-${incidencia.to} ;; x ${incidencia.xPt.toFixed(1)} ;; canal ${incidencia.channelPt.toFixed(1)} ;; ${incidencia.text.trim()} || ${incidencia.lastText.trim()}`;
-  }
-  return `${incidencia.type} ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${incidencia.text.trim()}`;
 }
 
 Given('una página de cajas con estas líneas:', (json: string) => {

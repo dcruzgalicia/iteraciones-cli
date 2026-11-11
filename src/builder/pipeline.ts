@@ -1,6 +1,5 @@
 import { dirname, join, relative } from 'node:path';
 
-import type { SiteConfig } from '../config/config-schema.js';
 import { posix } from '../lib/paths.js';
 import { killInFlightProcesses, mapWithConcurrency } from '../lib/run.js';
 import { notePdfSlots } from '../lib/script-recorder.js';
@@ -15,7 +14,6 @@ import {
   ensureBiberCaches,
   type FormatWorkSets,
   type RenderContext,
-  resolvePipelineSetup,
   writeEffectiveTemplates,
 } from './pipeline-setup.js';
 import type { BuildContext, BuildReporter, DiscoveryEntry } from './types.js';
@@ -61,16 +59,13 @@ export async function documentPipeline(
   ctx: BuildContext,
   plan: BuildMetadata,
   work: WorkSets,
-  formatCfg: SiteConfig['format'] | undefined,
   discoveryIndex: Map<string, DiscoveryEntry>,
   effectiveDisabledPreamble: string[],
 ): Promise<{ processed: Set<string>; pdfOutputs: string[] }> {
   const { activeFormats } = plan;
   const pdfOn = activeFormats.pdf;
 
-  const setup = await resolvePipelineSetup(ctx, plan);
-
-  const templates = await writeEffectiveTemplates(ctx, plan, activeFormats.html, ctx.siteConfig, setup.bibFiles, effectiveDisabledPreamble);
+  const templates = await writeEffectiveTemplates(ctx, plan, effectiveDisabledPreamble);
 
   const maxSlots = pdfOn ? pdfSlotCount(ctx.concurrency) : 0;
 
@@ -85,7 +80,7 @@ export async function documentPipeline(
     pdfConsumer.start();
   }
 
-  const { renderCtx, exportCtx, formatWorkSets } = await buildPoolContexts(ctx, plan, work, formatCfg, setup, templates, pdfConsumer);
+  const { renderCtx, exportCtx, formatWorkSets } = await buildPoolContexts(ctx, plan, work, templates, pdfConsumer);
 
   if (activeFormats.html) {
     renderCtx.announcementImages = await preparaImagenesDeAnuncios({

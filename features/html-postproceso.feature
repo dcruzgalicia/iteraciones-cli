@@ -95,20 +95,6 @@ Característica: el post-proceso del HTML y los formatos del argv
 
   Regla de negocio: El argv lleva un valor corto por formato, nunca HTML
 
-    Escenario: Sin formatos no hay flag
-      Dado que la raíz del proyecto está vacía
-      Y que los formatos son "[]"
-      Cuando compongo el flag de formatos
-      Y compongo los argumentos de formatos
-      Entonces el flag de formatos no existe
-      Y los argumentos de formatos son ""
-
-    Escenario: Con formatos el flag es un valor corto
-      Dado que la raíz del proyecto está vacía
-      Y que los formatos son '[{"href":"./doc.pdf","key":"pdf","name":"PDF","description":"Documento final"},{"href":"./doc.epub","key":"epub","name":"EPUB","description":"Edición adaptable"}]'
-      Cuando compongo el flag de formatos
-      Entonces el flag de formatos es "1"
-
     Escenario: Cada formato aporta exactamente un href corto
       Dado que la raíz del proyecto está vacía
       Y que los formatos son '[{"href":"./doc.pdf","key":"pdf","name":"PDF","description":"Documento final"},{"href":"./doc.epub","key":"epub","name":"EPUB","description":"Edición adaptable"}]'

@@ -4,6 +4,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { localizeDistAssets, relativizeTexForDist } from '../../builder/latex-composer.js';
 import { build } from '../../builder/orchestrator.js';
 import { loadSiteConfig } from '../../config/config-loader.js';
+import { distPath } from '../helpers.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 const REPLICADOS = ['iteraciones.config.yaml', 'preamble/04-margins.tex', 'filters/mi-filtro.lua', 'bibliography.bib'];
@@ -11,7 +12,7 @@ const REPLICADOS = ['iteraciones.config.yaml', 'preamble/04-margins.tex', 'filte
 const DOC = ['---', 'title: Ensayo', '---', '', '## Capítulo', '', 'Contenido.'].join('\n');
 
 const raiz = (): string => realpathSync(world.root);
-const salida = (): string => join(raiz(), 'dist', 'files');
+const salida = (): string => distPath(raiz());
 
 function configCon(lines: string[], bundle = true): string {
   return [

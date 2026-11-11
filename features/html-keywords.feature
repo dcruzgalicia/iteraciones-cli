@@ -58,7 +58,6 @@ Característica: las palabras clave del proyecto
       Y el HTML de "ana-ruiz.html" contiene "./keywords/cuidados.html"
       Y el chip "iteraciones" del HTML de "ana-ruiz.html" enlaza a "./index.html"
 
-    @requires-pandoc
     Escenario: El EPUB lleva los keywords como dc:subject
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con textos y keywords en html y epub

@@ -45,14 +45,6 @@ Then('el fragmento es {string}', (esperado: string) => {
   }
 });
 
-Then('el fragmento tiene {int} palabras en su línea de contenido', (cuantas: number) => {
-  const lineas = world.fragmento.split('\n');
-  const leidas = (lineas[1] ?? '').split(/\s+/).length;
-  if (leidas !== cuantas) {
-    throw new Error(`la línea de contenido tiene ${leidas} palabras y son ${cuantas}`);
-  }
-});
-
 Then('el fragmento está vacío', () => {
   if (world.fragmento !== '') {
     throw new Error(`esperaba un fragmento vacío y salió ${JSON.stringify(world.fragmento)}`);
@@ -273,13 +265,6 @@ Then('el nav de {string} no dice {string}', async (relativa: string, texto: stri
   const nav = navDePaginacion(await Bun.file(join(world.root, relativa)).text());
   if (nav === '') throw new Error(`${relativa} no tiene nav de paginación`);
   if (nav.includes(texto)) throw new Error(`el nav de ${relativa} dice ${JSON.stringify(texto)} y no debería: ${nav}`);
-});
-
-Then('el nav de la página {int} dice {string}', (pagina: number, texto: string) => {
-  const nav = (world.navs as string[])[pagina - 1] ?? '';
-  if (!nav.includes(texto)) {
-    throw new Error(`el nav de la página ${pagina} no dice ${JSON.stringify(texto)}: ${nav}`);
-  }
 });
 
 Then('el nav de la página {int} no enlaza a {string}', (pagina: number, texto: string) => {
