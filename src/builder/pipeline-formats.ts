@@ -460,6 +460,34 @@ function jsonLdFor(args: {
   return JSON.stringify(base).replace(/</g, '\\u003c');
 }
 
+function publicationMetaHtml(args: {
+  fm: Record<string, unknown>;
+  formatCfg: Record<string, unknown> | undefined;
+  siteConfig: SiteConfig;
+  keywords: string[];
+}): string | undefined {
+  const campo = (name: string): string | undefined => htmlMetadataField(args.fm, args.formatCfg, args.siteConfig, name);
+  const filas: Array<[string, string | undefined]> = [
+    ['Resumen', campo('abstract')],
+    ['DOI', campo('doi')],
+    ['ISBN', campo('isbn')],
+    ['Editorial', campo('publisher')],
+    ['Colaboradoras', campo('contributor')],
+    ['Derechos', campo('rights')],
+    ['Identificador', campo('identifier')],
+    ['Palabras clave', args.keywords.length > 0 ? args.keywords.join(', ') : undefined],
+  ];
+  const visibles = filas.filter(([, valor]) => valor !== undefined && valor.trim() !== '');
+  if (visibles.length === 0) return undefined;
+  const html = visibles
+    .map(
+      ([etiqueta, valor]) =>
+        `<div class="grid gap-1 border-t border-stone-300/50 py-2 first:border-t-0 first:pt-0 dark:border-stone-600/40"><dt class="font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">${etiqueta}</dt><dd class="m-0 text-stone-800 dark:text-stone-200">${Bun.escapeHTML(valor ?? '')}</dd></div>`,
+    )
+    .join('');
+  return `<dl class="m-0 grid gap-0">${html}</dl>`;
+}
+
 function socialMetaTags(args: {
   title: string;
   description?: string;
@@ -587,6 +615,10 @@ function htmlVars(args: {
     url: canonical,
     image: socialImage,
   });
+  const publicationMeta =
+    doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection'
+      ? publicationMetaHtml({ fm, formatCfg: htmlConfig, siteConfig: ctx.siteConfig, keywords })
+      : undefined;
   const jsonLd = jsonLdFor({
     type: doc.frontmatter.type,
     title: titulo,
@@ -607,6 +639,7 @@ function htmlVars(args: {
     canonical,
     socialMeta,
     jsonLd,
+    publicationMeta,
     lang,
     theme: htmlConfig?.site?.theme,
     css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
