@@ -1331,11 +1331,8 @@ export function hrefsDeImagenes(imageMap: Map<string, string>, outputDir: string
 
 function figuraDeTarjeta(href: string, enlace: string | undefined, titulo: string, lazy = false): string {
   const carga = lazy ? ' loading="lazy" decoding="async"' : '';
-  const img = `<img src="${href}" alt=""${carga} class="${CARD_IMAGE_IMG_CLASSES}">`;
-  const dentro =
-    enlace === undefined
-      ? img
-      : `<a href="${enlace}" aria-label="Imagen de ${Bun.escapeHTML(titulo)}" class="${CARD_IMAGE_LINK_CLASSES}">${img}</a>`;
+  const img = `<img src="${href}" alt="Ver imagen"${carga} class="${CARD_IMAGE_IMG_CLASSES}">`;
+  const dentro = enlace === undefined ? img : `<a href="${enlace}" class="${CARD_IMAGE_LINK_CLASSES}">${img}</a>`;
   return `<figure class="${CARD_IMAGE_CLASSES}">${dentro}</figure>`;
 }
 
