@@ -93,12 +93,14 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const identity = await loadCard(type, 'card-identity.html');
   const footerIdentity = comoFooter(await loadCard(type, 'card-identity.html'));
   const metadata = await loadCard(type, 'card-metadata.html');
-  const mainCards = [await loadCard(type, 'card-contenido.html'), await loadCard(type, 'card-referencias.html')];
+  const referencias = await loadCard(type, 'card-referencias.html');
+  const mainCards = [await loadCard(type, 'card-contenido.html'), ...(type === 'file' ? [] : [referencias])];
   const relatedCards = [
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
     await loadCard(type, 'card-indice.html'),
     await loadCard(type, 'card-formatos.html'),
     await loadCard('file', 'card-indice-coleccion.html'),
+    ...(type === 'file' ? [referencias] : []),
   ];
   const siteCards = ['$if(recientes)$$recientes$$endif$', '$if(site-keywords)$$site-keywords$$endif$', await loadCard('file', 'card-licencia.html')];
 
