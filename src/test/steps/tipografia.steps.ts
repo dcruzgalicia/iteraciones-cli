@@ -1,8 +1,9 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { analyzePdf, analyzeText, nombreCortado, splitPages, type TypographyIncidence } from '../../lib/pdf-typography.js';
+import { analyzePdf, analyzeText, splitPages } from '../../lib/pdf-typography.js';
 import { pdfDePaginas } from '../helpers/pdf.ts';
+import { describeIncidencia as describe } from '../helpers.js';
 import { escribirEnProyecto, jsonSalida, world } from './cli-world.steps.ts';
 
 const RAIZ = join(import.meta.dir, '..', '..', '..');
@@ -10,26 +11,6 @@ const RAIZ = join(import.meta.dir, '..', '..', '..');
 function salidaPdftotext(texto: string): string {
   const paginas = texto.split(/\\f\n?/).map((pagina) => pagina.trimEnd());
   return `${paginas.map((pagina) => (pagina === '' ? '' : `${pagina}\n`)).join('\f')}\f`;
-}
-
-function describe(incidencia: TypographyIncidence): string {
-  if (incidencia.type === 'single-word-line') {
-    return `single-word-line ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${incidencia.text.trim()}`;
-  }
-  if (incidencia.type === 'hyphenated-proper-noun') {
-    return `hyphenated-proper-noun ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${nombreCortado(incidencia)}`;
-  }
-  if (incidencia.type === 'stretched-line' || incidencia.type === 'shrunk-line') {
-    return `${incidencia.type} ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ratio ${incidencia.ratio.toFixed(2)} ;; gap ${incidencia.gapPt.toFixed(1)} ;; ${incidencia.text.trim()}`;
-  }
-  if (incidencia.type === 'river') {
-    return `river ;; pág ${incidencia.page} ;; líneas ${incidencia.from}-${incidencia.to} ;; x ${incidencia.xPt.toFixed(1)} ;; canal ${incidencia.channelPt.toFixed(1)} ;; ${incidencia.text.trim()} || ${incidencia.lastText.trim()}`;
-  }
-  const numeros = incidencia.lineas.map((l) => l.line);
-  const rango = `líneas ${numeros[0]}-${numeros.at(-1)}${incidencia.total > incidencia.lineas.length ? ` de ${incidencia.total}` : ''}`;
-  const cuerpo = incidencia.lineas.map((l) => `${l.line}: ${l.text.trim()}`).join(' || ');
-  const letra = incidencia.type === 'consecutive-punctuation' ? '' : ` ;; ${incidencia.letter}`;
-  return `${incidencia.type} ;; pág ${incidencia.page} ;; ${rango}${letra} ;; ${cuerpo}`;
 }
 
 function renglones(texto: string): string {

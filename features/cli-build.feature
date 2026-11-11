@@ -54,8 +54,6 @@ Característica: El build falla bien y responde en la misma forma
 
   Regla de negocio: El PDF sale válido de extremo a extremo
 
-    @requires-pandoc
-    @requires-latex
     Escenario: Un build con índice genera un PDF real
       Dado que la raíz del proyecto tiene un proyecto con PDF y con índice
       Cuando hago un build del proyecto
@@ -63,8 +61,6 @@ Característica: El build falla bien y responde en la misma forma
       Y el archivo "dist/files/test-document.pdf" existe
       Y el archivo "dist/files/test-document.pdf" lleva la firma "%PDF"
 
-    @requires-pandoc
-    @requires-latex
     Escenario: 99-pdfx activo produce un PDF con /TrimBox
       Dado que la raíz del proyecto tiene un proyecto con 97 y 98 desactivados
       Cuando hago un build del proyecto
@@ -72,8 +68,6 @@ Característica: El build falla bien y responde en la misma forma
       Y el archivo "dist/files/test-document.pdf" declara "/TrimBox"
       Y el PDF pasa la certificación X-1a
 
-    @requires-pandoc
-    @requires-latex
     Escenario: 97-eso-pic activo compila sin choque de opciones
       Dado que la raíz del proyecto tiene un proyecto con 98 y 99 desactivados
       Cuando hago un build del proyecto
@@ -82,8 +76,6 @@ Característica: El build falla bien y responde en la misma forma
 
   Regla de negocio: La portada se genera con el documento y desaparece sin él
 
-    @requires-pandoc
-    @requires-latex
     Escenario: coverImage genera la portada PNG junto al PDF
       Dado que la raíz del proyecto tiene un proyecto con portada
       Cuando hago un build del proyecto
@@ -91,16 +83,12 @@ Característica: El build falla bien y responde en la misma forma
       Y el archivo "dist/files/test-document.png" existe
       Y el archivo "dist/files/test-document.png" lleva la firma "PNG"
 
-    @requires-pandoc
-    @requires-latex
     Escenario: coverImage en la raíz de la configuración también funciona
       Dado que la raíz del proyecto tiene un proyecto con portada en la raíz
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/test-document.png" existe
 
-    @requires-pandoc
-    @requires-latex
     Escenario: Un build sin cambios con PDF no vuelve a encolar nada
       Dado que la raíz del proyecto tiene un proyecto con HTML y PDF
       Cuando hago un build del proyecto
@@ -111,8 +99,6 @@ Característica: El build falla bien y responde en la misma forma
       Y la salida dice "(todos reutilizados)"
       Y la salida no dice "documento modificado"
 
-    @requires-pandoc
-    @requires-latex
     Escenario: Desactivar la portada borra las PNG huérfanas
       Dado que la raíz del proyecto tiene un proyecto con portada
       Cuando hago un build del proyecto

@@ -26,7 +26,12 @@ function ctx(): BuildContext {
 }
 
 async function componerLaTex(bibFiles: string[]): Promise<{ tex: string; biblatex: boolean }> {
-  const state = await writeEffectiveTemplates(ctx(), { generateLatex: true } as BuildMetadata, false, DEFAULT_SITE_CONFIG, bibFiles, DISABLED);
+  const plan = {
+    generateLatex: true,
+    activeFormats: { html: false, pdf: false, latex: true, epub: false, markdown: false },
+    bibFiles,
+  } as BuildMetadata;
+  const state = await writeEffectiveTemplates(ctx(), plan, DISABLED);
   return { tex: readFileSync(state.templates.latex, 'utf8'), biblatex: state.biblatexAvailable };
 }
 

@@ -5,7 +5,7 @@ import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
-import { fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import { fmString, fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { minifyHtml } from '../lib/minify.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
@@ -19,7 +19,7 @@ import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { CHIP_OUTLINE_CLASSES, creatorPortraitHtml, type HtmlDocType, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
+import { CHIP_OUTLINE_CLASSES, creatorPortraitHtml, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
 import {
   type DocumentImages,
   imageNamerFor,
@@ -126,6 +126,12 @@ function xmpMetadataFor(
   return meta as PdfXmpMetadata;
 }
 
+async function writePathsFile(path: string, imageMap: Map<string, string>, docDir: string, relativize: boolean): Promise<string> {
+  await mkdir(dirname(path), { recursive: true });
+  await Bun.write(path, `${JSON.stringify(imagePathsMap(imageMap, docDir, relativize))}\n`);
+  return path;
+}
+
 export async function writeImagePaths(
   doc: BuildDocument,
   cwd: string,
@@ -134,10 +140,7 @@ export async function writeImagePaths(
   docDir: string,
   relativize: boolean,
 ): Promise<string> {
-  const path = resolve(cwd, '.iteraciones', 'paths', `${doc.relativePath}.${format}.json`);
-  await mkdir(dirname(path), { recursive: true });
-  await Bun.write(path, `${JSON.stringify(imagePathsMap(imageMap, docDir, relativize))}\n`);
-  return path;
+  return writePathsFile(resolve(cwd, '.iteraciones', 'paths', `${doc.relativePath}.${format}.json`), imageMap, docDir, relativize);
 }
 
 async function emitLatexAndQueuePdf(
@@ -169,7 +172,7 @@ async function emitLatexAndQueuePdf(
     formatCfg: pdfCfg,
     biblatexAvailable: exportCtx.biblatexAvailable,
     warnedLangs,
-    images: { imageMap: images.imageMap, processedImages: images.processedFiles },
+    images,
     cwd: ctx.cwd,
   });
   const xmp = renderCtx.pdfxActive ? xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig) : undefined;
@@ -288,10 +291,6 @@ function cuando(condicion: boolean, valor: string): string | undefined {
   return condicion ? valor : undefined;
 }
 
-function conValorPorDefecto(valor: string | undefined, defecto: string): string {
-  return valor === undefined || valor === '' ? defecto : valor;
-}
-
 function formatosOpcionales(formats: HtmlPageVars['formats']): HtmlPageVars['formats'] {
   return formats !== undefined && formats.length > 0 ? formats : undefined;
 }
@@ -365,15 +364,15 @@ function htmlVars(args: {
   const titulo = doc.frontmatter.title || slug;
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
-  const siteTitle = conValorPorDefecto(htmlConfig?.site?.title, 'iteraciones');
+  const siteTitle = fmString(htmlConfig?.site?.title, 'iteraciones');
   const esListaIndex = doc.relativePath === 'index.md' && doc.frontmatter.type === 'list';
   const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
   const esPaginaIndex = doc.relativePath === 'index.md';
   return {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
     title: titulo,
-    siteTitle: conValorPorDefecto(htmlConfig?.site?.title, 'iteraciones'),
-    tagline: conValorPorDefecto(htmlConfig?.site?.description, 'escribir, compartir, re-existir'),
+    siteTitle: fmString(htmlConfig?.site?.title, 'iteraciones'),
+    tagline: fmString(htmlConfig?.site?.description, 'escribir, compartir, re-existir'),
     lang,
     theme: htmlConfig?.site?.theme,
     css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
@@ -392,7 +391,7 @@ function htmlVars(args: {
     collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
-    docChip: conValorPorDefecto(docChip, docChipLabel(doc.frontmatter.type)),
+    docChip: fmString(docChip, docChipLabel(doc.frontmatter.type)),
     contentChip: contentChipOverride ?? contentChipPara(doc.frontmatter.type),
     frontCover: covers?.front,
     backCover: covers?.back,
@@ -482,7 +481,7 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
   const hasHomePage = discoveryIndex.has('index.md') || discoveryIndex.size > 0;
   const available = availableDefaultListSlugs(discoveryIndex);
 
-  const htmlType: HtmlDocType =
+  const htmlType: 'file' | 'collection' | 'creator' | 'list' =
     doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' || doc.frontmatter.type === 'list' ? doc.frontmatter.type : 'file';
   const contenidos = paginas ?? [content];
   for (const [indice, contenido] of contenidos.entries()) {
@@ -617,8 +616,6 @@ export async function writeDistMarkdown(p: {
   exportDoc: ExportDocument;
   relImageMap: Map<string, string>;
   docDir: string;
-  creatorLinks: { name: string; url: string }[];
-
   rootFiles?: string[];
 
   memberSlugs?: Map<string, string>;
@@ -1380,10 +1377,6 @@ function enlacesDelMenu(discoveryIndex: Map<string, DiscoveryEntry>): EnlaceMenu
   });
 }
 
-function existeMenu(discoveryIndex: Map<string, DiscoveryEntry>): boolean {
-  return [...discoveryIndex.values()].some((entry) => entry.type === 'menu');
-}
-
 function enlacesConInicio(links: EnlaceMenu[], siteTitle: string): EnlaceMenu[] {
   return [{ name: siteTitle, url: './index.html' }, ...links];
 }
@@ -1396,10 +1389,10 @@ function enlacesListasPorDefecto(available: Set<string>, conKeywords: boolean): 
   return conKeywords ? [...enlaces, { name: 'Palabras clave', url: `./${KEYWORD_INDEX_SLUG}.html` }] : enlaces;
 }
 
-function menuDelSitio(discoveryIndex: Map<string, DiscoveryEntry>, siteTitle: string, dir: string): { header?: string; footer?: string } {
-  if (!existeMenu(discoveryIndex)) return {};
-  const links = enlacesConInicio(enlacesDelMenu(discoveryIndex), siteTitle);
-  return { header: menuHeaderLink(links, dir), footer: menuFooterContent(links, dir) };
+function menuDelSitio(links: EnlaceMenu[], siteTitle: string, dir: string): { header?: string; footer?: string } {
+  if (links.length === 0) return {};
+  const conInicio = enlacesConInicio(links, siteTitle);
+  return { header: menuHeaderLink(conInicio, dir), footer: menuFooterContent(conInicio, dir) };
 }
 
 function esEnlaceExterno(url: string): boolean {
@@ -1691,7 +1684,7 @@ async function emitKeywordIndex(args: {
   const hrefsCreadores = creatorHrefs(discoveryIndex, '.');
   const available = availableDefaultListSlugs(discoveryIndex);
   const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
-  const menu = menuDelSitio(discoveryIndex, siteTitle, '.');
+  const menu = menuDelSitio(enlacesDelMenu(discoveryIndex), siteTitle, '.');
   const doc: BuildDocument = {
     filePath: join(cwd, `${KEYWORD_INDEX_SLUG}.md`),
     relativePath: `${KEYWORD_INDEX_SLUG}.md`,
@@ -1761,7 +1754,6 @@ interface EmitListPageArgs {
   imageMap: Map<string, string>;
   docChip: string;
   docChipHref?: string;
-  keywordSlug?: string;
   warning: (dueno: string) => string;
 }
 
@@ -1786,7 +1778,6 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     imageMap,
     docChip,
     docChipHref,
-    keywordSlug,
     warning,
   } = args;
   const dueno = htmlOwner(discoveryIndex, dir, slug);
@@ -1806,7 +1797,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     available,
     true,
     discoveryIndex,
-    { path: relativePath, outSlug: slug, ...(keywordSlug === undefined ? {} : { keywordSlug }) },
+    { path: relativePath, outSlug: slug },
     hrefsDeImagenes(imageMap, outputDir, dir),
   );
   const doc: BuildDocument = {
@@ -1824,7 +1815,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
   };
   const imagePaths = await writeListImagePaths(cwd, imageKey, imageMap);
   const siteTitle = renderCtx.formatCfg?.html?.site?.title ?? 'iteraciones';
-  const menu = menuDelSitio(discoveryIndex, siteTitle, dir);
+  const menu = menuDelSitio(enlacesDelMenu(discoveryIndex), siteTitle, dir);
   const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
     discoveryIndex,
     cwd,
@@ -1922,7 +1913,6 @@ export async function emitKeywordLists(args: {
       imageMap: procesadas.imageMap,
       docChip: 'Palabra clave',
       docChipHref: keywordIndexAvailable(discoveryIndex) ? relativeHref(KEYWORDS_DIR, `${KEYWORD_INDEX_SLUG}.html`) : '',
-      keywordSlug: slug,
       warning: () => `no se escribió la lista de "${label}" porque "${KEYWORDS_DIR}/${slug}.html" es el archivo de ese documento`,
     });
   }
@@ -1967,8 +1957,6 @@ function titleHtmlPara(title: string, href: string | undefined): string {
 interface PageRef {
   path: string;
   outSlug?: string;
-
-  keywordSlug?: string;
 }
 
 function chipsDePertenencia(
@@ -2659,7 +2647,7 @@ async function emitCollectionHtml(
   const esMenu = doc.frontmatter.type === 'menu';
   const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
   const enlaces = enlacesDelMenu(discoveryIndex);
-  const menu = menuDelSitio(discoveryIndex, siteTitle, outputs.dir);
+  const menu = menuDelSitio(enlaces, siteTitle, outputs.dir);
   const menuHeader = esMenu ? undefined : menu.header;
   const menuFooterPlain = menu.footer;
   const enlacesMenuPage = [...enlacesConInicio(enlaces, siteTitle), ...enlacesListasPorDefecto(available, keywordIndexAvailable(discoveryIndex))];
@@ -2858,7 +2846,6 @@ async function emitCollectionFormats(
     renderCtx,
     exportDoc,
     formatWorkSets,
-    creatorLinks,
     {
       relImageMap,
       docDir,
@@ -2875,7 +2862,6 @@ async function emitCollectionMarkdown(
   renderCtx: RenderContext,
   exportDoc: ExportDocument,
   formatWorkSets: FormatWorkSets,
-  creatorLinks: { name: string; url: string }[],
   assets: { relImageMap: Map<string, string>; docDir: string; fmAssets: Record<string, unknown> },
   discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<void> {
@@ -2900,7 +2886,6 @@ async function emitCollectionMarkdown(
     exportDoc,
     relImageMap,
     docDir,
-    creatorLinks,
     rootFiles,
     memberSlugs: rootFiles === undefined ? undefined : memberSlugMap(rootFiles, discoveryIndex),
     merge: isCollection && formatCfg?.markdown?.merge === true,
@@ -3041,10 +3026,7 @@ export async function emitDefaultLists(args: {
 }
 
 async function writeListImagePaths(cwd: string, slug: string, imageMap: Map<string, string>): Promise<string> {
-  const path = join(cwd, '.iteraciones', 'paths', `_lista-${slug}.html.json`);
-  await mkdir(dirname(path), { recursive: true });
-  await Bun.write(path, `${JSON.stringify(imagePathsMap(imageMap, cwd, true))}\n`);
-  return path;
+  return writePathsFile(join(cwd, '.iteraciones', 'paths', `_lista-${slug}.html.json`), imageMap, cwd, true);
 }
 
 export async function processDocumentFormats(

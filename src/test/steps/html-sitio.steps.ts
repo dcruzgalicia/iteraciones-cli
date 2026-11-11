@@ -189,11 +189,6 @@ Then('en el HTML de {string} el chip {string} no es un enlace', (archivo: string
   }
 });
 
-Then('el HTML de {string} no tiene chips de pertenencia', (archivo: string) => {
-  const html = leer(`dist/files/${archivo}`);
-  if (html.includes('bg-transparent')) throw new Error(`${archivo} tiene chips de pertenencia y no debería`);
-});
-
 Then('ningún enlace del HTML lleva {string} por defecto', (clase: string) => {
   const archivos = [...new Bun.Glob('dist/files/**/*.html').scanSync({ cwd: world.root })];
   const culpables: string[] = [];

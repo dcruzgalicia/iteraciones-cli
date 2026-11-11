@@ -1,8 +1,4 @@
 # language: es
-@requires-pandoc
-@requires-magick
-@requires-latex
-@requires-pdftoppm
 Característica: la tubería entera produce una salida por formato
 
   Como quien convierte un manuscrito a todos los formatos

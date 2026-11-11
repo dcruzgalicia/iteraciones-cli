@@ -4,7 +4,7 @@ import { ConfigError } from '../lib/errors.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
 import { hashFileCached } from './state-hash.js';
-import { type BibFileCache, hashString } from './state-serialize.js';
+import { type FileCacheMap, hashString } from './state-serialize.js';
 
 export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'csl']): Promise<string[]> {
   const results: string[] = [];
@@ -24,11 +24,6 @@ export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib
 }
 
 export const PACKAGED_APA7_CSL = join(import.meta.dir, '../lib/resources/apa-7.csl');
-
-async function hashBibFile(abs: string, prevCache: BibFileCache | undefined, cache: BibFileCache): Promise<string> {
-  const hash = await hashFileCached(abs, abs, prevCache, cache);
-  return hash ?? hashString('');
-}
 
 export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
   const configuredBib = siteConfig?.bibliography?.trim();
@@ -54,15 +49,15 @@ export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): P
 
 export async function computeBibHash(
   bib: { bibFiles: string[]; bibOptions?: BibOptions },
-  prevCache?: BibFileCache,
-): Promise<{ hash: string; cache: BibFileCache }> {
+  prevCache?: FileCacheMap,
+): Promise<{ hash: string; cache: FileCacheMap }> {
   const parts: string[] = [];
-  const cache: BibFileCache = {};
+  const cache: FileCacheMap = {};
   for (const file of bib.bibFiles) {
-    parts.push(file, await hashBibFile(file, prevCache, cache));
+    parts.push(file, (await hashFileCached(file, file, prevCache, cache)) ?? hashString(''));
   }
   if (bib.bibOptions?.csl) {
-    parts.push('csl', bib.bibOptions.csl, await hashBibFile(bib.bibOptions.csl, prevCache, cache));
+    parts.push('csl', bib.bibOptions.csl, (await hashFileCached(bib.bibOptions.csl, bib.bibOptions.csl, prevCache, cache)) ?? hashString(''));
   }
   return { hash: hashString(parts.join('\0')), cache };
 }

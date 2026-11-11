@@ -6,7 +6,7 @@ import { toolVersionLatexmk, toolVersionMagick, toolVersionMinify, toolVersionPd
 import { LUA_FILTERS_ROOT } from './filter-resolver.js';
 import { HTML_RESOURCES_DIR, htmlResourceFiles } from './html-composer.js';
 import { PKG_PREAMBLE_DIR, projectPreambleDirs } from './preamble-loader.js';
-import { type FileCacheEntry, type FilterFileCache, hashString } from './state-serialize.js';
+import { type FileCacheEntry, type FileCacheMap, hashString } from './state-serialize.js';
 
 export async function hashFileCached(
   abs: string,
@@ -68,7 +68,7 @@ export async function hashGlobbedFiles(
   return parts;
 }
 
-async function hashSpecFiles(specs: Array<[string, string]>, prevCache: FilterFileCache | undefined, cache: FilterFileCache): Promise<string[]> {
+async function hashSpecFiles(specs: Array<[string, string]>, prevCache: FileCacheMap | undefined, cache: FileCacheMap): Promise<string[]> {
   const parts: string[] = [];
   for (const [dir, glob] of specs) {
     try {
@@ -92,13 +92,13 @@ export function projectFilterSpecs(cwd: string): Array<[string, string]> {
 export async function computeFiltersHash(
   cwd: string,
   siteConfig: SiteConfig,
-  prevCache?: FilterFileCache,
+  prevCache?: FileCacheMap,
   effectiveDisabledPreamble?: string[],
   pandocVersion?: string,
   schemaPrevCache?: Record<string, FileCacheEntry>,
-): Promise<{ hash: string; cache: FilterFileCache; schemaCache: Record<string, FileCacheEntry> }> {
+): Promise<{ hash: string; cache: FileCacheMap; schemaCache: Record<string, FileCacheEntry> }> {
   const parts: string[] = [];
-  const cache: FilterFileCache = {};
+  const cache: FileCacheMap = {};
   const schemaCache: Record<string, FileCacheEntry> = {};
   const specs: Array<[string, string]> = [...PACKAGE_SPECS, ...projectFilterSpecs(cwd)];
   parts.push(...(await hashSpecFiles(specs, prevCache, cache)));
@@ -114,15 +114,6 @@ export async function computeFiltersHash(
   return { hash: hashString(parts.join('\0')), cache, schemaCache };
 }
 
-async function resourceHash(
-  abs: string,
-  key: string,
-  prevCache: Record<string, FileCacheEntry> | undefined,
-  cacheOut: Record<string, FileCacheEntry>,
-): Promise<string> {
-  return (await hashFileCached(abs, key, prevCache, cacheOut)) ?? '';
-}
-
 function computeFormatHash(configStr: string, extras: string[]): string {
   return hashString([configStr, ...extras].join('\n'));
 }
@@ -135,10 +126,14 @@ export async function computeConfigHashes(
 ): Promise<{ hashes: Record<string, string>; cache: Record<string, FileCacheEntry> }> {
   const fmt = siteConfig.format;
   const htmlResources = (
-    await Promise.all(htmlResourceFiles().map((rel) => resourceHash(join(HTML_RESOURCES_DIR, rel), `html-res:${rel}`, prevFileCache, fileCacheOut)))
+    await Promise.all(
+      htmlResourceFiles().map(
+        async (rel) => (await hashFileCached(join(HTML_RESOURCES_DIR, rel), `html-res:${rel}`, prevFileCache, fileCacheOut)) ?? '',
+      ),
+    )
   ).join('\n');
   const logoPath = fmt?.html?.site?.logo?.trim();
-  const logo = logoPath ? await resourceHash(join(cwd, logoPath), 'html-res:logo', prevFileCache, fileCacheOut) : '';
+  const logo = logoPath ? ((await hashFileCached(join(cwd, logoPath), 'html-res:logo', prevFileCache, fileCacheOut)) ?? '') : '';
   const toc = String(siteConfig.toc ?? false);
   const lang = String(siteConfig.language ?? '');
   const [magick, pdftoppm, latexmk, minify] = await Promise.all([

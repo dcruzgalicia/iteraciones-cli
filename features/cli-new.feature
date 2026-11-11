@@ -112,7 +112,6 @@ Característica: new crea el documento e infiere el título
 
   Regla de negocio: El documento sobrevive a validate y a build
 
-    @requires-pandoc
     Escenario: Un título difícil sobrevive a validate y a build
       Dado que la raíz del proyecto tiene una configuración mínima
       Cuando creo el documento "articulo" con el título "Los tres mosqueteros: d'Artagnan"

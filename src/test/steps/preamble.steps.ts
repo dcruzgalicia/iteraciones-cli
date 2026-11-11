@@ -20,6 +20,7 @@ import {
   validateDisabledPreambleFilters,
   validatePreambleDependencies,
 } from '../../builder/preamble-loader.js';
+import { exigeTexto as exige, prohibeTexto as prohibe } from '../helpers.js';
 import { world } from './cli-world.steps.ts';
 
 type Opts = Parameters<typeof composeLatexTemplate>[0];
@@ -31,22 +32,6 @@ function opts(over: Partial<Opts> = {}): Opts {
 function latex(): string {
   if (!world.latex) throw new Error('no se ha compuesto ningún LaTeX todavía');
   return world.latex;
-}
-
-function exige(contenido: string, archivo: string, textos: string[]): void {
-  for (const texto of textos) {
-    if (!contenido.includes(texto)) {
-      throw new Error(`${archivo} no trae ${JSON.stringify(texto)}`);
-    }
-  }
-}
-
-function prohibe(contenido: string, archivo: string, textos: string[]): void {
-  for (const texto of textos) {
-    if (contenido.includes(texto)) {
-      throw new Error(`${archivo} sí trae ${JSON.stringify(texto)} y no debería`);
-    }
-  }
 }
 
 Given('que compongo el LaTeX del documento', async () => {

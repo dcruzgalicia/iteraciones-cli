@@ -6,6 +6,7 @@ import { runPdfxOutputValidation } from '../../builder/pdfx-check.js';
 import { loadSiteConfig } from '../../config/config-loader.js';
 import * as runLib from '../../lib/run.js';
 import { ProcessSpawnError } from '../../lib/run.js';
+import { distPath } from '../helpers.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 const CONFIG_PDFX_ACTIVO =
@@ -21,10 +22,6 @@ function binarioQueDice(json: string): void {
   const ruta = join(dir, 'iteraciones-pdfcheck');
   writeFileSync(ruta, `#!/bin/sh\ncat <<'EOF'\n${json}\nEOF\n`, 'utf8');
   chmodSync(ruta, 0o755);
-}
-
-function salida(): string {
-  return join(world.root, 'dist', 'files');
 }
 
 type Config = Awaited<ReturnType<typeof loadSiteConfig>>;
@@ -46,7 +43,7 @@ Given('un proyecto con la certificación PDFX activada', async () => {
   aislarCacheBinario();
   escribirEnProyecto('iteraciones.config.yaml', CONFIG_PDFX_ACTIVO);
   world.configPdfx = (await cargarConfig()) as Config;
-  mkdirSync(salida(), { recursive: true });
+  mkdirSync(distPath(world.root), { recursive: true });
 });
 
 Given('un proyecto con la certificación PDFX desactivada', async () => {
@@ -57,7 +54,7 @@ Given('un proyecto con la certificación PDFX desactivada', async () => {
     'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabledPreambleFilters:\n      - 97-eso-pic\n      - 98-crop\n      - 99-pdfx\n',
   );
   world.configPdfx = (await cargarConfig()) as Config;
-  mkdirSync(salida(), { recursive: true });
+  mkdirSync(distPath(world.root), { recursive: true });
 });
 
 Given('la salida tiene un PDF llamado {string}', (nombre: string) => {
@@ -80,7 +77,7 @@ Given('compilar el binario va a fallar', () => {
 When('valido los PDF de la salida', async () => {
   world.espiaStderr = spyOn(process.stderr, 'write');
   try {
-    world.resultadoPdfx = await runPdfxOutputValidation(salida(), world.configPdfx as Config, { allowBuild: false });
+    world.resultadoPdfx = await runPdfxOutputValidation(distPath(world.root), world.configPdfx as Config, { allowBuild: false });
     world.mensajePdfx = '';
   } catch (e) {
     world.resultadoPdfx = undefined;
@@ -89,7 +86,7 @@ When('valido los PDF de la salida', async () => {
 });
 
 When('valido los PDF de la salida permitiendo compilar el binario', async () => {
-  world.resultadoPdfx = await runPdfxOutputValidation(salida(), world.configPdfx as Config, { allowBuild: true });
+  world.resultadoPdfx = await runPdfxOutputValidation(distPath(world.root), world.configPdfx as Config, { allowBuild: true });
 });
 
 Then('la validación se omite en silencio', () => {
@@ -131,7 +128,7 @@ Then('la línea de resumen dice {string}', (texto: string) => {
 
 Then('la validación falla diciendo {string}', async (motivos: string) => {
   if (world.mensajePdfx === '') {
-    world.mensajePdfx = await esperarFallo(() => runPdfxOutputValidation(salida(), world.configPdfx as Config, { allowBuild: false }));
+    world.mensajePdfx = await esperarFallo(() => runPdfxOutputValidation(distPath(world.root), world.configPdfx as Config, { allowBuild: false }));
   }
   const faltan = motivos
     .split(';;')

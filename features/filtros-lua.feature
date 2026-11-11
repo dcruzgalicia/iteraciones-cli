@@ -1,5 +1,4 @@
 # language: es
-@requires-pandoc
 Característica: Los filtros Lua del proyecto definen el contrato del markdown
   Como quien escribe un documento y espera que el build lo convierta
   Quiero saber exactamente qué produce cada construcción

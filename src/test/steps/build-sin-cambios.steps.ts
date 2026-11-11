@@ -4,36 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
-import { initTestProject } from '../helpers.js';
-
-function recordingReporter(): Parameters<typeof build>[2] & { logs: string[]; files: string[] } {
-  const logs: string[] = [];
-  const files: string[] = [];
-  return {
-    logs,
-    files,
-    setFormats(): void {},
-    planPhases(): void {},
-    startPhase(): void {},
-    reportFile(file: { relativePath: string }): void {
-      files.push(file.relativePath);
-    },
-    completePhase(): void {},
-    log(message: string): void {
-      logs.push(message);
-    },
-    addWarning(): void {},
-    addSummaryLine(): void {},
-    showCleanup(): void {},
-    startLightFormats(): void {},
-    finish(): Promise<void> {
-      return Promise.resolve();
-    },
-    fail(): Promise<void> {
-      return Promise.resolve();
-    },
-  } as Parameters<typeof build>[2] & { logs: string[]; files: string[] };
-}
+import { fakeReporter, initTestProject } from '../helpers.js';
 
 const CONFIG_SIN_FORMATOS = ['language: es-MX', 'format:', '  html:', '    generate: true'].join('\n');
 
@@ -41,14 +12,14 @@ const NO_CAMBIOS = 'Ningún documento modificado — sin cambios';
 
 interface ShortcircuitWorld {
   dir: string;
-  reporter: ReturnType<typeof recordingReporter>;
+  reporter: ReturnType<typeof fakeReporter>;
 }
 
-const world: ShortcircuitWorld = { dir: '', reporter: recordingReporter() };
+const world: ShortcircuitWorld = { dir: '', reporter: fakeReporter() };
 
 Before(async () => {
   world.dir = await mkdtemp(join(tmpdir(), 'iteraciones-gherkin-'));
-  world.reporter = recordingReporter();
+  world.reporter = fakeReporter();
 });
 
 After(async () => {
@@ -69,13 +40,13 @@ When('compilo el proyecto completo', async () => {
 });
 
 When('compilo otra vez sin tocar nada', async () => {
-  world.reporter = recordingReporter();
-  await build(world.dir, {}, world.reporter);
+  world.reporter = fakeReporter();
+  await build(world.dir, {}, world.reporter.reporter);
 });
 
 When('compilo el proyecto vacío', async () => {
-  world.reporter = recordingReporter();
-  await build(world.dir, {}, world.reporter);
+  world.reporter = fakeReporter();
+  await build(world.dir, {}, world.reporter.reporter);
 });
 
 Then('el build avisa que no hubo cambios', () => {

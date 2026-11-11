@@ -28,14 +28,17 @@ interface DiscoverResult {
   slugComputer: SlugComputer;
 }
 
-export function slugify(text: string): string {
-  const mapped = text.replace(/&/g, ' y ').replace(/%/g, ' por-ciento');
-  return mapped
+export function slugBase(text: string): string {
+  return text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+export function slugify(text: string): string {
+  return slugBase(text.replace(/&/g, ' y ').replace(/%/g, ' por-ciento'));
 }
 
 export function computeSlug(

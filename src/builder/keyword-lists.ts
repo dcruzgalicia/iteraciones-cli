@@ -1,3 +1,4 @@
+import { slugBase } from './discover.js';
 import { KEYWORDS_DIR } from './output-layout.js';
 import { relativeHref } from './pipeline-io.js';
 import type { DiscoveryEntry } from './types.js';
@@ -21,12 +22,7 @@ export function keywordsOf(entry: DiscoveryEntry | undefined): string[] {
 }
 
 export function keywordSlug(keyword: string): string | undefined {
-  const limpio = keyword
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  const limpio = slugBase(keyword);
   return limpio === '' ? undefined : limpio;
 }
 

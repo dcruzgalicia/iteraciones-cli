@@ -44,7 +44,7 @@ export function buildProgram(): Command {
     .name(packageJson.name.replace(/-cli$/, ''))
     .version(packageJson.version, '-V, --version', 'muestra la versión')
     .helpOption('-h, --help', 'muestra la ayuda')
-    .helpCommand(false);
+    .helpCommand('help [comando]', 'muestra la ayuda de un comando');
   program.addHelpText(
     'before',
     `escribir, compartir, re-existir
@@ -535,25 +535,6 @@ Ejemplos:
 `,
     )
     .action((options: { verbose?: boolean; json?: boolean }) => runFilters(projectRoot(), options));
-
-  program
-    .command('help [comando]')
-    .description('muestra la ayuda de un comando')
-    .action((cmdName?: string) => {
-      if (cmdName === undefined) {
-        program.outputHelp();
-        return;
-      }
-      const target = program.commands.find((c) => c.name() === cmdName);
-      if (target === undefined) {
-        try {
-          program.parse([cmdName], { from: 'user' });
-        } catch {}
-        process.exitCode = 1;
-        return;
-      }
-      target.outputHelp();
-    });
 
   return program;
 }

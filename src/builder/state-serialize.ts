@@ -9,9 +9,7 @@ export interface FileCacheEntry {
   hash: string;
 }
 
-export type FilterFileCache = Record<string, FileCacheEntry>;
-export type BibFileCache = Record<string, FileCacheEntry>;
-export type CssFileCache = Record<string, FileCacheEntry>;
+export type FileCacheMap = Record<string, FileCacheEntry>;
 
 const STATE_PATH = join('.iteraciones', 'state.json');
 
@@ -23,15 +21,15 @@ export interface BuildState {
   activeFormats: string[];
   outputDir?: string;
   filtersHash?: string;
-  filterFileCache?: FilterFileCache;
+  filterFileCache?: FileCacheMap;
   schemaFileCache?: Record<string, FileCacheEntry>;
   configHashes?: Record<string, string>;
   configFileCache?: Record<string, FileCacheEntry>;
   bibHash?: string;
   pdfxCache?: Record<string, string>;
-  bibFileCache?: BibFileCache;
+  bibFileCache?: FileCacheMap;
   cssHash?: string;
-  cssFileCache?: CssFileCache;
+  cssFileCache?: FileCacheMap;
 
   completed?: boolean;
   entries: Map<string, DiscoveryEntry>;

@@ -2,7 +2,7 @@ import { spyOn } from 'bun:test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { loadSiteConfig, loadSiteConfigIfPresent, loadSiteConfigWithPresence } from '../../config/config-loader.js';
+import { loadSiteConfig, loadSiteConfigIfPresent } from '../../config/config-loader.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
@@ -57,9 +57,9 @@ When('cargo la configuración si existe', async () => {
 
 When('cargo la configuración con el conjunto de presencia', async () => {
   try {
-    const { config, wroteDisabledPreamble } = await loadSiteConfigWithPresence(world.root);
-    world.config = config;
-    world.presentes = wroteDisabledPreamble ? new Set(['format.pdf.disabledPreambleFilters']) : new Set<string>();
+    const loaded = await loadSiteConfigIfPresent(world.root);
+    world.config = loaded?.config ?? (await loadSiteConfig(world.root));
+    world.presentes = loaded?.wroteDisabledPreamble ? new Set(['format.pdf.disabledPreambleFilters']) : new Set<string>();
     world.errorConfig = '';
   } catch (e) {
     world.config = null;

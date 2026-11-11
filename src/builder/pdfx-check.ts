@@ -176,23 +176,6 @@ function finalizeCache(cache: PdfxCacheHandle, claves: string[]): void {
   }
 }
 
-function isCached(claves: string[], i: number, cache: PdfxCacheHandle): boolean {
-  const key = claves[i];
-  return key !== undefined && cache.prev[key] === '1';
-}
-
-function mapResultsToFiles(
-  pendientes: string[],
-  results: Awaited<ReturnType<typeof validatePdfX1a>>[],
-): Map<string, Awaited<ReturnType<typeof validatePdfX1a>>> {
-  const porFile = new Map<string, Awaited<ReturnType<typeof validatePdfX1a>>>();
-  for (const [i, result] of results.entries()) {
-    const file = pendientes[i];
-    if (file !== undefined && result !== undefined) porFile.set(file, result);
-  }
-  return porFile;
-}
-
 function existingInScope(outputDir: string, scope: string[]): string[] {
   const files = new Set<string>();
   for (const raw of scope) {
@@ -229,13 +212,14 @@ export async function runPdfxOutputValidation(
   const binFp = getBinFingerprint(binary);
   const { pendientes, claves, preValidated } = await buildCacheKeys(pdfs, outputDir, binFp, disabled, cache);
   const results = await mapWithConcurrency(pendientes, cpuConcurrency(4), (file) => validatePdfX1a(join(outputDir, file), binary));
-  const porFile = mapResultsToFiles(pendientes, results);
+  const porFile = new Map(pendientes.map((file, i) => [file, results[i] as Awaited<ReturnType<typeof validatePdfX1a>>] as const));
 
   let validated = preValidated;
   let failed = 0;
   const fallos: string[] = [];
   for (const [i, file] of pdfs.entries()) {
-    if (isCached(claves, i, cache)) continue;
+    const key = claves[i];
+    if (key !== undefined && cache.prev[key] === '1') continue;
     const result = porFile.get(file);
     const { failed: wasFailed, falloLines } = processResult(file, result, claves, i, cache);
     validated++;

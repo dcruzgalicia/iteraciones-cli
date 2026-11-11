@@ -8,7 +8,6 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
 
   Regla de negocio: doctor sólo verifica lo que el proyecto usa
 
-    @requires-pandoc
     Escenario: Un proyecto de HTML no ofrece instalar pdflatex
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando corro "doctor"
@@ -20,21 +19,18 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
       Cuando corro "doctor"
       Entonces la salida dice "pdflatex disponible"
 
-    @requires-pandoc
     Escenario: Un proyecto de HTML no lista los checks de PDF
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando corro "doctor"
       Entonces la salida no dice "iteraciones-pdfcheck"
       Y la salida no dice "biber"
 
-    @requires-magick
     Escenario: Un proyecto de HTML sí verifica ImageMagick
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando corro "doctor"
       Entonces el comando termina con el código de salida 0
       Y la salida dice "ImageMagick disponible"
 
-    @requires-magick
     Escenario: Sin configuración doctor sigue en orden
       Dado que la raíz del proyecto está vacía
       Cuando corro "doctor"
@@ -116,7 +112,6 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
 
   Regla de negocio: doctor --info separa lo tuyo de los defaults del paquete
 
-    @requires-pandoc
     Escenario: --info refleja la salida real del último build
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando compilo el proyecto en la salida "salida"

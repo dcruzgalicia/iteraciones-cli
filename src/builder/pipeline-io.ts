@@ -5,6 +5,7 @@ import { applyCreatorTitle, parseFrontmatterRecord, splitFrontmatter } from '../
 import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import type { BuildMetadata } from './build-planner.js';
 import { parseAuthors } from './discover-frontmatter.js';
+import type { FormatsLink } from './html-composer.js';
 import { docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import type { BuildDocument } from './types.js';
 
@@ -72,14 +73,8 @@ const FORMAT_LINK_META = {
   markdown: { name: 'Markdown', description: 'Texto fuente reutilizable y portable' },
 } as const;
 
-type FormatLinkKey = keyof typeof FORMAT_LINK_META;
-
-export function formatLinksFor(
-  plan: BuildMetadata,
-  outSlug: string,
-  type?: string,
-): { href: string; key: FormatLinkKey; name: string; description: string }[] {
-  return (Object.keys(FORMAT_LINK_META) as FormatLinkKey[])
+export function formatLinksFor(plan: BuildMetadata, outSlug: string, type?: string): FormatsLink[] {
+  return (Object.keys(FORMAT_LINK_META) as FormatsLink['key'][])
     .filter((key) => plan.activeFormats[key])
     .filter((key) => docProducesFormat(type, key))
     .map((key) => ({

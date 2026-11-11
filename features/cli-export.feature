@@ -21,7 +21,6 @@ Característica: El PDF y el EPUB llevan los metadatos del documento
 
   Regla de negocio: Los espacios no separables son cosa del LaTeX
 
-    @requires-pandoc
     Escenario: En LaTeX el &nbsp; sigue siendo un espacio duro
       Dado que la raíz del proyecto tiene un proyecto con LaTeX
       Y que el archivo "test.md" tiene este contenido
@@ -37,7 +36,6 @@ Característica: El PDF y el EPUB llevan los metadatos del documento
 
   Regla de negocio: Las redes de la creadora no se cuelan en el cuerpo del LaTeX
 
-    @requires-pandoc
     Escenario: La creadora con redes las lista como texto y sin YAML suelto
       Dado que la raíz del proyecto tiene un proyecto con LaTeX
       Y que el archivo "david.md" tiene este contenido
@@ -59,8 +57,6 @@ Característica: El PDF y el EPUB llevan los metadatos del documento
 
   Regla de negocio: El EPUB lleva los metadatos del frontmatter
 
-    @requires-pandoc
-    @requires-unzip
     Escenario: El EPUB declara título, autor, fecha e idioma
       Dado que la raíz del proyecto tiene un proyecto con EPUB
       Dado que el archivo "test.md" tiene este contenido

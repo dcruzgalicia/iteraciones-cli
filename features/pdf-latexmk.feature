@@ -1,5 +1,4 @@
 # language: es
-@requires-latex
 Característica: la fase PDF compila el LaTeX con latexmk
 
   Como quien quiere un PDF y no un proceso de compilación

@@ -9,9 +9,10 @@ import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
+import { spawnMagick } from './image-processor.js';
 import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_FAVICON_SVG, ASSETS_IMAGES_DIR, ASSETS_LOGO_SVG, ASSETS_LOGO_WEBP } from './output-layout.js';
 import { hashGlobbedFiles } from './state-hash.js';
-import type { CssFileCache } from './state-serialize.js';
+import type { FileCacheMap } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
@@ -80,10 +81,10 @@ export async function compileTailwindCss(outputDir: string, accent: string, proj
 export async function computeCssHash(
   outputDir: string,
   siteConfig: SiteConfig,
-  prevCache?: CssFileCache,
-): Promise<{ hash: string; cache: CssFileCache }> {
+  prevCache?: FileCacheMap,
+): Promise<{ hash: string; cache: FileCacheMap }> {
   const hasher = new Bun.CryptoHasher('sha256');
-  const cache: CssFileCache = {};
+  const cache: FileCacheMap = {};
   if (await isDir(outputDir)) {
     for (const part of await hashGlobbedFiles(outputDir, '**/*.html', prevCache, cache)) hasher.update(part);
   }
@@ -110,9 +111,9 @@ export async function buildAssets(
   cwd: string,
   siteConfig: SiteConfig,
   prevCssHash?: string,
-  prevCssFileCache?: CssFileCache,
+  prevCssFileCache?: FileCacheMap,
   licenseIcons?: Set<string>,
-): Promise<{ cssHash: string; cssFileCache: CssFileCache }> {
+): Promise<{ cssHash: string; cssFileCache: FileCacheMap }> {
   await copyStaticAssets(outputDir, cwd, siteConfig, licenseIcons);
   const assetsArgv = ['iteraciones', 'assets', '-o', outputDir];
   if (licenseIcons !== undefined) assetsArgv.push('--licenses', [...licenseIcons].sort().join(','));
@@ -133,15 +134,6 @@ export type LogoAsset = { kind: 'file'; path: string; favicon?: string } | { kin
 function logoPx(size: string | undefined): number {
   const match = (size ?? '').trim().match(/^(\d+(?:\.\d+)?)px$/);
   return Math.round(Number(match?.[1] ?? Number.parseFloat(DEFAULT_HTML_FORMAT.site.logoSize)) * 2);
-}
-
-async function runMagick(args: string[]): Promise<boolean> {
-  try {
-    const proc = Bun.spawn(['magick', ...args], { stdout: 'ignore', stderr: 'ignore' });
-    return (await proc.exited) === 0;
-  } catch {
-    return false;
-  }
 }
 
 async function accent500(color: string | undefined): Promise<string | undefined> {
@@ -193,8 +185,8 @@ async function rasterSvgLogo(src: string, outputDir: string, size: number, accen
       stderr: 'ignore',
     });
     if ((await render.exited) !== 0) return false;
-    if (!(await runMagick(['-background', 'none', pngPath, '-strip', '-define', 'webp:lossless=true', webp]))) return false;
-    await runMagick(['-background', 'none', pngPath, '-resize', '32x32>', '-strip', favicon]);
+    if (!(await spawnMagick(['-background', 'none', pngPath, '-strip', '-define', 'webp:lossless=true', webp]))) return false;
+    await spawnMagick(['-background', 'none', pngPath, '-resize', '32x32>', '-strip', favicon]);
     await rm(join(outputDir, ASSETS_LOGO_SVG), { force: true });
     await rm(join(outputDir, ASSETS_FAVICON_SVG), { force: true });
     return true;
@@ -243,8 +235,8 @@ async function rasterLogo(src: string, outputDir: string, size: number, accent: 
       ...colorize,
     ];
     args.push(webp);
-    if (!(await runMagick(args))) return false;
-    await runMagick([
+    if (!(await spawnMagick(args))) return false;
+    await spawnMagick([
       '-background',
       'none',
       '-density',
@@ -302,7 +294,7 @@ async function iconAWebp(src: string, dest: string, size: number, tint?: string)
   const args = ['-background', 'none', src, '-resize', `${size}x${size}`, '-strip', '-define', 'webp:lossless=true'];
   if (tint !== undefined) args.push('-fuzz', '20%', '-fill', tint, '-opaque', 'black');
   args.push(dest);
-  return runMagick(args);
+  return spawnMagick(args);
 }
 
 async function writeIconAssets(outputDir: string, siteConfig: SiteConfig): Promise<void> {

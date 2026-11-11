@@ -2,7 +2,7 @@ import { exists, mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
-import { HtmlShotter } from '../lib/html-shot.js';
+import { captureHtmlShot } from '../lib/html-shot.js';
 import { logError, logInfo, logSuccess, logWarning, runCommand } from '../lib/logger.js';
 import { isDir, posix, relativeLabel } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
@@ -206,11 +206,10 @@ async function saveSnapshots(cwd: string, run: SnapshotRun): Promise<void> {
 async function saveHtmlSnapshots(cwd: string, outputDir: string, htmlFiles: string[], store: string): Promise<number> {
   if (htmlFiles.length === 0) return 0;
   await mkdir(store, { recursive: true });
-  const shotter = new HtmlShotter();
   let guardadas = 0;
   for (const html of htmlFiles) {
     const stem = htmlStemFor(html, outputDir);
-    const captura = await shotter.capture(html);
+    const captura = await captureHtmlShot(html);
     if (captura === undefined) continue;
     await clearSnapshotImages(store, stem);
     await writeFile(join(store, snapshotImageName(stem, 1)), captura.png);
@@ -343,7 +342,6 @@ async function checkHtmlSnapshots(cwd: string, outputDir: string): Promise<Compa
   if (htmlFiles.length === 0) return [];
   const store = join(cwd, SNAPSHOTS_DIR);
   const guardados = await listSnapshotImages(store);
-  const shotter = new HtmlShotter();
   const comparados: ComparedHtml[] = [];
   const sinLineaBase: string[] = [];
   for (const html of htmlFiles) {
@@ -353,7 +351,7 @@ async function checkHtmlSnapshots(cwd: string, outputDir: string): Promise<Compa
       sinLineaBase.push(relativeLabel(cwd, html));
       continue;
     }
-    const captura = await shotter.capture(html);
+    const captura = await captureHtmlShot(html);
     if (captura === undefined) continue;
     const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(html));
     await mkdir(dirname(workDir), { recursive: true });
