@@ -1418,7 +1418,7 @@ function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
 
 function menuHeaderLink(links: EnlaceMenu[], dir: string): string | undefined {
   if (links.length === 0) return undefined;
-  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="Menú"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" class="h-4 w-4"><span>Menú</span></a>`;
+  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="Menú"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" width="24" height="24" class="h-4 w-4"><span>Menú</span></a>`;
 }
 
 function menuFooterContent(links: EnlaceMenu[], dir: string): string | undefined {
