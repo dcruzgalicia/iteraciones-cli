@@ -63,6 +63,13 @@ Then('el archivo {string} no existe', async (nombre: string) => {
   }
 });
 
+Then('el frontmatter de {string} declara el campo {string} con el valor {string}', async (nombre: string, campo: string, valor: string) => {
+  const datos = await frontmatterParseado(nombre);
+  if (JSON.stringify(datos[campo]) !== JSON.stringify(valor)) {
+    throw new Error(`el frontmatter de ${nombre} declara ${campo}=${JSON.stringify(datos[campo])} y debía declarar ${JSON.stringify(valor)}`);
+  }
+});
+
 Then('el frontmatter de {string} declara el título {string}', async (nombre: string, titulo: string) => {
   const datos = await frontmatterParseado(nombre);
   if (datos.title !== titulo) {

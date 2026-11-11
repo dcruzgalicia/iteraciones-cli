@@ -237,7 +237,32 @@ export async function runDoctor(cwd: string, options: { json?: boolean; info?: b
   });
 }
 
-export async function runNew(cwd: string, path: string, options: { title?: string } = {}): Promise<void> {
+export const NEW_DOCUMENT_TYPES = ['texto', 'coleccion', 'creadora', 'libro', 'anuncio', 'lista'] as const;
+
+export type NewDocumentType = (typeof NEW_DOCUMENT_TYPES)[number];
+
+export function isNewDocumentType(value: string): value is NewDocumentType {
+  return (NEW_DOCUMENT_TYPES as readonly string[]).includes(value);
+}
+
+function typedFrontmatter(type: NewDocumentType, title: string, today: string): Record<string, unknown> {
+  if (type === 'texto') return { title, date: today, type: 'file' };
+  if (type === 'coleccion' || type === 'libro') return { title, type: 'collection', files: [] };
+  if (type === 'creadora') return { type: 'creator', name: title };
+  if (type === 'anuncio') return { title, date: today, type: 'announcement', placement: 'top' };
+  return { title, type: 'list', order: 'date-desc' };
+}
+
+const TYPED_BODY: Record<NewDocumentType, string> = {
+  texto: 'Escribe tu contenido aquí.\n',
+  coleccion: 'Presenta aquí la colección.\n',
+  creadora: 'Escribe aquí la semblanza.\n',
+  libro: 'Escribe aquí el contenido del libro.\n',
+  anuncio: 'Escribe aquí el anuncio.\n',
+  lista: 'Presenta aquí la lista.\n',
+};
+
+export async function runNew(cwd: string, path: string, options: { title?: string; type?: NewDocumentType } = {}): Promise<void> {
   try {
     await assertProjectRoot(cwd);
     const base = path.endsWith('.md') ? path : `${path}.md`;
@@ -257,24 +282,33 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
 
     const today = todayIso();
     const title = options.title?.trim() || inferTitleFromPath(normalizedPath);
-    const content = [
-      '---',
-      stringify({ title, date: today }, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' }).trimEnd(),
-      '---',
-      '',
-      'Escribe tu contenido aquí.',
-      '',
-      '<!-- Espacio vertical extra entre párrafos: una línea con solo :: -->',
-      '',
-      '::',
-      '',
-      '<!-- Epígrafe: fenced div con clase .dictum (opcional: autor con .author) -->',
-      '',
-      '::: {.dictum}',
-      'La ciencia se compone de errores, que a su vez son los pasos hacia la verdad.',
-      '::: ',
-      '',
-    ].join('\n');
+    const content =
+      options.type === undefined
+        ? [
+            '---',
+            stringify({ title, date: today }, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' }).trimEnd(),
+            '---',
+            '',
+            'Escribe tu contenido aquí.',
+            '',
+            '<!-- Espacio vertical extra entre párrafos: una línea con solo :: -->',
+            '',
+            '::',
+            '',
+            '<!-- Epígrafe: fenced div con clase .dictum (opcional: autor con .author) -->',
+            '',
+            '::: {.dictum}',
+            'La ciencia se compone de errores, que a su vez son los pasos hacia la verdad.',
+            '::: ',
+            '',
+          ].join('\n')
+        : [
+            '---',
+            stringify(typedFrontmatter(options.type, title, today), { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' }).trimEnd(),
+            '---',
+            '',
+            TYPED_BODY[options.type],
+          ].join('\n');
 
     if (!(await writeExclusive(absPath, content))) {
       logInfo(`omitido ${path} (ya existe)`, 'new');
