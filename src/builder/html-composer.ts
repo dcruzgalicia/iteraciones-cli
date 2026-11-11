@@ -151,6 +151,7 @@ export interface HtmlPageVars {
   tagline?: string;
   metaDescription?: string;
   canonical?: string;
+  socialMeta?: string;
   lang: string;
 
   logoBlock?: string;

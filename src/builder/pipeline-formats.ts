@@ -49,6 +49,7 @@ import { fechaOrdenable } from './list-filter.js';
 import {
   ASSETS_CSS_FILE,
   ASSETS_IMAGES_DIR,
+  ASSETS_LOGO_WEBP,
   ASSETS_PDF_IMAGES_DIR,
   docProducesFormat,
   KEYWORDS_DIR,
@@ -298,6 +299,35 @@ function canonicalHref(siteUrl: string | undefined, dir: string, slug: string): 
   return `${base}/${path}`;
 }
 
+function absoluteUrl(siteUrl: string | undefined, path: string): string | undefined {
+  if (siteUrl === undefined || siteUrl.trim() === '') return undefined;
+  return new URL(path, `${siteUrl.trim().replace(/\/+$/, '')}/`).href;
+}
+
+function socialMetaTags(args: {
+  title: string;
+  description?: string;
+  type: string;
+  url?: string;
+  image?: string;
+}): string | undefined {
+  const tags: string[] = [];
+  tags.push(`<meta property="og:title" content="${Bun.escapeHTML(args.title)}">`);
+  if (args.description !== undefined) tags.push(`<meta property="og:description" content="${Bun.escapeHTML(args.description)}">`);
+  tags.push(`<meta property="og:type" content="${Bun.escapeHTML(args.type)}">`);
+  if (args.url !== undefined) tags.push(`<meta property="og:url" content="${Bun.escapeHTML(args.url)}">`);
+  if (args.image !== undefined) {
+    tags.push(`<meta property="og:image" content="${Bun.escapeHTML(args.image)}">`);
+    tags.push('<meta name="twitter:card" content="summary_large_image">');
+    tags.push(`<meta name="twitter:image" content="${Bun.escapeHTML(args.image)}">`);
+  } else {
+    tags.push('<meta name="twitter:card" content="summary">');
+  }
+  tags.push(`<meta name="twitter:title" content="${Bun.escapeHTML(args.title)}">`);
+  if (args.description !== undefined) tags.push(`<meta name="twitter:description" content="${Bun.escapeHTML(args.description)}">`);
+  return tags.join('\n  ');
+}
+
 function formatosOpcionales(formats: HtmlPageVars['formats']): HtmlPageVars['formats'] {
   return formats !== undefined && formats.length > 0 ? formats : undefined;
 }
@@ -376,6 +406,31 @@ function htmlVars(args: {
   const siteTitle = fmString(htmlConfig?.site?.title, 'iteraciones');
   const metaDescription = opcional(htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'description') ?? htmlConfig?.site?.description);
   const showDates = fm.showDates === false ? false : fm.showDates === true ? true : htmlConfig?.site?.showDates === true;
+  const siteUrl = htmlConfig?.site?.url;
+  const canonical = canonicalHref(siteUrl, dir, pageSlug ?? slug);
+  const socialImage =
+    siteUrl === undefined
+      ? undefined
+      : covers?.front !== undefined
+        ? absoluteUrl(siteUrl, covers.front)
+        : renderCtx.logo?.kind === 'file'
+          ? absoluteUrl(siteUrl, ASSETS_LOGO_WEBP)
+          : undefined;
+  const ogType =
+    doc.frontmatter.type === 'collection'
+      ? 'book'
+      : doc.frontmatter.type === 'creator'
+        ? 'profile'
+        : doc.frontmatter.type === 'file' || doc.frontmatter.type === undefined
+          ? 'article'
+          : 'website';
+  const socialMeta = socialMetaTags({
+    title: titulo,
+    description: metaDescription,
+    type: ogType,
+    url: canonical,
+    image: socialImage,
+  });
   const esListaIndex = doc.relativePath === 'index.md' && doc.frontmatter.type === 'list';
   const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
   const esPaginaIndex = doc.relativePath === 'index.md';
@@ -385,7 +440,8 @@ function htmlVars(args: {
     siteTitle: fmString(htmlConfig?.site?.title, 'iteraciones'),
     tagline: fmString(htmlConfig?.site?.description, 'escribir, compartir, re-existir'),
     metaDescription,
-    canonical: canonicalHref(htmlConfig?.site?.url, dir, pageSlug ?? slug),
+    canonical,
+    socialMeta,
     lang,
     theme: htmlConfig?.site?.theme,
     css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
