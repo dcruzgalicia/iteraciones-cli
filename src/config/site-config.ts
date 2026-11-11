@@ -9,6 +9,7 @@ export const DEFAULT_HTML_FORMAT = {
     theme: 'dark' as const,
     color: 'lime' as const,
     showDates: false,
+    rss: false,
     url: undefined as string | undefined,
     links: [] as { name: string; url: string }[],
     license: undefined as string | false | undefined,

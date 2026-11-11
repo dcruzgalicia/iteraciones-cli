@@ -34,6 +34,7 @@ Si no existe, se usan estos valores por defecto:
     format.html.site.logo: ${html.site?.logo || "''"}
     format.html.site.logoSize: ${html.site?.logoSize}           tamaño del logo (px, rem, em…)
     format.html.site.showDates: ${html.site?.showDates}         muestra las fechas en tarjetas y páginas
+    format.html.site.rss: ${html.site?.rss}               genera feed.xml con los contenidos con fecha
     format.html.pageSize: ${html.pageSize}              tarjetas por página en las colecciones
     format.html.site.license: ${html.site.license ?? '(por defecto)'}   PF-AC-PR-FA-1.0 | CC-BY-NC-ND-4.0 (hereda del nivel superior)
 

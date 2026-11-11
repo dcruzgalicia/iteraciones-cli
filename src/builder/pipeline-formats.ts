@@ -371,6 +371,37 @@ export async function emit404(args: { outputDir: string; renderCtx: RenderContex
   await writeOutput(join(args.outputDir, '404.html'), html);
 }
 
+export async function emitRss(args: {
+  outputDir: string;
+  siteUrl: string | undefined;
+  siteTitle: string;
+  siteDescription: string;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+}): Promise<void> {
+  const base = args.siteUrl?.trim().replace(/\/+$/, '');
+  if (base === undefined || base === '') return;
+  const items = [...args.discoveryIndex.entries()]
+    .filter(([, entry]) => {
+      if (entry.date === undefined || entry.slug === undefined) return false;
+      const tipo = entry.type ?? 'file';
+      return tipo === 'file' || tipo === 'collection' || tipo === 'announcement';
+    })
+    .map(([ruta, entry]) => {
+      const path = posix(join(dirname(ruta), `${entry.slug ?? ''}.html`));
+      return { entry, url: `${base}/${path}`, fecha: Date.parse(entry.date ?? '') };
+    })
+    .filter((item) => !Number.isNaN(item.fecha))
+    .sort((a, b) => b.fecha - a.fecha);
+  const xmlItems = items
+    .map(
+      (item) =>
+        `    <item>\n      <title>${escapeXml(item.entry.title)}</title>\n      <link>${escapeXml(item.url)}</link>\n      <guid>${escapeXml(item.url)}</guid>\n      <pubDate>${new Date(item.fecha).toUTCString()}</pubDate>\n    </item>`,
+    )
+    .join('\n');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>${escapeXml(args.siteTitle)}</title>\n    <link>${escapeXml(`${base}/`)}</link>\n    <description>${escapeXml(args.siteDescription)}</description>\n${xmlItems}\n  </channel>\n</rss>\n`;
+  await writeOutput(join(args.outputDir, 'feed.xml'), xml);
+}
+
 export async function emitRobots(args: { outputDir: string; siteUrl: string | undefined }): Promise<void> {
   const base = args.siteUrl?.trim().replace(/\/+$/, '');
   const sitemap = base === undefined || base === '' ? '' : `\nSitemap: ${base}/sitemap.xml\n`;

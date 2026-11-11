@@ -7,7 +7,7 @@ import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { generateCoverImages } from './export.js';
 import { PDF_WORK_BASE } from './output-layout.js';
 import { createPdfConsumer } from './pdf-pool.js';
-import { emit404, emitDefaultLists, emitKeywordLists, emitRobots, emitSitemap, preparaImagenesDeAnuncios, processDocumentFormats } from './pipeline-formats.js';
+import { emit404, emitDefaultLists, emitKeywordLists, emitRobots, emitRss, emitSitemap, preparaImagenesDeAnuncios, processDocumentFormats } from './pipeline-formats.js';
 import {
   buildPoolContexts,
   type ExportContext,
@@ -119,8 +119,18 @@ export async function documentPipeline(
       discoveryIndex,
     });
     const siteUrl = ctx.siteConfig.format?.html?.site?.url;
+    const htmlSite = ctx.siteConfig.format?.html?.site;
     await emitSitemap({ outputDir: ctx.outputDir, siteUrl });
     await emitRobots({ outputDir: ctx.outputDir, siteUrl });
+    if (htmlSite?.rss === true) {
+      await emitRss({
+        outputDir: ctx.outputDir,
+        siteUrl,
+        siteTitle: htmlSite.title ?? 'iteraciones',
+        siteDescription: htmlSite.description ?? '',
+        discoveryIndex,
+      });
+    }
     await emit404({ outputDir: ctx.outputDir, renderCtx, discoveryIndex });
   }
 
