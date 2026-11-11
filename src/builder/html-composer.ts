@@ -106,6 +106,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     await loadCard(type, 'card-indice.html'),
     await loadCard(type, 'card-formatos.html'),
     await loadCard('file', 'card-publicacion.html'),
+    await loadCard('file', 'card-cita.html'),
     await loadCard('file', 'card-indice-coleccion.html'),
     ...(type === 'file' ? [referencias] : []),
   ];
@@ -194,6 +195,7 @@ export interface HtmlPageVars {
   announcementsBottom?: string;
   indiceColeccion?: string;
   publicationMeta?: string;
+  citationBlock?: string;
 
   extras?: string;
 
