@@ -29,8 +29,8 @@ const LICENSE_ICONS = [
 ];
 const ICONS_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'icons');
 const ICON_FILES = [
-  { name: 'arrow-upward', size: 32 },
-  { name: 'menu', size: 16 },
+  { name: 'arrow-upward', size: 72 },
+  { name: 'menu', size: 48 },
 ] as const;
 
 export async function resolveTailwindBin(): Promise<string> {
