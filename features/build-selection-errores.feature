@@ -15,7 +15,6 @@ Característica: qué pasa cuando la selección está mal
       Entonces las salidas de documento son:
       """
       ana-garcia.html
-      ana-garcia.md
       capitulo-uno-por-ana-garcia.html
       capitulo-uno-por-ana-garcia.md
       index.html

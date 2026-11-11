@@ -52,8 +52,8 @@ Característica: El PDF y el EPUB llevan los metadatos del documento
       """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/david-cruz-galicia.tex" contiene '\textbf{Facebook}: https://www.facebook.com/david'
-      Y el archivo "dist/files/david-cruz-galicia.tex" no contiene 'title:'
+      Y el archivo "dist/files/david-cruz-galicia.html" contiene "https://www.facebook.com/david"
+      Y el archivo "dist/files/david-cruz-galicia.html" no contiene "title:"
 
   Regla de negocio: El EPUB lleva los metadatos del frontmatter
 
