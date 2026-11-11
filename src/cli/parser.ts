@@ -455,13 +455,16 @@ Ejemplos:
 
   program
     .command('validate')
-    .description('valida el frontmatter de los documentos y, si existe, iteraciones.config.yaml')
+    .description('valida el frontmatter, la configuración y la accesibilidad básica del HTML ya construido')
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
       'after',
       `
+Además revisa los HTML de la salida si ya existe un build: imágenes sin alt o sin
+dimensiones, enlaces sin nombre y saltos de encabezado. Esos avisos no bloquean.
+
 Ejemplos:
-  iteraciones validate         valida el frontmatter y la configuración (opcional) del proyecto
+  iteraciones validate         valida el frontmatter, la configuración y la accesibilidad
   iteraciones validate --json  imprime el resultado como JSON en stdout
 `,
     )

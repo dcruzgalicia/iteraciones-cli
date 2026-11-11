@@ -1,8 +1,10 @@
 import { readFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
+import { type AccessibilityReport, auditProjectHtml } from '../builder/accessibility.js';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { listMarkdownDocuments } from '../builder/discover-files.js';
 import { projectFilterNames, validateDisabledFilters } from '../builder/filter-resolver.js';
+import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
 import {
   dictumWidthWarnings,
@@ -14,6 +16,7 @@ import {
   validateFrontmatterFields,
 } from '../builder/project-validator.js';
 import { outputKeyFor } from '../builder/slug-resolver.js';
+import { loadStateFile } from '../builder/state-serialize.js';
 import { assertBuildTools } from '../builder/tool-preflight.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
@@ -176,6 +179,7 @@ interface ValidationSummary {
   documents: number;
   errors: ValidationError[];
   warnings: ValidationError[];
+  accessibility: AccessibilityReport;
 }
 
 async function collectConfigIssues(
@@ -206,6 +210,12 @@ async function collectToolIssues(cwd: string, config: Awaited<ReturnType<typeof 
   }
 }
 
+async function collectAccessibility(cwd: string): Promise<AccessibilityReport> {
+  const state = await loadStateFile(cwd);
+  const outputDir = state?.outputDir ? (isAbsolute(state.outputDir) ? state.outputDir : join(cwd, state.outputDir)) : join(cwd, DIST_FILES_DIR);
+  return auditProjectHtml(cwd, outputDir);
+}
+
 async function collectValidation(cwd: string): Promise<{ summary: ValidationSummary; disabledFiltersCount: number; luaFiltersCount: number }> {
   const configErrors: ValidationError[] = [];
   const configWarnings: ValidationError[] = [];
@@ -234,16 +244,28 @@ async function collectValidation(cwd: string): Promise<{ summary: ValidationSumm
     }
   }
   const { errors: fmErrors, warnings, count: docCount } = await validateFrontmatter(cwd);
+  const accessibility = await collectAccessibility(cwd);
   return {
     summary: {
       ok: [...configErrors, ...fmErrors].length === 0,
       documents: docCount,
       errors: [...configErrors, ...fmErrors],
       warnings: [...configWarnings, ...warnings],
+      accessibility,
     },
     disabledFiltersCount,
     luaFiltersCount,
   };
+}
+
+function reportAccessibility(accessibility: AccessibilityReport): void {
+  if (accessibility.issues.length === 0) return;
+  const archivos = plural(accessibility.checked, 'archivo HTML', 'archivos HTML');
+  const avisos = plural(accessibility.issues.length, 'aviso de accesibilidad', 'avisos de accesibilidad');
+  logWarning(`${avisos} en ${archivos} (no bloquea el build):`, 'validate');
+  for (const issue of accessibility.issues) {
+    logWarning(`${issue.file}: ${issue.message}`, 'validate');
+  }
 }
 
 export async function validateProject(cwd: string, options: { json?: boolean } = {}): Promise<void> {
@@ -253,7 +275,7 @@ export async function validateProject(cwd: string, options: { json?: boolean } =
     if (!summary.ok) process.exitCode = 1;
     return;
   }
-  const { errors, warnings: allWarnings, documents: docCount, ok } = summary;
+  const { errors, warnings: allWarnings, documents: docCount, ok, accessibility } = summary;
 
   if (allWarnings.length > 0) {
     logWarning(`${plural(allWarnings.length, 'advertencia')}:`, 'validate');
@@ -261,6 +283,8 @@ export async function validateProject(cwd: string, options: { json?: boolean } =
       logWarning(`${w.file}: ${w.message}`, 'validate');
     }
   }
+
+  reportAccessibility(accessibility);
 
   if (ok) {
     const detail: string[] = [plural(docCount, 'documento')];
