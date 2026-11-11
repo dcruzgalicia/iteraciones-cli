@@ -121,6 +121,30 @@ function validateEmptyFields(parsed: Record<string, unknown>): ValidationIssue[]
   return issues;
 }
 
+function validateMenuLinks(parsed: Record<string, unknown>): ValidationIssue[] {
+  if (parsed.type !== 'menu' || parsed.links === undefined) return [];
+  if (!Array.isArray(parsed.links)) return [{ severity: 'error', message: 'menu: "links" debe ser una lista' }];
+  const issues: ValidationIssue[] = [];
+  const revisar = (links: unknown[], ruta: string): void => {
+    for (const [indice, link] of links.entries()) {
+      const donde = `${ruta}[${indice}]`;
+      if (typeof link !== 'object' || link === null || Array.isArray(link)) {
+        issues.push({ severity: 'error', message: `menu: ${donde} debe ser un objeto con name y url` });
+        continue;
+      }
+      const { name, url, children } = link as Record<string, unknown>;
+      if (typeof name !== 'string' || name.trim() === '') issues.push({ severity: 'error', message: `menu: ${donde}.name debe ser texto` });
+      if (typeof url !== 'string' || url.trim() === '') issues.push({ severity: 'error', message: `menu: ${donde}.url debe ser texto` });
+      if (children !== undefined) {
+        if (!Array.isArray(children)) issues.push({ severity: 'error', message: `menu: ${donde}.children debe ser una lista` });
+        else revisar(children, `${donde}.children`);
+      }
+    }
+  };
+  revisar(parsed.links, 'links');
+  return issues;
+}
+
 function validateUnknownFields(parsed: Record<string, unknown>): ValidationIssue[] {
   const unknown = Object.keys(parsed).filter((key) => !KNOWN_FRONTMATTER_FIELDS.includes(key));
   if (unknown.length > 0) {
@@ -323,6 +347,7 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
     ...validateDateFormat(parsed),
     ...validateEmptyFields(parsed),
     ...validateUnknownFields(parsed),
+    ...validateMenuLinks(parsed),
     ...validateSlugField(parsed),
     ...validateTypeField(parsed),
   ];
