@@ -672,6 +672,7 @@ function htmlVars(args: {
   const titulo = doc.frontmatter.title || slug;
   const creatorExtras = doc.frontmatter.type === 'creator' ? splitFirstTopLevelDiv(extras) : undefined;
   const featuredPublication = creatorExtras?.first;
+  const publicationsRest = creatorExtras?.rest;
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
   const siteTitle = fmString(htmlConfig?.site?.title, 'iteraciones');
@@ -784,6 +785,7 @@ function htmlVars(args: {
     docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: opcional(extras),
     featuredPublication: opcional(featuredPublication),
+    publicationsRest: opcional(publicationsRest),
     sidebarExtras: opcional(sidebarExtras),
     recientes: opcional(esListaIndex ? '' : recentesCard(discoveryIndex, dir)),
     siteKeywords: opcional(
