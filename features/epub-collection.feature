@@ -9,3 +9,4 @@ Característica: EPUB de una colección
     Cuando hago un build del proyecto
     Entonces el comando termina con el código de salida 0
     Y el EPUB "libro" tiene al menos 2 capítulos XHTML
+    Y el EPUB "dist/files/libro.epub" lleva la portada como cover
