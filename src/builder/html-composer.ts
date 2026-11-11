@@ -155,6 +155,8 @@ export interface HtmlPageVars {
   docTitle?: string;
   subtitle?: string;
   date?: string;
+  dateIso?: string;
+  showDates?: boolean;
   homeHref?: string;
   formats?: FormatsLink[];
 

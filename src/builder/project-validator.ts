@@ -61,6 +61,7 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'order',
   'name',
   'links',
+  'showDates',
   'pages',
   'lineLength',
   'letterhead',

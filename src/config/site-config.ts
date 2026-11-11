@@ -8,6 +8,7 @@ export const DEFAULT_HTML_FORMAT = {
     logoSize: '50px',
     theme: 'dark' as const,
     color: 'lime' as const,
+    showDates: false,
     links: [] as { name: string; url: string }[],
     license: undefined as string | false | undefined,
   },
