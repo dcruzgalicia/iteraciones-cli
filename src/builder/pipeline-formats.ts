@@ -812,8 +812,8 @@ function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>, tono: 'a
   if (tono === 'plano') return `<a href="${href}">${nombre}</a>`;
   const clases =
     tono === 'gris'
-      ? 'text-stone-600 no-underline underline-offset-4 hover:underline dark:text-stone-400'
-      : 'text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
+      ? 'py-1 text-stone-600 no-underline underline-offset-4 hover:underline dark:text-stone-400'
+      : 'py-1 text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
   return `<a href="${href}" class="${clases}">${nombre}</a>`;
 }
 
@@ -1102,7 +1102,7 @@ function chipHtml(
 }
 
 const MEMBER_LINK_CLASSES =
-  'no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current';
+  'py-1 no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current';
 
 const CARD_CTA_CLASSES =
   'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
