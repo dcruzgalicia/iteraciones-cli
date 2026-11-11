@@ -81,6 +81,11 @@ const HtmlSiteSchema = z
     color: z.enum(ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.site.color),
     links: z.array(z.object({ name: z.string(), url: z.string() }).strict()).optional(),
     license: z.union([z.string(), z.literal(false)]).optional(),
+    url: z
+      .string()
+      .url()
+      .refine((value) => /^https?:\/\//i.test(value), 'la URL debe empezar con http:// o https://')
+      .optional(),
   })
   .strict();
 
