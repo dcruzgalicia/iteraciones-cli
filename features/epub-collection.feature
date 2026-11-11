@@ -11,3 +11,7 @@ Característica: EPUB de una colección
     Y el EPUB "libro" tiene al menos 2 capítulos XHTML
     Y el EPUB "libro" tiene en el índice "Capítulo uno"
     Y el EPUB "dist/files/libro.epub" lleva la portada como cover
+    Y el EPUB "libro" declara la clave "dc:description" con el valor "Descripción del libro"
+    Y el EPUB "libro" declara la clave "dc:rights" con el valor "Derechos reservados"
+    Y el EPUB "libro" declara la clave "dc:subject" con el valor "pruebas"
+    Y el EPUB "libro" incluye una imagen

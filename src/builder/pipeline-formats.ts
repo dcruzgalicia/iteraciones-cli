@@ -3047,13 +3047,15 @@ async function emitCollectionFormats(
     const baseConLicencia = conLicenciaAlFinal(base, outputs.fm, ctx.siteConfig);
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', epubMap, docDir, false);
     const epubCover = epubCoverPath(mergedFm, docDir, epubMap);
+    const licenciaFm = licenciaFrontmatterPara(outputs.fm, ctx.siteConfig);
+    const epubFm = licenciaFm === undefined ? outputs.fm : { ...outputs.fm, rights: licenciaFm.rights };
     await convertToEpub(
       prependLinksMarkdown(baseConLicencia, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
       exportDoc,
       exportCtx.filters,
       ctx.siteConfig.toc,
-      outputs.fm,
+      epubFm,
       await collectionPandocInput(doc, ctx.cwd, outputs.outSlug, 'epub'),
       imagePaths,
       epubCover,

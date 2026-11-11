@@ -4,7 +4,7 @@ import { stringify } from 'yaml';
 import { formatHumanDate } from '../lib/date.js';
 import { ExportError, PANDOC_ERROR_CODES } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
-import { fmBool, fmString } from '../lib/frontmatter-fields.js';
+import { fmBool, fmString, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { cpuConcurrency, exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
@@ -85,6 +85,12 @@ export async function convertToEpub(
       { key: 'title', value: doc.metadata.title },
       { key: 'creator', value: doc.metadata.creator },
       { key: 'date', value: (doc.metadata.dateIso ?? doc.metadata.date) || undefined },
+      { key: 'description', value: fmTrimmedString(fm.description) ?? fmTrimmedString(fm.abstract) },
+      { key: 'rights', value: fmTrimmedString(fm.rights) ?? fmTrimmedString(fm.license) },
+      { key: 'publisher', value: fmTrimmedString(fm.publisher) },
+      { key: 'identifier', value: fmTrimmedString(fm.identifier) },
+      { key: 'isbn', value: fmTrimmedString(fm.isbn) },
+      { key: 'doi', value: fmTrimmedString(fm.doi) },
     ]),
   );
 
