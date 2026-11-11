@@ -12,15 +12,27 @@ export function loadReferencesCardTemplate(type: HtmlDocType): Promise<string> {
   return loadCard(type, 'card-referencias-block.html');
 }
 
+function removeEmptyRelatedSlot(html: string): string {
+  const start = html.indexOf('<div id="slot-related"');
+  if (start < 0) return html;
+  const openEnd = html.indexOf('>', start);
+  if (openEnd < 0) return html;
+  const end = findBalancedDivEnd(html, start, 'la columna relacionada');
+  if (end === undefined) return html;
+  const inner = html.slice(openEnd + 1, end - '</div>'.length);
+  if (inner.trim() !== '') return html;
+  return html.slice(0, start) + html.slice(end);
+}
+
 export function postProcessHtml(html: string, refsCardTemplate: string): string {
   const withIntro = moveCollectionIntro(removeTocReferencesLink(html));
   const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate);
-  if (block === undefined) return clean;
+  if (block === undefined) return removeEmptyRelatedSlot(clean);
   if (!clean.includes(REFS)) {
     logWarning('no se encontró el marcador de la tarjeta de referencias; la bibliografía no se inserta en la página', 'html');
-    return clean;
+    return removeEmptyRelatedSlot(clean);
   }
-  return clean.replace(REFS, block);
+  return removeEmptyRelatedSlot(clean.replace(REFS, block));
 }
 
 export function moveCollectionIntro(html: string): string {
