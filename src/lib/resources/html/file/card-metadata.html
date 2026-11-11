@@ -20,6 +20,11 @@
       $if(subtitle)$
       <p class="text-lg italic text-accent-800 sm:text-xl lg:text-2xl dark:text-accent-200">$subtitle$</p>
       $endif$
+      $if(show-dates)$
+      $if(date-iso)$
+      <p class="text-sm font-mono text-stone-600 dark:text-stone-400"><time datetime="$date-iso$">$date$</time></p>
+      $endif$
+      $endif$
       $if(collection-creator-prefix)$
       <p class="text-sm font-mono font-bold text-accent-600 dark:text-accent-400">$collection-creator-prefix$</p>
       $endif$

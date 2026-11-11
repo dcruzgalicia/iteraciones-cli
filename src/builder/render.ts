@@ -95,6 +95,8 @@ function buildHtmlMetadataArgs(
       { key: 'doc-title', value: vars.docTitle },
       { key: 'subtitle', value: vars.subtitle },
       { key: 'date', value: vars.date },
+      { key: 'date-iso', value: vars.dateIso },
+      { key: 'show-dates', value: vars.showDates ? 'true' : undefined },
       { key: 'home-href', value: vars.homeHref },
       { key: 'theme', value: theme },
       { key: 'css', value: css },

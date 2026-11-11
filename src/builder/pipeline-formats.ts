@@ -365,6 +365,7 @@ function htmlVars(args: {
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
   const siteTitle = fmString(htmlConfig?.site?.title, 'iteraciones');
+  const showDates = fm.showDates === false ? false : fm.showDates === true ? true : htmlConfig?.site?.showDates === true;
   const esListaIndex = doc.relativePath === 'index.md' && doc.frontmatter.type === 'list';
   const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
   const esPaginaIndex = doc.relativePath === 'index.md';
@@ -382,6 +383,8 @@ function htmlVars(args: {
     docTitle: cuando(doc.frontmatter.title !== undefined && doc.frontmatter.title !== TITULO_POR_DEFECTO, doc.frontmatter.title ?? ''),
     subtitle: doc.frontmatter.subtitle,
     date: formatHumanDate(doc.frontmatter.date),
+    dateIso: opcional(doc.frontmatter.date),
+    showDates,
     homeHref: cuando(hasHomePage, relativeHref(dir, 'index.html')),
     formats: formatosOpcionales(formats),
 
@@ -539,6 +542,7 @@ export type CollectionEntry = {
   title: string;
   creator: string[];
   subtitle: string | undefined;
+  date?: string;
   type: string | undefined;
   lineLength: number | undefined;
   pages: number | undefined;
@@ -1797,7 +1801,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     available,
     true,
     discoveryIndex,
-    { path: relativePath, outSlug: slug },
+    { path: relativePath, outSlug: slug, showDates: renderCtx.formatCfg?.html?.site?.showDates === true },
     hrefsDeImagenes(imageMap, outputDir, dir),
   );
   const doc: BuildDocument = {
@@ -1957,6 +1961,7 @@ function titleHtmlPara(title: string, href: string | undefined): string {
 interface PageRef {
   path: string;
   outSlug?: string;
+  showDates?: boolean;
 }
 
 function chipsDePertenencia(
@@ -2080,6 +2085,13 @@ function cabeceraDeTarjeta(
     cuerpo.push(`<h2 class="not-prose text-center text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`, '');
   cuerpo.push(titleHtml);
   if (e.subtitle) cuerpo.push('', `<h4 class="text-center text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
+  if (page?.showDates === true && e.date !== undefined) {
+    const fecha = e.date;
+    cuerpo.push(
+      '',
+      `<p class="not-prose mb-4 text-center text-xs font-mono text-stone-600 sm:text-sm dark:text-stone-400"><time datetime="${Bun.escapeHTML(fecha)}">${Bun.escapeHTML(formatHumanDate(fecha) ?? fecha)}</time></p>`,
+    );
+  }
   return { chips, cuerpo };
 }
 
@@ -2567,7 +2579,7 @@ function paginasDeLaPagina(args: Parameters<typeof paginasDeDocumento>[0]): { pa
     args.available,
     false,
     args.discoveryIndex,
-    { path: args.doc.relativePath, outSlug: args.outSlug },
+    { path: args.doc.relativePath, outSlug: args.outSlug, showDates: args.showDates },
     args.imagenes,
   );
   return { paginas: [args.pageContent, ...tarjetasPaginas.slice(1).map(() => '')], tarjetasPaginas };
@@ -2599,6 +2611,7 @@ function paginasDeDocumento(args: {
   available?: Set<string>;
   discoveryIndex: Map<string, DiscoveryEntry>;
   imagenes: Map<string, string>;
+  showDates: boolean;
 }): string[] {
   if (args.entradas.length === 0) return [args.pageContent];
   return collectionCardsPages(
@@ -2611,7 +2624,7 @@ function paginasDeDocumento(args: {
     args.available,
     false,
     args.discoveryIndex,
-    { path: args.doc.relativePath, outSlug: args.outSlug },
+    { path: args.doc.relativePath, outSlug: args.outSlug, showDates: args.showDates },
     args.imagenes,
   );
 }
@@ -2643,6 +2656,7 @@ async function emitCollectionHtml(
   const memberHrefs = memberHtmlHrefs(doc.relativePath, entradasTarjetas, discoveryIndex);
   const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
   const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
+  const showDates = mergedFm.showDates === false ? false : mergedFm.showDates === true ? true : formatCfg?.html?.site?.showDates === true;
   const available = availableDefaultListSlugs(discoveryIndex);
   const esMenu = doc.frontmatter.type === 'menu';
   const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
@@ -2668,6 +2682,7 @@ async function emitCollectionHtml(
     available,
     discoveryIndex,
     imagenes,
+    showDates,
   });
   assertPaginasLibres(doc.relativePath, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 

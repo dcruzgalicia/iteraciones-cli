@@ -91,6 +91,7 @@ export function parseFileFrontmatter(
   title: string;
   creator: string[];
   subtitle: string | undefined;
+  date: string | undefined;
   type: string | undefined;
   lineLength: number | undefined;
   pages: number | undefined;
@@ -105,6 +106,7 @@ export function parseFileFrontmatter(
       title: '',
       creator: [],
       subtitle: undefined,
+      date: undefined,
       type: undefined,
       lineLength: undefined,
       pages: undefined,
@@ -120,6 +122,7 @@ export function parseFileFrontmatter(
     title: typeof parsed.title === 'string' ? parsed.title : '',
     creator: parseAuthors(parsed.creator),
     subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
+    date: typeof parsed.date === 'string' ? parsed.date : undefined,
     type: typeof parsed.type === 'string' ? parsed.type : undefined,
     lineLength: typeof parsed.lineLength === 'number' ? parsed.lineLength : undefined,
     pages: typeof parsed.pages === 'number' ? parsed.pages : undefined,
