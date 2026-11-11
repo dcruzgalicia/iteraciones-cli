@@ -88,7 +88,8 @@ function documentales(): string[] {
       const ruta = join(dir, entrada.name);
       if (entrada.isDirectory()) recorrer(ruta);
       else if (ruta.endsWith('.html') || ruta.endsWith('.md')) {
-        salida.push(relative(join(world.root, 'dist', 'files'), ruta));
+        const relativa = relative(join(world.root, 'dist', 'files'), ruta);
+        if (relativa !== '404.html') salida.push(relativa);
       }
     }
   };
