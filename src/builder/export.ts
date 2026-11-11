@@ -9,7 +9,7 @@ import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { cpuConcurrency, exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
-import { type LuaFilterGroup, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
+import { type LuaFilterGroup, luaFilterArgs, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
 import { keywordsFromFm } from './keyword-lists.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
 import { preparePaths } from './prepare.js';
@@ -70,7 +70,7 @@ export async function convertToEpub(
   const extraArgs: string[] = [];
   extraArgs.push('--shift-heading-level-by=4');
   if (coverImage !== undefined) extraArgs.push(`--epub-cover-image=${coverImage}`);
-  for (const f of [...filters.semantic, STRIP_TYPOGRAPHIC_FILTER, ...filters.user]) extraArgs.push('--lua-filter', f);
+  extraArgs.push(...luaFilterArgs([...filters.semantic, STRIP_TYPOGRAPHIC_FILTER, ...filters.user]));
   extraArgs.push(...citationCompileArgs(doc.metadata.bibliography, doc.metadata.csl));
   const tocActive = fmBool(fm.toc, toc ?? false);
   if (tocActive) {
@@ -143,7 +143,7 @@ export async function convertToMarkdown(
           sourcePath: doc.filePath,
           from: MD_READER,
           to: 'markdown',
-          extraArgs: ['--lua-filter', STRIP_TYPOGRAPHIC_FILTER],
+          extraArgs: luaFilterArgs([STRIP_TYPOGRAPHIC_FILTER]),
         });
   await Bun.write(outputPath, `---\n${stringify(outFm)}---\n\n${normalizedBody}`);
 }

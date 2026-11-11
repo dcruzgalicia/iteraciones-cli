@@ -7,7 +7,7 @@ import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { PKG_PREAMBLE_DIR } from '../builder/preamble-loader.js';
 import { BuildError } from '../lib/errors.js';
 import { readFrontmatter, splitFrontmatter } from '../lib/frontmatter.js';
-import { fail, logError, logInfo, logSuccess, writeJson } from '../lib/logger.js';
+import { logError, logInfo, logSuccess, runCommand, writeJson } from '../lib/logger.js';
 import { relativeLabel } from '../lib/paths.js';
 import {
   agregaExcepcionesAlTexto,
@@ -183,7 +183,7 @@ function esSeleccion(spec: string): boolean {
 }
 
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
-  try {
+  await runCommand('typography', async () => {
     for (const opcion of ['ignore', 'clean', 'fix'] as const) {
       const valor = options[opcion];
       if (typeof valor === 'string' && !esSeleccion(valor)) {
@@ -313,9 +313,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     logInfo('Para guardar una excepción: iteraciones typography --ignore 3,5 (sin números, todas)', 'typography');
     process.exitCode = 1;
     logError(`${plural(total, 'incidencia')} en ${plural(files.length, 'PDF')}`, 'typography');
-  } catch (err) {
-    fail('typography', err);
-  }
+  });
 }
 
 async function aseguraGit(cwd: string, opcion = '--fix'): Promise<void> {
@@ -1024,6 +1022,37 @@ export function limpiaParrafo(texto: string): string {
   return salida.join('\n');
 }
 
+async function analizaPdfs(
+  cwd: string,
+  targets: string[],
+  analisis: OpcionesAnalisis,
+  excepciones: ReturnType<typeof parseaExcepciones>,
+): Promise<{ pdf: string; incidences: TypographyIncidence[] }[]> {
+  return await mapWithConcurrency(targets, 4, async (pdf) => ({
+    pdf,
+    incidences: await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) }),
+  }));
+}
+
+async function cargaFuentes(cwd: string, pdf: string): Promise<{ contenido: Map<string, string>; contenidoNormalizado: Map<string, string> }> {
+  const contenido = new Map<string, string>();
+  const contenidoNormalizado = new Map<string, string>();
+  for (const fuente of await candidatosDeFuente(cwd, pdf)) {
+    try {
+      const texto = await Bun.file(fuente).text();
+      contenido.set(fuente, texto);
+      contenidoNormalizado.set(fuente, normalizaParaBusqueda(texto));
+    } catch {}
+  }
+  return { contenido, contenidoNormalizado };
+}
+
+async function escribeFuentes(contenido: Map<string, string>): Promise<void> {
+  for (const [ruta, texto] of contenido) {
+    if (texto !== (await Bun.file(ruta).text())) await Bun.write(ruta, texto);
+  }
+}
+
 async function limpiaTypografia(
   cwd: string,
   targets: string[],
@@ -1037,10 +1066,7 @@ async function limpiaTypografia(
 }> {
   await aseguraGit(cwd, '--clean');
   const excepciones = cargarExcepciones(cwd, options, true);
-  const analizados = await mapWithConcurrency(targets, 4, async (pdf) => ({
-    pdf,
-    incidences: await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) }),
-  }));
+  const analizados = await analizaPdfs(cwd, targets, analisis, excepciones);
   const planas = analizados.flatMap((file) => file.incidences.map((incidencia) => ({ pdf: file.pdf, incidencia })));
   const numeros =
     typeof options.clean === 'string' ? seleccionaIncidencias(options.clean, planas.length, '--clean') : planas.map((_, indice) => indice + 1);
@@ -1056,16 +1082,7 @@ async function limpiaTypografia(
   let sinLimpiar = 0;
   let noAplica = 0;
   for (const [pdf, resultado] of porPdf) {
-    const fuentes = await candidatosDeFuente(cwd, pdf);
-    const contenido = new Map<string, string>();
-    const contenidoNormalizado = new Map<string, string>();
-    for (const fuente of fuentes) {
-      try {
-        const texto = await Bun.file(fuente).text();
-        contenido.set(fuente, texto);
-        contenidoNormalizado.set(fuente, normalizaParaBusqueda(texto));
-      } catch {}
-    }
+    const { contenido, contenidoNormalizado } = await cargaFuentes(cwd, pdf);
     for (const incidencia of resultado.incidences) {
       if (esReglaDeEspaciado(incidencia.type)) {
         resultado.estado.set(incidencia, 'no aplica');
@@ -1097,9 +1114,7 @@ async function limpiaTypografia(
       resultado.estado.set(incidencia, 'limpio');
       limpiados++;
     }
-    for (const [ruta, texto] of contenido) {
-      if (texto !== (await Bun.file(ruta).text())) await Bun.write(ruta, texto);
-    }
+    await escribeFuentes(contenido);
   }
   return { limpiados, sinLimpiar, noAplica, porPdf };
 }
@@ -1135,8 +1150,8 @@ async function arreglaTypografia(
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>();
 
   const excepciones = cargarExcepciones(cwd, options);
-  for (const pdf of targets) {
-    const incidences = await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) });
+  const analizados = await analizaPdfs(cwd, targets, analisis, excepciones);
+  for (const { pdf, incidences } of analizados) {
     if (incidences.length === 0) continue;
     porPdf.set(pdf, { incidences, estado: new Map<TypographyIncidence, MotivoIncidencia>() });
   }
@@ -1170,15 +1185,7 @@ async function arreglaTypografia(
       continue;
     }
 
-    const contenido = new Map<string, string>();
-    const contenidoNormalizado = new Map<string, string>();
-    for (const f of fuentes) {
-      try {
-        const txt = await Bun.file(f).text();
-        contenido.set(f, txt);
-        contenidoNormalizado.set(f, normalizaParaBusqueda(txt));
-      } catch {}
-    }
+    const { contenido, contenidoNormalizado } = await cargaFuentes(cwd, pdf);
 
     for (const inc of resto) {
       if (esReglaDeEspaciado(inc.type)) {
@@ -1271,11 +1278,7 @@ async function arreglaTypografia(
       estado.set(inc, 'corregido');
     }
 
-    for (const [ruta, texto] of contenido) {
-      if (texto !== (await Bun.file(ruta).text())) {
-        await Bun.write(ruta, texto);
-      }
-    }
+    await escribeFuentes(contenido);
   }
 
   return { corregidos, sinAplicar, noEncontradas, multiples, noAplica, soloReporte, sinAccion, sinUnion, exactMiss, porPdf };

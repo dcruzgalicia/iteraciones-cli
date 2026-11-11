@@ -3,6 +3,5 @@
   "markdown": "# Título\n\nPrimer párrafo.",
   "contains": [],
   "notContains": ["\\ofoot*{\\pagemark}"],
-  "needsBib": false,
   "normalizeNewlines": false
 }

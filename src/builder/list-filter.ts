@@ -86,13 +86,13 @@ function cumple(ruta: string, entry: DiscoveryEntry, filtro: ListFilter): boolea
   );
 }
 
-function fechaOrdenable(entry: DiscoveryEntry): number {
-  const explicita = entry.date ?? entry.listDate;
+export function fechaOrdenable(entry: DiscoveryEntry | undefined): number {
+  const explicita = entry?.date ?? entry?.listDate;
   if (explicita !== undefined) {
     const fecha = Date.parse(explicita);
     if (!Number.isNaN(fecha)) return fecha;
   }
-  return entry.mtime ?? 0;
+  return entry?.mtime ?? 0;
 }
 
 function compararFecha(a: DiscoveryEntry, b: DiscoveryEntry, descendente: boolean): number {

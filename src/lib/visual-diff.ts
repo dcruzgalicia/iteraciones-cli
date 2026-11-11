@@ -140,8 +140,6 @@ export interface VisualDiffResult {
   generatedPages: number;
   pass: boolean;
 
-  diffDir?: string;
-
   fromCache?: boolean;
 }
 
@@ -283,11 +281,6 @@ interface CompareVisualInput {
   diffStem?: string;
 }
 
-async function cacheResult(path: string, key: string, result: VisualDiffResult): Promise<void> {
-  const { compared, unchanged, changed, referencePages, generatedPages, pass } = result;
-  await writeCache(path, key, { compared, unchanged, changed, referencePages, generatedPages, pass });
-}
-
 async function comparePages(args: {
   referencePages: string[];
   generatedPages: string[];
@@ -377,13 +370,14 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
     referencePages: referenceCount,
     generatedPages: generatedPages.length,
     pass,
-
-    ...(changed > 0 ? { diffDir } : {}),
   };
 
   const keepWorkDir = diffDir === input.workDir && changed > 0;
   try {
-    if (pass && input.cachePath !== undefined) await cacheResult(input.cachePath, key, result);
+    if (pass && input.cachePath !== undefined) {
+      const { compared, unchanged, changed, referencePages, generatedPages } = result;
+      await writeCache(input.cachePath, key, { compared, unchanged, changed, referencePages, generatedPages, pass });
+    }
   } finally {
     if (!keepWorkDir) await rm(input.workDir, { recursive: true, force: true });
   }

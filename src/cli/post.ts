@@ -4,7 +4,7 @@ import { loadReferencesCardTemplate, postProcessHtml } from '../builder/html-pos
 import { composeLatexFinalOutput, type LatexPostManifest } from '../builder/latex-composer.js';
 import { writeOutput } from '../builder/pipeline-io.js';
 import { BuildError } from '../lib/errors.js';
-import { fail, logSuccess } from '../lib/logger.js';
+import { logSuccess, runCommand } from '../lib/logger.js';
 import { minifyHtml } from '../lib/minify.js';
 
 const POST_KINDS = ['html', 'latex'] as const;
@@ -36,7 +36,7 @@ async function postLatex(raw: string, post: string | undefined, cwd: string, out
 }
 
 export async function runPost(cwd: string, kind: string, options: { output: string; post?: string; type?: string }): Promise<void> {
-  try {
+  await runCommand('post', async () => {
     if (!(POST_KINDS as readonly string[]).includes(kind)) {
       throw new BuildError(`tipo de post-proceso desconocido "${kind}"; esperado: ${POST_KINDS.join(' | ')}`);
     }
@@ -46,7 +46,5 @@ export async function runPost(cwd: string, kind: string, options: { output: stri
 
     await writeOutput(output, kind === 'html' ? await postHtml(raw, options.type ?? 'file') : await postLatex(raw, options.post, cwd, output));
     logSuccess(`${kind} → ${options.output}`, 'post');
-  } catch (err) {
-    fail('post', err);
-  }
+  });
 }

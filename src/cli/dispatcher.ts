@@ -9,7 +9,7 @@ import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadStateFile } from '../builder/state-serialize.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { SiteConfigSchema } from '../config/config-schema.js';
-import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig, userWroteDisabledPreamble } from '../config/site-config.js';
+import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { todayIso } from '../lib/date.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
 import { fail, logError, logInfo, logSuccess, writeJson } from '../lib/logger.js';
@@ -160,14 +160,14 @@ function classifyAndReportError(err: unknown): void {
 async function buildProjectInfo(cwd: string): Promise<string[]> {
   const loaded = await loadSiteConfigIfPresent(cwd);
   const config = loaded?.config ?? SiteConfigSchema.parse({});
-  const presentKeys = loaded?.presentKeys ?? new Set<string>();
+  const wroteDisabledPreamble = loaded?.wroteDisabledPreamble ?? false;
   const pandocVersion = await getPandocVersion().catch(() => 'no disponible');
   const state = await loadStateFile(cwd);
   const distDir = state?.outputDir ?? join(cwd, DIST_FILES_DIR);
   const distExists = await isDir(distDir);
   const activeFormats = computeActiveFormats(config.format);
   const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
-  const preambleDisabled = userWroteDisabledPreamble(presentKeys) ? resolveDisabledPreambleConfig(config) : [];
+  const preambleDisabled = wroteDisabledPreamble ? resolveDisabledPreambleConfig(config) : [];
   const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
   const theme = html?.site?.theme ?? '(por defecto)';

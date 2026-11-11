@@ -223,12 +223,6 @@
   animation-range: 150px 300px;
 }
 
-@utility scroll-reveal-at-end {
-  animation: scroll-reveal linear both;
-  animation-timeline: scroll();
-  animation-range: 90% 100%;
-}
-
 @keyframes scroll-reveal {
   from {
     opacity: 0;

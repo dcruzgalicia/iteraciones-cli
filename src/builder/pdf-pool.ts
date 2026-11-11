@@ -21,6 +21,10 @@ export interface PdfJob {
   noBibtex: boolean;
 }
 
+export interface PdfJobSink {
+  push(job: PdfJob): void;
+}
+
 async function waitForWorkers(promises: Promise<void>[], timeoutMs: number): Promise<boolean> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -67,7 +71,7 @@ export function createPdfConsumer(
   biberBase: string,
   maxSlots: number,
   progress: BuildReporter,
-): {
+): PdfJobSink & {
   pdfJobs: PdfJob[];
   start: () => void;
   markProducerDone: () => void;
@@ -81,24 +85,47 @@ export function createPdfConsumer(
   let next = 0;
   let workerPromises: Promise<void>[] = [];
   let firstError: unknown = null;
+  let waiters: Array<() => void> = [];
   let pdfPhaseStarted = false;
   const inFlightPids: (number | null)[] = Array.from({ length: maxSlots }, () => null);
+
+  const notify = (): void => {
+    const pending = waiters;
+    waiters = [];
+    for (const resolve of pending) resolve();
+  };
+
+  const push = (job: PdfJob): void => {
+    pdfJobs.push(job);
+    notify();
+  };
 
   const onError = (err: unknown): void => {
     firstError = err;
     producerDone = true;
     pdfJobs.length = 0;
+    notify();
+  };
+
+  const nextJob = async (): Promise<PdfJob | undefined> => {
+    while (firstError === null) {
+      const job = pdfJobs[next];
+      if (job !== undefined) {
+        next++;
+        return job;
+      }
+      if (producerDone) return undefined;
+      await new Promise<void>((resolve) => {
+        waiters.push(resolve);
+      });
+    }
+    return undefined;
   };
 
   const worker = async (slotIndex: number): Promise<void> => {
-    while (firstError === null) {
-      if (next >= pdfJobs.length) {
-        if (producerDone) return;
-        await Bun.sleep(5);
-        continue;
-      }
-      const job = pdfJobs[next++];
-      if (job === undefined) continue;
+    for (;;) {
+      const job = await nextJob();
+      if (job === undefined) return;
       ensurePdfPhaseStarted();
       const ok = await executePdfJob(job, slotIndex, pdfWorkBase, biberBase, inFlightPids, progress, onError);
       if (!ok) return;
@@ -120,11 +147,13 @@ export function createPdfConsumer(
 
   const markProducerDone = (): void => {
     producerDone = true;
+    notify();
   };
 
   const cancel = (): void => {
     producerDone = true;
     pdfJobs.length = 0;
+    notify();
   };
 
   const quiesce = async (timeoutMs: number = QUIESCE_TIMEOUT_MS): Promise<void> => {
@@ -150,5 +179,5 @@ export function createPdfConsumer(
     if (firstError !== null) throw firstError;
   };
 
-  return { pdfJobs, start, markProducerDone, cancel, drain, quiesce };
+  return { pdfJobs, push, start, markProducerDone, cancel, drain, quiesce };
 }

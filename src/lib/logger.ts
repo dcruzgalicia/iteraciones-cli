@@ -27,6 +27,14 @@ export function fail(context: string, err: unknown): void {
   process.exitCode = 1;
 }
 
+export async function runCommand(context: string, fn: () => Promise<void>): Promise<void> {
+  try {
+    await fn();
+  } catch (err) {
+    fail(context, err);
+  }
+}
+
 let warningSink: ((message: string) => void) | null = null;
 
 export async function runWithWarningSink<T>(sink: (message: string) => void, fn: () => Promise<T>): Promise<T> {

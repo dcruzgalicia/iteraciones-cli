@@ -3,7 +3,7 @@ import { fmString } from '../lib/frontmatter-fields.js';
 import { minifyHtml } from '../lib/minify.js';
 import { type BibOptions, execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { resolveScriptStdout } from '../lib/script-recorder.js';
-import { type LuaFilterGroup, loadFilterGroups, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
+import { type LuaFilterGroup, loadFilterGroups, luaFilterArgs, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
 import { buildFormatsArgs, buildFormatsFlag, type HtmlDocType, type HtmlPageVars } from './html-composer.js';
 import { postProcessHtml } from './html-postprocess.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
@@ -126,9 +126,7 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const extraArgs = buildHtmlMetadataArgs(templatePath, vars, lang, siteTitle, tagline, theme, css, tocActive);
   extraArgs.push('--shift-heading-level-by=4');
   if (tocActive) extraArgs.push('--toc-depth=6');
-  for (const filter of [...filters.semantic, STRIP_TYPOGRAPHIC_FILTER, ...filters.user, ...filters.flags, ...filters.html]) {
-    extraArgs.push('--lua-filter', filter);
-  }
+  extraArgs.push(...luaFilterArgs([...filters.semantic, STRIP_TYPOGRAPHIC_FILTER, ...filters.user, ...filters.flags, ...filters.html]));
   extraArgs.push(...citationCompileArgs(bibOptions?.bibliography, bibOptions?.csl));
 
   const html = await execPandoc({

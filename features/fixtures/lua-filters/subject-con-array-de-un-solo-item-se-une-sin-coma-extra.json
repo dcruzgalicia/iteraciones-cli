@@ -3,6 +3,5 @@
   "markdown": "---\ntitle: Prueba\nsubject: [Ensayo]\n---\n\nCuerpo.\n",
   "contains": ["\\subject{Ensayo}"],
   "notContains": [],
-  "needsBib": false,
   "normalizeNewlines": false
 }

@@ -5,12 +5,12 @@ import { resolveDisabledPreambleForBuild } from '../builder/preamble-loader.js';
 import { resolveBibOptions } from '../builder/state-bib.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { BuildError } from '../lib/errors.js';
-import { fail, logSuccess } from '../lib/logger.js';
+import { logSuccess, runCommand } from '../lib/logger.js';
 
 const KINDS = TEMPLATE_KINDS as readonly string[];
 
 export async function runTemplate(cwd: string, kind: string, options: { output?: string }): Promise<void> {
-  try {
+  await runCommand('template', async () => {
     if (!KINDS.includes(kind)) throw new BuildError(`tipo de plantilla desconocido "${kind}"; esperado: ${KINDS.join(' | ')}`);
     const siteConfig = await loadSiteConfig(cwd);
     const { bibFiles } = await resolveBibOptions(cwd, siteConfig);
@@ -28,7 +28,5 @@ export async function runTemplate(cwd: string, kind: string, options: { output?:
         : resolve(cwd, options.output);
     await writeIfChanged(output, content);
     logSuccess(`${kind} → ${output}`, 'template');
-  } catch (err) {
-    fail('template', err);
-  }
+  });
 }

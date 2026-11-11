@@ -3,6 +3,5 @@
   "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {spacing=1.5}\n  contraportada\n  :::\n---\n\nCuerpo.\n",
   "contains": ["contraportada"],
   "notContains": ["\\begin{spacing}"],
-  "needsBib": false,
   "normalizeNewlines": false
 }

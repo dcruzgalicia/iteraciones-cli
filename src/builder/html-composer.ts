@@ -64,26 +64,28 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
   return `<nav aria-label="Redes" class="contents">${items}</nav>`;
 }
 
-function headerHtml(identity: string, menuHeader: string, redes: string): string {
+function identityCard(children: string[]): string {
   return [
     '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6 lg:p-8">',
     '<div class="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:gap-12">',
-    `<div class="min-w-0">${identity}</div>`,
-    `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-end">${menuHeader}${redes}</div>`,
+    ...children,
     '</div>',
     '</div>',
   ].join('\n');
 }
 
+function headerHtml(identity: string, menuHeader: string, redes: string): string {
+  return identityCard([
+    `<div class="min-w-0">${identity}</div>`,
+    `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-end">${menuHeader}${redes}</div>`,
+  ]);
+}
+
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
-  return [
-    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6 lg:p-8">',
-    '<div class="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:gap-12">',
+  return identityCard([
     `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-start">${menuFooterPlain}${redes}</div>`,
     `<div class="flex min-w-0 items-center justify-center sm:justify-start">${footerIdentity}</div>`,
-    '</div>',
-    '</div>',
-  ].join('\n');
+  ]);
 }
 
 export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocType = 'file'): Promise<string> {

@@ -125,11 +125,6 @@ Then('el proyecto no tiene configuración', async () => {
   }
 });
 
-Then('dist tiene al menos un HTML', async () => {
-  for await (const _entry of new Bun.Glob('*.html').scan({ cwd: distPath() })) return;
-  throw new Error('dist no tiene ningún HTML');
-});
-
 Then('el HTML no se reescribe', async () => {
   const despues = (await stat(distPath('test-document.html'))).mtimeMs;
   if (despues !== world.htmlMtime) {

@@ -3,6 +3,5 @@
   "markdown": "---\ntitle: Prueba\nuppertitleback: |\n  [Arriba]{.text-nowrap}\nlowertitleback: |\n  [Abajo]{.text-nowrap}\n---\n\nCuerpo.\n",
   "contains": ["\\mbox{Arriba}", "\\mbox{Abajo}"],
   "notContains": [],
-  "needsBib": false,
   "normalizeNewlines": false
 }

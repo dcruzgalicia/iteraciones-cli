@@ -3,6 +3,5 @@
   "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {.text-lg}\n  ::: {br=1}\n  :::\n\n  Grande\n  :::\n---\n\nCuerpo.\n",
   "contains": ["\\large", "\\vspace{\\baselineskip}", "Grande"],
   "notContains": [],
-  "needsBib": false,
   "normalizeNewlines": false
 }

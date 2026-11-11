@@ -11,7 +11,7 @@ import { composeHtmlTemplate, type HtmlDocType } from './html-composer.js';
 import { loadReferencesCardTemplate } from './html-postprocess.js';
 import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from './latex-preamble.js';
 import { PDF_WORK_BASE } from './output-layout.js';
-import type { PdfJob } from './pdf-pool.js';
+import type { PdfJobSink } from './pdf-pool.js';
 import { writeIfChanged } from './pipeline-io.js';
 import { disableBibliographyWithoutBibFiles, loadPreambleFilters, type PreambleDocType, type PreambleFilter } from './preamble-loader.js';
 import type { resolveBibOptions } from './state-bib.js';
@@ -208,7 +208,7 @@ export interface FormatWorkSets {
   epubPaths: Set<string>;
   mdPaths: Set<string>;
   latexPaths: Set<string>;
-  pdfJobs: PdfJob[];
+  pdfJobs: PdfJobSink;
 }
 
 export async function buildPoolContexts(
@@ -218,7 +218,7 @@ export async function buildPoolContexts(
   formatCfg: SiteConfig['format'] | undefined,
   setup: PipelineSetup,
   templates: EffectiveTemplates,
-  pdfJobs: PdfJob[],
+  pdfJobs: PdfJobSink,
 ): Promise<{ renderCtx: RenderContext; exportCtx: ExportContext; formatWorkSets: FormatWorkSets }> {
   const filters = await loadFilterGroups(ctx.siteConfig, ctx.siteConfig.disabledFilters, ctx.cwd);
   const renderCtx: RenderContext = {

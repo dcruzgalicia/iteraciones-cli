@@ -3,6 +3,5 @@
   "markdown": "Primer párrafo.\n\nSegundo párrafo.",
   "contains": ["\\vspace*{2\\baselineskip}", "\\noindent Primer párrafo."],
   "notContains": ["\\tableofcontents"],
-  "needsBib": false,
   "normalizeNewlines": false
 }

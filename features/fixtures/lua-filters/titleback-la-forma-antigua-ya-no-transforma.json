@@ -3,6 +3,5 @@
   "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {.textls value=30}\n  contraportada\n  :::\n---\n\nCuerpo.\n",
   "contains": ["contraportada"],
   "notContains": ["\\textls"],
-  "needsBib": false,
   "normalizeNewlines": false
 }

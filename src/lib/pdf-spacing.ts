@@ -10,7 +10,6 @@ export interface WordBox {
 
 export interface LineBox {
   page: number;
-  index: number;
   line: number;
   text: string;
   xMin: number;
@@ -89,7 +88,6 @@ export function parseBboxLayout(xml: string): PageBox[] {
       const index = lines.length + 1;
       lines.push({
         page: pages.length + 1,
-        index,
         line: index,
         text: words.map((word) => word.text).join(' '),
         xMin: numero(lineAttrs.xMin),

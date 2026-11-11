@@ -26,7 +26,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats, resolveDisabledPreambleConfig, toActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { readFrontmatter } from '../lib/frontmatter.js';
-import { fail, logSuccess } from '../lib/logger.js';
+import { logSuccess, runCommand } from '../lib/logger.js';
 import { posix } from '../lib/paths.js';
 
 const FORMATS = ['latex', 'html', 'epub', 'markdown'] as const;
@@ -178,7 +178,8 @@ async function composeFor(
 }
 
 export async function runMerge(cwd: string, input: string, options: { output?: string; format?: string; slug?: string }): Promise<void> {
-  try {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: el cuerpo se movió tal cual a runCommand
+  await runCommand('merge', async () => {
     const format = options.format;
     if (format === undefined || format === '') throw new BuildError(`falta --format (-f): esperado ${FORMATS.join(' | ')}`);
     if (!(FORMATS as readonly string[]).includes(format)) throw new BuildError(`formato desconocido "${format}"; esperado: ${FORMATS.join(' | ')}`);
@@ -218,7 +219,5 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     const hrefsCreadores = format === 'html' ? creatorHrefs(slugIndex, dirname(src.relativePath)) : new Map<string, string>();
     await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs, hrefsCreadores, slugIndex, outSlug));
     logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');
-  } catch (err) {
-    fail('merge', err);
-  }
+  });
 }
