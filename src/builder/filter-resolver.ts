@@ -42,6 +42,10 @@ export function groupOfFilterPath(rel: string): { group: string; name: string } 
 
 export const LUA_GROUP_ORDER = LUA_GROUPS.map((g) => g.dir);
 
+export function luaFilterArgs(paths: string[]): string[] {
+  return paths.flatMap((path) => ['--lua-filter', path]);
+}
+
 export interface LuaFilterGroup {
   semantic: string[];
   latex: string[];

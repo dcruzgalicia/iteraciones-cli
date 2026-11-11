@@ -86,21 +86,6 @@ Then('el fragmento no dice {string}', (texto: string) => {
   }
 });
 
-Then('el fragmento cierra el bloque él mismo', () => {
-  const lineas = world.fragmento.split('\n');
-  if (lineas[0] !== '::: {.nota}') throw new Error(`el bloque no abre con su clase: ${JSON.stringify(lineas[0])}`);
-  if (lineas[lineas.length - 1] !== ':::') {
-    throw new Error(`el bloque no cierra: termina en ${JSON.stringify(lineas[lineas.length - 1])}`);
-  }
-});
-
-Then('los puntos suspensivos van antes del cierre del bloque', () => {
-  const lineas = world.fragmento.split('\n');
-  if (lineas[lineas.length - 2] !== '...') {
-    throw new Error(`los puntos no van antes del cierre: penúltima línea ${JSON.stringify(lineas[lineas.length - 2])}`);
-  }
-});
-
 import type { CollectionEntry } from '../../builder/pipeline-formats.js';
 
 import {

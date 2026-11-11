@@ -152,14 +152,6 @@ Then('el archivo {string} tiene como máximo {int} líneas', (relativa: string, 
   }
 });
 
-Then('el config del proyecto no declara {string}', (clave: string) => {
-  const yaml = Bun.YAML.parse(readFileSync(ruta('iteraciones.config.yaml'), 'utf8')) as Record<string, unknown>;
-  const html = (yaml.format as Record<string, Record<string, unknown>> | undefined)?.html;
-  if (html && clave in html) {
-    throw new Error(`el config declara ${JSON.stringify(clave)} y los defaults deberían vivir en el código`);
-  }
-});
-
 Then('el JSON declara al menos {int} rutas eliminadas', (minimo: number) => {
   const removed = jsonSalida().removed;
   if (!Array.isArray(removed) || removed.length < minimo) {

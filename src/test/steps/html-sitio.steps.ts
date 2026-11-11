@@ -47,7 +47,7 @@ Given('un proyecto con una creadora con redes', () => {
 
 Then('el HTML de {string} tiene la tarjeta de redes de {string}', (archivo: string, dueno: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const tarjeta = new RegExp(`<h2[^>]*>Redes</h2><span class="[^"]*bg-transparent[^"]*">${escaparRegex(dueno)}</span>`);
+  const tarjeta = new RegExp(`<h2[^>]*>Redes</h2><span class="[^"]*bg-transparent[^"]*">${RegExp.escape(dueno)}</span>`);
   if (!tarjeta.test(html)) throw new Error(`${archivo} no tiene la tarjeta de redes de ${dueno}`);
 });
 
@@ -80,10 +80,6 @@ Given('el proyecto produce html y markdown', () => {
 });
 
 const CONFIG_HTML = 'language: es-MX\nformat:\n  html:\n    generate: true\n';
-
-function escaparRegex(texto: string): string {
-  return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 Given('un proyecto con un texto en dos colecciones', () => {
   escribirEnProyecto('iteraciones.config.yaml', CONFIG_HTML);
@@ -124,7 +120,7 @@ Given('un proyecto con un texto en una lista', () => {
 
 function chipDelHtml(archivo: string, etiqueta: string): string {
   const html = leer(`dist/files/${archivo}`);
-  const patron = new RegExp(`<(h2|a|span)\\b[^>]*class="[^"]*rounded-full[^"]*"[^>]*>(?:<a\\b[^>]*>)?${escaparRegex(etiqueta)}(?:</a>)?</\\1>`);
+  const patron = new RegExp(`<(h2|a|span)\\b[^>]*class="[^"]*rounded-full[^"]*"[^>]*>(?:<a\\b[^>]*>)?${RegExp.escape(etiqueta)}(?:</a>)?</\\1>`);
   const chip = patron.exec(html);
   if (chip === null) throw new Error(`el HTML de ${archivo} no tiene un chip ${JSON.stringify(etiqueta)}`);
   return chip[0];
@@ -150,7 +146,7 @@ Then('el EPUB {string} declara la clave {string} con el valor {string}', async (
   const proc = Bun.spawn(['unzip', '-p', epub, 'EPUB/content.opf'], { stdout: 'pipe', stderr: 'pipe' });
   const [salida, errores, codigo] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
   if (codigo !== 0) throw new Error(`unzip falló con ${archivo}.epub: ${errores}`);
-  if (!new RegExp(`<${clave}[^>]*>${escaparRegex(valor)}</${clave}>`).test(salida)) {
+  if (!new RegExp(`<${clave}[^>]*>${RegExp.escape(valor)}</${clave}>`).test(salida)) {
     throw new Error(`el EPUB ${archivo} no declara ${clave}=${JSON.stringify(valor)}`);
   }
 });
@@ -180,15 +176,15 @@ Then('el chip {string} del HTML de {string} enlaza a {string}', (etiqueta: strin
 
 Then('en el HTML de {string} el chip {string} enlaza a {string}', (archivo: string, etiqueta: string, href: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const enlace = new RegExp(`<a href="${escaparRegex(href)}" class="[^"]*bg-transparent[^"]*">${escaparRegex(etiqueta)}</a>`);
+  const enlace = new RegExp(`<a href="${RegExp.escape(href)}" class="[^"]*bg-transparent[^"]*">${RegExp.escape(etiqueta)}</a>`);
   if (!enlace.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no enlaza a ${href} en ${archivo}`);
 });
 
 Then('en el HTML de {string} el chip {string} no es un enlace', (archivo: string, etiqueta: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const chip = new RegExp(`<span class="[^"]*bg-transparent[^"]*">${escaparRegex(etiqueta)}</span>`);
+  const chip = new RegExp(`<span class="[^"]*bg-transparent[^"]*">${RegExp.escape(etiqueta)}</span>`);
   if (!chip.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no aparece sin enlace en ${archivo}`);
-  if (new RegExp(`<a [^>]*class="[^"]*rounded-full[^"]*"[^>]*>${escaparRegex(etiqueta)}</a>`).test(html)) {
+  if (new RegExp(`<a [^>]*class="[^"]*rounded-full[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).test(html)) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} es un enlace y no debería`);
   }
 });

@@ -6,20 +6,18 @@ import { type SiteConfig, SiteConfigSchema } from './config-schema.js';
 
 const CONFIG_FILE = 'iteraciones.config.yaml';
 
-type PresentKeyPaths = ReadonlySet<string>;
-
 interface LoadedSiteConfig {
   config: SiteConfig;
-  presentKeys: PresentKeyPaths;
+  wroteDisabledPreamble: boolean;
 }
 
-function collectPresentKeys(value: unknown, prefix: string, out: Set<string>): void {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return;
-  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    out.add(path);
-    collectPresentKeys(child, path, out);
-  }
+function wroteDisabledPreamble(root: Record<string, unknown>): boolean {
+  const format = root.format;
+  const pdf = typeof format === 'object' && format !== null ? (format as Record<string, unknown>).pdf : undefined;
+  return (
+    root.disabledPreambleFilters !== undefined ||
+    (typeof pdf === 'object' && pdf !== null && (pdf as Record<string, unknown>).disabledPreambleFilters !== undefined)
+  );
 }
 
 async function readConfigText(cwd: string): Promise<{ configPath: string; raw: string } | null> {
@@ -62,12 +60,10 @@ function parseConfig(raw: string, configPath: string): LoadedSiteConfig {
     if (parsed !== null && parsed !== undefined) {
       logWarning('iteraciones.config.yaml no es un objeto YAML (se esperaba un mapa); se usan los valores por defecto', 'config');
     }
-    return { config: SiteConfigSchema.parse({}), presentKeys: new Set() };
+    return { config: SiteConfigSchema.parse({}), wroteDisabledPreamble: false };
   }
 
   const root = parsed as Record<string, unknown>;
-  const presentKeys = new Set<string>();
-  collectPresentKeys(root, '', presentKeys);
 
   const result = SiteConfigSchema.safeParse(root);
   if (!result.success) {
@@ -82,12 +78,12 @@ function parseConfig(raw: string, configPath: string): LoadedSiteConfig {
     throw new ConfigError(details, configPath);
   }
 
-  return { config: result.data, presentKeys };
+  return { config: result.data, wroteDisabledPreamble: wroteDisabledPreamble(root) };
 }
 
 export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSiteConfig> {
   const read = await readConfigText(cwd);
-  if (read === null) return { config: SiteConfigSchema.parse({}), presentKeys: new Set() };
+  if (read === null) return { config: SiteConfigSchema.parse({}), wroteDisabledPreamble: false };
   return parseConfig(read.raw, read.configPath);
 }
 

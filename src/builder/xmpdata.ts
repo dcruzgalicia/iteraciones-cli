@@ -16,7 +16,6 @@ export interface PdfXmpMetadata {
   license?: string;
   doi?: string;
   isbn?: string;
-  abstract?: string;
 }
 
 const XMP_ESCAPES: Record<string, string> = {

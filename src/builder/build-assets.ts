@@ -144,38 +144,11 @@ async function runMagick(args: string[]): Promise<boolean> {
   }
 }
 
-function oklchToHex(value: string): string | undefined {
-  const match = /^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)(?:\s+([\d.]+))?\s*\)/.exec(value.trim());
-  if (match === null) return undefined;
-  const L = Number(match[1]) / (match[2] === '%' ? 100 : 1);
-  const chroma = Number(match[3]);
-  const hue = (Number(match[4] ?? '0') * Math.PI) / 180;
-  const a = chroma * Math.cos(hue);
-  const b = chroma * Math.sin(hue);
-  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
-  const linear = [
-    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-  ];
-  const hex = linear
-    .map((x) => {
-      const gamma = x <= 0.0031308 ? 12.92 * x : 1.055 * Math.max(x, 0) ** (1 / 2.4) - 0.055;
-      return Math.round(Math.min(1, Math.max(0, gamma)) * 255)
-        .toString(16)
-        .padStart(2, '0');
-    })
-    .join('');
-  return `#${hex}`;
-}
-
 async function accent500(color: string | undefined): Promise<string | undefined> {
   try {
     const css = await Bun.file(fileURLToPath(import.meta.resolve('tailwindcss/theme.css'))).text();
     const raw = new RegExp(`--color-${color ?? 'lime'}-500:\\s*([^;]+);`).exec(css)?.[1]?.trim();
-    return raw === undefined ? undefined : oklchToHex(raw);
+    return raw === undefined ? undefined : (Bun.color(raw, 'hex') ?? undefined);
   } catch {
     return undefined;
   }

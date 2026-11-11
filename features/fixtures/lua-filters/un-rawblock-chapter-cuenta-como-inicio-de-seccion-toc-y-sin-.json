@@ -3,6 +3,5 @@
   "markdown": "\\chapter{Capítulo directo}\n\nTexto.",
   "contains": ["\\tableofcontents"],
   "notContains": ["\\vspace*{2\\baselineskip}"],
-  "needsBib": false,
   "normalizeNewlines": false
 }

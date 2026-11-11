@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { buildAssets } from '../../builder/build-assets.js';
@@ -47,10 +47,6 @@ Given('un proyecto con un logo propio', () => {
   );
 });
 
-When('el proyecto cambia su logo a {string}', (contenido: string) => {
-  escribirEnProyecto('assets/mi-logo.svg', contenido);
-});
-
 When('construyo los assets con el logo del proyecto', async () => {
   const config = {
     ...DEFAULT_SITE_CONFIG,
@@ -68,23 +64,6 @@ When('construyo los assets con el logo del proyecto', async () => {
 function readCss(): string {
   return readFileSync(join(salida(), 'assets', 'css', 'styles.css'), 'utf8');
 }
-
-Then('el logo copiado dice {string}', (esperado: string) => {
-  const svg = readFileSync(join(salida(), 'assets', 'images', 'favicon.svg'), 'utf8');
-  if (svg !== esperado) throw new Error(`el logo copiado dice ${JSON.stringify(svg)} y debía decir ${esperado}`);
-});
-
-Then('el logo copiado no se ha vuelto a escribir', () => {
-  const antes = world.mtimeLogo as number;
-  const ahora = statSync(join(salida(), 'assets', 'images', 'favicon.svg')).mtimeMs;
-  if (ahora !== antes) {
-    throw new Error(`el logo se reescribió (mtime ${antes} → ${ahora}): eso invalida el CSS sin motivo`);
-  }
-});
-
-Then('anoto la fecha del logo copiado', () => {
-  world.mtimeLogo = statSync(join(salida(), 'assets', 'images', 'favicon.svg')).mtimeMs;
-});
 
 Given('un documento borrado con slug {string} y estos artefactos:', (slug: string, artefactos: string) => {
   world.slugBorrado = slug;
@@ -250,19 +229,6 @@ Given('un proyecto con un logo de un color y un documento', () => {
 
 When('compilo el sitio con su logo', async () => {
   await runBuild(world.root);
-});
-
-Then('el HTML del documento incrusta el logo svg', () => {
-  const html = readFileSync(join(salida(), 'doc.html'), 'utf8');
-  if (!/class="[^"]*logo-fill[^"]*"[^>]*>\s*<svg/.test(html)) {
-    throw new Error('el HTML no incrusta el logo SVG');
-  }
-});
-
-Then('el logo svg está teñido con el accent', () => {
-  const svg = readFileSync(join(salida(), 'assets', 'images', 'logo.svg'), 'utf8');
-  if (svg.includes('currentColor')) throw new Error('el logo SVG conserva currentColor y no se tiñó');
-  if (!/#[0-9a-f]{3,8}\b/i.test(svg)) throw new Error('el logo SVG no tiene un color de acento');
 });
 
 Then('el logo webp conserva transparencia', () => {

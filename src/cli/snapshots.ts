@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { HtmlShotter } from '../lib/html-shot.js';
-import { fail, logError, logInfo, logSuccess, logWarning } from '../lib/logger.js';
+import { logError, logInfo, logSuccess, logWarning, runCommand } from '../lib/logger.js';
 import { isDir, posix, relativeLabel } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 import type { VisualDiffResult } from '../lib/visual-diff.js';
@@ -52,27 +52,6 @@ function htmlStemFor(htmlPath: string, outputDir: string): string {
   return `${snapshotStemFor(htmlPath, outputDir)}${HTML_SUFFIX}`;
 }
 
-async function listHtmlFiles(outputDir: string): Promise<string[]> {
-  const base = join(outputDir, '.');
-  if (
-    !(
-      await Bun.file(base)
-        .stat()
-        .catch(() => null)
-    )?.isDirectory()
-  )
-    return [];
-  const archivos: string[] = [];
-  for await (const rel of new Bun.Glob('**/*.html').scan({ cwd: base, onlyFiles: true })) {
-    archivos.push(join(base, rel));
-  }
-  return archivos.sort();
-}
-
-function siteMapPath(cwd: string): string {
-  return join(cwd, SNAPSHOTS_DIR, SITE_MAP_FILE);
-}
-
 async function listHtmlRoutes(outputDir: string): Promise<string[]> {
   if (!(await isDir(outputDir))) return [];
   const routes: string[] = [];
@@ -82,8 +61,12 @@ async function listHtmlRoutes(outputDir: string): Promise<string[]> {
   return routes.sort();
 }
 
-function siteMapText(routes: string[]): string {
-  return `${routes.join('\n')}\n`;
+async function listHtmlFiles(outputDir: string): Promise<string[]> {
+  return (await listHtmlRoutes(outputDir)).map((rel) => join(outputDir, rel));
+}
+
+function siteMapPath(cwd: string): string {
+  return join(cwd, SNAPSHOTS_DIR, SITE_MAP_FILE);
 }
 
 async function saveSiteMap(cwd: string, outputDir: string): Promise<void> {
@@ -95,7 +78,7 @@ async function saveSiteMap(cwd: string, outputDir: string): Promise<void> {
     return;
   }
   await mkdir(join(cwd, SNAPSHOTS_DIR), { recursive: true });
-  await Bun.write(file, siteMapText(routes));
+  await Bun.write(file, `${routes.join('\n')}\n`);
   logSuccess(`mapa del sitio → ${SNAPSHOTS_DIR}/${SITE_MAP_FILE} (${plural(routes.length, 'ruta')})`, 'snapshots');
 }
 
@@ -225,18 +208,14 @@ async function saveHtmlSnapshots(cwd: string, outputDir: string, htmlFiles: stri
   await mkdir(store, { recursive: true });
   const shotter = new HtmlShotter();
   let guardadas = 0;
-  try {
-    for (const html of htmlFiles) {
-      const stem = htmlStemFor(html, outputDir);
-      const captura = await shotter.capture(html);
-      if (captura === undefined) continue;
-      await clearSnapshotImages(store, stem);
-      await writeFile(join(store, snapshotImageName(stem, 1)), captura.png);
-      guardadas += 1;
-      logSuccess(`${relativeLabel(cwd, html)} → ${SNAPSHOTS_DIR}/${stem} (1 captura)`, 'snapshots');
-    }
-  } finally {
-    shotter.close();
+  for (const html of htmlFiles) {
+    const stem = htmlStemFor(html, outputDir);
+    const captura = await shotter.capture(html);
+    if (captura === undefined) continue;
+    await clearSnapshotImages(store, stem);
+    await writeFile(join(store, snapshotImageName(stem, 1)), captura.png);
+    guardadas += 1;
+    logSuccess(`${relativeLabel(cwd, html)} → ${SNAPSHOTS_DIR}/${stem} (1 captura)`, 'snapshots');
   }
   if (guardadas === 0) {
     logInfo('no hay capturas del HTML: los snapshots del PDF siguen valiendo', 'snapshots');
@@ -367,33 +346,29 @@ async function checkHtmlSnapshots(cwd: string, outputDir: string): Promise<Compa
   const shotter = new HtmlShotter();
   const comparados: ComparedHtml[] = [];
   const sinLineaBase: string[] = [];
-  try {
-    for (const html of htmlFiles) {
-      const stem = htmlStemFor(html, outputDir);
-      const referencia = guardados.get(stem);
-      if (referencia === undefined) {
-        sinLineaBase.push(relativeLabel(cwd, html));
-        continue;
-      }
-      const captura = await shotter.capture(html);
-      if (captura === undefined) continue;
-      const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(html));
-      await mkdir(dirname(workDir), { recursive: true });
-
-      const generada = join(dirname(workDir), 'generada.png');
-      await writeFile(generada, captura.png);
-      const result = await compareVisual({
-        referencePngs: referencia,
-        generatedPngs: [generada],
-        workDir,
-        cachePath,
-        diffDir: join(cwd, DIFF_DIR),
-        diffStem: stem,
-      });
-      comparados.push({ html, entry: { referenceLabel: `${SNAPSHOTS_DIR}/${stem}`, result } });
+  for (const html of htmlFiles) {
+    const stem = htmlStemFor(html, outputDir);
+    const referencia = guardados.get(stem);
+    if (referencia === undefined) {
+      sinLineaBase.push(relativeLabel(cwd, html));
+      continue;
     }
-  } finally {
-    shotter.close();
+    const captura = await shotter.capture(html);
+    if (captura === undefined) continue;
+    const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(html));
+    await mkdir(dirname(workDir), { recursive: true });
+
+    const generada = join(dirname(workDir), 'generada.png');
+    await writeFile(generada, captura.png);
+    const result = await compareVisual({
+      referencePngs: referencia,
+      generatedPngs: [generada],
+      workDir,
+      cachePath,
+      diffDir: join(cwd, DIFF_DIR),
+      diffStem: stem,
+    });
+    comparados.push({ html, entry: { referenceLabel: `${SNAPSHOTS_DIR}/${stem}`, result } });
   }
   if (sinLineaBase.length > 0) {
     logInfo(`${plural(sinLineaBase.length, 'página HTML agregada')} sin captura, sin comparación: ${sinLineaBase.join(', ')}`, 'snapshots');
@@ -438,7 +413,7 @@ async function checkAll(cwd: string, run: SnapshotRun): Promise<void> {
 }
 
 export async function runSnapshots(cwd: string, paths: string[], mode: SnapshotsMode, options: SnapshotsOptions = {}): Promise<void> {
-  try {
+  await runCommand('snapshots', async () => {
     const run = await resolveRun(cwd, paths, mode, options);
     if (mode === 'save') {
       if (run.siteMapOnly) await saveSiteMap(cwd, run.outputDir);
@@ -446,7 +421,5 @@ export async function runSnapshots(cwd: string, paths: string[], mode: Snapshots
     } else {
       await checkAll(cwd, run);
     }
-  } catch (err) {
-    fail('snapshots', err);
-  }
+  });
 }

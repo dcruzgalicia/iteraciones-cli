@@ -71,10 +71,6 @@ export class TrackerState {
     return created;
   }
 
-  planPhases(phases: PipelinePhase[]): void {
-    for (const phase of phases) this.timing(phase);
-  }
-
   setFormats(formats: FormatState[]): void {
     this.formats = formats;
   }

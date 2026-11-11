@@ -3,6 +3,5 @@
   "markdown": "::: {.text-center}\nCentrado\n:::\n\nTexto.",
   "contains": ["\\vspace*{2\\baselineskip}"],
   "notContains": [],
-  "needsBib": false,
   "normalizeNewlines": false
 }

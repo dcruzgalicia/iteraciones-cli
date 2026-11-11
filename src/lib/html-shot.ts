@@ -53,6 +53,4 @@ export class HtmlShotter {
     const png = await view.screenshot({ encoding: 'buffer' });
     return { png, alto: altoFinal };
   }
-
-  close(): void {}
 }

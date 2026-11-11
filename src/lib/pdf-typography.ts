@@ -264,7 +264,7 @@ function marcaFinal(linea: string): string | undefined {
   return marca !== undefined && TERMINALS.has(marca) ? marca : undefined;
 }
 
-function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number): RepeatedLetter[] {
+function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas = 2): RepeatedLetter[] {
   const de = (linea: string): string | undefined => (posicion === 'first' ? letraInicial(linea) : letraFinal(linea));
   const tipo = posicion === 'first' ? 'repeated-first-letter' : 'repeated-last-letter';
   const hallados: RepeatedLetter[] = [];
@@ -284,7 +284,7 @@ function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', linea
   return hallados;
 }
 
-function consecutivePunctuationRuns(pages: string[][], lineas: number): ConsecutivePunctuation[] {
+function consecutivePunctuationRuns(pages: string[][], lineas = 2): ConsecutivePunctuation[] {
   const clave = (linea: string): string | undefined => marcaFinal(linea);
   const hallados: ConsecutivePunctuation[] = [];
   for (const tirada of tiradasCoincidentes(pages, lineas, clave)) {
@@ -485,23 +485,13 @@ function excepcionCoincide(archivo: string, incidencia: TypographyIncidence, exc
 }
 
 export interface OpcionesAnalisis {
-  primeraPagina?: number;
-  ultimaPagina?: number;
-
   paginas?: readonly { desde: number; hasta: number }[];
   reglas?: readonly string[];
-  lineasMinimas?: number;
   excepciones?: readonly ExcepcionTipografia[];
   archivo?: string;
 }
 
 function validaPaginasPedidas(pdfPath: string, opciones: OpcionesAnalisis, total: number): void {
-  const desde = opciones.primeraPagina;
-  if (desde !== undefined && desde > total) {
-    const pedido =
-      opciones.ultimaPagina === undefined || opciones.ultimaPagina === desde ? `la página ${desde}` : `el rango ${desde}-${opciones.ultimaPagina}`;
-    throw new BuildError(`${pedido} se sale del PDF "${pdfPath}": el documento tiene ${plural(total, 'página')}`);
-  }
   for (const tramo of opciones.paginas ?? []) {
     if (tramo.hasta <= total) continue;
     const pedido = tramo.hasta === tramo.desde ? `la página ${tramo.desde}` : `el rango ${tramo.desde}-${tramo.hasta}`;
@@ -515,14 +505,10 @@ function porPaginaLineaYRegla(a: TypographyIncidence, b: TypographyIncidence): n
   return a.page - b.page || a.line - b.line || (ORDEN_REGLA.get(a.type) ?? 99) - (ORDEN_REGLA.get(b.type) ?? 99);
 }
 
-function filtroDePaginas(opciones: OpcionesAnalisis, total: number): (pagina: number) => boolean {
-  if (opciones.paginas !== undefined) {
-    const pedidas = new Set(paginasDeTramos(opciones.paginas));
-    return (pagina: number): boolean => pedidas.has(pagina);
-  }
-  const desde = opciones.primeraPagina ?? 1;
-  const hasta = opciones.ultimaPagina ?? total;
-  return (pagina: number): boolean => pagina >= desde && pagina <= hasta;
+function filtroDePaginas(opciones: OpcionesAnalisis): (pagina: number) => boolean {
+  if (opciones.paginas === undefined) return () => true;
+  const pedidas = new Set(paginasDeTramos(opciones.paginas));
+  return (pagina: number): boolean => pedidas.has(pagina);
 }
 
 function paginasDeTramos(tramos: readonly { desde: number; hasta: number }[]): number[] {
@@ -534,19 +520,19 @@ function paginasDeTramos(tramos: readonly { desde: number; hasta: number }[]): n
 }
 
 export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
-  const { lineasMinimas = 2, excepciones = [] } = opciones;
+  const excepciones = opciones.excepciones ?? [];
   const pedidas = new Set(opciones.reglas ?? TYPOGRAPHY_RULES);
   const pages = splitPages(stdout);
 
   const halladas: TypographyIncidence[] = [
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
-    ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas) : []),
-    ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas) : []),
-    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas) : []),
+    ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last') : []),
+    ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first') : []),
+    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages) : []),
     ...(pedidas.has('hyphenated-proper-noun') ? hyphenatedProperNouns(pages) : []),
   ];
   const vivas = excepciones.length === 0 ? halladas : filtraExcepciones(halladas, opciones.archivo ?? '', excepciones);
-  const dentro = filtroDePaginas(opciones, pages.length);
+  const dentro = filtroDePaginas(opciones);
   return vivas.filter((incidencia) => dentro(incidencia.page)).sort(porPaginaLineaYRegla);
 }
 
@@ -581,7 +567,7 @@ export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {
 
   const bbox = await leePdf(pdfPath, '-bbox-layout');
   const geometria = analyzeBbox(bbox, opciones);
-  const dentro = filtroDePaginas(opciones, pages.length);
+  const dentro = filtroDePaginas(opciones);
   const excepciones = opciones.excepciones ?? [];
   const vivas = excepciones.length > 0 ? filtraExcepciones(geometria, opciones.archivo ?? '', excepciones) : geometria;
   return [...texto, ...vivas.filter((incidencia) => dentro(incidencia.page))].sort(porPaginaLineaYRegla);

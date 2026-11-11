@@ -50,15 +50,16 @@ When('cargo la configuración del proyecto', async () => {
 });
 
 When('cargo la configuración si existe', async () => {
-  world.configOpcional = await loadSiteConfigIfPresent(world.root);
-  world.config = world.configOpcional;
+  const loaded = await loadSiteConfigIfPresent(world.root);
+  world.configOpcional = loaded;
+  world.config = loaded?.config ?? null;
 });
 
 When('cargo la configuración con el conjunto de presencia', async () => {
   try {
-    const { config, presentKeys } = await loadSiteConfigWithPresence(world.root);
+    const { config, wroteDisabledPreamble } = await loadSiteConfigWithPresence(world.root);
     world.config = config;
-    world.presentes = presentKeys;
+    world.presentes = wroteDisabledPreamble ? new Set(['format.pdf.disabledPreambleFilters']) : new Set<string>();
     world.errorConfig = '';
   } catch (e) {
     world.config = null;
@@ -69,15 +70,6 @@ When('cargo la configuración con el conjunto de presencia', async () => {
 
 Then('la carga no falla', () => {
   if (world.errorConfig) throw new Error(`la carga falló: ${world.errorConfig}`);
-});
-
-Then('la carga falla diciendo que:', (motivo: string) => {
-  if (!world.errorConfig) throw new Error('la carga no falló y debía');
-
-  const esperado = motivo.trim();
-  if (!world.errorConfig.includes(esperado)) {
-    throw new Error(`el error no dice ${JSON.stringify(esperado)}. Dijo: ${world.errorConfig}`);
-  }
 });
 
 Then('la carga falla con {string}', (motivo: string) => {

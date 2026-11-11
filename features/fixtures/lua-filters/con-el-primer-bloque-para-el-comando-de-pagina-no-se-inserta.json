@@ -3,6 +3,5 @@
   "markdown": "Primer párrafo.\n\nSegundo.",
   "contains": [],
   "notContains": ["\\ofoot*{\\pagemark}"],
-  "needsBib": false,
   "normalizeNewlines": false
 }

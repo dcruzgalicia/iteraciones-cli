@@ -1,20 +1,16 @@
 import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
-import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from './state-serialize.js';
+import type { BuildMetadata } from './build-planner.js';
+import type { BuildState } from './state-serialize.js';
 import { hashString, STATE_SCHEMA_VERSION } from './state-serialize.js';
 import type { DiscoveryEntry } from './types.js';
 
 type CacheDecision = { process: false; touched?: boolean } | { process: true; text: string | null; hash?: string };
 
-interface DiscoverMeta {
-  filtersHash: string;
-  filterFileCache: FilterFileCache;
-  schemaFileCache?: Record<string, FileCacheEntry>;
-  configHashes: Record<string, string>;
-  configFileCache?: Record<string, FileCacheEntry>;
-  bibHash: string;
-  bibFileCache: BibFileCache;
-}
+type DiscoverMeta = Pick<
+  BuildMetadata,
+  'filtersHash' | 'filterFileCache' | 'schemaFileCache' | 'configHashes' | 'configFileCache' | 'bibHash' | 'bibFileCache'
+>;
 
 export async function resolveCacheDecision(
   cached: DiscoveryEntry | undefined,

@@ -4,7 +4,7 @@ import { STRIP_TYPOGRAPHIC_FILTER } from '../builder/filter-resolver.js';
 import { espaciosNormales, writeIfChanged } from '../builder/pipeline-io.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
-import { fail, logInfo, logSuccess } from '../lib/logger.js';
+import { logInfo, logSuccess, runCommand } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { relativeLabel } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
@@ -30,7 +30,8 @@ export async function limpiaMarkdown(file: string, content: string): Promise<str
 }
 
 export async function runMarkdownClean(cwd: string, args: string[], options: MarkdownCleanOptions = {}): Promise<void> {
-  try {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: el cuerpo se movió tal cual a runCommand
+  await runCommand('clean-markdown', async () => {
     const archivos = args.length > 0 ? args.map((ruta) => resolve(cwd, ruta)) : (await listMarkdownDocuments(cwd)).map((rel) => join(cwd, rel));
     if (archivos.length === 0) throw new BuildError('no hay archivos markdown que limpiar');
 
@@ -63,7 +64,5 @@ export async function runMarkdownClean(cwd: string, args: string[], options: Mar
       return;
     }
     logSuccess(`${plural(limpios, 'markdown limpio', 'markdown limpios')} de ${archivos.length}`, 'clean-markdown');
-  } catch (err) {
-    fail('clean-markdown', err);
-  }
+  });
 }

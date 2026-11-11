@@ -1,7 +1,6 @@
 import { discoverBibFiles } from '../builder/state-bib.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
-import type { SiteConfig } from '../config/config-schema.js';
-import { DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig, userWroteDisabledPreamble } from '../config/site-config.js';
+import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { GLYPHS, logInfo } from '../lib/logger.js';
 import { checkMinify } from '../lib/minify.js';
 import {
@@ -25,14 +24,6 @@ function resolveConfigResult(loadedOrError: { loaded?: Awaited<ReturnType<typeof
   return { siteConfig: null, ok: true, detail: undefined, missing: true } as const;
 }
 
-function resolveEffectiveDisabled(
-  loadedOrError: { loaded?: { presentKeys: ReadonlySet<string> } | null; error?: string },
-  siteConfig: SiteConfig | null,
-): string[] {
-  const userWroteDisabledList = !('error' in loadedOrError) && userWroteDisabledPreamble(loadedOrError.loaded?.presentKeys ?? new Set());
-  return userWroteDisabledList ? resolveDisabledPreambleConfig(siteConfig ?? {}) : (DEFAULT_PDF_FORMAT.disabledPreambleFilters ?? []);
-}
-
 export function checksOk(checks: CheckResult[]): boolean {
   return checks.filter((c) => !c.warn).every((c) => c.ok);
 }
@@ -51,7 +42,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   ]);
   const configResult = resolveConfigResult(loadedOrError);
   const needsLatex = configResult.siteConfig?.format?.pdf?.generate === true;
-  const effectiveDisabled = resolveEffectiveDisabled(loadedOrError, configResult.siteConfig);
+  const effectiveDisabled = resolveDisabledPreambleConfig(configResult.siteConfig ?? {});
   const needsPdfx = needsLatex && !effectiveDisabled.includes('99-pdfx');
   const [latex, pdfToPpm, pdfToText] = needsLatex
     ? await Promise.all([checkLatexEngine(), checkPdfToPpm(), checkPdfToText()])

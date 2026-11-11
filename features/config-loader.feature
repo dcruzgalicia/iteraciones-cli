@@ -223,23 +223,6 @@ Característica: la configuración del proyecto
       Y la clave "format.pdf.disabledPreambleFilters" NO está en el conjunto de presencia
       Y la configuración deja "format.pdf.disabledPreambleFilters" sin materializar
 
-    Escenario: El conjunto recoge las rutas punteadas de todos los niveles
-      Dado que el archivo de configuración es:
-      """
-      language: en-US
-      format:
-        pdf:
-          generate: true
-          showDate: true
-      """
-      Cuando cargo la configuración con el conjunto de presencia
-      Entonces la clave "language" está en el conjunto de presencia
-      Y la clave "format" está en el conjunto de presencia
-      Y la clave "format.pdf" está en el conjunto de presencia
-      Y la clave "format.pdf.generate" está en el conjunto de presencia
-      Y la clave "format.pdf.showDate" está en el conjunto de presencia
-      Y la clave "format.pdf.disabledPreambleFilters" NO está en el conjunto de presencia
-
   Regla de negocio: Una configuración válida no produce avisos
 
     Escenario: Nada que avisar en una config que se puede usar

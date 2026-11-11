@@ -2,10 +2,10 @@ import { spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { stripVTControlCharacters } from 'node:util';
 import { After, Given, setDefaultTimeout, Then } from '@cucumber/cucumber';
 import ignore from 'ignore';
 import type { Snapshot } from '../../cli/preview.js';
-import type { ProgressTracker } from '../../cli/progress.js';
 import { initTestProject } from '../helpers.js';
 
 setDefaultTimeout(120_000);
@@ -61,26 +61,8 @@ function nuevoMundo() {
     raizRaiz: '',
     cuerpoDoc: '',
     contenido: '',
-    tracker: null as ProgressTracker | null,
-    salidaProgreso: '',
-    fasesProgreso: [] as string[],
-    avisosProgreso: [] as string[],
-    hooksNuevos: 0,
-    tubeProgreso: false,
     espia: null as { mock: { calls: unknown[][] }; mockRestore: () => void } | null,
-    hayIndex: false,
-    fasesCorrieron: '',
-    bufferProgreso: null as string[] | null,
-    estadoCargado: undefined as unknown,
     pendiente: null as unknown,
-    bibliografiaConfig: undefined as string | undefined,
-    opcionesBib: undefined as unknown,
-    errorBib: '',
-    bibs: [] as string[],
-    hashArchivo: undefined as unknown,
-    cachePrevia: undefined as Record<string, { mtime: number; size: number; hash: string }> | undefined,
-    cacheSalida: {} as Record<string, { mtime: number; size: number; hash: string }>,
-    errorHash: '',
     camposPortada: {} as Record<string, unknown>,
     portada: [] as { absPath: string; isSvg: boolean }[],
     pdfxActivo: false,
@@ -100,17 +82,9 @@ function nuevoMundo() {
     ordenadas: [] as string[],
     pdfs: [] as string[],
     workspaces: {} as unknown,
-    errorVisual: '',
     comparacion: {} as unknown,
     informe: '',
     resumen: [] as string[],
-    cuerpoVoc: '',
-    offsetColones: undefined as number | undefined,
-    colones: [] as number[],
-    avisoColones: '',
-    configCargado: null as unknown,
-    hashPrevio: undefined as string | undefined,
-    hashActual: undefined as string | undefined,
     hashFiltrosPrevio: undefined as string | undefined,
     hashFiltrosObjeto: undefined as unknown,
     hashBibObjeto: undefined as unknown,
@@ -150,9 +124,6 @@ function nuevoMundo() {
     rutaJpgQr: '',
     marcadorPwned: '',
     arbolDist: [] as string[],
-    cacheFiltros: {} as Record<string, unknown>,
-    hashConfigPrevio: undefined as unknown,
-    hashConfigActual: undefined as unknown,
     mapaImagenes: new Map<string, string>() as ReadonlyMap<string, string>,
     rutas: {} as unknown,
     namer: null as ((ruta: string) => string) | null,
@@ -193,18 +164,7 @@ function nuevoMundo() {
     resultadoPdfx: undefined as unknown,
     mensajePdfx: '',
     espiaStderr: null as { mock: { calls: unknown[][] }; mockRestore: () => void } | null,
-    sinHerramientas: [] as string[],
-    featureGating: '',
-    omitidas: [] as string[],
     pool: null as unknown,
-    slotsPool: 2,
-    esperaPool: 0,
-    llamadasPool: [] as string[],
-    concurrentesPool: 0,
-    maxConcurrentesPool: 0,
-    fasesPool: [] as string[],
-    progresoRoto: false,
-    productorTerminado: false,
 
     indice: new Map<string, unknown>() as Map<string, unknown>,
     reglasGitignore: ignore() as ReturnType<typeof import('ignore')>,
@@ -247,9 +207,6 @@ function nuevoMundo() {
     cambiados: new Set<string>() as Set<string>,
     slugsCambiados: new Map<string, string>() as Map<string, string>,
     stderrSlug: '',
-    ttyProgreso: undefined as unknown,
-    trozosProgreso: [] as string[],
-    hooksPrevios: [] as unknown[],
     codigoVisual: 0,
     stdoutVisual: '',
     stderrVisual: '',
@@ -271,7 +228,6 @@ function nuevoMundo() {
     borrados: new Set<string>() as Set<string>,
     cambioSlug: '',
     formatosQuitados: [] as string[],
-    mtimeLogo: 0,
     estadoAntes: {} as Record<string, unknown>,
     stderrCache: '',
     camposXmp: {} as Record<string, unknown>,
@@ -375,14 +331,14 @@ Then('el comando termina con el código de salida {int}', (codigo: number) => {
 });
 
 Then('el error dice {string}', (esperado: string) => {
-  const limpio = sinColor(world.stderr);
+  const limpio = stripVTControlCharacters(world.stderr);
   if (!limpio.includes(esperado)) {
     throw new Error(`el error no dice ${JSON.stringify(esperado)}. stderr: ${JSON.stringify(limpio)}`);
   }
 });
 
 Then('el error no dice {string}', (ruido: string) => {
-  const limpio = sinColor(world.stderr);
+  const limpio = stripVTControlCharacters(world.stderr);
   if (limpio.includes(ruido)) {
     throw new Error(`el error sí dice ${JSON.stringify(ruido)} y no debería: ${JSON.stringify(limpio)}`);
   }
@@ -412,10 +368,4 @@ Then('el error menciona {string} una sola vez', (texto: string) => {
   }
 });
 
-const ESC = String.fromCharCode(27);
-
-const ANSI = new RegExp(`${ESC}\\[[0-9;]*m`, 'g');
-
-export function sinColor(texto: string): string {
-  return texto.replace(ANSI, '');
-}
+export { stripVTControlCharacters as sinColor } from 'node:util';

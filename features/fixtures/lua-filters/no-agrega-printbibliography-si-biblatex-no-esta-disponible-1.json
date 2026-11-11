@@ -3,6 +3,5 @@
   "markdown": "Cita [@key1].",
   "contains": [],
   "notContains": ["\\printbibliography"],
-  "needsBib": false,
   "normalizeNewlines": false
 }

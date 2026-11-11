@@ -353,7 +353,10 @@ function asignaListDate(discoveryIndex: Map<string, DiscoveryEntry>, creatorOwne
   }
 }
 
-export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Map<string, string[]>> {
+export async function postProcessCollections(
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  cwd: string,
+): Promise<{ creatorOwners: Map<string, string[]>; collectionOwners: Map<string, string[]> }> {
   const creatorOwners = new Map<string, string[]>();
   const owners = new Map<string, string[]>();
 
@@ -364,6 +367,13 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
 
   for (const [relativePath, entry] of discoveryIndex) {
     anotaCreadoras(relativePath, entry, discoveryIndex, creatorOwners);
+  }
+
+  const collectionOwners = new Map(owners);
+  for (const [creatorDoc, collections] of creatorOwners) {
+    const list = collectionOwners.get(creatorDoc);
+    if (list === undefined) collectionOwners.set(creatorDoc, [...collections]);
+    else list.push(...collections);
   }
 
   asignaListDate(discoveryIndex, creatorOwners);
@@ -378,29 +388,10 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
     entry.containedBy = [...contenedores].sort((a, b) => a.localeCompare(b, 'es'));
   }
 
-  return creatorOwners;
+  return { creatorOwners, collectionOwners };
 }
 
-function collectionOwnersByFile(discoveryIndex: Map<string, DiscoveryEntry>, creatorOwners: Map<string, string[]>): Map<string, string[]> {
-  const owners = new Map<string, string[]>();
-  for (const [path, entry] of discoveryIndex) {
-    if (entry.type !== 'collection' || !entry.files) continue;
-    for (const file of entry.files) {
-      const list = owners.get(file);
-      if (list === undefined) owners.set(file, [path]);
-      else list.push(path);
-    }
-  }
-  for (const [creatorDoc, collections] of creatorOwners) {
-    const list = owners.get(creatorDoc);
-    if (list === undefined) owners.set(creatorDoc, [...collections]);
-    else list.push(...collections);
-  }
-  return owners;
-}
-
-function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, changed: Set<string>, creatorOwners: Map<string, string[]>): void {
-  const owners = collectionOwnersByFile(discoveryIndex, creatorOwners);
+function expandCollectionChanges(changed: Set<string>, owners: Map<string, string[]>): void {
   const queue = [...changed];
   const seen = new Set(queue);
   while (queue.length > 0) {
@@ -517,25 +508,17 @@ async function discoverDocuments(
     activeFormats: plan.currentFormats,
     prevState,
     outputDir: ctx.outputDir,
-    meta: {
-      filtersHash: plan.filtersHash,
-      filterFileCache: plan.filterFileCache,
-      schemaFileCache: plan.schemaFileCache,
-      configHashes: plan.configHashes,
-      configFileCache: plan.configFileCache,
-      bibHash: plan.bibHash,
-      bibFileCache: plan.bibFileCache,
-    },
+    meta: plan,
   });
 
   const { slugChangedEntries, changedPaths: slugChangedPaths } = resolveDiscoverSlugs(discoveryIndex, slugComputer);
   for (const path of slugChangedPaths) discoveredChanges.add(path);
 
-  const creatorOwners = await postProcessCollections(discoveryIndex, cwd);
+  const { collectionOwners } = await postProcessCollections(discoveryIndex, cwd);
 
   let allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
-  expandCollectionChanges(discoveryIndex, discoveredChanges, creatorOwners);
+  expandCollectionChanges(discoveredChanges, collectionOwners);
   expandListChanges(discoveryIndex, discoveredChanges);
 
   const only = selectionOf(options);

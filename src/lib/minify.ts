@@ -29,33 +29,23 @@ export async function checkMinify(): Promise<{ label: string; ok: boolean; detai
   };
 }
 
+function warnMissing(): void {
+  if (warnedMissing) return;
+  logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
+  warnedMissing = true;
+}
+
 export async function minifyHtml(html: string): Promise<string> {
   if (!(await minifyAvailable())) {
-    if (!warnedMissing) {
-      logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
-      warnedMissing = true;
-    }
+    warnMissing();
     return html;
   }
 
-  const proc = (() => {
-    try {
-      return Bun.spawn([BIN, '--type', 'html', '--html-keep-quotes'], {
-        stdin: new Blob([html]),
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-    } catch {
-      return undefined;
-    }
-  })();
-  if (proc === undefined) {
-    if (!warnedMissing) {
-      logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
-      warnedMissing = true;
-    }
-    return html;
-  }
+  const proc = Bun.spawn([BIN, '--type', 'html', '--html-keep-quotes'], {
+    stdin: new Blob([html]),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
 
   const [salida, error] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
   const code = await proc.exited;

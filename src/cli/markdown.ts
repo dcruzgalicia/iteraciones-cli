@@ -21,7 +21,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { readFrontmatter } from '../lib/frontmatter.js';
-import { fail, logSuccess } from '../lib/logger.js';
+import { logSuccess, runCommand } from '../lib/logger.js';
 import { buildImagesContext, readSourceDocument } from './merge.js';
 
 function outputRootFor(output: string, dir: string): string {
@@ -40,7 +40,8 @@ async function collectionFiles(cwd: string, relativePath: string, fm: Record<str
 }
 
 export async function runMarkdown(cwd: string, input: string, options: { output?: string }): Promise<void> {
-  try {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: el cuerpo se movió tal cual a runCommand
+  await runCommand('markdown', async () => {
     if (options.output === undefined || options.output === '') {
       throw new BuildError('falta --output (-o): indica la ruta del .md de salida');
     }
@@ -96,7 +97,5 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
       autoras,
     });
     logSuccess(`${input} → ${options.output}`, 'markdown');
-  } catch (err) {
-    fail('markdown', err);
-  }
+  });
 }

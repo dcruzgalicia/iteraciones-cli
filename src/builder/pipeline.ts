@@ -85,7 +85,7 @@ export async function documentPipeline(
     pdfConsumer.start();
   }
 
-  const { renderCtx, exportCtx, formatWorkSets } = await buildPoolContexts(ctx, plan, work, formatCfg, setup, templates, pdfConsumer.pdfJobs);
+  const { renderCtx, exportCtx, formatWorkSets } = await buildPoolContexts(ctx, plan, work, formatCfg, setup, templates, pdfConsumer);
 
   if (activeFormats.html) {
     renderCtx.announcementImages = await preparaImagenesDeAnuncios({

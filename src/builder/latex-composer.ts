@@ -10,7 +10,7 @@ import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { isInside, posix } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
-import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
+import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { COVER_IMAGE_FIELDS, parseLetterheadHeight, uniqueName } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { ASSETS_PDF_IMAGES_DIR } from './output-layout.js';
@@ -204,48 +204,24 @@ function applyInterventionOverrides(
   return { title: rule, creator: [rule], subtitle: '', date: '', extraPages: pages };
 }
 
-function yamlScalar(value: string): string {
-  if (!value.includes('\n')) {
-    return stringify({ v: value }, { defaultStringType: 'QUOTE_SINGLE', defaultKeyType: 'PLAIN' }).replace(/^v: /, '').trimEnd();
-  }
-  const lineas = value
-    .replace(/\n+$/, '')
-    .split('\n')
-    .map((linea) => `  ${linea}`)
-    .join('\n');
-  return `|\n${lineas}`;
-}
-
 function prependFrontmatterYaml(content: string, overrides: Record<string, string>): string {
-  const keys = Object.keys(overrides);
-  if (keys.length === 0) return content;
-  const lines = ['---'];
-  for (const key of keys) {
-    const value = overrides[key];
-    if (value === undefined) continue;
-    lines.push(`${key}: ${yamlScalar(value)}`);
-  }
-  lines.push('---');
-  const yaml = lines.join('\n');
+  if (Object.keys(overrides).length === 0) return content;
   const fmEnd = content.startsWith('---\n') ? content.indexOf('\n---\n') : -1;
   if (fmEnd >= 0) {
     const original = content.slice(4, fmEnd);
     let mezclado: Record<string, unknown>;
-    const overridesYaml = Object.fromEntries(
-      Object.entries(overrides).map(([clave, valor]) => [clave, valor.includes('\n') && !valor.endsWith('\n') ? `${valor}\n` : valor]),
-    );
     try {
       const parseado: unknown = parse(original);
       mezclado = {
         ...(typeof parseado === 'object' && parseado !== null && !Array.isArray(parseado) ? (parseado as Record<string, unknown>) : {}),
-        ...overridesYaml,
+        ...overrides,
       };
     } catch {
-      mezclado = { ...overridesYaml };
+      mezclado = { ...overrides };
     }
     return `---\n${stringify(mezclado)}---\n${content.slice(fmEnd + 5)}`;
   }
-  return `${yaml}\n${content}`;
+  return `---\n${stringify(overrides)}---\n${content}`;
 }
 
 function buildPandocArgs(
@@ -269,9 +245,7 @@ function buildPandocArgs(
   } else if (pageNumber) {
     logWarning(`pageNumber "${pageNumber}" no es una posición válida; se usa header-right`, 'latex');
   }
-  for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
-    extraArgs.push('--lua-filter', filter);
-  }
+  extraArgs.push(...luaFilterArgs([...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]));
   if (bibFiles.length > 0) {
     extraArgs.push('--biblatex');
     for (const bib of bibFiles) {
