@@ -165,6 +165,7 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
   const expected = [
     'bg-paper',
     'bg-paper-grid',
+    'collection-grid',
     'contenido-compacto',
     'contenido-tamano',
     'creator-grid',
