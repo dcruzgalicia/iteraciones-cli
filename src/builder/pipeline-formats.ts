@@ -239,7 +239,7 @@ function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<
 }
 
 function epubCoverPath(fm: Record<string, unknown>, docDir: string, epubMap: Map<string, string>): string | undefined {
-  const raw = fm.frontCover;
+  const raw = typeof fm.frontCover === 'string' && fm.frontCover !== '' ? fm.frontCover : fm.titleImage;
   if (typeof raw !== 'string' || raw === '') return undefined;
   const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
   const processed = epubMap.get(abs);
