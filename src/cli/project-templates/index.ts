@@ -1,15 +1,16 @@
+import { BLOG } from './blog.js';
 import { type ProjectTemplate, writeTemplate } from './engine.js';
 
-export const TEMPLATE_NAMES: readonly string[] = [];
+export const TEMPLATE_NAMES = ['blog'] as const;
 
-export type TemplateName = string;
+export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
-const TEMPLATES: Record<string, ProjectTemplate> = {};
+const TEMPLATES: Record<TemplateName, ProjectTemplate> = { blog: BLOG };
 
 export function isTemplateName(value: string): value is TemplateName {
-  return Object.hasOwn(TEMPLATES, value);
+  return (TEMPLATE_NAMES as readonly string[]).includes(value);
 }
 
 export async function initTemplate(cwd: string, name: TemplateName): Promise<void> {
-  await writeTemplate(cwd, name, TEMPLATES[name] as ProjectTemplate);
+  await writeTemplate(cwd, name, TEMPLATES[name]);
 }
