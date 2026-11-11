@@ -14,9 +14,9 @@ import { runCollectPdf } from './pdf.js';
 import { runPost } from './post.js';
 import { runPrepare } from './prepare.js';
 import { runPreview } from './preview.js';
+import { TEMPLATE_NAMES } from './project-templates/index.js';
 import { runSnapshots, type SnapshotsOptions } from './snapshots.js';
 import { runTemplate } from './template.js';
-import { TEMPLATE_NAMES } from './project-templates/index.js';
 import { runTypography, type TypographyOptions } from './typography.js';
 
 function collect(value: string, previous: string[]): string[] {
@@ -38,6 +38,21 @@ function translateCommanderError(message: string): string {
     .join('\n');
 }
 
+const EDITORIAL_COMMANDS = ['init', 'new', 'build', 'preview', 'validate', 'clean', 'doctor', 'list-filters'];
+
+function rangoEditorial(name: string): number {
+  const indice = EDITORIAL_COMMANDS.indexOf(name);
+  return indice < 0 ? EDITORIAL_COMMANDS.length : indice;
+}
+
+function agruparAyuda(program: Command): void {
+  for (const command of program.commands) {
+    command.helpGroup(rangoEditorial(command.name()) < EDITORIAL_COMMANDS.length ? 'Flujo editorial:' : 'Comandos avanzados:');
+  }
+  const ordenados = [...program.commands].sort((a, b) => rangoEditorial(a.name()) - rangoEditorial(b.name()));
+  (program as unknown as { commands: Command[] }).commands = ordenados;
+}
+
 export function buildProgram(): Command {
   const program = new Command();
 
@@ -45,7 +60,8 @@ export function buildProgram(): Command {
     .name(packageJson.name.replace(/-cli$/, ''))
     .version(packageJson.version, '-V, --version', 'muestra la versión')
     .helpOption('-h, --help', 'muestra la ayuda')
-    .helpCommand('help [comando]', 'muestra la ayuda de un comando');
+    .helpCommand('help [comando]', 'muestra la ayuda de un comando')
+    .commandsGroup('Comandos avanzados:');
   program.addHelpText(
     'before',
     `escribir, compartir, re-existir
@@ -53,9 +69,11 @@ export function buildProgram(): Command {
 Construye documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Markdown (pandoc + Tailwind CSS).
 
 Primeros pasos:
-  iteraciones init                 crea la estructura del proyecto
-  iteraciones new posts/doc.md     crea un documento
+  iteraciones init blog             crea un proyecto con una plantilla (blog, libro, colectiva, repositorio)
+  iteraciones new texto             crea un documento del type indicado
+  iteraciones new posts/doc.md      crea un documento con frontmatter mínimo
   iteraciones build                 construye los documentos del proyecto
+  iteraciones preview               construye y sirve el sitio en local
 `,
   );
   program.addHelpText(
@@ -555,5 +573,6 @@ Ejemplos:
     )
     .action((options: { verbose?: boolean; json?: boolean }) => runFilters(projectRoot(), options));
 
+  agruparAyuda(program);
   return program;
 }

@@ -94,6 +94,16 @@ Then('la ayuda repite {string} una sola vez', (texto: string) => {
   }
 });
 
+Then('la ayuda pone {string} antes de {string}', (primero: string, segundo: string) => {
+  const posicionPrimero = world.stdout.indexOf(primero);
+  const posicionSegundo = world.stdout.indexOf(segundo);
+  if (posicionPrimero < 0) throw new Error(`la ayuda no contiene ${JSON.stringify(primero)}`);
+  if (posicionSegundo < 0) throw new Error(`la ayuda no contiene ${JSON.stringify(segundo)}`);
+  if (posicionPrimero > posicionSegundo) {
+    throw new Error(`la ayuda pone ${JSON.stringify(segundo)} antes de ${JSON.stringify(primero)}`);
+  }
+});
+
 Then('la ayuda empieza con el slogan', () => {
   if (!world.stdout.startsWith('escribir, compartir, re-existir')) {
     throw new Error(`la ayuda no empieza con el slogan: ${JSON.stringify(world.stdout.slice(0, 80))}`);
