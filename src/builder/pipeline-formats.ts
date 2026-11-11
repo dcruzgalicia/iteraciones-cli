@@ -291,6 +291,13 @@ function cuando(condicion: boolean, valor: string): string | undefined {
   return condicion ? valor : undefined;
 }
 
+function canonicalHref(siteUrl: string | undefined, dir: string, slug: string): string | undefined {
+  if (siteUrl === undefined || siteUrl.trim() === '') return undefined;
+  const base = siteUrl.trim().replace(/\/+$/, '');
+  const path = posix(join(dir === '.' ? '' : dir, slug === 'index' ? '' : `${slug}.html`));
+  return `${base}/${path}`;
+}
+
 function formatosOpcionales(formats: HtmlPageVars['formats']): HtmlPageVars['formats'] {
   return formats !== undefined && formats.length > 0 ? formats : undefined;
 }
@@ -316,6 +323,7 @@ function htmlVars(args: {
   renderCtx: RenderContext;
   formats: HtmlPageVars['formats'];
   hasHomePage: boolean;
+  pageSlug?: string;
   available?: Set<string>;
   docChip?: string;
   covers?: { front?: string; back?: string };
@@ -340,6 +348,7 @@ function htmlVars(args: {
     renderCtx,
     formats,
     hasHomePage,
+    pageSlug,
     available,
     docChip,
     covers,
@@ -376,6 +385,7 @@ function htmlVars(args: {
     siteTitle: fmString(htmlConfig?.site?.title, 'iteraciones'),
     tagline: fmString(htmlConfig?.site?.description, 'escribir, compartir, re-existir'),
     metaDescription,
+    canonical: canonicalHref(htmlConfig?.site?.url, dir, pageSlug ?? slug),
     lang,
     theme: htmlConfig?.site?.theme,
     css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
@@ -507,6 +517,7 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
         renderCtx,
         formats,
         hasHomePage,
+        pageSlug: slugPagina,
         available,
         docChip: docChipOverride,
         covers,
