@@ -16,6 +16,7 @@ import { runPrepare } from './prepare.js';
 import { runPreview } from './preview.js';
 import { runSnapshots, type SnapshotsOptions } from './snapshots.js';
 import { runTemplate } from './template.js';
+import { TEMPLATE_NAMES } from './project-templates/index.js';
 import { runTypography, type TypographyOptions } from './typography.js';
 
 function collect(value: string, previous: string[]): string[] {
@@ -415,19 +416,22 @@ empezar en otro punto. El folio sí se usa, para no reportarlo como línea de un
 
   program
     .command('init [tipo]')
-    .description('crea el .gitignore mínimo; con "sveltia" agrega el admin y el layout')
+    .description('crea el .gitignore mínimo; con una plantilla crea un proyecto compilable, y con "sveltia" agrega el admin')
     .addHelpText(
       'after',
       `
+Plantillas: ${TEMPLATE_NAMES.join(' | ')}
+
 Ejemplos:
-  iteraciones init           prepara el .gitignore del proyecto en el directorio actual
-  iteraciones init sveltia   agrega el admin de Sveltia y el layout para publicarlo
+  iteraciones init                  prepara el .gitignore del proyecto en el directorio actual
+  iteraciones init blog             crea un proyecto de blog sin contenido de ejemplo
+  iteraciones init libro            crea un proyecto de libro con PDF y EPUB
+  iteraciones init colectiva        crea portada, menú y carpetas para una colectiva
+  iteraciones init repositorio      crea catálogo, metadatos y licencias
+  iteraciones init sveltia          agrega el admin de Sveltia y el layout para publicarlo
 `,
     )
     .action(async (tipo?: string) => {
-      if (tipo !== undefined && tipo !== 'sveltia') {
-        program.error(`tipo de init desconocido: "${tipo}"; el único tipo es "sveltia"`);
-      }
       await runInit(projectRoot(), tipo);
     });
 
