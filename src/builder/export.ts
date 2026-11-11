@@ -64,11 +64,12 @@ export async function convertToEpub(
   imagePaths?: string,
   coverImage?: string,
   cwd?: string,
+  splitLevel = 1,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const extraArgs: string[] = [];
-  extraArgs.push('--shift-heading-level-by=4');
+  extraArgs.push(`--split-level=${splitLevel}`);
   if (coverImage !== undefined) extraArgs.push(`--epub-cover-image=${coverImage}`);
   extraArgs.push(...luaFilterArgs([...filters.semantic, STRIP_TYPOGRAPHIC_FILTER, ...filters.user]));
   extraArgs.push(...citationCompileArgs(doc.metadata.bibliography, doc.metadata.csl));

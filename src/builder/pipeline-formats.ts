@@ -2402,7 +2402,7 @@ function buildAuthorsMarkdown(authoras: CreatorDoc[]): string {
 
 function resolveCollectionContent(
   collectionEntries: CollectionEntry[],
-  format: 'latex' | 'html' | 'markdown',
+  format: 'latex' | 'html' | 'markdown' | 'epub',
   fallback: string,
   pageNumber?: string,
   merge = false,
@@ -2413,6 +2413,7 @@ function resolveCollectionContent(
     const printable = printableEntries(collectionEntries);
     return printable.length === 0 ? fallback : buildCollectionSectionsHtml(printable);
   }
+  if (format === 'epub') return buildCollectionSections(printableEntries(collectionEntries), MARKDOWN_HEADINGS, 4);
   return buildCollectionSectionsMarkdown(collectionEntries, merge);
 }
 
@@ -2650,7 +2651,7 @@ async function buildAuthorsLatex(
 
 export function collectionBaseContent(
   collectionEntries: CollectionEntry[],
-  format: 'latex' | 'html' | 'markdown',
+  format: 'latex' | 'html' | 'markdown' | 'epub',
   content: string,
   pageNumber?: string,
   merge = false,
@@ -3042,7 +3043,7 @@ async function emitCollectionFormats(
   );
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
-    const base = collectionBaseContent(collectionEntries, 'html', content);
+    const base = collectionBaseContent(collectionEntries, 'epub', content);
     const baseConLicencia = conLicenciaAlFinal(base, outputs.fm, ctx.siteConfig);
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', epubMap, docDir, false);
     const epubCover = epubCoverPath(mergedFm, docDir, epubMap);
@@ -3057,6 +3058,7 @@ async function emitCollectionFormats(
       imagePaths,
       epubCover,
       ctx.cwd,
+      doc.frontmatter.type === 'collection' ? 2 : 1,
     );
   }
 

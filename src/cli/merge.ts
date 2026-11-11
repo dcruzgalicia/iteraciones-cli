@@ -168,7 +168,7 @@ async function composeFor(
       ctx.relImageMap,
     );
   }
-  const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
+  const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : format === 'epub' ? 'epub' : 'html', src.text);
   if (format === 'epub') {
     const licencia = licenciaMarkdownPara(src.fm, siteConfig);
     return licencia === undefined ? base : `${base}\n\n${licencia}`;
