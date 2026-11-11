@@ -2280,7 +2280,7 @@
                       "width": 87,
                       "height": 21
                     },
-                    "snippet": "<a href=\"./autoras/historikas/historikas.html\" class=\"no-underline underline-offset-4 decoration-current/40 transition-colors du…\">",
+                    "snippet": "<a href=\"./autoras/sitio-ejemplo/sitio-ejemplo.html\" class=\"no-underline underline-offset-4 decoration-current/40 transition-colors du…\">",
                     "nodeLabel": "Histórikas"
                   }
                 },
@@ -2298,7 +2298,7 @@
                       "width": 68,
                       "height": 17
                     },
-                    "snippet": "<a href=\"./autoras/historikas/historikas.html\" class=\"text-accent-700 no-underline underline-offset-4 hover:underline dark:text-…\">",
+                    "snippet": "<a href=\"./autoras/sitio-ejemplo/sitio-ejemplo.html\" class=\"text-accent-700 no-underline underline-offset-4 hover:underline dark:text-…\">",
                     "nodeLabel": "Histórikas"
                   }
                 }
@@ -2445,7 +2445,7 @@
                 "width": 364,
                 "height": 100
               },
-              "snippet": "<a href=\"./autoras/historikas/tercera-convocatoria-de-historikas-anhelos.html\" class=\"block h-full w-full rounded-tr-xl rounded-bl-xl\">",
+              "snippet": "<a href=\"./autoras/sitio-ejemplo/tercera-convocatoria-de-sitio-ejemplo-anhelos.html\" class=\"block h-full w-full rounded-tr-xl rounded-bl-xl\">",
               "nodeLabel": "div.min-w-0 > div.tarjeta-fragmento > figure.mt-0! > a.block",
               "explanation": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute"
             }
@@ -2464,7 +2464,7 @@
                 "width": 364,
                 "height": 100
               },
-              "snippet": "<a href=\"./autoras/historikas/tres-libros-independientes-que-queremos-que-conozcas.…\" class=\"block h-full w-full rounded-tr-xl rounded-bl-xl\">",
+              "snippet": "<a href=\"./autoras/sitio-ejemplo/tres-libros-independientes-que-queremos-que-conozcas.…\" class=\"block h-full w-full rounded-tr-xl rounded-bl-xl\">",
               "nodeLabel": "div.min-w-0 > div.tarjeta-fragmento > figure.mt-0! > a.block",
               "explanation": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute"
             }
@@ -2732,7 +2732,7 @@
                 "width": 68,
                 "height": 17
               },
-              "snippet": "<a href=\"./autoras/historikas/historikas.html\" class=\"text-accent-700 no-underline underline-offset-4 hover:underline dark:text-…\">",
+              "snippet": "<a href=\"./autoras/sitio-ejemplo/sitio-ejemplo.html\" class=\"text-accent-700 no-underline underline-offset-4 hover:underline dark:text-…\">",
               "nodeLabel": "Histórikas",
               "explanation": "Fix any of the following:\n  Target has insufficient size (68.2px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 18px instead of at least 24px."
             },
@@ -2753,7 +2753,7 @@
                       "width": 304,
                       "height": 44
                     },
-                    "snippet": "<a href=\"./autoras/historikas/tercera-convocatoria-de-historikas-anhelos.html\" class=\"no-underline underline-offset-4 decoration-current/40 transition-colors du…\">",
+                    "snippet": "<a href=\"./autoras/sitio-ejemplo/tercera-convocatoria-de-sitio-ejemplo-anhelos.html\" class=\"no-underline underline-offset-4 decoration-current/40 transition-colors du…\">",
                     "nodeLabel": "Tercera convocatoria de Histórikas: Anhelos"
                   }
                 }
@@ -2858,7 +2858,7 @@
                 "width": 68,
                 "height": 17
               },
-              "snippet": "<a href=\"./autoras/historikas/historikas.html\" class=\"text-accent-700 no-underline underline-offset-4 hover:underline dark:text-…\">",
+              "snippet": "<a href=\"./autoras/sitio-ejemplo/sitio-ejemplo.html\" class=\"text-accent-700 no-underline underline-offset-4 hover:underline dark:text-…\">",
               "nodeLabel": "Histórikas",
               "explanation": "Fix any of the following:\n  Target has insufficient size (68.2px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 18px instead of at least 24px."
             },
@@ -2879,7 +2879,7 @@
                       "width": 355,
                       "height": 44
                     },
-                    "snippet": "<a href=\"./autoras/historikas/tres-libros-independientes-que-queremos-que-conozcas.…\" class=\"no-underline underline-offset-4 decoration-current/40 transition-colors du…\">",
+                    "snippet": "<a href=\"./autoras/sitio-ejemplo/tres-libros-independientes-que-queremos-que-conozcas.…\" class=\"no-underline underline-offset-4 decoration-current/40 transition-colors du…\">",
                     "nodeLabel": "Tres libros independientes que queremos que conozcas"
                   }
                 }

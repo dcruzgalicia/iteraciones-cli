@@ -23,9 +23,9 @@ Medición original del sitio de ejemplo (móvil):
 ## Medición guardada
 
 - Fecha: 2026-11-10.
-- URL: `http://127.0.0.1:4173/index.html` (servidor local sobre `/Users/david/Proyectos/historikas/dist/files`).
+- URL: `http://127.0.0.1:4173/index.html` (servidor local sobre `/proyecto/sitio-ejemplo/dist/files`).
 - Lighthouse 13.6.0, preset móvil por defecto, Chromium de Playwright 1254 vía `CHROME_PATH`.
-- Reportes: `2026-11-10-historikas-mobile.json` y `2026-11-10-historikas-mobile.html`.
+- Reportes: `2026-11-10-sitio-ejemplo-mobile.json` y `2026-11-10-sitio-ejemplo-mobile.html`.
 
 | Categoría | Score local |
 | --- | --- |
@@ -50,10 +50,10 @@ oficial sigue siendo la tabla del issue.
 ```sh
 # Servir el sitio ya construido
 python3 -m http.server 4173 --bind 127.0.0.1 \
-  --directory /Users/david/Proyectos/historikas/dist/files
+  --directory /proyecto/sitio-ejemplo/dist/files
 
 # En otra terminal
-tools/lighthouse-baseline.sh http://127.0.0.1:4173/index.html 2026-11-10-historikas-mobile
+tools/lighthouse-baseline.sh http://127.0.0.1:4173/index.html 2026-11-10-sitio-ejemplo-mobile
 ```
 
 `tools/lighthouse-baseline.sh` acepta `LIGHTHOUSE_URL`, `LIGHTHOUSE_NAME`,
