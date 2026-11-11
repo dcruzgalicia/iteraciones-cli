@@ -150,6 +150,7 @@ export interface HtmlPageVars {
   siteTitle: string;
   tagline?: string;
   metaDescription?: string;
+  canonical?: string;
   lang: string;
 
   logoBlock?: string;
