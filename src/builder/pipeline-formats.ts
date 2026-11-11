@@ -308,6 +308,69 @@ function escapeXml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
+export async function emit404(args: { outputDir: string; renderCtx: RenderContext; discoveryIndex: Map<string, DiscoveryEntry> }): Promise<void> {
+  const { ctx, formatCfg } = args.renderCtx;
+  const site = formatCfg?.html?.site;
+  const siteTitle = site?.title ?? 'iteraciones';
+  const tagline = site?.description ?? '';
+  const theme = site?.theme ?? 'dark';
+  const logo =
+    args.renderCtx.logo === undefined
+      ? ''
+      : logoBlockHtml(
+          args.renderCtx.logo.kind === 'file' ? relativeHref('.', args.renderCtx.logo.path) : '',
+          site?.logoSize,
+          args.renderCtx.logo.kind === 'inline' ? args.renderCtx.logo.svg : undefined,
+        );
+  const available = availableDefaultListSlugs(args.discoveryIndex);
+  const enlaces = [
+    { href: './index.html', label: 'Inicio' },
+    ...DEFAULT_LISTS.filter((lista) => lista.slug !== 'index' && available.has(lista.slug)).map((lista) => ({
+      href: `./${lista.slug}.html`,
+      label: lista.title,
+    })),
+    ...(keywordIndexAvailable(args.discoveryIndex) ? [{ href: `./${KEYWORD_INDEX_SLUG}.html`, label: 'Palabras clave' }] : []),
+  ];
+  const items = enlaces
+    .map(
+      (enlace) =>
+        `<li><a href="${enlace.href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(enlace.label)}</a></li>`,
+    )
+    .join('');
+  const html = `<!DOCTYPE html>
+<html lang="${Bun.escapeHTML(ctx.siteConfig.language)}" data-theme="${theme}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Página no encontrada · ${Bun.escapeHTML(siteTitle)}</title>
+  ${ctx.needsCss ? `<link rel="stylesheet" href="${relativeHref('.', ASSETS_CSS_FILE)}">` : ''}
+</head>
+<body class="font-sans antialiased text-base text-stone-900 sm:text-lg dark:text-stone-100 bg-paper bg-paper-grid">
+  <div class="xl:container mx-auto space-y-4 px-2 pt-2 pb-28 sm:space-y-6 sm:px-4 sm:pt-4 sm:pb-32 lg:space-y-8 lg:px-8 lg:pt-8">
+    <header class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 sm:p-6 dark:ring-stone-600/40">
+      <div class="flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-3 sm:text-left">
+        ${logo}
+        <div class="flex min-w-0 flex-col items-center sm:items-start">
+          <a href="./index.html" class="font-semibold text-base leading-none text-accent-800 no-underline hover:underline sm:text-lg lg:text-xl dark:text-accent-300">${Bun.escapeHTML(siteTitle)}</a>
+          ${tagline === '' ? '' : `<span class="mt-1 text-[11px] italic leading-none text-stone-600 sm:text-xs lg:text-sm dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
+        </div>
+      </div>
+    </header>
+    <main class="tarjeta relative rounded-tr-2xl rounded-bl-2xl p-6 ring-1 ring-inset ring-stone-300/60 sm:p-8 dark:ring-stone-600/40">
+      <h1 class="text-2xl font-bold text-accent-900 sm:text-3xl dark:text-accent-100">Página no encontrada</h1>
+      <p class="mt-4 text-stone-700 dark:text-stone-300">La página que buscas no existe o cambió de lugar.</p>
+      <nav aria-label="Enlaces de recuperación" class="mt-6">
+        <ul class="flex flex-wrap gap-3 ps-0">${items}</ul>
+      </nav>
+    </main>
+  </div>
+</body>
+</html>
+`;
+  await writeOutput(join(args.outputDir, '404.html'), html);
+}
+
 export async function emitRobots(args: { outputDir: string; siteUrl: string | undefined }): Promise<void> {
   const base = args.siteUrl?.trim().replace(/\/+$/, '');
   const sitemap = base === undefined || base === '' ? '' : `\nSitemap: ${base}/sitemap.xml\n`;
