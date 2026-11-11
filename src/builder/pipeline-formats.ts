@@ -365,6 +365,7 @@ function htmlVars(args: {
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
   const siteTitle = fmString(htmlConfig?.site?.title, 'iteraciones');
+  const metaDescription = opcional(htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'description') ?? htmlConfig?.site?.description);
   const showDates = fm.showDates === false ? false : fm.showDates === true ? true : htmlConfig?.site?.showDates === true;
   const esListaIndex = doc.relativePath === 'index.md' && doc.frontmatter.type === 'list';
   const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
@@ -374,6 +375,7 @@ function htmlVars(args: {
     title: titulo,
     siteTitle: fmString(htmlConfig?.site?.title, 'iteraciones'),
     tagline: fmString(htmlConfig?.site?.description, 'escribir, compartir, re-existir'),
+    metaDescription,
     lang,
     theme: htmlConfig?.site?.theme,
     css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),

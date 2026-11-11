@@ -92,6 +92,7 @@ function buildHtmlMetadataArgs(
   args.push(
     ...metadataArgs([
       { key: 'tagline', value: tagline },
+      { key: 'meta-description', value: vars.metaDescription },
       { key: 'doc-title', value: vars.docTitle },
       { key: 'subtitle', value: vars.subtitle },
       { key: 'date', value: vars.date },

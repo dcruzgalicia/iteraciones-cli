@@ -149,6 +149,7 @@ export interface HtmlPageVars {
   title: string;
   siteTitle: string;
   tagline?: string;
+  metaDescription?: string;
   lang: string;
 
   logoBlock?: string;
