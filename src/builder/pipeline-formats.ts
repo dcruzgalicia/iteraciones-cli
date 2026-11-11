@@ -1,4 +1,4 @@
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
@@ -302,6 +302,29 @@ function canonicalHref(siteUrl: string | undefined, dir: string, slug: string): 
 function absoluteUrl(siteUrl: string | undefined, path: string): string | undefined {
   if (siteUrl === undefined || siteUrl.trim() === '') return undefined;
   return new URL(path, `${siteUrl.trim().replace(/\/+$/, '')}/`).href;
+}
+
+function escapeXml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+export async function emitSitemap(args: { outputDir: string; siteUrl: string | undefined }): Promise<void> {
+  const base = args.siteUrl?.trim().replace(/\/+$/, '');
+  if (base === undefined || base === '') return;
+  const paths = [...new Bun.Glob('**/*.html').scanSync({ cwd: args.outputDir, onlyFiles: true })]
+    .filter((path) => !path.startsWith('admin/') && path !== '404.html')
+    .sort();
+  const urls: string[] = [];
+  for (const path of paths) {
+    const info = await stat(join(args.outputDir, path));
+    const lastmod = info.mtime.toISOString().slice(0, 10);
+    const loc = `${base}/${path}`.replace(/index\.html$/, '');
+    urls.push(`  <url>\n    <loc>${escapeXml(loc)}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`);
+  }
+  await writeOutput(
+    join(args.outputDir, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`,
+  );
 }
 
 function socialMetaTags(args: {
