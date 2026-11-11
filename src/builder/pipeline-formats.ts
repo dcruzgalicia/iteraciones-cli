@@ -996,9 +996,12 @@ export function hrefsDeImagenes(imageMap: Map<string, string>, outputDir: string
   return hrefs;
 }
 
-function figuraDeTarjeta(href: string, enlace?: string): string {
+function figuraDeTarjeta(href: string, enlace: string | undefined, titulo: string): string {
   const img = `<img src="${href}" alt="" class="${CARD_IMAGE_IMG_CLASSES}">`;
-  const dentro = enlace === undefined ? img : `<a href="${enlace}" class="${CARD_IMAGE_LINK_CLASSES}">${img}</a>`;
+  const dentro =
+    enlace === undefined
+      ? img
+      : `<a href="${enlace}" aria-label="Imagen de ${Bun.escapeHTML(titulo)}" class="${CARD_IMAGE_LINK_CLASSES}">${img}</a>`;
   return `<figure class="${CARD_IMAGE_CLASSES}">${dentro}</figure>`;
 }
 
@@ -2050,7 +2053,7 @@ function imagenDeCabecera(e: CollectionEntry, tipo: string, imagenes: Map<string
   if (imagen === undefined) return undefined;
   if (tipo === 'creator') return retratoDeCreadora(imagen, e.title || TITULO_POR_DEFECTO, href);
 
-  return figuraDeTarjeta(imagen, href);
+  return figuraDeTarjeta(imagen, href, e.title || TITULO_POR_DEFECTO);
 }
 
 interface CabeceraTarjeta {
