@@ -69,8 +69,8 @@ Característica: la tubería entera produce una salida por formato
     Esquema del escenario: La portada depende de coverImage
       Dado un proyecto con todos los formatos y coverImage: <valor>
       Cuando compilo el proyecto desde cero
-      Entonces dist <portada> el archivo "ana-ruiz.png"
-      Y dist tiene el archivo "ana-ruiz.pdf"
+      Entonces dist <portada> el archivo "manuscrito-por-ana-ruiz.png"
+      Y dist tiene el archivo "manuscrito-por-ana-ruiz.pdf"
 
       Ejemplos:
         | valor | portada    |

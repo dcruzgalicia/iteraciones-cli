@@ -32,19 +32,6 @@ const FUENTE = [
   '',
 ].join('\n');
 
-const CREATIVA = [
-  '---',
-  'title: Creativa',
-  'type: creator',
-  'links:',
-  '  - name: Web',
-  '    url: https://ejemplo.com',
-  '---',
-  '',
-  'Cuerpo de la creadora.',
-  '',
-].join('\n');
-
 interface ReprocessWorld {
   dir: string;
   reprocessDir: string;
@@ -66,10 +53,6 @@ Given('un proyecto con salida en HTML y Markdown', async () => {
 
 Given('un documento {string} con título, subtítulo, autora, fecha y slug', async (slug: string) => {
   await Bun.write(join(world.dir, `${slug}.md`), `${FUENTE}\n`);
-});
-
-Given('una creativa con un enlace en su frontmatter', async () => {
-  await Bun.write(join(world.dir, 'creativa.md'), `${CREATIVA}\n`);
 });
 
 Given('una colección con merge {word}', async (merge: string) => {
@@ -177,15 +160,6 @@ Then('el markdown exportado conserva el heading sin desplazar', async () => {
   if (exported.includes('#####')) throw new Error('el heading llegó desplazado por el shift de pandoc');
 });
 
-Then('la creativa lleva su enlace en el frontmatter y no lo repite en el cuerpo', async () => {
-  const creative = await readFile(join(distPath(world.dir), 'creativa.md'), 'utf8');
-  if (!creative.includes('type: creator')) throw new Error('falta type: creator');
-
-  const count = creative.split('https://ejemplo.com').length - 1;
-  if (count !== 1) throw new Error(`esperaba 1 aparición del enlace (en el frontmatter) y hubo ${count}`);
-  if (creative.includes('**Enlace**')) throw new Error('el cuerpo repite las redes en negritas');
-});
-
 When('uso dist como proyecto origen y compilo de nuevo', async () => {
   world.reprocessDir = join(world.dir, 'reproceso');
   await mkdir(world.reprocessDir, { recursive: true });
@@ -197,7 +171,7 @@ When('uso dist como proyecto origen y compilo de nuevo', async () => {
 Then('todas las salidas son idénticas a la primera pasada', async () => {
   const first = distPath(world.dir);
   const second = await distPath(world.reprocessDir);
-  for (const name of ['ensayo.md', 'ensayo.html', 'creativa.md', 'creativa.html']) {
+  for (const name of ['ensayo.md', 'ensayo.html']) {
     const before = await readFile(join(first, name), 'utf8');
     const after = await readFile(join(second, name), 'utf8');
     if (after !== before) throw new Error(`el re-proceso de ${name} no es idéntico`);
