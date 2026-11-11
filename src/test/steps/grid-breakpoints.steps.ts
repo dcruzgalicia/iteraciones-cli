@@ -26,10 +26,15 @@ function base(utilidad: string): string {
 
 function media(utilidad: string, breakpoint: string): string {
   const texto = bloque(utilidad);
-  const inicio = texto.indexOf(`@media (min-width: ${BREAKPOINTS[breakpoint]}px)`);
-  if (inicio === -1) return '';
-  const siguiente = texto.indexOf('@media', inicio + 1);
-  return texto.slice(inicio, siguiente === -1 ? undefined : siguiente);
+  let desde = 0;
+  while (true) {
+    const inicio = texto.indexOf(`@media (min-width: ${BREAKPOINTS[breakpoint]}px)`, desde);
+    if (inicio === -1) return '';
+    const siguiente = texto.indexOf('@media', inicio + 1);
+    const bloqueMedia = texto.slice(inicio, siguiente === -1 ? undefined : siguiente);
+    if (bloqueMedia.includes('grid-template-columns')) return bloqueMedia;
+    desde = inicio + 1;
+  }
 }
 
 function columnas(fragmento: string): number | undefined {

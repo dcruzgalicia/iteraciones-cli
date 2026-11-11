@@ -50,6 +50,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     ['creator-image', vars.creatorImage],
     ['creator-image-alt', vars.creatorImageAlt],
     ['creator-photo', vars.creatorPhoto],
+    ['featured-publication', vars.featuredPublication],
     ['license', vars.license],
     ['menu-header', vars.menuHeader],
     ['menu-footer-plain', vars.menuFooterPlain],
