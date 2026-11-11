@@ -30,114 +30,389 @@
   }
 }
 
-@utility creator-grid {
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    > :first-child,
-    > :nth-child(2) {
-      align-self: stretch;
-    }
-
-    > :first-child > article {
-      height: 100%;
-    }
-
-    > :nth-child(2) .tarjeta-fragmento {
-      height: 100%;
-      min-height: 34rem;
-      contain: size;
-    }
-
-    > :nth-child(2) > figure {
-      height: 100%;
-      min-height: 34rem;
-    }
-
-    > :nth-child(2) > figure img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center;
-    }
-
-    > :only-child {
-      grid-column: span 2;
-    }
-  }
-}
-
-@utility main-grid {
+@utility content-grid {
+  display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+  grid-template-areas:
+    "header"
+    "main"
+    "photo"
+    "publications"
+    "related"
+    "sidebar";
+
+  & .page-header {
+    grid-area: header;
+  }
+
+  & .page-main {
+    grid-area: main;
+  }
+
+  & .page-photo {
+    grid-area: photo;
+  }
+
+  & .page-publications {
+    grid-area: publications;
+  }
+
+  & .page-related {
+    grid-area: related;
+  }
+
+  & .page-sidebar {
+    grid-area: sidebar;
+  }
+
+  &.page-creator .page-main {
+    align-self: stretch;
+  }
+
+  &.page-creator .page-main > div,
+  &.page-creator .page-main article {
+    height: 100%;
+  }
+
+  &.page-file,
+  &.page-collection {
+    grid-template-areas:
+      "header"
+      "main"
+      "related"
+      "sidebar";
+  }
+
+  &.page-creator {
+    grid-template-areas:
+      "header"
+      "main"
+      "photo"
+      "publications"
+      "related"
+      "sidebar";
+  }
 
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
 
-    > :only-child {
-      grid-column: span 2;
+    &.page-file,
+    &.page-collection {
+      grid-template-areas:
+        "header header"
+        "main related"
+        "main sidebar";
+    }
+
+    &.page-creator {
+      grid-template-areas:
+        "header header"
+        "main photo"
+        "publications related"
+        "publications sidebar";
     }
   }
 
   @media (min-width: 768px) {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    > :only-child {
-      grid-column: span 1;
+    &.page-file,
+    &.page-collection {
+      grid-template-areas:
+        "header header"
+        "main related"
+        "main sidebar";
+    }
+
+    &.page-creator {
+      grid-template-areas:
+        "header header"
+        "main photo"
+        "publications related"
+        "publications sidebar";
     }
   }
 
   @media (min-width: 1024px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
 
-    > :only-child {
-      grid-column: span 2;
+    &.page-file {
+      grid-template-areas:
+        "header header sidebar"
+        "main related sidebar";
     }
-  }
-}
 
-@utility collection-grid {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    > :only-child {
-      grid-column: span 2;
+    &.page-collection {
+      grid-template-areas:
+        "header header header"
+        "main main related"
+        "main main sidebar";
     }
-  }
 
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-
-    > :only-child {
-      grid-column: span 1;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    > :only-child {
-      grid-column: span 2;
+    &.page-creator {
+      grid-template-areas:
+        "header header header"
+        "main photo related"
+        "publications publications sidebar";
     }
   }
 
   @media (min-width: 1280px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 
-    > :only-child {
-      grid-column: span 2;
+    &.page-file {
+      grid-template-areas:
+        "header header sidebar"
+        "main related sidebar";
+    }
+
+    &.page-collection {
+      grid-template-areas:
+        "header header header"
+        "main main related"
+        "main main sidebar";
+    }
+
+    &.page-creator {
+      grid-template-areas:
+        "header header header"
+        "main photo related"
+        "publications publications sidebar";
     }
   }
 
   @media (min-width: 1536px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 
-    > :only-child {
-      grid-column: span 3;
+    &.page-file,
+    &.page-collection {
+      grid-template-areas:
+        "header header header sidebar"
+        "main main related sidebar";
     }
+
+    &.page-creator {
+      grid-template-areas:
+        "header header header sidebar"
+        "main photo related sidebar"
+        "publications publications publications sidebar";
+    }
+  }
+
+  &.page-file:not(:has(.page-related)),
+  &.page-collection:not(:has(.page-related)) {
+    @media (min-width: 640px) {
+      grid-template-areas:
+        "header sidebar"
+        "main sidebar";
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-areas:
+        "header header sidebar"
+        "main main sidebar";
+    }
+
+    @media (min-width: 1536px) {
+      grid-template-areas:
+        "header header header sidebar"
+        "main main main sidebar";
+    }
+  }
+
+  &.page-file:not(:has(.page-sidebar)),
+  &.page-collection:not(:has(.page-sidebar)) {
+    @media (min-width: 640px) {
+      grid-template-areas:
+        "header header"
+        "main related";
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-areas:
+        "header header header"
+        "main main related";
+    }
+
+    @media (min-width: 1536px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "header header header"
+        "main main related";
+    }
+  }
+
+  &.page-file:not(:has(.page-related)):not(:has(.page-sidebar)),
+  &.page-collection:not(:has(.page-related)):not(:has(.page-sidebar)) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "main";
+  }
+
+  &.page-creator:not(:has(.page-related)) {
+    @media (min-width: 640px) {
+      grid-template-areas:
+        "header header"
+        "main photo"
+        "publications sidebar";
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-areas:
+        "header header sidebar"
+        "main photo sidebar"
+        "publications publications sidebar";
+    }
+
+    @media (min-width: 1536px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "header header sidebar"
+        "main photo sidebar"
+        "publications publications sidebar";
+    }
+  }
+
+  &.page-creator:not(:has(.page-sidebar)) {
+    @media (min-width: 640px) {
+      grid-template-areas:
+        "header header"
+        "main photo"
+        "publications related";
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-areas:
+        "header header header"
+        "main photo related"
+        "publications publications related";
+    }
+
+    @media (min-width: 1536px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "header header header"
+        "main photo related"
+        "publications publications related";
+    }
+  }
+
+  &.page-creator:not(:has(.page-related)):not(:has(.page-sidebar)) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "main"
+      "photo"
+      "publications";
+  }
+
+  &.page-creator:not(:has(.page-photo)):has(.page-related):has(.page-sidebar) {
+    @media (min-width: 640px) {
+      grid-template-areas:
+        "header header"
+        "main main"
+        "publications related"
+        "publications sidebar";
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-areas:
+        "header header header"
+        "main main related"
+        "publications publications sidebar";
+    }
+
+    @media (min-width: 1536px) {
+      grid-template-areas:
+        "header header header sidebar"
+        "main main related sidebar"
+        "publications publications publications sidebar";
+    }
+  }
+
+  &.page-creator:not(:has(.page-photo)):not(:has(.page-related)):has(.page-sidebar) {
+    @media (min-width: 640px) {
+      grid-template-areas:
+        "header header"
+        "main main"
+        "publications sidebar";
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-areas:
+        "header header sidebar"
+        "main main sidebar"
+        "publications publications sidebar";
+    }
+
+    @media (min-width: 1536px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "header header sidebar"
+        "main main sidebar"
+        "publications publications sidebar";
+    }
+  }
+
+  &.page-creator:not(:has(.page-photo)):has(.page-related):not(:has(.page-sidebar)) {
+    @media (min-width: 640px) {
+      grid-template-areas:
+        "header header"
+        "main main"
+        "publications related";
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-areas:
+        "header header header"
+        "main main related"
+        "publications publications related";
+    }
+
+    @media (min-width: 1536px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "header header header"
+        "main main related"
+        "publications publications related";
+    }
+  }
+
+  &.page-creator:not(:has(.page-photo)):not(:has(.page-related)):not(:has(.page-sidebar)) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "main"
+      "publications";
+  }
+}
+
+@utility preview-grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@utility creator-publications-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 1536px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
   }
 }
 

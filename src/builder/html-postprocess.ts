@@ -12,27 +12,35 @@ export function loadReferencesCardTemplate(type: HtmlDocType): Promise<string> {
   return loadCard(type, 'card-referencias-block.html');
 }
 
-function removeEmptyRelatedSlot(html: string): string {
-  const start = html.indexOf('<div id="slot-related"');
+function removeEmptySlot(html: string, name: string): string {
+  const start = html.indexOf(`<div id="slot-${name}"`);
   if (start < 0) return html;
   const openEnd = html.indexOf('>', start);
   if (openEnd < 0) return html;
-  const end = findBalancedDivEnd(html, start, 'la columna relacionada');
+  const end = findBalancedDivEnd(html, start, `la columna ${name}`);
   if (end === undefined) return html;
   const inner = html.slice(openEnd + 1, end - '</div>'.length);
   if (inner.trim() !== '') return html;
   return html.slice(0, start) + html.slice(end);
 }
 
+function removeEmptyGridSlots(html: string): string {
+  let resultado = html;
+  for (const name of ['photo', 'publications', 'related', 'sidebar']) {
+    resultado = removeEmptySlot(resultado, name);
+  }
+  return resultado;
+}
+
 export function postProcessHtml(html: string, refsCardTemplate: string): string {
   const withIntro = moveCollectionIntro(removeTocReferencesLink(html));
   const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate);
-  if (block === undefined) return removeEmptyRelatedSlot(clean);
+  if (block === undefined) return removeEmptyGridSlots(clean);
   if (!clean.includes(REFS)) {
     logWarning('no se encontró el marcador de la tarjeta de referencias; la bibliografía no se inserta en la página', 'html');
-    return removeEmptyRelatedSlot(clean);
+    return removeEmptyGridSlots(clean);
   }
-  return removeEmptyRelatedSlot(clean.replace(REFS, block));
+  return removeEmptyGridSlots(clean.replace(REFS, block));
 }
 
 export function moveCollectionIntro(html: string): string {

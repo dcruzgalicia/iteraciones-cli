@@ -94,13 +94,23 @@ function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: stri
   ]);
 }
 
+function fillSlot(html: string, name: string, content: string): string {
+  const start = html.indexOf(`<div id="slot-${name}"`);
+  if (start === -1) return html;
+  const openEnd = html.indexOf('>', start);
+  if (openEnd === -1) return html;
+  const close = html.indexOf('</div>', openEnd);
+  if (close === -1) return html;
+  return html.slice(0, openEnd + 1) + content + html.slice(close);
+}
+
 export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocType = 'file'): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
   const identity = await loadCard(type, 'card-identity.html');
   const footerIdentity = comoFooter(await loadCard(type, 'card-identity.html'));
   const metadata = await loadCard(type, 'card-metadata.html');
   const referencias = await loadCard(type, 'card-referencias.html');
-  const mainCards = [await loadCard(type, 'card-contenido.html'), ...(type === 'file' ? [] : [referencias])];
+  const contenido = await loadCard(type, 'card-contenido.html');
   const relatedCards = [
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
     await loadCard(type, 'card-indice.html'),
@@ -108,7 +118,6 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     await loadCard('file', 'card-publicacion.html'),
     await loadCard('file', 'card-cita.html'),
     await loadCard('file', 'card-indice-coleccion.html'),
-    ...(type === 'file' ? [referencias] : []),
   ];
   const siteCards = ['$if(recientes)$$recientes$$endif$', '$if(site-keywords)$$site-keywords$$endif$', await loadCard('file', 'card-licencia.html')];
 
@@ -117,34 +126,32 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const menuFooterPlain = '$if(menu-footer-plain)$$menu-footer-plain$$endif$';
   const header = headerHtml(identity, menuHeader, redes);
   const portadas = await loadCard('file', 'card-portadas.html');
-  const esArchivo = type === 'file';
   const esCreador = type === 'creator';
+  const pageType = esCreador ? 'creator' : type === 'collection' || type === 'list' ? 'collection' : 'file';
   const main = esCreador
-    ? `<div class="grid gap-4 sm:gap-6 creator-grid lg:gap-8">${mainCards[0] ?? ''}${'$if(extras)$$extras$$endif$'}${mainCards[1] ?? ''}${portadas}${'$if(pagination)$$pagination$$endif$'}</div>`
-    : [portadas, ...mainCards, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
-  const pageGridClass = 'md:grid-cols-2 lg:grid-cols-3';
-  const mainColClass = 'lg:col-span-2';
-  const related = esArchivo ? relatedCards.join('\n') : '';
+    ? contenido
+    : [portadas, contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
+  const photo = esCreador ? '$if(creator-photo)$$creator-photo$$endif$' : '';
+  const publications = esCreador ? ['$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n') : '';
+  const related = [...relatedCards, referencias, ...(esCreador ? [portadas] : [])].join('\n');
   const sidebar = [
     '$if(announcements-top)$$announcements-top$$endif$',
-    ...(esArchivo ? [] : relatedCards),
     ...siteCards,
     '$if(announcements-bottom)$$announcements-bottom$$endif$',
   ].join('\n');
   const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
-  const relatedSlot = '<div id="slot-related" class="min-w-0 space-y-4 sm:space-y-6 empty:hidden lg:space-y-8"></div>';
-  const relatedHtml =
-    related === '' ? relatedSlot : `<div id="slot-related" class="min-w-0 space-y-4 sm:space-y-6 empty:hidden lg:space-y-8">${related}</div>`;
 
-  return skeleton
-    .replace('$page-grid-class$', pageGridClass)
-    .replace('$main-col-class$', mainColClass)
+  let html = skeleton
+    .replace('$page-type-class$', `page-${pageType}`)
     .replace(slot('header'), () => header)
-    .replace(slot('page-header'), () => metadata)
-    .replace(slot('main'), () => main)
-    .replace(relatedSlot, () => relatedHtml)
-    .replace(slot('sidebar'), () => sidebar)
     .replace(slot('footer'), () => footer);
+  html = fillSlot(html, 'page-header', metadata);
+  html = fillSlot(html, 'main', main);
+  html = fillSlot(html, 'photo', photo);
+  html = fillSlot(html, 'publications', publications);
+  html = fillSlot(html, 'related', related);
+  html = fillSlot(html, 'sidebar', sidebar);
+  return html;
 }
 
 export interface HtmlPageVars {
@@ -186,6 +193,7 @@ export interface HtmlPageVars {
   backCover?: string;
   creatorImage?: string;
   creatorImageAlt?: string;
+  creatorPhoto?: string;
   license?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
