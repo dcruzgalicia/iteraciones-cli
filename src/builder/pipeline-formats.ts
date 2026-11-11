@@ -1762,11 +1762,13 @@ async function readAnuncios(discoveryIndex: Map<string, DiscoveryEntry>, cwd: st
   return entries.sort((a, b) => fechaOrdenable(discoveryIndex.get(b.file)) - fechaOrdenable(discoveryIndex.get(a.file)));
 }
 
-function menuPageMarkdown(links: EnlaceMenu[], dir: string): string {
+function menuPageMarkdown(links: EnlaceMenu[], dir: string, depth = 0): string {
   return links
     .map((enlace) => {
       const attrs = esEnlaceExterno(enlace.url) ? '{target="_blank" rel="noopener noreferrer"}' : '';
-      return `- [${enlace.name}](${hrefDeMenu(enlace.url, dir)})${attrs}`;
+      const linea = `${'    '.repeat(depth)}- [${enlace.name}](${hrefDeMenu(enlace.url, dir)})${attrs}`;
+      const hijos = enlace.children === undefined || enlace.children.length === 0 ? '' : `\n${menuPageMarkdown(enlace.children, dir, depth + 1)}`;
+      return `${linea}${hijos}`;
     })
     .join('\n');
 }
