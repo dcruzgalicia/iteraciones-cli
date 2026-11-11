@@ -1571,6 +1571,15 @@ function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string):
 interface EnlaceMenu {
   name: string;
   url: string;
+  children?: EnlaceMenu[];
+}
+
+function parseEnlaceMenu(value: unknown): EnlaceMenu | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const { name, url, children } = value as Record<string, unknown>;
+  if (typeof name !== 'string' || typeof url !== 'string') return undefined;
+  const hijos = Array.isArray(children) ? children.flatMap((child) => parseEnlaceMenu(child) ?? []) : undefined;
+  return hijos !== undefined && hijos.length > 0 ? { name, url, children: hijos } : { name, url };
 }
 
 function enlacesDelMenu(discoveryIndex: Map<string, DiscoveryEntry>): EnlaceMenu[] {
@@ -1580,11 +1589,7 @@ function enlacesDelMenu(discoveryIndex: Map<string, DiscoveryEntry>): EnlaceMenu
   }
   const links = menus[0]?.[1].fm?.links;
   if (!Array.isArray(links)) return [];
-  return links.flatMap((link) => {
-    if (typeof link !== 'object' || link === null) return [];
-    const { name, url } = link as Record<string, unknown>;
-    return typeof name === 'string' && typeof url === 'string' ? [{ name, url }] : [];
-  });
+  return links.flatMap((link) => parseEnlaceMenu(link) ?? []);
 }
 
 function enlacesConInicio(links: EnlaceMenu[], siteTitle: string): EnlaceMenu[] {
