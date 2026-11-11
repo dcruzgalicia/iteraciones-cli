@@ -5,25 +5,35 @@ Característica: La paginación de las colecciones
   Quiero la colección repartida en páginas
   Para no cargar un scroll infinito
 
-  Regla de negocio: Diez tarjetas por página
+  Regla de negocio: Doce tarjetas por página
 
-    Escenario: Con diez miembros hay una sola página
-      Dado que la colección tiene 10 miembros
+    Escenario: Con doce miembros hay una sola página
+      Dado que la colección tiene 12 miembros
       Y que la colección tiene el cuerpo propio:
       """
       """
-      Cuando compogo las páginas de la colección con 10 por página
+      Cuando compogo las páginas de la colección con 12 por página
       Entonces hay 1 páginas
-      Y la página 1 tiene 10 tarjetas
+      Y la página 1 tiene 12 tarjetas
 
-    Escenario: Con once miembros hay dos páginas
-      Dado que la colección tiene 11 miembros
+    Escenario: Con trece miembros hay dos páginas
+      Dado que la colección tiene 13 miembros
       Y que la colección tiene el cuerpo propio:
       """
       """
-      Cuando compogo las páginas de la colección con 10 por página
+      Cuando compogo las páginas de la colección con 12 por página
       Entonces hay 2 páginas
-      Y la página 1 tiene 10 tarjetas
+      Y la página 1 tiene 12 tarjetas
+      Y la página 2 tiene 1 tarjetas
+
+    Escenario: Sin pageSize se usan doce tarjetas
+      Dado que la colección tiene 13 miembros
+      Y que la colección tiene el cuerpo propio:
+      """
+      """
+      Cuando compogo las páginas de la colección con el pageSize por defecto
+      Entonces hay 2 páginas
+      Y la página 1 tiene 12 tarjetas
       Y la página 2 tiene 1 tarjetas
 
     Escenario: El corte lo manda la configuración
