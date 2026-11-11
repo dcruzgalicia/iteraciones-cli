@@ -62,3 +62,9 @@ Then('el EPUB {string} tiene en el índice {string}', (nombre: string, texto: st
   if (!nav.includes(texto)) throw new Error(`el índice de ${nombre} no incluye ${JSON.stringify(texto)}`);
 });
 
+Then('el EPUB {string} incluye una imagen', (nombre: string) => {
+  if (!/media\/.+\.(jpg|jpeg|png|webp)/i.test(listaEpub(nombre))) {
+    throw new Error(`el EPUB ${nombre} no incluye imágenes en media/`);
+  }
+});
+
