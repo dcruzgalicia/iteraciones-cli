@@ -197,15 +197,21 @@ Given('el libro produce epub', () => {
   escribirEnProyecto('iteraciones.config.yaml', `${CONFIG_EPUB}\n`);
 });
 
-Then('las portadas del HTML van en el contenido antes de los formatos', () => {
+Then('las portadas del HTML son las primeras tarjetas de related', () => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'un-libro.html'), 'utf8');
-  const main = html.indexOf('<main');
-  const front = html.indexOf('un-libro-frontCover.webp');
-  const back = html.indexOf('un-libro-backCover.webp');
-  const formatos = html.indexOf('>Formatos</h2>');
-  if (main < 0 || front < 0 || back < 0 || formatos < 0) throw new Error('faltan el contenido, las portadas o los formatos');
-  if (!(main < front && front < back && back < formatos)) {
-    throw new Error('las portadas no van en el contenido antes de los formatos');
+  const inicio = html.indexOf('id="slot-related"');
+  const fin = html.indexOf('id="slot-sidebar"', inicio);
+  const related = html.slice(inicio, fin < 0 ? undefined : fin);
+  const [primera, segunda] = [...related.matchAll(/<figure class="[^"]*\btarjeta\b[^"]*">[\s\S]*?<\/figure>/g)].map((m) => m[0]);
+  if (primera === undefined || segunda === undefined) throw new Error('related no tiene las dos tarjetas de portada');
+  if (!primera.includes('un-libro-frontCover.webp')) throw new Error('la primera tarjeta de related no es la portada');
+  if (!segunda.includes('un-libro-backCover.webp')) throw new Error('la segunda tarjeta de related no es la contraportada');
+  if (/\btarjeta\b/.test(related.slice(0, related.indexOf(primera)))) {
+    throw new Error('hay tarjetas antes de las portadas en related');
+  }
+  const main = html.slice(html.indexOf('id="slot-main"'), inicio);
+  if (main.includes('un-libro-frontCover.webp') || main.includes('un-libro-backCover.webp')) {
+    throw new Error('las portadas siguen en la columna principal');
   }
 });
 
