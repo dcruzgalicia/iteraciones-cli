@@ -127,9 +127,9 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const portadas = await loadCard('file', 'card-portadas.html');
   const esCreador = type === 'creator';
   const pageType = esCreador ? 'creator' : type === 'collection' || type === 'list' ? 'collection' : 'file';
-  const main = esCreador ? contenido : [portadas, contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
+  const main = esCreador ? contenido : [contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
   const publications = esCreador ? ['$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n') : '';
-  const related = [...relatedCards, referencias, ...(esCreador ? [portadas] : [])].join('\n');
+  const related = [portadas, ...relatedCards, referencias].join('\n');
   const sidebar = ['$if(announcements-top)$$announcements-top$$endif$', ...siteCards, '$if(announcements-bottom)$$announcements-bottom$$endif$'].join(
     '\n',
   );
