@@ -8,7 +8,7 @@ Característica: metadatos de publicación en el encabezado
     Dado que la raíz del proyecto tiene un proyecto con HTML y metadatos de publicación
     Cuando hago un build del proyecto
     Entonces el comando termina con el código de salida 0
-    Y el archivo "dist/files/test-document.html" contiene "Tipo"
+    Y el archivo "dist/files/test-document.html" contiene "Texto"
     Y el archivo "dist/files/test-document.html" contiene "Test Document"
     Y el archivo "dist/files/test-document.html" contiene "ISBN"
     Y el archivo "dist/files/test-document.html" contiene "978-607-00-0000-0"
