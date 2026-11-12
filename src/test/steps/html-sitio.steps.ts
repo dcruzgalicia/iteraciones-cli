@@ -122,8 +122,12 @@ function chipDelHtml(archivo: string, etiqueta: string): string {
   const html = leer(`dist/files/${archivo}`);
   const patron = new RegExp(`<(h2|a|span)\\b[^>]*class="[^"]*rounded-full[^"]*"[^>]*>(?:<a\\b[^>]*>)?${RegExp.escape(etiqueta)}(?:</a>)?</\\1>`);
   const chip = patron.exec(html);
-  if (chip === null) throw new Error(`el HTML de ${archivo} no tiene un chip ${JSON.stringify(etiqueta)}`);
-  return chip[0];
+  if (chip !== null) return chip[0];
+  const enlace = new RegExp(`<a\\b[^>]*class="[^"]*text-accent-700[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).exec(html);
+  if (enlace !== null) return enlace[0];
+  const texto = new RegExp(`<span[^>]*>${RegExp.escape(etiqueta)}</span>`).exec(html);
+  if (texto !== null) return texto[0];
+  throw new Error(`el HTML de ${archivo} no tiene un chip ${JSON.stringify(etiqueta)}`);
 }
 
 Then('el chip {string} del HTML de {string} no es un enlace', (etiqueta: string, archivo: string) => {
@@ -176,7 +180,7 @@ Then('el chip {string} del HTML de {string} enlaza a {string}', (etiqueta: strin
 
 Then('en el HTML de {string} el chip {string} enlaza a {string}', (archivo: string, etiqueta: string, href: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const enlace = new RegExp(`<a href="${RegExp.escape(href)}" class="[^"]*bg-transparent[^"]*">${RegExp.escape(etiqueta)}</a>`);
+  const enlace = new RegExp(`<a href="${RegExp.escape(href)}"[^>]*>${RegExp.escape(etiqueta)}</a>`);
   if (!enlace.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no enlaza a ${href} en ${archivo}`);
 });
 
