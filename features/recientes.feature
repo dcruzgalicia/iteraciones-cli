@@ -117,4 +117,4 @@ Característica: la tarjeta de entradas recientes del sidebar
         """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/texto-2.html" pone "Recientes" antes que "border-accent-500/40 bg-transparent"
+      Y el archivo "dist/files/texto-2.html" pone "Recientes" antes que "items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent"

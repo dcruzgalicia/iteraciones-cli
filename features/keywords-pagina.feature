@@ -51,7 +51,7 @@ Característica: la página por defecto de palabras clave
       Y el chip "Palabras clave" del HTML de "ensayo.html" enlaza a "./keyword.html"
       Y el chip "Palabra clave" del HTML de "keywords/alfa.html" enlaza a "./../keyword.html"
 
-    Escenario: En index.html el chip del sitio no enlaza a sí mismo
+    Escenario: La tarjeta de palabras clave no repite el nombre del sitio
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y que el archivo "ensayo.md" tiene este contenido
@@ -65,7 +65,7 @@ Característica: la página por defecto de palabras clave
         """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el chip "iteraciones" del HTML de "index.html" no es un enlace
+      Y el slot "sidebar" del archivo "dist/files/index.html" no contiene ">iteraciones</span>"
 
     Escenario: Con una sola palabra clave no hay página ni enlace
       Dado que la raíz del proyecto tiene un proyecto de prueba

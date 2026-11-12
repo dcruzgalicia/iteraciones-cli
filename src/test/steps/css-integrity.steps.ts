@@ -166,6 +166,7 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
     'bg-paper',
     'bg-paper-grid',
     'contenido-compacto',
+    'contenido-preview',
     'contenido-tamano',
     'content-grid',
     'creator-publications-grid',
@@ -267,16 +268,14 @@ When('reviso la punta de las tarjetas de {string}, {string} y {string}', (_a: st
 
 function exigePuntaRecta(html: string, etiqueta: string, llevaMarco: boolean): void {
   if (!llevaMarco) {
-    if (html.includes('rounded-tr-')) throw new Error(`${etiqueta} no debía llevar marco`);
+    if (html.includes('rounded-tr-') || html.includes('rounded-bl-')) throw new Error(`${etiqueta} no debía llevar marco`);
     return;
   }
-  if (!/rounded-tr-(xl|2xl) rounded-bl-(xl|2xl)/.test(html)) {
-    throw new Error(`${etiqueta} no redondea las esquinas de la punta`);
-  }
-  if (/\brounded-(xl|2xl)\b/.test(html)) throw new Error(`${etiqueta} redondea todo, no sólo la punta`);
+  if (!html.includes('rounded-lg')) throw new Error(`${etiqueta} no redondea las esquinas`);
+  if (/rounded-(tr|bl)-/.test(html)) throw new Error(`${etiqueta} conserva esquinas asimétricas`);
 }
 
-Then('la punta de cada tarjeta queda en las esquinas rectas', async () => {
+Then('cada tarjeta usa el mismo redondeo', async () => {
   for (const type of TYPES) {
     for (const card of CARDS) {
       exigePuntaRecta(await readCard(type, card), `${type}/${card}`, !sinMarco(type, card));
@@ -313,8 +312,8 @@ Then('el styles.css define ese fondo con las dos retículas y sin utilidad muert
   if (!world.css.includes('@utility bg-paper-grid')) throw new Error('falta la utilidad bg-paper-grid');
 
   if (!world.css.includes('--grid-fine')) throw new Error('falta la variable --grid-fine');
-  if (!world.css.includes('50px 50px')) throw new Error('falta la retícula gruesa');
-  if (!world.css.includes('10px 10px')) throw new Error('falta la retícula fina');
+  if (!world.css.includes('64px 64px')) throw new Error('falta la retícula gruesa');
+  if (!world.css.includes('16px 16px')) throw new Error('falta la retícula fina');
 
   if (world.css.includes('bg-grid-accent')) throw new Error('bg-grid-accent estaba definida y sin uso');
 });

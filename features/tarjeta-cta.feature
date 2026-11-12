@@ -84,7 +84,7 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
         Cuerpo del texto.
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-2.5 text-[11px] font-semibold"
+      Entonces el archivo "dist/files/index.html" dice "inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20"
       Y el archivo "dist/files/index.html" dice "focus-visible:outline"
 
     Escenario: El botón del menú usa el mismo chip que las tarjetas
@@ -111,7 +111,7 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
         ---
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "href=\"./menu.html\" class=\"inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px]"
+      Entonces el archivo "dist/files/index.html" dice "href=\"./menu.html\" class=\"inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/30 bg-accent-500/12"
 
   Regla de negocio: En lo visible se dice Colaboradora, pero el type sigue siendo creator
 

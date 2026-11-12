@@ -38,7 +38,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/ana-garcia.html" dice "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" dice "assets/images/ana-garcia-ana"
-      Y el archivo "dist/files/ana-garcia.html" dice "rounded-tr-2xl rounded-bl-2xl"
+      Y el archivo "dist/files/ana-garcia.html" dice "rounded-lg"
       Y el archivo "dist/files/ana-garcia.html" dice "grid sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2"
       Y el archivo "dist/files/ana-garcia.html" dice "sm:h-auto"
       Y el archivo "dist/files/ana-garcia.html" dice "md:h-[30rem]"

@@ -99,7 +99,7 @@ Característica: la tarjeta de licencia del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/un-texto.html" pone "Palabras clave" antes que "Algunos derechos reservados."
-      Y el archivo "dist/files/un-texto.html" pone "border-accent-500/40 bg-transparent" antes que "Algunos derechos reservados."
+      Y el archivo "dist/files/un-texto.html" pone "items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent" antes que "Algunos derechos reservados."
       Y la licencia de "dist/files/un-texto.html" va antes de la segunda Redes
 
     Escenario: Los iconos se referencian desde cada página
