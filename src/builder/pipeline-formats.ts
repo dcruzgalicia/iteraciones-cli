@@ -360,7 +360,7 @@ export async function emit404(args: {
   ${ctx.needsCss ? `<link rel="stylesheet" href="${relativeHref('.', ASSETS_CSS_FILE)}">` : ''}
 </head>
 <body class="font-sans antialiased text-base text-stone-900 sm:text-lg dark:text-stone-100 bg-paper bg-paper-grid">
-  <div class="xl:container mx-auto space-y-4 px-2 pt-2 pb-28 sm:space-y-6 sm:px-4 sm:pt-4 sm:pb-32 lg:space-y-8 lg:px-8 lg:pt-8">
+  <div class="mx-auto max-w-[96rem] space-y-4 px-2 pt-2 pb-28 sm:space-y-6 sm:px-4 sm:pt-4 sm:pb-32 lg:space-y-8 lg:px-8 lg:pt-8">
     <header class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 sm:p-6 dark:ring-stone-600/40">
       <div class="flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-3 sm:text-left">
         ${logo}
@@ -480,27 +480,48 @@ function publicationMetaHtml(args: {
   fm: Record<string, unknown>;
   formatCfg: Record<string, unknown> | undefined;
   siteConfig: SiteConfig;
-  keywords: string[];
+  creatorHrefs: Map<string, string>;
 }): string | undefined {
   const campo = (name: string): string | undefined => htmlMetadataField(args.fm, args.formatCfg, args.siteConfig, name);
+  const texto = (name: string): string | undefined => {
+    const valor = campo(name);
+    return valor === undefined ? undefined : Bun.escapeHTML(valor);
+  };
+  const doi = campo('doi');
+  const doiHtml =
+    doi === undefined
+      ? undefined
+      : (() => {
+          const limpio = doi.replace(/^doi:\s*/i, '').trim();
+          const href = /^https?:\/\//i.test(limpio) ? limpio : `https://doi.org/${limpio}`;
+          return `<a href="${Bun.escapeHTML(href)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(limpio)}</a>`;
+        })();
+  const identifier = campo('identifier');
+  const identifierHtml =
+    identifier === undefined
+      ? undefined
+      : /^https?:\/\//i.test(identifier)
+        ? `<a href="${Bun.escapeHTML(identifier)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(identifier)}</a>`
+        : Bun.escapeHTML(identifier);
+  const contributor = parseAuthors(resolveMetadataField(args.fm, args.formatCfg, args.siteConfig, 'contributor'))
+    .map((nombre) => nombreEnlazadoHtml(nombre, args.creatorHrefs))
+    .join(', ');
   const filas: Array<[string, string | undefined]> = [
-    ['Resumen', campo('abstract')],
-    ['DOI', campo('doi')],
-    ['ISBN', campo('isbn')],
-    ['Editorial', campo('publisher')],
-    ['Colaboradoras', campo('contributor')],
-    ['Identificador', campo('identifier')],
-    ['Palabras clave', args.keywords.length > 0 ? args.keywords.join(', ') : undefined],
+    ['DOI', doiHtml],
+    ['ISBN', texto('isbn')],
+    ['Editorial', texto('publisher')],
+    ['Colaboradoras', contributor || undefined],
+    ['Identificador', identifierHtml],
   ];
   const visibles = filas.filter(([, valor]) => valor !== undefined && valor.trim() !== '');
   if (visibles.length === 0) return undefined;
   const html = visibles
     .map(
       ([etiqueta, valor]) =>
-        `<div class="grid gap-1 border-t border-stone-300/50 py-2 first:border-t-0 first:pt-0 dark:border-stone-600/40"><dt class="font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">${etiqueta}</dt><dd class="m-0 text-stone-800 dark:text-stone-200">${Bun.escapeHTML(valor ?? '')}</dd></div>`,
+        `<span><span class="font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">${etiqueta}</span> ${valor}</span>`,
     )
     .join('');
-  return `<dl class="m-0 grid gap-0">${html}</dl>`;
+  return html;
 }
 
 function citationBlockHtml(args: {
@@ -608,7 +629,8 @@ function htmlVars(args: {
   creatorImage?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
-  pageChips?: string;
+  collectionLinks?: string;
+  keywordLinks?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   docChipHrefOverride?: string;
@@ -633,7 +655,8 @@ function htmlVars(args: {
     creatorImage,
     menuHeader,
     menuFooterPlain,
-    pageChips,
+    collectionLinks,
+    keywordLinks,
     announcementsTop,
     announcementsBottom,
     docChipHrefOverride,
@@ -650,6 +673,7 @@ function htmlVars(args: {
   const { dir, slug, fm } = outputs;
   const titulo = doc.frontmatter.title || slug;
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
+  const abstractRaw = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'abstract');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
   const siteTitle = fmString(htmlConfig?.site?.title, 'iteraciones');
   const metaDescription = opcional(htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'description') ?? htmlConfig?.site?.description);
@@ -681,10 +705,12 @@ function htmlVars(args: {
   });
   const publicationMeta =
     doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection'
-      ? publicationMetaHtml({ fm, formatCfg: htmlConfig, siteConfig: ctx.siteConfig, keywords })
+      ? publicationMetaHtml({ fm, formatCfg: htmlConfig, siteConfig: ctx.siteConfig, creatorHrefs })
       : undefined;
+  const showCitation = htmlConfig?.site?.showCitation === true;
   const citationBlock =
-    doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection'
+    showCitation &&
+    (doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection')
       ? citationBlockHtml({
           type: doc.frontmatter.type,
           title: titulo,
@@ -725,6 +751,7 @@ function htmlVars(args: {
     authorMeta: doc.frontmatter.creator.join(', '),
     docTitle: cuando(doc.frontmatter.title !== undefined && doc.frontmatter.title !== TITULO_POR_DEFECTO, doc.frontmatter.title ?? ''),
     subtitle: doc.frontmatter.subtitle,
+    abstract: abstractRaw === undefined ? undefined : Bun.escapeHTML(abstractRaw),
     date: formatHumanDate(doc.frontmatter.date),
     dateIso: opcional(doc.frontmatter.date),
     showDates,
@@ -733,7 +760,6 @@ function htmlVars(args: {
 
     titlehead: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
     subject: subjectVisible(subject, keywords),
-    publishers: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publishers'),
     collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
@@ -756,7 +782,8 @@ function htmlVars(args: {
       announcementsTop,
       announcementsBottom,
     }),
-    pageChips: opcional(pageChips),
+    collectionLinks: opcional(collectionLinks),
+    keywordLinks: opcional(keywordLinks),
     indiceColeccion,
     docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: opcional(extras),
@@ -792,7 +819,8 @@ export interface EmitHtmlPageArgs {
   creatorImage?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
-  pageChips?: string;
+  collectionLinks?: string;
+  keywordLinks?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   docChipHrefOverride?: string;
@@ -817,7 +845,8 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
     creatorImage,
     menuHeader,
     menuFooterPlain,
-    pageChips,
+    collectionLinks,
+    keywordLinks,
     announcementsTop,
     announcementsBottom,
     docChipHrefOverride,
@@ -859,7 +888,8 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
         creatorImage,
         menuHeader,
         menuFooterPlain,
-        pageChips,
+        collectionLinks,
+        keywordLinks,
         announcementsTop,
         announcementsBottom,
         docChipHrefOverride,
@@ -1420,9 +1450,6 @@ const PILL_BASE =
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
 const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
-const EXTRA_PILL_OUTLINE_CLASSES =
-  'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-transparent px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300';
-
 const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
 const MEMBER_BADGE_CLASSES =
@@ -1463,17 +1490,14 @@ const MENU_BUTTON_CLASSES =
 const MENU_LINK_CLASSES =
   'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/40 bg-transparent px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
 
-const PAGE_CHIP_BASE =
-  'inline-flex h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none no-underline transition-colors duration-200 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm';
-const PAGE_COLLECTION_CHIP_CLASSES = `${PAGE_CHIP_BASE} border-accent-500/50 bg-transparent text-accent-800 hover:border-accent-500 hover:underline dark:border-accent-400/50 dark:text-accent-200`;
-const PAGE_KEYWORD_CHIP_CLASSES = `${PAGE_CHIP_BASE} border-stone-500/60 bg-transparent text-stone-600 hover:border-stone-600 hover:underline dark:border-stone-400/60 dark:text-stone-300`;
+const HEADER_LINK_CLASSES =
+  'text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
 const RECENTES_LIMIT = 5;
 const KEYWORD_INDEX_SLUG = 'keyword';
 const SIDEBAR_KEYWORD_CHIP_CLASSES =
   'not-prose inline-flex h-7 items-center gap-1.5 rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-colors duration-200 hover:border-stone-600 hover:underline sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
 const KEYWORD_BADGE_CLASSES =
   'inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
-
 function ctaDeTarjeta(type: string | undefined): string {
   return TYPE_META[type ?? 'file']?.cta ?? 'Leer texto completo';
 }
@@ -1663,11 +1687,6 @@ function keywordChipsCard(keywords: { titulo: string; href: string; count?: numb
       ? `<h2 class="${EXTRA_PILL_CLASSES}">Palabras clave</h2>`
       : `<a href="${titleHref}" class="${EXTRA_PILL_CLASSES} hover:underline">Palabras clave</a>`;
   return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2">${titulo}${ownerChip}</div><div class="flex flex-wrap gap-2">${chips}</div></div>`;
-}
-
-export function keywordsCard(keywords: { titulo: string; href: string; count?: number }[], ownerLabel: string, titleHref?: string): string {
-  const ownerChip = `<span class="${EXTRA_PILL_OUTLINE_CLASSES}">${Bun.escapeHTML(ownerLabel)}</span>`;
-  return keywordChipsCard(keywords, ownerChip, titleHref);
 }
 
 function siteKeywordsCard(
@@ -1936,13 +1955,10 @@ async function buildExtrasHtml(
     tarjetas?: string;
     creatorDocs: CreatorDoc[];
     contenedores: { titulo: string; href: string; type: string | undefined }[];
-    palabrasClave: { titulo: string; href: string }[];
-    keywordOwner: string;
     redesCreador: { name: string; url: string }[];
     duenoRedes: string;
     creatorImage?: string;
     creatorAlt?: string;
-    keywordPageHref?: string;
     creatorHrefs: Map<string, string>;
     available?: Set<string>;
     filters: ExportContext['filters'];
@@ -1982,9 +1998,6 @@ async function buildExtrasHtml(
   }
   if (args.contenedores.some((c) => c.type === 'collection')) {
     partes.push([CARD_WRAPPER, '', containersCard(args.contenedores, args.dir, args.available), '', '</div>'].join('\n'));
-  }
-  if (args.palabrasClave.length > 0) {
-    partes.push([CARD_WRAPPER, '', keywordsCard(args.palabrasClave, args.keywordOwner, args.keywordPageHref), '', '</div>'].join('\n'));
   }
   if (args.redesCreador.length > 0) {
     partes.push([CARD_WRAPPER, '', creatorLinksCard(args.duenoRedes, args.redesCreador), '', '</div>'].join('\n'));
@@ -2090,7 +2103,8 @@ async function emitKeywordIndex(args: {
     docChipOverride: 'Lista',
     menuHeader: menu.header,
     menuFooterPlain: menu.footer,
-    pageChips: '',
+    collectionLinks: '',
+    keywordLinks: '',
     announcementsTop: anunciosTop,
     announcementsBottom: anunciosBottom,
     docChipHrefOverride: '',
@@ -2368,21 +2382,6 @@ function palabrasClaveDeRutas(
 
 function palabrasClaveDe(relativePath: string, dir: string, discoveryIndex: Map<string, DiscoveryEntry>): { titulo: string; href: string }[] {
   return palabrasClaveDeRutas([relativePath], dir, discoveryIndex);
-}
-
-function chipsDePagina(
-  contenedores: { titulo: string; href: string; type: string | undefined }[],
-  palabrasClave: { titulo: string; href: string }[],
-): string {
-  const chips: string[] = [];
-  for (const contenedor of contenedores) {
-    if (contenedor.type !== 'collection') continue;
-    chips.push(`<a href="${contenedor.href}" class="${PAGE_COLLECTION_CHIP_CLASSES}">${Bun.escapeHTML(contenedor.titulo)}</a>`);
-  }
-  for (const keyword of palabrasClave) {
-    chips.push(`<a href="${keyword.href}" class="${PAGE_KEYWORD_CHIP_CLASSES}">${Bun.escapeHTML(keyword.titulo)}</a>`);
-  }
-  return chips.join('');
 }
 
 function chipsDeCabecera(
@@ -3082,30 +3081,24 @@ async function emitCollectionHtml(
     imagePaths,
     sourcePath: doc.filePath,
   });
-  const esTexto = doc.frontmatter.type === undefined || doc.frontmatter.type === 'file';
   const esColeccion = doc.frontmatter.type === 'collection';
-  const palabrasClave = esTexto
-    ? palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex)
-    : esColeccion
-      ? palabrasClaveDeRutas(
-          collectionEntries.map((entrada) => entrada.file),
-          outputs.dir,
-          discoveryIndex,
-        )
-      : [];
-  const keywordOwner = docChipLabel(doc.frontmatter.type);
+  const palabrasClave = esColeccion
+    ? palabrasClaveDeRutas(
+        collectionEntries.map((entrada) => entrada.file),
+        outputs.dir,
+        discoveryIndex,
+      )
+    : palabrasClaveDe(doc.relativePath, outputs.dir, discoveryIndex);
   const duenoRedes = String(outputs.fm.name ?? outputs.fm.title ?? '');
   const creatorImage = retratoDePaginaHref(outputs.fm, webMap, docDir, ctx.outputDir, outputs.dir);
   const extrasComunes = {
     creatorDocs,
     contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
     palabrasClave,
-    keywordOwner,
     redesCreador: esCreadora ? creatorLinks : [],
     duenoRedes,
     creatorImage,
     creatorAlt: creatorImage === undefined ? undefined : `Retrato de ${doc.frontmatter.title || outputs.slug}`,
-    keywordPageHref: keywordIndexHref(outputs.dir, discoveryIndex),
     creatorHrefs: hrefsCreadores,
     filters: exportCtx.filters,
     imagePaths,
@@ -3116,7 +3109,13 @@ async function emitCollectionHtml(
   };
   const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas, parteDeExtras(doc.frontmatter.type));
   const sidebarExtras = (await extrasDeLaPagina(extrasComunes, [], 'sidebar')) as string;
-  const pageChips = chipsDePagina(extrasComunes.contenedores, extrasComunes.palabrasClave);
+  const collectionLinks = extrasComunes.contenedores
+    .filter((contenedor) => contenedor.type === 'collection')
+    .map((contenedor) => `<a href="${contenedor.href}" class="${HEADER_LINK_CLASSES}">${Bun.escapeHTML(contenedor.titulo)}</a>`)
+    .join(', ');
+  const keywordLinks = extrasComunes.palabrasClave
+    .map((keyword) => `<a href="${keyword.href}" class="${HEADER_LINK_CLASSES}">${Bun.escapeHTML(keyword.titulo)}</a>`)
+    .join(', ');
 
   const contenidos = paginas;
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
@@ -3138,7 +3137,8 @@ async function emitCollectionHtml(
     creatorImage: creatorImage,
     menuHeader: menuHeader,
     menuFooterPlain: menuFooterPlain,
-    pageChips: pageChips,
+    collectionLinks: collectionLinks,
+    keywordLinks: keywordLinks,
     announcementsTop: anunciosTop,
     announcementsBottom: anunciosBottom,
   });

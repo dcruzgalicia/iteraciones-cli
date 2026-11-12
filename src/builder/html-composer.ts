@@ -52,7 +52,7 @@ export function logoBlockHtml(href: string, logoSize?: string, svg?: string): st
 }
 
 export function creatorPortraitHtml(image: string, alt: string): string {
-  return `<div class="min-w-0"><figure class="relative m-0 h-[30rem] overflow-hidden rounded-tr-2xl rounded-bl-2xl tarjeta sm:h-[32rem] lg:h-[34rem]"><img src="${Bun.escapeHTML(image)}" alt="${Bun.escapeHTML(alt)}" class="block h-full w-full object-cover object-center"></figure></div>`;
+  return `<figure class="relative m-0 h-[30rem] sm:h-auto md:h-[30rem] lg:h-auto"><img src="${Bun.escapeHTML(image)}" alt="${Bun.escapeHTML(alt)}" class="absolute inset-0 block h-full w-full object-cover object-center"></figure>`;
 }
 
 export const CHIP_OUTLINE_CLASSES =
@@ -115,7 +115,6 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
     await loadCard(type, 'card-indice.html'),
     await loadCard(type, 'card-formatos.html'),
-    await loadCard('file', 'card-publicacion.html'),
     await loadCard('file', 'card-cita.html'),
     await loadCard('file', 'card-indice-coleccion.html'),
   ];
@@ -131,7 +130,6 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const main = esCreador
     ? contenido
     : [portadas, contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
-  const photo = esCreador ? '$if(creator-photo)$$creator-photo$$endif$' : '';
   const publications = esCreador ? ['$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n') : '';
   const related = [...relatedCards, referencias, ...(esCreador ? [portadas] : [])].join('\n');
   const sidebar = [
@@ -147,7 +145,6 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     .replace(slot('footer'), () => footer);
   html = fillSlot(html, 'page-header', metadata);
   html = fillSlot(html, 'main', main);
-  html = fillSlot(html, 'photo', photo);
   html = fillSlot(html, 'publications', publications);
   html = fillSlot(html, 'related', related);
   html = fillSlot(html, 'sidebar', sidebar);
@@ -175,6 +172,7 @@ export interface HtmlPageVars {
   authorMeta?: string;
   docTitle?: string;
   subtitle?: string;
+  abstract?: string;
   date?: string;
   dateIso?: string;
   showDates?: boolean;
@@ -183,7 +181,6 @@ export interface HtmlPageVars {
 
   titlehead?: string;
   subject?: string;
-  publishers?: string;
   collectionCreatorPrefix?: string;
 
   docChip?: string;
@@ -198,7 +195,8 @@ export interface HtmlPageVars {
   menuHeader?: string;
   menuFooterPlain?: string;
 
-  pageChips?: string;
+  collectionLinks?: string;
+  keywordLinks?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;

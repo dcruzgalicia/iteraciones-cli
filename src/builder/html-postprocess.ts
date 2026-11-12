@@ -26,7 +26,7 @@ function removeEmptySlot(html: string, name: string): string {
 
 function removeEmptyGridSlots(html: string): string {
   let resultado = html;
-  for (const name of ['photo', 'publications', 'related', 'sidebar']) {
+  for (const name of ['publications', 'related', 'sidebar']) {
     resultado = removeEmptySlot(resultado, name);
   }
   return resultado.replace(/<aside id="slot-aside"[^>]*>\s*<\/aside>/, '');
