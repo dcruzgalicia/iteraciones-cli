@@ -214,6 +214,12 @@ Then('la portada del HTML va en la tarjeta de encabezado', () => {
     'rounded-lg',
     'border-2',
     'border-accent-500/70',
+    'transition-all',
+    'duration-200',
+    'hover:-translate-x-0.5',
+    'hover:-translate-y-0.5',
+    'hover:shadow-[3px_3px_0_0]',
+    'hover:shadow-accent-500/30',
     'object-contain',
   ]) {
     if (!portada.includes(clase)) throw new Error(`la portada del encabezado no tiene ${clase}`);
