@@ -124,12 +124,12 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const menuHeader = '$if(menu-header)$$menu-header$$endif$';
   const menuFooterPlain = '$if(menu-footer-plain)$$menu-footer-plain$$endif$';
   const header = headerHtml(identity, menuHeader, redes);
-  const portadas = await loadCard('file', 'card-portadas.html');
+  const contraportada = await loadCard('file', 'card-contraportada.html');
   const esCreador = type === 'creator';
   const pageType = esCreador ? 'creator' : type === 'collection' || type === 'list' ? 'collection' : 'file';
   const main = esCreador ? contenido : [contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
   const publications = esCreador ? ['$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n') : '';
-  const related = [portadas, ...relatedCards, referencias].join('\n');
+  const related = [contraportada, ...relatedCards, referencias].join('\n');
   const sidebar = ['$if(announcements-top)$$announcements-top$$endif$', ...siteCards, '$if(announcements-bottom)$$announcements-bottom$$endif$'].join(
     '\n',
   );

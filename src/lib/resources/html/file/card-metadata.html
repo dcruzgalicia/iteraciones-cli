@@ -1,62 +1,69 @@
     <div class="tarjeta relative min-w-0 rounded-lg p-4 text-left sm:p-6 lg:p-8">
-      <div class="flex flex-wrap items-center gap-2">
-        $if(doc-chip)$
-        $if(doc-chip-href)$
-        <a href="$doc-chip-href$" class="not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 hover:border-accent-500 hover:bg-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200">$doc-chip$</a>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6 lg:gap-8">
+        $if(front-cover)$
+        <img src="$front-cover$" alt="Portada" class="w-3/4 shrink-0 rounded-lg object-contain sm:w-1/2 md:w-2/5 lg:w-1/3 xl:w-1/4 2xl:w-1/4">
+        $endif$
+        <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          $if(doc-chip)$
+          $if(doc-chip-href)$
+          <a href="$doc-chip-href$" class="not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 hover:border-accent-500 hover:bg-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200">$doc-chip$</a>
+          $else$
+          <span class="not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200">$doc-chip$</span>
+          $endif$
+          $endif$
+          $if(collection-chips)$$collection-chips$$endif$
+          $if(keyword-chips)$$keyword-chips$$endif$
+        </div>
+        $if(titlehead)$
+        <p class="mt-3 text-xs font-mono text-stone-500 dark:text-stone-400">$titlehead$</p>
+        $endif$
+        $if(doc-title)$
+        <h1 class="mt-3 text-3xl font-bold leading-tight tracking-tight text-accent-900 sm:text-4xl lg:text-5xl xl:text-6xl dark:text-accent-100">$doc-title$</h1>
+        $endif$
+        $if(subtitle)$
+        <p class="mt-2 text-lg italic text-accent-800 sm:text-xl lg:text-2xl dark:text-accent-200">$subtitle$</p>
+        $endif$
+        $if(author-names)$
+        <p class="nombres-enlazados mt-3 text-base font-semibold text-accent-700 sm:text-lg lg:text-xl dark:text-accent-300">$author-names$</p>
+        $endif$
+        $if(collection-creator-prefix)$
+        <div class="mt-3 flex flex-col gap-1">
+          <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">$collection-creator-prefix$</span>
+          $if(collection-creator-names)$<span class="nombres-enlazados text-sm text-stone-700 dark:text-stone-300">$collection-creator-names$</span>$endif$
+        </div>
         $else$
-        <span class="not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200">$doc-chip$</span>
-        $endif$
-        $endif$
-        $if(collection-chips)$$collection-chips$$endif$
-        $if(keyword-chips)$$keyword-chips$$endif$
-      </div>
-      $if(titlehead)$
-      <p class="mt-3 text-xs font-mono text-stone-500 dark:text-stone-400">$titlehead$</p>
-      $endif$
-      $if(doc-title)$
-      <h1 class="mt-3 text-3xl font-bold leading-tight tracking-tight text-accent-900 sm:text-4xl lg:text-5xl xl:text-6xl dark:text-accent-100">$doc-title$</h1>
-      $endif$
-      $if(subtitle)$
-      <p class="mt-2 text-lg italic text-accent-800 sm:text-xl lg:text-2xl dark:text-accent-200">$subtitle$</p>
-      $endif$
-      $if(author-names)$
-      <p class="nombres-enlazados mt-3 text-base font-semibold text-accent-700 sm:text-lg lg:text-xl dark:text-accent-300">$author-names$</p>
-      $endif$
-      $if(collection-creator-prefix)$
-      <div class="mt-3 flex flex-col gap-1">
-        <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">$collection-creator-prefix$</span>
-        $if(collection-creator-names)$<span class="nombres-enlazados text-sm text-stone-700 dark:text-stone-300">$collection-creator-names$</span>$endif$
-      </div>
-      $else$
-      $if(collection-creator-names)$
-      <div class="mt-3 flex flex-col gap-1">
-        <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Antologadora</span>
-        <span class="nombres-enlazados text-sm text-stone-700 dark:text-stone-300">$collection-creator-names$</span>
-      </div>
-      $endif$
-      $endif$
-      <div class="mt-4 grid gap-3 text-sm text-stone-700 sm:gap-4 sm:text-base lg:grid-cols-3 lg:gap-6 dark:text-stone-300">
-        $if(show-dates)$
-        $if(date-iso)$
-        <div class="flex flex-col gap-1">
-          <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Publicado</span>
-          <span class="text-sm text-stone-800 sm:text-base dark:text-stone-200"><time datetime="$date-iso$">$date$</time></span>
+        $if(collection-creator-names)$
+        <div class="mt-3 flex flex-col gap-1">
+          <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Antologadora</span>
+          <span class="nombres-enlazados text-sm text-stone-700 dark:text-stone-300">$collection-creator-names$</span>
         </div>
         $endif$
         $endif$
-        $if(publication-meta)$$publication-meta$$endif$
-        $if(subject)$
-        <div class="flex flex-col gap-1">
-          <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Materia</span>
-          <span class="text-sm text-stone-800 sm:text-base dark:text-stone-200">$subject$</span>
+        <div class="mt-4 grid gap-3 text-sm text-stone-700 sm:gap-4 sm:text-base lg:grid-cols-3 lg:gap-6 dark:text-stone-300">
+          $if(show-dates)$
+          $if(date-iso)$
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Publicado</span>
+            <span class="text-sm text-stone-800 sm:text-base dark:text-stone-200"><time datetime="$date-iso$">$date$</time></span>
+          </div>
+          $endif$
+          $endif$
+          $if(publication-meta)$$publication-meta$$endif$
+          $if(subject)$
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Materia</span>
+            <span class="text-sm text-stone-800 sm:text-base dark:text-stone-200">$subject$</span>
+          </div>
+          $endif$
+        </div>
+        $if(abstract)$
+        <div class="mt-4 flex flex-col gap-1">
+          <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Resumen</span>
+          <p class="m-0 text-sm leading-relaxed text-stone-700 dark:text-stone-300">$abstract$</p>
         </div>
         $endif$
+        <div id="block-intro"></div>
+        </div>
       </div>
-      $if(abstract)$
-      <div class="mt-4 flex flex-col gap-1">
-        <span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Resumen</span>
-        <p class="m-0 text-sm leading-relaxed text-stone-700 dark:text-stone-300">$abstract$</p>
-      </div>
-      $endif$
-      <div id="block-intro"></div>
     </div>
