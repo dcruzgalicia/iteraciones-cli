@@ -360,17 +360,17 @@ export async function emit404(args: {
   ${ctx.needsCss ? `<link rel="stylesheet" href="${relativeHref('.', ASSETS_CSS_FILE)}">` : ''}
 </head>
 <body class="font-sans antialiased text-base text-stone-900 sm:text-lg dark:text-stone-100 bg-paper bg-paper-grid">
-  <div class="mx-auto max-w-[96rem] space-y-4 px-2 pt-2 pb-28 sm:space-y-6 sm:px-4 sm:pt-4 sm:pb-32 lg:space-y-8 lg:px-8 lg:pt-8">
-    <header class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 sm:p-6 dark:ring-stone-600/40">
+  <div class="mx-auto max-w-[96rem] space-y-3 px-3 pt-3 pb-24 sm:space-y-5 sm:px-5 sm:pt-5 sm:pb-28 lg:space-y-7 lg:px-8 lg:pt-7 lg:pb-32">
+    <header class="tarjeta relative rounded-lg p-4  sm:p-6 ">
       <div class="flex flex-col items-start gap-2 text-left sm:flex-row sm:gap-3">
         ${logo}
         <div class="flex min-w-0 flex-col items-start">
           <a href="./index.html" class="font-semibold text-base leading-none text-accent-800 no-underline hover:underline sm:text-lg lg:text-xl dark:text-accent-300">${Bun.escapeHTML(siteTitle)}</a>
-          ${tagline === '' ? '' : `<span class="mt-1 text-[11px] italic leading-none text-stone-600 sm:text-xs lg:text-sm dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
+          ${tagline === '' ? '' : `<span class="mt-1 text-[10px] sm:text-[11px] lg:text-xs italic leading-none text-stone-600 sm:text-xs lg:text-sm dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
         </div>
       </div>
     </header>
-    <main class="tarjeta relative rounded-tr-2xl rounded-bl-2xl p-6 ring-1 ring-inset ring-stone-300/60 sm:p-8 dark:ring-stone-600/40">
+    <main class="tarjeta relative rounded-lg p-6  sm:p-8 ">
       <h1 class="text-2xl font-bold text-accent-900 sm:text-3xl dark:text-accent-100">Página no encontrada</h1>
       <p class="mt-4 text-stone-700 dark:text-stone-300">La página que buscas no existe o cambió de lugar.</p>
       <nav aria-label="Enlaces de recuperación" class="mt-6">
@@ -518,7 +518,7 @@ function publicationMetaHtml(args: {
   const html = visibles
     .map(
       ([etiqueta, valor]) =>
-        `<div class="flex flex-col gap-1"><span class="text-[11px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">${etiqueta}</span><span class="text-sm text-stone-800 dark:text-stone-200">${valor}</span></div>`,
+        `<div class="flex flex-col gap-1"><span class="text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">${etiqueta}</span><span class="text-sm text-stone-800 sm:text-base dark:text-stone-200">${valor}</span></div>`,
     )
     .join('');
   return html;
@@ -559,11 +559,11 @@ function citationBlockHtml(args: {
   const bibtex = bibLineas.join('\n');
   const ris = risLineas.join('\n');
   const enlace = (nombre: string, contenido: string): string =>
-    `<a download="${nombre}" href="data:text/plain,${encodeURIComponent(contenido)}" class="inline-flex h-7 items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-3 text-xs font-semibold text-accent-800 no-underline hover:bg-accent-500/20 dark:text-accent-300">${nombre}</a>`;
+    `<a download="${nombre}" href="data:text/plain,${encodeURIComponent(contenido)}" class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/40 bg-accent-500/10 px-3 text-xs font-semibold text-accent-800 no-underline hover:bg-accent-500/20 dark:text-accent-300">${nombre}</a>`;
   return [
     '<div class="min-w-0">',
-    '<section class="relative rounded-tr-xl rounded-bl-xl tarjeta p-4 text-xs! ring-1 ring-inset ring-stone-300/60 sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! dark:ring-stone-600/40">',
-    '<h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Cómo citar</h2>',
+    '<section class="relative rounded-lg tarjeta p-4 text-xs!  sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! ">',
+    '<h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Cómo citar</h2>',
     `<p class="m-0 text-stone-800 dark:text-stone-200">${Bun.escapeHTML(apa)}</p>`,
     `<div class="mt-4 flex flex-wrap gap-2">${enlace('cita.bib', bibtex)}${enlace('cita.ris', ris)}</div>`,
     `<details class="mt-4"><summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">BibTeX</summary><pre class="mt-2 overflow-x-auto rounded-lg bg-stone-100 p-3 text-xs dark:bg-stone-950/70">${Bun.escapeHTML(bibtex)}</pre></details>`,
@@ -573,13 +573,7 @@ function citationBlockHtml(args: {
   ].join('');
 }
 
-function socialMetaTags(args: {
-  title: string;
-  description?: string;
-  type: string;
-  url?: string;
-  image?: string;
-}): string | undefined {
+function socialMetaTags(args: { title: string; description?: string; type: string; url?: string; image?: string }): string | undefined {
   const tags: string[] = [];
   tags.push(`<meta property="og:title" content="${Bun.escapeHTML(args.title)}">`);
   if (args.description !== undefined) tags.push(`<meta property="og:description" content="${Bun.escapeHTML(args.description)}">`);
@@ -675,7 +669,6 @@ function htmlVars(args: {
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
   const abstractRaw = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'abstract');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
-  const siteTitle = fmString(htmlConfig?.site?.title, 'iteraciones');
   const metaDescription = opcional(htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'description') ?? htmlConfig?.site?.description);
   const showDates = fm.showDates === false ? false : fm.showDates === true ? true : htmlConfig?.site?.showDates === true;
   const siteUrl = htmlConfig?.site?.url;
@@ -709,8 +702,7 @@ function htmlVars(args: {
       : undefined;
   const showCitation = htmlConfig?.site?.showCitation === true;
   const citationBlock =
-    showCitation &&
-    (doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection')
+    showCitation && (doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection')
       ? citationBlockHtml({
           type: doc.frontmatter.type,
           title: titulo,
@@ -731,7 +723,6 @@ function htmlVars(args: {
   });
   const esListaIndex = doc.relativePath === 'index.md' && doc.frontmatter.type === 'list';
   const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
-  const esPaginaIndex = doc.relativePath === 'index.md';
   return {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
     title: titulo,
@@ -770,9 +761,7 @@ function htmlVars(args: {
     creatorImage,
     creatorImageAlt: cuando(creatorImage !== undefined, `Retrato de ${titulo}`),
     creatorPhoto:
-      doc.frontmatter.type === 'creator' && creatorImage !== undefined
-        ? creatorPortraitHtml(creatorImage, `Retrato de ${titulo}`)
-        : undefined,
+      doc.frontmatter.type === 'creator' && creatorImage !== undefined ? creatorPortraitHtml(creatorImage, `Retrato de ${titulo}`) : undefined,
     ...tarjetasDeSitio({
       siteConfig: ctx.siteConfig,
       dir,
@@ -789,15 +778,7 @@ function htmlVars(args: {
     extras: opcional(extras),
     sidebarExtras: opcional(sidebarExtras),
     recientes: opcional(esListaIndex ? '' : recentesCard(discoveryIndex, dir)),
-    siteKeywords: opcional(
-      siteKeywordsCard(
-        discoveryIndex,
-        dir,
-        siteTitle,
-        esPaginaKeyword ? undefined : keywordIndexHref(dir, discoveryIndex),
-        esPaginaIndex ? undefined : relativeHref(dir, 'index.html'),
-      ),
-    ),
+    siteKeywords: opcional(siteKeywordsCard(discoveryIndex, dir, esPaginaKeyword ? undefined : keywordIndexHref(dir, discoveryIndex))),
     pagination: opcional(pagination),
   };
 }
@@ -1211,12 +1192,8 @@ function collectionCards(
 ): string {
   const cards: string[] = [];
   if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
-  for (const [indice, e] of printableEntries(entries)
-    .slice(desde, hasta)
-    .entries()) {
-    cards.push(
-      collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, indice > 0),
-    );
+  for (const [indice, e] of printableEntries(entries).slice(desde, hasta).entries()) {
+    cards.push(collectionCard(e, memberHrefs.get(e.file), creatorHrefs, dir, available, discoveryIndex, page, currentHref, imagenes, indice > 0));
   }
   return espaciosNormales(cards.join('\n\n'));
 }
@@ -1311,10 +1288,10 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-accent-500/40 bg-accent-500/10 px-2 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 sm:px-2.5 sm:text-xs lg:px-3 lg:text-sm dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
+  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500/40 bg-accent-500/10 px-1.5 sm:px-2.5 lg:px-3 text-[10px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/30 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-none dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
 const PAGINATION_ACTIVE_CLASSES =
-  'inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-accent-500 bg-accent-500/20 px-2 text-[11px] font-semibold text-accent-900 sm:px-2.5 sm:text-xs lg:px-3 lg:text-sm dark:text-accent-100';
+  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500 bg-accent-500/20 px-1.5 sm:px-2.5 lg:px-3 text-[10px] sm:text-xs lg:text-sm font-semibold text-accent-900 shadow-[3px_3px_0_0] shadow-accent-500/40 dark:text-accent-100';
 
 const PAGINATION_NAV_CLASSES = 'mt-8 flex flex-wrap items-center justify-start gap-2 sm:mt-10 lg:mt-12';
 
@@ -1349,9 +1326,9 @@ export function paginationNav(outSlug: string, pagina: number, total: number): s
   return `<nav class="${PAGINATION_NAV_CLASSES}" aria-label="Paginación">${anterior}${numeros}${siguiente}</nav>`;
 }
 
-const CARD_IMAGE_CLASSES = 'mt-0! mb-3! flex h-[100px] w-full items-center justify-start overflow-hidden rounded-tr-xl rounded-bl-xl sm:mb-4!';
+const CARD_IMAGE_CLASSES = 'mt-0! mb-3! flex h-[100px] w-full items-center justify-start overflow-hidden rounded-lg sm:mb-4!';
 const CARD_IMAGE_IMG_CLASSES = 'm-0! block h-full w-full object-cover';
-const CARD_IMAGE_LINK_CLASSES = 'block h-full w-full rounded-tr-xl rounded-bl-xl';
+const CARD_IMAGE_LINK_CLASSES = 'block h-full w-full rounded-lg';
 const PORTRAIT_WRAPPER_CLASSES = 'mb-6 flex justify-center';
 const PORTRAIT_CLASSES = 'm-0! block rounded-full object-cover';
 const PORTRAIT_LINK_CLASSES = 'block overflow-hidden rounded-full [clip-path:circle(50%)]';
@@ -1407,7 +1384,7 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
         : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
     })
     .join('');
-  const indice = `<div class="min-w-0" id="indice-completo"><nav class="contenido-tamano contenido-compacto relative rounded-tr-xl rounded-bl-xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40"><h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
+  const indice = `<div class="min-w-0" id="indice-completo"><nav class="contenido-tamano contenido-compacto relative rounded-lg tarjeta p-4 sm:p-6 "><h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
   return Array.from({ length: total }, () => indice);
 }
 
@@ -1440,12 +1417,15 @@ const CARD_WRAPPER = '<div class="min-w-0">';
 const CARD_PREVIEW_MAX_WORDS = 150;
 
 const CARD_TEXT_CLASSES =
-  'prose prose-base dark:prose-invert max-w-none contenido-tamano contenido-compacto [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-lg md:prose-xl lg:prose-2xl';
+  'prose prose-sm dark:prose-invert max-w-none contenido-preview contenido-compacto [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-base md:prose-lg lg:prose-xl';
 
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[30rem] flex-col overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-4 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_h3]:line-clamp-2 [&_h3]:pb-1.5 sm:h-[32rem] sm:p-5 lg:h-[34rem] lg:p-6 ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[26rem] flex-col overflow-hidden rounded-lg tarjeta p-3 [overflow-wrap:anywhere] [&_h3]:line-clamp-2 [&_h3]:pb-1.5 sm:h-[30rem] sm:p-4 lg:h-[34rem] lg:p-5 ${CARD_TEXT_CLASSES}`;
+
+const CHIP_HOVER_EFFECT_CLASSES =
+  'transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30';
 
 const PILL_BASE =
-  'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-[10px] sm:text-xs lg:text-sm font-normal uppercase tracking-wide leading-none text-accent-800 dark:text-accent-300';
 
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
@@ -1453,13 +1433,13 @@ const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
 const MEMBER_BADGE_CLASSES =
-  'inline-block shrink-0 rounded-full border border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
+  'inline-block shrink-0 rounded-md border-2 border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
 function memberTypeLabel(type: string | undefined): string {
   return TYPE_META[type ?? 'file']?.memberLabel ?? 'Texto';
 }
 
-const CHIP_HOVER_CLASSES = 'transition-colors duration-200 hover:underline';
+const CHIP_HOVER_CLASSES = `${CHIP_HOVER_EFFECT_CLASSES} hover:underline`;
 
 const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
 
@@ -1475,36 +1455,35 @@ function chipHtml(
   const href = slug !== undefined && (available === undefined || available.has(slug)) ? defaultListHref(dir, type) : undefined;
   const chip = `<h2 class="${classes}">${label}</h2>`;
   if (href === undefined || href === currentHref) return chip;
-  return `<h2 class="${classes}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
+  return `<h2 class="${classes} ${CHIP_HOVER_EFFECT_CLASSES}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
 }
 
-const MEMBER_LINK_CLASSES =
-  'py-1 no-underline underline-offset-4 transition-colors duration-200 hover:underline';
+const MEMBER_LINK_CLASSES = 'py-1 no-underline underline-offset-4 transition-colors duration-200 hover:underline';
 
 const CARD_CTA_CLASSES =
-  'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-3 lg:px-3.5 text-[10px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/40 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline hover:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
 
 const MENU_BUTTON_CLASSES =
-  'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/20 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-[10px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/35 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
 const MENU_LINK_CLASSES =
-  'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/40 bg-transparent px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
 
 const HEADER_COLLECTION_CHIP_CLASSES =
-  'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/50 bg-transparent px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:underline sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200';
 const HEADER_KEYWORD_CHIP_CLASSES =
-  'not-prose inline-flex h-7 items-center rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none text-stone-600 no-underline transition-colors duration-200 hover:border-stone-600 hover:underline sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide leading-none text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
 const RECENTES_LIMIT = 5;
 const KEYWORD_INDEX_SLUG = 'keyword';
 const SIDEBAR_KEYWORD_CHIP_CLASSES =
-  'not-prose inline-flex h-7 items-center gap-1.5 rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-colors duration-200 hover:border-stone-600 hover:underline sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
 const KEYWORD_BADGE_CLASSES =
-  'inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
+  'inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
 function ctaDeTarjeta(type: string | undefined): string {
   return TYPE_META[type ?? 'file']?.cta ?? 'Leer texto completo';
 }
 
-const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-tr-xl rounded-bl-xl tarjeta p-4 text-xs! ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! ${CARD_TEXT_CLASSES}`;
+const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-lg tarjeta p-3 text-xs! [overflow-wrap:anywhere] sm:p-4 sm:text-xs! md:text-sm! lg:p-5 lg:text-base! ${CARD_TEXT_CLASSES}`;
 
 function extraCard(inner: string): string {
   return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', inner, '', '::::'].join('\n');
@@ -1676,7 +1655,7 @@ export function containersCard(
   return extraCard([`<div class="flex flex-wrap items-center gap-2 mb-4">${chips.join('')}</div>`, '', items].join('\n'));
 }
 
-function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], ownerChip: string, titleHref?: string): string {
+function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], titleHref?: string): string {
   if (keywords.length === 0) return '';
   const chips = keywords
     .map((keyword) => {
@@ -1687,27 +1666,17 @@ function keywordChipsCard(keywords: { titulo: string; href: string; count?: numb
   const titulo =
     titleHref === undefined
       ? `<h2 class="${EXTRA_PILL_CLASSES}">Palabras clave</h2>`
-      : `<a href="${titleHref}" class="${EXTRA_PILL_CLASSES} hover:underline">Palabras clave</a>`;
-  return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2">${titulo}${ownerChip}</div><div class="flex flex-wrap gap-2">${chips}</div></div>`;
+      : `<a href="${titleHref}" class="${EXTRA_PILL_CLASSES} ${CHIP_HOVER_EFFECT_CLASSES} hover:underline">Palabras clave</a>`;
+  return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2">${titulo}</div><div class="flex flex-wrap gap-2">${chips}</div></div>`;
 }
 
-function siteKeywordsCard(
-  discoveryIndex: Map<string, DiscoveryEntry>,
-  dir: string,
-  siteTitle: string,
-  titleHref?: string,
-  siteHref?: string,
-): string {
+function siteKeywordsCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, titleHref?: string): string {
   const keywords = keywordListsOf(discoveryIndex).map(({ slug, label }) => ({
     titulo: label,
     href: keywordHref(dir, slug),
     count: keywordMembers(discoveryIndex, slug).length,
   }));
-  const ownerChip =
-    siteHref === undefined
-      ? `<span class="${CHIP_OUTLINE_CLASSES}">${Bun.escapeHTML(siteTitle)}</span>`
-      : `<a href="${siteHref}" class="${CHIP_OUTLINE_CLASSES}">${Bun.escapeHTML(siteTitle)}</a>`;
-  return keywordChipsCard(keywords, ownerChip, titleHref);
+  return keywordChipsCard(keywords, titleHref);
 }
 
 function keywordIndexAvailable(discoveryIndex: Map<string, DiscoveryEntry>): boolean {

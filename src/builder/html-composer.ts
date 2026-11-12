@@ -56,7 +56,7 @@ export function creatorPortraitHtml(image: string, alt: string): string {
 }
 
 export const CHIP_OUTLINE_CLASSES =
-  'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/40 bg-transparent px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none no-underline text-accent-700 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:text-accent-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-normal uppercase tracking-wide leading-none no-underline text-accent-700 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:text-accent-300';
 
 function frecuenciasInline(siteConfig: SiteConfig): string {
   const links = siteConfig.format?.html?.site?.links ?? [];
@@ -64,7 +64,7 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
   const items = links
     .map(
       (link: { name: string; url: string }) =>
-        `<a href="${Bun.escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex h-7 items-center rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold text-stone-600 no-underline transition-colors duration-200 hover:border-stone-600 hover:bg-stone-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:bg-transparent dark:text-stone-300 dark:hover:bg-stone-500/10">${Bun.escapeHTML(link.name)}</a>`,
+        `<a href="${Bun.escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:bg-stone-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:bg-transparent dark:text-stone-300 dark:hover:bg-stone-500/10">${Bun.escapeHTML(link.name)}</a>`,
     )
     .join('');
   return `<nav aria-label="Redes" class="contents">${items}</nav>`;
@@ -72,7 +72,7 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
 
 function identityCard(children: string[]): string {
   return [
-    '<div class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 sm:p-6 lg:p-8">',
+    '<div class="tarjeta relative rounded-lg p-4 sm:p-6 lg:p-8">',
     '<div class="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:gap-12">',
     ...children,
     '</div>',
@@ -127,16 +127,12 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const portadas = await loadCard('file', 'card-portadas.html');
   const esCreador = type === 'creator';
   const pageType = esCreador ? 'creator' : type === 'collection' || type === 'list' ? 'collection' : 'file';
-  const main = esCreador
-    ? contenido
-    : [portadas, contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
+  const main = esCreador ? contenido : [portadas, contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
   const publications = esCreador ? ['$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n') : '';
   const related = [...relatedCards, referencias, ...(esCreador ? [portadas] : [])].join('\n');
-  const sidebar = [
-    '$if(announcements-top)$$announcements-top$$endif$',
-    ...siteCards,
-    '$if(announcements-bottom)$$announcements-bottom$$endif$',
-  ].join('\n');
+  const sidebar = ['$if(announcements-top)$$announcements-top$$endif$', ...siteCards, '$if(announcements-bottom)$$announcements-bottom$$endif$'].join(
+    '\n',
+  );
   const footer = footerHtml(footerIdentity, menuFooterPlain, redes);
 
   let html = skeleton

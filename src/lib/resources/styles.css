@@ -5,20 +5,22 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @utility bg-paper-grid {
-  --grid-fine: color-mix(in srgb, var(--color-accent-700) 2.5%, transparent);
+  --grid-fine: color-mix(in srgb, var(--color-accent-700) 4%, transparent);
   --grid-bold: color-mix(in srgb, var(--color-accent-700) 7%, transparent);
   background-image:
-    linear-gradient(to right, var(--grid-bold) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-bold) 1px, transparent 1px),
-    linear-gradient(to right, var(--grid-fine) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-bold) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-bold) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-fine) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
   background-size:
-    50px 50px,
-    50px 50px,
-    10px 10px,
-    10px 10px;
+    64px 64px,
+    64px 64px,
+    16px 16px,
+    16px 16px;
 
   &:where([data-theme="dark"], [data-theme="dark"] *) {
-    --grid-fine: color-mix(in srgb, var(--color-accent-500) 2%, transparent);
-    --grid-bold: color-mix(in srgb, var(--color-accent-500) 5%, transparent);
+    --grid-fine: color-mix(in srgb, var(--color-accent-500) 3.5%, transparent);
+    --grid-bold: color-mix(in srgb, var(--color-accent-500) 5.5%, transparent);
   }
 }
 
@@ -33,7 +35,7 @@
 @utility content-grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: start;
   grid-template-areas:
     "header"
@@ -87,7 +89,7 @@
 
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem;
+    gap: 1.25rem;
 
     & .page-aside {
       gap: 1.5rem;
@@ -149,7 +151,7 @@
 
   @media (min-width: 1024px) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2rem;
+    gap: 1.75rem;
 
     & .page-aside {
       gap: 2rem;
@@ -212,6 +214,7 @@
 
   @media (min-width: 1536px) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2rem;
 
     &.page-file {
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -312,67 +315,43 @@
 }
 
 @utility tarjeta {
-  background-color: color-mix(in oklab, var(--color-accent-500) 2%, color-mix(in srgb, #fff 95%, transparent));
-  border-color: color-mix(in srgb, var(--color-stone-300) 90%, transparent);
+  background-color: color-mix(in oklab, var(--color-accent-500) 2%, #fff);
+  border: 2px solid color-mix(in oklab, var(--color-accent-500) 50%, transparent);
+  border-radius: 0.5rem;
+  box-shadow: 5px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 35%, transparent);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 
   &:hover {
-    --tw-ring-color: color-mix(in srgb, var(--color-accent-500) 40%, transparent);
+    border-color: color-mix(in oklab, var(--color-accent-500) 90%, transparent);
+    box-shadow: 6px 6px 0 0 color-mix(in oklab, var(--color-accent-500) 40%, transparent);
   }
 
   &:where([data-theme="dark"], [data-theme="dark"] *) {
-    background-color: color-mix(in oklab, var(--color-accent-500) 3%, color-mix(in srgb, var(--color-stone-700) 70%, transparent));
-    border-color: color-mix(in srgb, var(--color-stone-600) 40%, transparent);
-  }
-
-  &::before,
-  &::after {
-    pointer-events: none;
-    position: absolute;
-    height: 0.75rem;
-    width: 0.75rem;
-    border-color: color-mix(in srgb, var(--color-accent-600) 34%, transparent);
-    content: "";
-  }
-
-  &:where([data-theme="dark"], [data-theme="dark"] *) {
-    &::before,
-    &::after {
-      border-color: color-mix(in srgb, var(--color-accent-300) 34%, transparent);
-    }
-  }
-
-  &::before {
-    left: 0.5rem;
-    top: 0.5rem;
-    border-left-width: 1px;
-    border-top-width: 1px;
-  }
-
-  &::after {
-    bottom: 0.5rem;
-    right: 0.5rem;
-    border-bottom-width: 1px;
-    border-right-width: 1px;
+    background-color: color-mix(in oklab, var(--color-accent-500) 3%, var(--color-stone-900));
+    border-color: color-mix(in oklab, var(--color-accent-500) 60%, transparent);
+    box-shadow: 5px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 30%, transparent);
   }
 }
 
 @utility contenido-tamano {
-  font-size: 16px;
+  font-size: 15px;
 
   @media (min-width: 640px) {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   @media (min-width: 768px) {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   @media (min-width: 1024px) {
-    font-size: 19px;
+    font-size: 18px;
   }
 
   @media (min-width: 1280px) {
-    font-size: 20px;
+    font-size: 19px;
   }
 
   & :where(p, li, blockquote, td, th) {
@@ -380,30 +359,76 @@
   }
 
   &.prose {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   @media (min-width: 640px) {
     &.prose {
-      font-size: 17px;
+      font-size: 16px;
     }
   }
 
   @media (min-width: 768px) {
     &.prose {
-      font-size: 18px;
+      font-size: 17px;
     }
   }
 
   @media (min-width: 1024px) {
     &.prose {
-      font-size: 19px;
+      font-size: 18px;
     }
   }
 
   @media (min-width: 1280px) {
     &.prose {
-      font-size: 20px;
+      font-size: 19px;
+    }
+  }
+
+  &.prose :where(p, li, blockquote, td, th) {
+    font-size: inherit;
+  }
+}
+
+@utility contenido-preview {
+  font-size: 14px;
+
+  @media (min-width: 640px) {
+    font-size: 15px;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: 16px;
+  }
+
+  @media (min-width: 1536px) {
+    font-size: 17px;
+  }
+
+  & :where(p, li, blockquote, td, th) {
+    font-size: inherit;
+  }
+
+  &.prose {
+    font-size: 14px;
+  }
+
+  @media (min-width: 640px) {
+    &.prose {
+      font-size: 15px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    &.prose {
+      font-size: 16px;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    &.prose {
+      font-size: 17px;
     }
   }
 
