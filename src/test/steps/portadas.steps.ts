@@ -204,7 +204,18 @@ Then('la portada del HTML va en la tarjeta de encabezado', () => {
   const encabezado = html.slice(inicio, fin);
   const portada = /<img[^>]*un-libro-frontCover\.webp[^>]*>/.exec(encabezado)?.[0];
   if (portada === undefined) throw new Error('la portada no está en la tarjeta de encabezado');
-  for (const clase of ['w-3/4', 'sm:w-1/2', 'md:w-2/5', 'lg:w-1/3', 'xl:w-1/4', '2xl:w-1/4', 'rounded-lg', 'object-contain']) {
+  for (const clase of [
+    'w-full',
+    'sm:w-1/2',
+    'md:w-2/5',
+    'lg:w-1/3',
+    'xl:w-1/4',
+    '2xl:w-1/4',
+    'rounded-lg',
+    'border-2',
+    'border-accent-500/70',
+    'object-contain',
+  ]) {
     if (!portada.includes(clase)) throw new Error(`la portada del encabezado no tiene ${clase}`);
   }
   if (portada.includes('object-cover')) throw new Error('la portada del encabezado recorta la imagen');
