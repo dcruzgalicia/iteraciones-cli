@@ -29,7 +29,7 @@ function removeEmptyGridSlots(html: string): string {
   for (const name of ['photo', 'publications', 'related', 'sidebar']) {
     resultado = removeEmptySlot(resultado, name);
   }
-  return resultado;
+  return resultado.replace(/<aside id="slot-aside"[^>]*>\s*<\/aside>/, '');
 }
 
 export function postProcessHtml(html: string, refsCardTemplate: string): string {
