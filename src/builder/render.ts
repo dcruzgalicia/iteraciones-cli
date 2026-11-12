@@ -34,7 +34,6 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   const args = metadataArgs([
     { key: 'titlehead', value: vars.titlehead },
     { key: 'subject', value: vars.subject },
-    { key: 'publishers', value: vars.publishers },
     { key: 'collection-creator-prefix', value: vars.collectionCreatorPrefix },
     { key: 'author-names', value: vars.authors },
     { key: 'collection-creator-names', value: vars.collectionCreator },
@@ -53,7 +52,8 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     ['license', vars.license],
     ['menu-header', vars.menuHeader],
     ['menu-footer-plain', vars.menuFooterPlain],
-    ['page-chips', vars.pageChips],
+    ['collection-links', vars.collectionLinks],
+    ['keyword-links', vars.keywordLinks],
     ['announcements-top', vars.announcementsTop],
     ['announcements-bottom', vars.announcementsBottom],
     ['indice-coleccion', vars.indiceColeccion],

@@ -2,7 +2,7 @@ $if(body)$
     <div id="card-document" class="min-w-0">
 
       <article
-        class="relative prose prose-xl sm:prose-xl md:prose-2xl contenido-tamano contenido-compacto [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] dark:prose-invert max-w-none rounded-tr-2xl rounded-bl-2xl tarjeta p-4 sm:p-6 ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 transition-all duration-200 hover:ring-accent-500/40 [overflow-wrap:anywhere]
+        class="relative$if(creator-photo)$ grid sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2$endif$ prose prose-xl sm:prose-xl md:prose-2xl contenido-tamano contenido-compacto [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] dark:prose-invert max-w-none overflow-hidden rounded-tr-2xl rounded-bl-2xl tarjeta ring-1 ring-inset ring-stone-300/60 dark:ring-stone-600/40 transition-all duration-200 hover:ring-accent-500/40 [overflow-wrap:anywhere]
         [&_blockquote]:border-accent-500/40
         [&_.citation_a]:text-stone-900 dark:[&_.citation_a]:text-stone-100
         [&_.citation_a]:no-underline [&_.citation_a:hover]:underline [&_.citation_a]:underline-offset-4 [&_.citation_a]:decoration-accent-500/60 [&_.citation_a]:transition-colors [&_.citation_a]:duration-200 [&_.citation_a:hover]:decoration-accent-500
@@ -14,10 +14,13 @@ $if(body)$
         [&_h6:not([class])]:text-xl [&_h6:not([class])]:italic [&_h6:not([class])]:font-normal
         [&_table]:border-accent-500/10 [&_th]:border-accent-500/10 [&_td]:border-accent-500/10"
       >
-        $if(content-chip)$
-        <div class="not-prose"><h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">$content-chip$</h2></div>
-        $endif$
-        $body$
+        <div class="min-w-0 p-4 sm:p-6">
+          $if(content-chip)$
+          <div class="not-prose"><h2 class="inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">$content-chip$</h2></div>
+          $endif$
+          $body$
+        </div>
+        $if(creator-photo)$$creator-photo$$endif$
       </article>
     </div>
 $endif$

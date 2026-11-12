@@ -38,7 +38,6 @@
   grid-template-areas:
     "header"
     "main"
-    "photo"
     "publications"
     "aside";
 
@@ -50,8 +49,8 @@
     grid-area: main;
   }
 
-  & .page-photo {
-    grid-area: photo;
+  & .page-content {
+    display: contents;
   }
 
   & .page-publications {
@@ -66,34 +65,8 @@
     gap: 1rem;
   }
 
-  &.page-creator .page-main {
-    align-self: stretch;
-  }
-
-  &.page-creator .page-main > div,
-  &.page-creator .page-main article {
-    height: 100%;
-  }
-
-  &.page-creator .page-photo {
-    align-self: stretch;
-  }
-
-  &.page-creator .page-photo > div,
-  &.page-creator .page-photo figure {
-    height: 100%;
-  }
-
-  &.page-creator .page-photo figure {
-    min-height: 30rem;
-
-    @media (min-width: 640px) {
-      min-height: 32rem;
-    }
-
-    @media (min-width: 1024px) {
-      min-height: 34rem;
-    }
+  &.page-creator .page-main article > figure {
+    margin: 0;
   }
 
   &.page-file,
@@ -108,7 +81,6 @@
     grid-template-areas:
       "header"
       "main"
-      "photo"
       "publications"
       "aside";
   }
@@ -123,16 +95,20 @@
 
     &.page-file,
     &.page-collection {
+      grid-template-columns: minmax(0, 1fr);
       grid-template-areas:
-        "header header"
-        "main aside";
+        "header"
+        "main"
+        "aside";
     }
 
     &.page-creator {
+      grid-template-columns: minmax(0, 1fr);
       grid-template-areas:
-        "header header"
-        "main photo"
-        "publications aside";
+        "header"
+        "main"
+        "publications"
+        "aside";
     }
   }
 
@@ -146,11 +122,28 @@
         "main aside";
     }
 
+    &.page-file,
+    &.page-collection {
+      grid-template-columns: 3fr 2fr;
+    }
+
     &.page-creator {
+      grid-template-columns: 3fr 2fr;
       grid-template-areas:
         "header header"
-        "main photo"
-        "publications aside";
+        "content aside";
+
+      & .page-content {
+        display: grid;
+        grid-area: content;
+        align-content: start;
+        gap: 1.5rem;
+
+        & > .page-main,
+        & > .page-publications {
+          grid-area: auto;
+        }
+      }
     }
   }
 
@@ -163,26 +156,28 @@
     }
 
     &.page-file {
+      grid-template-columns: 2fr 1fr;
       grid-template-areas:
-        "header header header"
-        "main aside aside";
-
-      & .page-aside {
-        grid-template-columns: subgrid;
-      }
+        "header header"
+        "main aside";
     }
 
     &.page-collection {
+      grid-template-columns: 2fr 1fr;
       grid-template-areas:
-        "header header header"
-        "main main aside";
+        "header header"
+        "main aside";
     }
 
     &.page-creator {
+      grid-template-columns: 2fr 1fr;
       grid-template-areas:
-        "header header header"
-        "main photo aside"
-        "publications publications aside";
+        "header header"
+        "content aside";
+
+      & .page-content {
+        gap: 2rem;
+      }
     }
   }
 
@@ -190,34 +185,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 
     &.page-file {
-      grid-template-areas:
-        "header header header"
-        "main aside aside";
-
-      & .page-aside {
-        grid-template-columns: subgrid;
-      }
-    }
-
-    &.page-collection {
-      grid-template-areas:
-        "header header header"
-        "main main aside";
-    }
-
-    &.page-creator {
-      grid-template-areas:
-        "header header header"
-        "main photo aside"
-        "publications publications aside";
-    }
-  }
-
-  @media (min-width: 1536px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-
-    &.page-file,
-    &.page-collection {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-areas:
         "header header header header"
         "main main aside aside";
@@ -227,55 +195,40 @@
       }
     }
 
-    &.page-creator {
+    &.page-collection {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-areas:
         "header header header header"
-        "main photo aside aside"
-        "publications publications aside aside";
+        "main main main aside";
+    }
+
+    &.page-creator {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-areas:
+        "header header header header"
+        "content content content aside";
+    }
+  }
+
+  @media (min-width: 1536px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    &.page-file {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-areas:
+        "header header header header"
+        "main main aside aside";
 
       & .page-aside {
         grid-template-columns: subgrid;
       }
     }
+
   }
 
   &.page-file:not(:has(.page-related)),
-  &.page-collection:not(:has(.page-related)) {
-    @media (min-width: 640px) {
-      grid-template-areas:
-        "header header"
-        "main aside";
-    }
-
-    @media (min-width: 1024px) {
-      grid-template-areas:
-        "header header header"
-        "main main aside";
-    }
-
-    @media (min-width: 1536px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header"
-        "main main aside";
-    }
-  }
-
-  &.page-file:not(:has(.page-sidebar)),
-  &.page-collection:not(:has(.page-sidebar)) {
-    @media (min-width: 640px) {
-      grid-template-areas:
-        "header header"
-        "main aside";
-    }
-
-    @media (min-width: 1024px) {
-      grid-template-areas:
-        "header header header"
-        "main main aside";
-    }
-
-    @media (min-width: 1536px) {
+  &.page-file:not(:has(.page-sidebar)) {
+    @media (min-width: 1280px) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       grid-template-areas:
         "header header header"
@@ -291,106 +244,49 @@
       "main";
   }
 
-  &.page-creator:not(:has(.page-related)),
-  &.page-creator:not(:has(.page-sidebar)) {
-    @media (min-width: 640px) {
-      grid-template-areas:
-        "header header"
-        "main photo"
-        "publications aside";
-    }
-
-    @media (min-width: 1024px) {
-      grid-template-areas:
-        "header header header"
-        "main photo aside"
-        "publications publications aside";
-    }
-
-    @media (min-width: 1536px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header"
-        "main photo aside"
-        "publications publications aside";
-    }
-  }
-
   &.page-creator:not(:has(.page-related)):not(:has(.page-sidebar)) {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "header"
       "main"
-      "photo"
       "publications";
-  }
 
-  &.page-creator:not(:has(.page-photo)):has(.page-related):has(.page-sidebar) {
-    @media (min-width: 640px) {
-      grid-template-areas:
-        "header header"
-        "main main"
-        "publications aside";
+    & .page-content {
+      display: contents;
     }
 
-    @media (min-width: 1024px) {
-      grid-template-areas:
-        "header header header"
-        "main main aside"
-        "publications publications aside";
+    & .page-main {
+      grid-area: main;
     }
 
-    @media (min-width: 1536px) {
-      grid-template-areas:
-        "header header header header"
-        "main main aside aside"
-        "publications publications aside aside";
+    & .page-publications {
+      grid-area: publications;
     }
   }
 
-  &.page-creator:not(:has(.page-photo)):not(:has(.page-related)),
-  &.page-creator:not(:has(.page-photo)):not(:has(.page-sidebar)) {
-    @media (min-width: 640px) {
-      grid-template-areas:
-        "header header"
-        "main main"
-        "publications aside";
-    }
-
-    @media (min-width: 1024px) {
-      grid-template-areas:
-        "header header header"
-        "main main aside"
-        "publications publications aside";
-    }
-
-    @media (min-width: 1536px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header"
-        "main main aside"
-        "publications publications aside";
-    }
-  }
-
-  &.page-creator:not(:has(.page-photo)):not(:has(.page-related)):not(:has(.page-sidebar)) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "header"
-      "main"
-      "publications";
-  }
 }
 
 @utility preview-grid {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 
+  @media (min-width: 640px) and (max-width: 767px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
   @media (min-width: 1024px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
-    > :only-child {
-      grid-column: span 2;
-    }
+  @media (min-width: 1280px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (min-width: 1536px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -402,19 +298,16 @@
   @media (min-width: 1024px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.5rem;
+  }
 
-    > :only-child {
-      grid-column: span 2;
-    }
+  @media (min-width: 1280px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
   }
 
   @media (min-width: 1536px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 2rem;
-
-    > :only-child {
-      grid-column: span 2;
-    }
   }
 }
 
