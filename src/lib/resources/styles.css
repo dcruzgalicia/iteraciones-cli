@@ -40,8 +40,7 @@
     "main"
     "photo"
     "publications"
-    "related"
-    "sidebar";
+    "aside";
 
   & .page-header {
     grid-area: header;
@@ -59,12 +58,12 @@
     grid-area: publications;
   }
 
-  & .page-related {
-    grid-area: related;
-  }
-
-  & .page-sidebar {
-    grid-area: sidebar;
+  & .page-aside {
+    grid-area: aside;
+    display: grid;
+    align-content: start;
+    align-items: start;
+    gap: 1rem;
   }
 
   &.page-creator .page-main {
@@ -102,8 +101,7 @@
     grid-template-areas:
       "header"
       "main"
-      "related"
-      "sidebar";
+      "aside";
   }
 
   &.page-creator {
@@ -112,28 +110,29 @@
       "main"
       "photo"
       "publications"
-      "related"
-      "sidebar";
+      "aside";
   }
 
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.5rem;
 
+    & .page-aside {
+      gap: 1.5rem;
+    }
+
     &.page-file,
     &.page-collection {
       grid-template-areas:
         "header header"
-        "main related"
-        "main sidebar";
+        "main aside";
     }
 
     &.page-creator {
       grid-template-areas:
         "header header"
         "main photo"
-        "publications related"
-        "publications sidebar";
+        "publications aside";
     }
   }
 
@@ -144,16 +143,14 @@
     &.page-collection {
       grid-template-areas:
         "header header"
-        "main related"
-        "main sidebar";
+        "main aside";
     }
 
     &.page-creator {
       grid-template-areas:
         "header header"
         "main photo"
-        "publications related"
-        "publications sidebar";
+        "publications aside";
     }
   }
 
@@ -161,24 +158,31 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 2rem;
 
+    & .page-aside {
+      gap: 2rem;
+    }
+
     &.page-file {
       grid-template-areas:
         "header header header"
-        "main related sidebar";
+        "main aside aside";
+
+      & .page-aside {
+        grid-template-columns: subgrid;
+      }
     }
 
     &.page-collection {
       grid-template-areas:
         "header header header"
-        "main main related"
-        "main main sidebar";
+        "main main aside";
     }
 
     &.page-creator {
       grid-template-areas:
         "header header header"
-        "main photo related"
-        "publications publications sidebar";
+        "main photo aside"
+        "publications publications aside";
     }
   }
 
@@ -188,21 +192,24 @@
     &.page-file {
       grid-template-areas:
         "header header header"
-        "main related sidebar";
+        "main aside aside";
+
+      & .page-aside {
+        grid-template-columns: subgrid;
+      }
     }
 
     &.page-collection {
       grid-template-areas:
         "header header header"
-        "main main related"
-        "main main sidebar";
+        "main main aside";
     }
 
     &.page-creator {
       grid-template-areas:
         "header header header"
-        "main photo related"
-        "publications publications sidebar";
+        "main photo aside"
+        "publications publications aside";
     }
   }
 
@@ -213,14 +220,22 @@
     &.page-collection {
       grid-template-areas:
         "header header header header"
-        "main main related sidebar";
+        "main main aside aside";
+
+      & .page-aside {
+        grid-template-columns: subgrid;
+      }
     }
 
     &.page-creator {
       grid-template-areas:
         "header header header header"
-        "main photo related sidebar"
-        "publications publications related sidebar";
+        "main photo aside aside"
+        "publications publications aside aside";
+
+      & .page-aside {
+        grid-template-columns: subgrid;
+      }
     }
   }
 
@@ -229,20 +244,20 @@
     @media (min-width: 640px) {
       grid-template-areas:
         "header header"
-        "main sidebar";
+        "main aside";
     }
 
     @media (min-width: 1024px) {
       grid-template-areas:
         "header header header"
-        "main main sidebar";
+        "main main aside";
     }
 
     @media (min-width: 1536px) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       grid-template-areas:
         "header header header"
-        "main main sidebar";
+        "main main aside";
     }
   }
 
@@ -251,20 +266,20 @@
     @media (min-width: 640px) {
       grid-template-areas:
         "header header"
-        "main related";
+        "main aside";
     }
 
     @media (min-width: 1024px) {
       grid-template-areas:
         "header header header"
-        "main main related";
+        "main main aside";
     }
 
     @media (min-width: 1536px) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       grid-template-areas:
         "header header header"
-        "main main related";
+        "main main aside";
     }
   }
 
@@ -276,51 +291,28 @@
       "main";
   }
 
-  &.page-creator:not(:has(.page-related)) {
-    @media (min-width: 640px) {
-      grid-template-areas:
-        "header header"
-        "main photo"
-        "publications sidebar";
-    }
-
-    @media (min-width: 1024px) {
-      grid-template-areas:
-        "header header header"
-        "main photo sidebar"
-        "publications publications sidebar";
-    }
-
-    @media (min-width: 1536px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header"
-        "main photo sidebar"
-        "publications publications sidebar";
-    }
-  }
-
+  &.page-creator:not(:has(.page-related)),
   &.page-creator:not(:has(.page-sidebar)) {
     @media (min-width: 640px) {
       grid-template-areas:
         "header header"
         "main photo"
-        "publications related";
+        "publications aside";
     }
 
     @media (min-width: 1024px) {
       grid-template-areas:
         "header header header"
-        "main photo related"
-        "publications publications related";
+        "main photo aside"
+        "publications publications aside";
     }
 
     @media (min-width: 1536px) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       grid-template-areas:
         "header header header"
-        "main photo related"
-        "publications publications related";
+        "main photo aside"
+        "publications publications aside";
     }
   }
 
@@ -338,70 +330,46 @@
       grid-template-areas:
         "header header"
         "main main"
-        "publications related"
-        "publications sidebar";
+        "publications aside";
     }
 
     @media (min-width: 1024px) {
       grid-template-areas:
         "header header header"
-        "main main related"
-        "publications publications sidebar";
+        "main main aside"
+        "publications publications aside";
     }
 
     @media (min-width: 1536px) {
       grid-template-areas:
         "header header header header"
-        "main main related sidebar"
-        "publications publications related sidebar";
+        "main main aside aside"
+        "publications publications aside aside";
     }
   }
 
-  &.page-creator:not(:has(.page-photo)):not(:has(.page-related)):has(.page-sidebar) {
+  &.page-creator:not(:has(.page-photo)):not(:has(.page-related)),
+  &.page-creator:not(:has(.page-photo)):not(:has(.page-sidebar)) {
     @media (min-width: 640px) {
       grid-template-areas:
         "header header"
         "main main"
-        "publications sidebar";
+        "publications aside";
     }
 
     @media (min-width: 1024px) {
       grid-template-areas:
         "header header header"
-        "main main sidebar"
-        "publications publications sidebar";
+        "main main aside"
+        "publications publications aside";
     }
 
     @media (min-width: 1536px) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       grid-template-areas:
         "header header header"
-        "main main sidebar"
-        "publications publications sidebar";
-    }
-  }
-
-  &.page-creator:not(:has(.page-photo)):has(.page-related):not(:has(.page-sidebar)) {
-    @media (min-width: 640px) {
-      grid-template-areas:
-        "header header"
-        "main main"
-        "publications related";
-    }
-
-    @media (min-width: 1024px) {
-      grid-template-areas:
-        "header header header"
-        "main main related"
-        "publications publications related";
-    }
-
-    @media (min-width: 1536px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header"
-        "main main related"
-        "publications publications related";
+        "main main aside"
+        "publications publications aside";
     }
   }
 
