@@ -83,14 +83,14 @@ function identityCard(children: string[]): string {
 function headerHtml(identity: string, menuHeader: string, redes: string): string {
   return identityCard([
     `<div class="min-w-0">${identity}</div>`,
-    `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-end">${menuHeader}${redes}</div>`,
+    `<div class="flex flex-wrap items-start justify-start gap-2 sm:justify-end">${menuHeader}${redes}</div>`,
   ]);
 }
 
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
   return identityCard([
-    `<div class="flex flex-wrap items-start justify-center gap-2 sm:justify-start">${menuFooterPlain}${redes}</div>`,
-    `<div class="flex min-w-0 items-center justify-center sm:justify-start">${footerIdentity}</div>`,
+    `<div class="flex flex-wrap items-start justify-start gap-2">${menuFooterPlain}${redes}</div>`,
+    `<div class="flex min-w-0 items-center justify-start">${footerIdentity}</div>`,
   ]);
 }
 
@@ -195,8 +195,8 @@ export interface HtmlPageVars {
   menuHeader?: string;
   menuFooterPlain?: string;
 
-  collectionLinks?: string;
-  keywordLinks?: string;
+  collectionChips?: string;
+  keywordChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;

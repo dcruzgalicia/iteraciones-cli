@@ -521,7 +521,12 @@
 @utility nombres-enlazados {
   a {
     color: var(--color-accent-700);
+    text-decoration: none;
     text-underline-offset: 0.25em;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   &:where([data-theme="dark"], [data-theme="dark"] *) {
