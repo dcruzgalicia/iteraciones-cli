@@ -206,7 +206,7 @@ Then('la portada del HTML va en la tarjeta de encabezado', () => {
   if (portada === undefined) throw new Error('la portada no está en la tarjeta de encabezado');
   for (const clase of [
     'w-full',
-    'sm:w-1/2',
+    'sm:w-2/5',
     'md:w-2/5',
     'lg:w-1/3',
     'xl:w-1/4',
