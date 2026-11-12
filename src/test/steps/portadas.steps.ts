@@ -214,17 +214,14 @@ Then('la portada del HTML va en la tarjeta de encabezado', () => {
     'rounded-lg',
     'border-2',
     'border-accent-500/70',
-    'transition-all',
-    'duration-200',
-    'hover:-translate-x-0.5',
-    'hover:-translate-y-0.5',
-    'hover:shadow-[3px_3px_0_0]',
-    'hover:shadow-accent-500/30',
+    'shadow-[3px_3px_0_0]',
+    'shadow-accent-500/30',
     'object-contain',
   ]) {
     if (!portada.includes(clase)) throw new Error(`la portada del encabezado no tiene ${clase}`);
   }
   if (portada.includes('object-cover')) throw new Error('la portada del encabezado recorta la imagen');
+  if (portada.includes('hover:')) throw new Error('la portada del encabezado no debe cambiar al hover');
   const primerDato = Math.min(...['<h1', 'not-prose'].map((marca) => encabezado.indexOf(marca)).filter((i) => i >= 0));
   if (encabezado.indexOf(portada) > primerDato) throw new Error('la portada no va a la izquierda de los datos');
 });
