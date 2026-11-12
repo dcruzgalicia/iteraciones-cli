@@ -362,9 +362,9 @@ export async function emit404(args: {
 <body class="font-sans antialiased text-base text-stone-900 sm:text-lg dark:text-stone-100 bg-paper bg-paper-grid">
   <div class="mx-auto max-w-[96rem] space-y-4 px-2 pt-2 pb-28 sm:space-y-6 sm:px-4 sm:pt-4 sm:pb-32 lg:space-y-8 lg:px-8 lg:pt-8">
     <header class="tarjeta relative rounded-tr-xl rounded-bl-xl p-4 ring-1 ring-inset ring-stone-300/60 sm:p-6 dark:ring-stone-600/40">
-      <div class="flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-3 sm:text-left">
+      <div class="flex flex-col items-start gap-2 text-left sm:flex-row sm:gap-3">
         ${logo}
-        <div class="flex min-w-0 flex-col items-center sm:items-start">
+        <div class="flex min-w-0 flex-col items-start">
           <a href="./index.html" class="font-semibold text-base leading-none text-accent-800 no-underline hover:underline sm:text-lg lg:text-xl dark:text-accent-300">${Bun.escapeHTML(siteTitle)}</a>
           ${tagline === '' ? '' : `<span class="mt-1 text-[11px] italic leading-none text-stone-600 sm:text-xs lg:text-sm dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
         </div>
@@ -518,7 +518,7 @@ function publicationMetaHtml(args: {
   const html = visibles
     .map(
       ([etiqueta, valor]) =>
-        `<span><span class="font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">${etiqueta}</span> ${valor}</span>`,
+        `<div class="flex flex-col gap-1"><span class="text-[11px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">${etiqueta}</span><span class="text-sm text-stone-800 dark:text-stone-200">${valor}</span></div>`,
     )
     .join('');
   return html;
@@ -629,8 +629,8 @@ function htmlVars(args: {
   creatorImage?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
-  collectionLinks?: string;
-  keywordLinks?: string;
+  collectionChips?: string;
+  keywordChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   docChipHrefOverride?: string;
@@ -655,8 +655,8 @@ function htmlVars(args: {
     creatorImage,
     menuHeader,
     menuFooterPlain,
-    collectionLinks,
-    keywordLinks,
+    collectionChips,
+    keywordChips,
     announcementsTop,
     announcementsBottom,
     docChipHrefOverride,
@@ -782,8 +782,8 @@ function htmlVars(args: {
       announcementsTop,
       announcementsBottom,
     }),
-    collectionLinks: opcional(collectionLinks),
-    keywordLinks: opcional(keywordLinks),
+    collectionChips: opcional(collectionChips),
+    keywordChips: opcional(keywordChips),
     indiceColeccion,
     docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: opcional(extras),
@@ -819,8 +819,8 @@ export interface EmitHtmlPageArgs {
   creatorImage?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
-  collectionLinks?: string;
-  keywordLinks?: string;
+  collectionChips?: string;
+  keywordChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
   docChipHrefOverride?: string;
@@ -845,8 +845,8 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
     creatorImage,
     menuHeader,
     menuFooterPlain,
-    collectionLinks,
-    keywordLinks,
+    collectionChips,
+    keywordChips,
     announcementsTop,
     announcementsBottom,
     docChipHrefOverride,
@@ -888,8 +888,8 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
         creatorImage,
         menuHeader,
         menuFooterPlain,
-        collectionLinks,
-        keywordLinks,
+        collectionChips,
+        keywordChips,
         announcementsTop,
         announcementsBottom,
         docChipHrefOverride,
@@ -1316,7 +1316,7 @@ const PAGINATION_BUTTON_CLASSES =
 const PAGINATION_ACTIVE_CLASSES =
   'inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-accent-500 bg-accent-500/20 px-2 text-[11px] font-semibold text-accent-900 sm:px-2.5 sm:text-xs lg:px-3 lg:text-sm dark:text-accent-100';
 
-const PAGINATION_NAV_CLASSES = 'mt-8 flex flex-wrap items-center justify-center gap-2 sm:mt-10 lg:mt-12';
+const PAGINATION_NAV_CLASSES = 'mt-8 flex flex-wrap items-center justify-start gap-2 sm:mt-10 lg:mt-12';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
@@ -1349,7 +1349,7 @@ export function paginationNav(outSlug: string, pagina: number, total: number): s
   return `<nav class="${PAGINATION_NAV_CLASSES}" aria-label="Paginación">${anterior}${numeros}${siguiente}</nav>`;
 }
 
-const CARD_IMAGE_CLASSES = 'mt-0! mb-3! flex h-[100px] w-full items-center justify-center overflow-hidden rounded-tr-xl rounded-bl-xl sm:mb-4!';
+const CARD_IMAGE_CLASSES = 'mt-0! mb-3! flex h-[100px] w-full items-center justify-start overflow-hidden rounded-tr-xl rounded-bl-xl sm:mb-4!';
 const CARD_IMAGE_IMG_CLASSES = 'm-0! block h-full w-full object-cover';
 const CARD_IMAGE_LINK_CLASSES = 'block h-full w-full rounded-tr-xl rounded-bl-xl';
 const PORTRAIT_WRAPPER_CLASSES = 'mb-6 flex justify-center';
@@ -1442,7 +1442,7 @@ const CARD_PREVIEW_MAX_WORDS = 150;
 const CARD_TEXT_CLASSES =
   'prose prose-base dark:prose-invert max-w-none contenido-tamano contenido-compacto [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-lg md:prose-xl lg:prose-2xl';
 
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[30rem] flex-col overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-4 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_h3]:line-clamp-2 [&>h2]:line-clamp-1 sm:h-[32rem] sm:p-5 lg:h-[34rem] lg:p-6 ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[30rem] flex-col overflow-hidden rounded-tr-xl rounded-bl-xl tarjeta p-4 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] [&_h3]:line-clamp-2 [&_h3]:pb-1.5 sm:h-[32rem] sm:p-5 lg:h-[34rem] lg:p-6 ${CARD_TEXT_CLASSES}`;
 
 const PILL_BASE =
   'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/30 bg-accent-500/12 px-2.5 text-[11px] font-normal uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300';
@@ -1479,7 +1479,7 @@ function chipHtml(
 }
 
 const MEMBER_LINK_CLASSES =
-  'py-1 no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current';
+  'py-1 no-underline underline-offset-4 transition-colors duration-200 hover:underline';
 
 const CARD_CTA_CLASSES =
   'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/50 bg-accent-500/20 px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
@@ -1490,8 +1490,10 @@ const MENU_BUTTON_CLASSES =
 const MENU_LINK_CLASSES =
   'inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/40 bg-transparent px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
 
-const HEADER_LINK_CLASSES =
-  'text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
+const HEADER_COLLECTION_CHIP_CLASSES =
+  'not-prose inline-flex h-7 items-center rounded-full border border-accent-500/50 bg-transparent px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:underline sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200';
+const HEADER_KEYWORD_CHIP_CLASSES =
+  'not-prose inline-flex h-7 items-center rounded-full border border-stone-500/60 bg-transparent px-2.5 text-[11px] font-semibold uppercase tracking-wide leading-none text-stone-600 no-underline transition-colors duration-200 hover:border-stone-600 hover:underline sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
 const RECENTES_LIMIT = 5;
 const KEYWORD_INDEX_SLUG = 'keyword';
 const SIDEBAR_KEYWORD_CHIP_CLASSES =
@@ -1806,7 +1808,7 @@ function menuFooterContent(links: EnlaceMenu[], dir: string): string | undefined
 }
 
 function tituloSidebarHtml(title: string, href: string | undefined): string {
-  const clases = 'not-prose mt-4 mb-4 text-center text-base font-bold text-accent-900 sm:text-lg dark:text-accent-300';
+  const clases = 'not-prose mt-4 mb-4 text-left text-base font-bold text-accent-900 sm:text-lg dark:text-accent-300';
   return href === undefined
     ? `<h3 class="${clases}">${title}</h3>`
     : `<h3 class="${clases}"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
@@ -1831,7 +1833,7 @@ function announcementCard(
       '',
       body,
       '',
-      href === undefined ? '' : `<p class="not-prose mt-4 text-center"><a href="${href}" class="${CARD_CTA_CLASSES}">Leer anuncio →</a></p>`,
+      href === undefined ? '' : `<p class="not-prose mt-4 text-left"><a href="${href}" class="${CARD_CTA_CLASSES}">Leer anuncio →</a></p>`,
     ].join('\n'),
   );
 }
@@ -2103,8 +2105,8 @@ async function emitKeywordIndex(args: {
     docChipOverride: 'Lista',
     menuHeader: menu.header,
     menuFooterPlain: menu.footer,
-    collectionLinks: '',
-    keywordLinks: '',
+    collectionChips: '',
+    keywordChips: '',
     announcementsTop: anunciosTop,
     announcementsBottom: anunciosBottom,
     docChipHrefOverride: '',
@@ -2311,12 +2313,13 @@ function renderNombres(lista: string[], tono: 'accent' | 'gris' | 'plano', creat
   return lista.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`).join(', ');
 }
 
-function partesDeColeccion(titleHtml: string): string[] {
-  return [
-    '<h2 class="not-prose text-center text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">Varias colaboradoras</h2>',
-    '',
-    titleHtml,
-  ];
+function partesDeColeccion(titleHtml: string, href: string | undefined): string[] {
+  const texto = 'Varias colaboradoras';
+  const etiqueta =
+    href === undefined
+      ? `<h2 class="not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${texto}</h2>`
+      : `<h2 class="not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${texto}</a></h2>`;
+  return [etiqueta, '', titleHtml];
 }
 
 function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, DiscoveryEntry>): { tono: 'accent' | 'gris'; nombres?: string[] } {
@@ -2326,10 +2329,11 @@ function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, Dis
   return { tono: 'accent', nombres: e.creator };
 }
 
-function titleHtmlPara(title: string, href: string | undefined): string {
+function titleHtmlPara(title: string, href: string | undefined, center = false): string {
+  const alineacion = center ? 'text-center' : 'text-left';
   if (href === undefined)
-    return `<h3 class="not-prose mb-4 text-center text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300">${title}</h3>`;
-  return `<h3 class="not-prose mb-4 text-center text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
+    return `<h3 class="not-prose mb-4 ${alineacion} text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300">${title}</h3>`;
+  return `<h3 class="not-prose mb-4 ${alineacion} text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
 }
 
 interface PageRef {
@@ -2442,20 +2446,20 @@ function cabeceraDeTarjeta(
   const cuerpo: string[] = [];
   if (imagen !== undefined) cuerpo.push(imagen, '');
   if (tipo === 'collection') {
-    cuerpo.push(...partesDeColeccion(titleHtml));
+    cuerpo.push(...partesDeColeccion(titleHtml, href));
     return { chips, cuerpo };
   }
   const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
   const creator = nombres === undefined ? '' : nombres.length > 0 ? renderNombres(nombres, tono, creatorHrefs) : AUTORA_POR_DEFECTO;
   if (creator !== '')
-    cuerpo.push(`<h2 class="not-prose text-center text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`, '');
+    cuerpo.push(`<h2 class="not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`, '');
   cuerpo.push(titleHtml);
-  if (e.subtitle) cuerpo.push('', `<h4 class="text-center text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
+  if (e.subtitle) cuerpo.push('', `<h4 class="text-left text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
   if (page?.showDates === true && e.date !== undefined) {
     const fecha = e.date;
     cuerpo.push(
       '',
-      `<p class="not-prose mb-4 text-center text-xs font-mono text-stone-600 sm:text-sm dark:text-stone-400"><time datetime="${Bun.escapeHTML(fecha)}">${Bun.escapeHTML(formatHumanDate(fecha) ?? fecha)}</time></p>`,
+      `<p class="not-prose mb-4 text-left text-xs font-mono text-stone-600 sm:text-sm dark:text-stone-400"><time datetime="${Bun.escapeHTML(fecha)}">${Bun.escapeHTML(formatHumanDate(fecha) ?? fecha)}</time></p>`,
     );
   }
   return { chips, cuerpo };
@@ -2506,7 +2510,7 @@ function collectionCard(
   const fragment = extractFragment(e.body, CARD_PREVIEW_MAX_WORDS);
   const cabecera = cabeceraDeTarjeta(
     e,
-    titleHtmlPara(title, href),
+    titleHtmlPara(title, href, e.type === 'creator'),
     creatorHrefs,
     dir,
     available,
@@ -2533,7 +2537,7 @@ function collectionCard(
   }
   card.push(...contenido);
   if (href !== undefined) {
-    card.push('', `<p class="not-prose mt-auto pt-4 text-center"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
+    card.push('', `<p class="not-prose mt-auto pt-4 text-left"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
   }
   card.push('', '::::');
   return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');
@@ -3109,13 +3113,13 @@ async function emitCollectionHtml(
   };
   const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas, parteDeExtras(doc.frontmatter.type));
   const sidebarExtras = (await extrasDeLaPagina(extrasComunes, [], 'sidebar')) as string;
-  const collectionLinks = extrasComunes.contenedores
+  const collectionChips = extrasComunes.contenedores
     .filter((contenedor) => contenedor.type === 'collection')
-    .map((contenedor) => `<a href="${contenedor.href}" class="${HEADER_LINK_CLASSES}">${Bun.escapeHTML(contenedor.titulo)}</a>`)
-    .join(', ');
-  const keywordLinks = extrasComunes.palabrasClave
-    .map((keyword) => `<a href="${keyword.href}" class="${HEADER_LINK_CLASSES}">${Bun.escapeHTML(keyword.titulo)}</a>`)
-    .join(', ');
+    .map((contenedor) => `<a href="${contenedor.href}" class="${HEADER_COLLECTION_CHIP_CLASSES}">${Bun.escapeHTML(contenedor.titulo)}</a>`)
+    .join('');
+  const keywordChips = extrasComunes.palabrasClave
+    .map((keyword) => `<a href="${keyword.href}" class="${HEADER_KEYWORD_CHIP_CLASSES}">${Bun.escapeHTML(keyword.titulo)}</a>`)
+    .join('');
 
   const contenidos = paginas;
   const covers = htmlCoverUrls(mergedFm, docDir, webMap);
@@ -3137,8 +3141,8 @@ async function emitCollectionHtml(
     creatorImage: creatorImage,
     menuHeader: menuHeader,
     menuFooterPlain: menuFooterPlain,
-    collectionLinks: collectionLinks,
-    keywordLinks: keywordLinks,
+    collectionChips: collectionChips,
+    keywordChips: keywordChips,
     announcementsTop: anunciosTop,
     announcementsBottom: anunciosBottom,
   });
