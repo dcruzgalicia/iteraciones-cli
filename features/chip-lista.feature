@@ -76,6 +76,7 @@ Característica: El chip de tipo lleva a la lista de ese type
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/antologia-por-ana-garcia.html" dice "href=\"./coleccion.html\""
+      Y el archivo "dist/files/coleccion.html" dice "href=\"./antologia-por-ana-garcia.html\" class=\"py-1 no-underline underline-offset-4 transition-colors duration-200 hover:underline\">Varias colaboradoras</a>"
 
     Escenario: El chip de la tarjeta de un miembro lleva a la lista de su type
       Dado que la raíz del proyecto tiene un proyecto de prueba

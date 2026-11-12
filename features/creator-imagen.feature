@@ -19,6 +19,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Y el archivo "dist/files/creadora.html" dice "rounded-full object-cover"
       Y el archivo "dist/files/creadora.html" dice "aria-label=\"Ver la biografía de Ana García\" class=\"block overflow-hidden rounded-full"
       Y el archivo "dist/files/creadora.html" pone "Retrato de Ana García" antes que ">Ana García</a>"
+      Y el archivo "dist/files/creadora.html" dice "mb-4 text-center text-lg font-bold"
 
     Escenario: La tarjeta de autora de un texto también lleva el retrato
       Dado que la raíz del proyecto tiene un proyecto de prueba

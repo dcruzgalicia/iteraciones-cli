@@ -216,7 +216,7 @@ Then('los enlaces de Formatos abren en otra pestaña', () => {
 
 Then('la identidad no es un enlace', () => {
   const html = leer('dist/files/test-document.html');
-  if (!html.includes('id="card-identity" class="min-w-0"><div class="flex flex-col items-center')) {
+  if (!html.includes('id="card-identity" class="min-w-0"><div class="flex flex-col items-start')) {
     throw new Error('la identidad sigue siendo un enlace');
   }
 });
