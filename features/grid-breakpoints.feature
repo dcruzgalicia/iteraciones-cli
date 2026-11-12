@@ -19,8 +19,9 @@ Característica: columnas del grid por breakpoint
     Y preview-grid usa 2 columnas en lg
     Y preview-grid no define 3 columnas en 2xl
 
-  Escenario: Las publicaciones de creadora llegan a tres columnas
+  Escenario: Las publicaciones de creadora también se quedan en dos columnas
     Cuando leo las utilidades de grid
     Entonces creator-publications-grid usa 1 columna base
     Y creator-publications-grid usa 2 columnas en lg
-    Y creator-publications-grid usa 3 columnas en 2xl
+    Y creator-publications-grid usa 2 columnas en 2xl
+    Y creator-publications-grid no define 3 columnas en 2xl
