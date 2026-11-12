@@ -56,7 +56,7 @@ Característica: las palabras clave del proyecto
       Cuando hago un build del proyecto
       Entonces el HTML de "ana-ruiz.html" contiene "Palabras clave"
       Y el HTML de "ana-ruiz.html" contiene "./keywords/cuidados.html"
-      Y el chip "iteraciones" del HTML de "ana-ruiz.html" enlaza a "./index.html"
+      Y el chip "Palabras clave" del HTML de "ana-ruiz.html" enlaza a "./keyword.html"
 
     Escenario: El EPUB lleva los keywords como dc:subject
       Dado que la raíz del proyecto tiene un proyecto de prueba

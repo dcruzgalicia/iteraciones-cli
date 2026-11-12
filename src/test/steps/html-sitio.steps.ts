@@ -120,7 +120,9 @@ Given('un proyecto con un texto en una lista', () => {
 
 function chipDelHtml(archivo: string, etiqueta: string): string {
   const html = leer(`dist/files/${archivo}`);
-  const patron = new RegExp(`<(h2|a|span)\\b[^>]*class="[^"]*rounded-full[^"]*"[^>]*>(?:<a\\b[^>]*>)?${RegExp.escape(etiqueta)}(?:</a>)?</\\1>`);
+  const patron = new RegExp(
+    `<(h2|a|span)\\b[^>]*class="[^"]*rounded-(?:full|md)[^"]*"[^>]*>(?:<a\\b[^>]*>)?${RegExp.escape(etiqueta)}(?:</a>)?</\\1>`,
+  );
   const chip = patron.exec(html);
   if (chip !== null) return chip[0];
   const enlace = new RegExp(`<a\\b[^>]*class="[^"]*text-accent-700[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).exec(html);
@@ -188,7 +190,7 @@ Then('en el HTML de {string} el chip {string} no es un enlace', (archivo: string
   const html = leer(`dist/files/${archivo}`);
   const chip = new RegExp(`<span class="[^"]*bg-transparent[^"]*">${RegExp.escape(etiqueta)}</span>`);
   if (!chip.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no aparece sin enlace en ${archivo}`);
-  if (new RegExp(`<a [^>]*class="[^"]*rounded-full[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).test(html)) {
+  if (new RegExp(`<a [^>]*class="[^"]*rounded-(?:full|md)[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).test(html)) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} es un enlace y no debería`);
   }
 });

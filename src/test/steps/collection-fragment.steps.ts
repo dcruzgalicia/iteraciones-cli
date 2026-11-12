@@ -208,7 +208,7 @@ Then('los badges de las tarjetas son {string}', (esperados: string) => {
 Then('el chip y el badge van en la misma fila', () => {
   const inicio = world.html.indexOf('<div class="flex items-start justify-between gap-4">');
   if (inicio < 0) throw new Error('el chip y el badge no van en una fila con el chip a la izquierda y el badge a la derecha');
-  const badge = world.html.indexOf('inline-block shrink-0 rounded-full border border-stone-300', inicio);
+  const badge = world.html.indexOf('inline-block shrink-0 rounded-md border-2 border-stone-300', inicio);
   if (badge < 0) throw new Error('la fila no tiene el badge');
   if (!world.html.slice(inicio, badge).includes('<h2')) throw new Error('la fila no tiene el chip');
 });

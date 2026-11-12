@@ -28,7 +28,7 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
   Escenario: El borde de acento se resalta al pasar el ratón en todas las tarjetas
     Dado un proyecto cuyo HTML trae "<div class=\"tarjeta ring-1\">x</div>"
     Cuando compilo el CSS con acento "lime"
-    Entonces el CSS da a ".tarjeta:hover" la propiedad "--tw-ring-color"
+    Entonces el CSS da a ".tarjeta:hover" la propiedad "border-color"
 
   Escenario: styles.css no define ninguna clase de CSS tradicional (#2487)
     Cuando leo el styles.css del proyecto
@@ -129,9 +129,9 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
       Cuando reviso la transparencia de las tarjetas de "file", "collection" y "creator"
       Entonces todas las tarjetas comparten la misma superficie
 
-    Escenario: La punta dibujada queda en las esquinas rectas
+    Escenario: Todas las tarjetas redondean igual
       Cuando reviso la punta de las tarjetas de "file", "collection" y "creator"
-      Entonces la punta de cada tarjeta queda en las esquinas rectas
+      Entonces cada tarjeta usa el mismo redondeo
 
     Escenario: El fondo es papel milimetrado: dos retículas y ni un punto
       Cuando leo el esqueleto y el styles.css del proyecto

@@ -112,7 +112,7 @@ Característica: el menú del sitio
         ---
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "<a href=\"./index.html\" class=\"inline-flex h-7 items-center gap-2 rounded-full border border-accent-500/40 bg-transparent px-2.5 text-[11px] font-semibold text-accent-800 no-underline transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/10 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10\">Inicio</a>"
+      Entonces el archivo "dist/files/index.html" dice "<a href=\"./index.html\" class=\"inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent"
       Y el archivo "dist/files/index.html" dice "href=\"https://www.facebook.com/Historikasmx\""
       Y el archivo "dist/files/index.html" dice "target=\"_blank\" rel=\"noopener noreferrer\""
 
