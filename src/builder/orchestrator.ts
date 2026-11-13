@@ -187,9 +187,14 @@ function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): s
   return invalidations;
 }
 
-export async function aggregateCollectionCreators(entry: { files?: string[] }, cwd: string): Promise<string[]> {
-  const aggregated = new Set<string>();
+export async function aggregateCollectionCreators(
+  entry: { files?: string[]; fm?: Record<string, unknown> },
+  cwd: string,
+): Promise<string[]> {
   const { with: withCreator, without: withoutCreator } = await countCreatorsByFile(entry.files ?? [], cwd);
+  const fallback = parseAuthors(entry.fm?.collectionCreator);
+  if (withCreator.length === 0 && fallback.length > 0) return fallback.sort((a, b) => a.localeCompare(b, 'es'));
+  const aggregated = new Set<string>();
   for (const c of withCreator) aggregated.add(c);
   addAnonymousFallback(aggregated, withoutCreator, entry.files?.length ?? 0);
   return [...aggregated].sort((a, b) => a.localeCompare(b, 'es'));

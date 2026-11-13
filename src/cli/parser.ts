@@ -6,7 +6,7 @@ import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
 import { configHelp } from './config-help.js';
 import { runCover } from './cover.js';
-import { isNewDocumentType, NEW_DOCUMENT_TYPES, runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
+import { defaultNewDocumentPath, isNewDocumentType, NEW_DOCUMENT_TYPES, runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 import { runMarkdown } from './markdown.js';
 import { runMarkdownClean } from './markdown-clean.js';
 import { runMerge } from './merge.js';
@@ -538,7 +538,7 @@ Ejemplos:
         return;
       }
       const type = isNewDocumentType(tipoOrPath) ? tipoOrPath : undefined;
-      const destino = type === undefined ? tipoOrPath : (path ?? `${type}.md`);
+      const destino = type === undefined ? tipoOrPath : (path ?? defaultNewDocumentPath(type));
       await runNew(projectRoot(), destino, { title: opts.title, type });
     });
 

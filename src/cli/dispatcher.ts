@@ -237,16 +237,31 @@ export async function runDoctor(cwd: string, options: { json?: boolean; info?: b
   });
 }
 
-export const NEW_DOCUMENT_TYPES = ['texto', 'coleccion', 'creadora', 'libro', 'anuncio', 'lista'] as const;
+export const NEW_DOCUMENT_TYPES = ['texto', 'pagina', 'documento', 'coleccion', 'creadora', 'libro', 'anuncio', 'lista'] as const;
 
 export type NewDocumentType = (typeof NEW_DOCUMENT_TYPES)[number];
+
+const NEW_DOCUMENT_FOLDERS: Record<NewDocumentType, string> = {
+  texto: 'textos',
+  pagina: 'paginas',
+  documento: 'documentos',
+  coleccion: 'colecciones',
+  creadora: 'creadoras',
+  libro: 'colecciones',
+  anuncio: 'anuncios',
+  lista: 'listas',
+};
+
+export function defaultNewDocumentPath(type: NewDocumentType): string {
+  return `${NEW_DOCUMENT_FOLDERS[type]}/${type}.md`;
+}
 
 export function isNewDocumentType(value: string): value is NewDocumentType {
   return (NEW_DOCUMENT_TYPES as readonly string[]).includes(value);
 }
 
 function typedFrontmatter(type: NewDocumentType, title: string, today: string): Record<string, unknown> {
-  if (type === 'texto') return { title, date: today, type: 'file' };
+  if (type === 'texto' || type === 'pagina' || type === 'documento') return { title, date: today, type: 'file' };
   if (type === 'coleccion' || type === 'libro') return { title, type: 'collection', files: [] };
   if (type === 'creadora') return { type: 'creator', name: title };
   if (type === 'anuncio') return { title, date: today, type: 'announcement', placement: 'top' };
@@ -255,6 +270,8 @@ function typedFrontmatter(type: NewDocumentType, title: string, today: string): 
 
 const TYPED_BODY: Record<NewDocumentType, string> = {
   texto: 'Escribe tu contenido aquí.\n',
+  pagina: 'Escribe aquí el contenido de la página.\n',
+  documento: 'Escribe aquí el contenido del documento.\n',
   coleccion: 'Presenta aquí la colección.\n',
   creadora: 'Escribe aquí la semblanza.\n',
   libro: 'Escribe aquí el contenido del libro.\n',

@@ -16,31 +16,33 @@ Característica: new crea documentos por type
 
       Ejemplos:
         | tipo      | archivo      | type         |
-        | texto     | texto.md     | file         |
-        | coleccion | coleccion.md | collection   |
-        | creadora  | creadora.md  | creator      |
-        | libro     | libro.md     | collection   |
-        | anuncio   | anuncio.md   | announcement |
-        | lista     | lista.md     | list         |
+        | texto     | textos/texto.md         | file         |
+        | pagina    | paginas/pagina.md       | file         |
+        | documento | documentos/documento.md | file         |
+        | coleccion | colecciones/coleccion.md | collection   |
+        | creadora  | creadoras/creadora.md   | creator      |
+        | libro     | colecciones/libro.md     | collection   |
+        | anuncio   | anuncios/anuncio.md     | announcement |
+        | lista     | listas/lista.md         | list         |
 
     Escenario: new creadora usa name
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "new creadora" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el frontmatter de "creadora.md" declara el campo "name" con el valor "Creadora"
+      Y el frontmatter de "creadoras/creadora.md" declara el campo "name" con el valor "Creadora"
 
     Escenario: new anuncio trae fecha y ubicación
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "new anuncio" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "anuncio.md" tiene la clave "date:"
-      Y el frontmatter de "anuncio.md" declara el campo "placement" con el valor "top"
+      Y el archivo "anuncios/anuncio.md" tiene la clave "date:"
+      Y el frontmatter de "anuncios/anuncio.md" declara el campo "placement" con el valor "top"
 
     Escenario: new lista trae el orden cronológico
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "new lista" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el frontmatter de "lista.md" declara el campo "order" con el valor "date-desc"
+      Y el frontmatter de "listas/lista.md" declara el campo "order" con el valor "date-desc"
 
   Regla de negocio: Una ruta suelta conserva el comportamiento anterior
 
