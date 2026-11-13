@@ -1,0 +1,18 @@
+language: es-MX
+toc: false
+format:
+  latex:
+    generate: false
+  html:
+    site:
+      title: "Sitio de ejemplo"
+      description: "Fixture mínima de un sitio"
+      theme: light
+      color: purple
+    generate: true
+  pdf:
+    generate: false
+  epub:
+    generate: false
+  markdown:
+    generate: false
