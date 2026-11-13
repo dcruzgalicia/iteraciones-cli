@@ -336,22 +336,22 @@
 }
 
 @utility contenido-tamano {
-  font-size: 15px;
+  font-size: 16px;
 
   @media (min-width: 640px) {
-    font-size: 16px;
-  }
-
-  @media (min-width: 768px) {
     font-size: 17px;
   }
 
-  @media (min-width: 1024px) {
+  @media (min-width: 768px) {
     font-size: 18px;
   }
 
-  @media (min-width: 1280px) {
+  @media (min-width: 1024px) {
     font-size: 19px;
+  }
+
+  @media (min-width: 1280px) {
+    font-size: 20px;
   }
 
   & :where(p, li, blockquote, td, th) {
@@ -359,30 +359,30 @@
   }
 
   &.prose {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   @media (min-width: 640px) {
-    &.prose {
-      font-size: 16px;
-    }
-  }
-
-  @media (min-width: 768px) {
     &.prose {
       font-size: 17px;
     }
   }
 
-  @media (min-width: 1024px) {
+  @media (min-width: 768px) {
     &.prose {
       font-size: 18px;
     }
   }
 
-  @media (min-width: 1280px) {
+  @media (min-width: 1024px) {
     &.prose {
       font-size: 19px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    &.prose {
+      font-size: 20px;
     }
   }
 
@@ -392,18 +392,18 @@
 }
 
 @utility contenido-preview {
-  font-size: 14px;
+  font-size: 15px;
 
   @media (min-width: 640px) {
-    font-size: 15px;
-  }
-
-  @media (min-width: 1024px) {
     font-size: 16px;
   }
 
-  @media (min-width: 1536px) {
+  @media (min-width: 1024px) {
     font-size: 17px;
+  }
+
+  @media (min-width: 1536px) {
+    font-size: 18px;
   }
 
   & :where(p, li, blockquote, td, th) {
@@ -411,24 +411,24 @@
   }
 
   &.prose {
-    font-size: 14px;
+    font-size: 15px;
   }
 
   @media (min-width: 640px) {
-    &.prose {
-      font-size: 15px;
-    }
-  }
-
-  @media (min-width: 1024px) {
     &.prose {
       font-size: 16px;
     }
   }
 
-  @media (min-width: 1536px) {
+  @media (min-width: 1024px) {
     &.prose {
       font-size: 17px;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    &.prose {
+      font-size: 18px;
     }
   }
 
@@ -436,6 +436,7 @@
     font-size: inherit;
   }
 }
+
 
 @utility contenido-compacto {
   line-height: 1.25;

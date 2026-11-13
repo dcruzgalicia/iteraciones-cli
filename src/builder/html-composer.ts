@@ -56,7 +56,7 @@ export function creatorPortraitHtml(image: string, alt: string): string {
 }
 
 export const CHIP_OUTLINE_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-normal uppercase tracking-wide leading-none no-underline text-accent-700 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:text-accent-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-[11px] lg:text-xs font-normal uppercase tracking-wide leading-none no-underline text-accent-700 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:text-accent-300';
 
 function frecuenciasInline(siteConfig: SiteConfig): string {
   const links = siteConfig.format?.html?.site?.links ?? [];
@@ -64,7 +64,7 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
   const items = links
     .map(
       (link: { name: string; url: string }) =>
-        `<a href="${Bun.escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[10px] sm:text-[11px] lg:text-xs font-semibold text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:bg-stone-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:bg-transparent dark:text-stone-300 dark:hover:bg-stone-500/10">${Bun.escapeHTML(link.name)}</a>`,
+        `<a href="${Bun.escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-[11px] lg:text-xs font-semibold text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:bg-stone-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:bg-transparent dark:text-stone-300 dark:hover:bg-stone-500/10">${Bun.escapeHTML(link.name)}</a>`,
     )
     .join('');
   return `<nav aria-label="Redes" class="contents">${items}</nav>`;
@@ -183,10 +183,10 @@ export interface HtmlPageVars {
   docChipHref?: string;
   contentChip?: string;
   frontCover?: string;
+  frontCoverAlt?: string;
   backCover?: string;
   creatorImage?: string;
   creatorImageAlt?: string;
-  creatorPhoto?: string;
   license?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
