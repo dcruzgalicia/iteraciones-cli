@@ -179,6 +179,7 @@ Característica: las tarjetas de textos y colecciones en la página de la autora
       Y el archivo "dist/files/autora-a.html" dice "Texto 3"
       Y el archivo "dist/files/autora-a.html" dice "Texto 2"
       Y el archivo "dist/files/autora-a.html" dice "Siguiente →"
+      Y el archivo "dist/files/autora-a.html" dice "col-span-full mt-8 flex flex-wrap"
       Y el archivo "dist/files/autora-a-2.html" no dice "Bio de Autora A."
       Y el archivo "dist/files/autora-a-2.html" no dice "card-document"
       Y el archivo "dist/files/autora-a-2.html" dice "Texto 1"
