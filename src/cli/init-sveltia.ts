@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, join } from 'node:path';
@@ -147,7 +148,7 @@ function campoOrden(): Record<string, unknown> {
   });
 }
 
-function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string): string {
+function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string, cwd: string): string {
   const dominio = `${slug}.netlify.app`;
   const medios = { media_folder: '/assets/images', public_folder: '../assets/images' };
 
@@ -319,6 +320,82 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         ],
       },
       {
+        name: 'paginas',
+        label: 'Páginas',
+        label_singular: 'Página',
+        folder: 'paginas',
+        create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'title',
+        ...medios,
+        slug: '{{slug}}',
+        summary: '{{title}}',
+        fields: [
+          campoTitulo(),
+          campoSubtitulo(),
+          campoCuerpo(),
+          campoFecha(),
+          campoLicencia(),
+          campoIdioma(idioma),
+          campoSlug(),
+          campoType('file'),
+        ],
+      },
+      {
+        name: 'documentos',
+        label: 'Documentos',
+        label_singular: 'Documento',
+        folder: 'documentos',
+        create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'title',
+        ...medios,
+        slug: '{{slug}}',
+        summary: '{{title}} — {{creator}}',
+        sortable_fields: ['date', 'title', 'creator'],
+        fields: [
+          campoTitulo(),
+          campoRelacion('creator', 'Autora', 'creadoras'),
+          campoRelacion('contributor', 'Colaboradoras', 'creadoras'),
+          campo('publisher', 'Editorial', 'string', { required: false }),
+          campo('identifier', 'Identificador', 'string', { required: false }),
+          campo('doi', 'DOI', 'string', { required: false }),
+          campo('isbn', 'ISBN', 'string', { required: false }),
+          campo('abstract', 'Resumen', 'text', { required: false }),
+          campoRelacion('keywords', 'Palabras clave', 'palabras_clave'),
+          campoFecha(),
+          campoLicencia(),
+          campoIdioma(idioma),
+          campoSlug(),
+          campoCuerpo(),
+          campoType('file'),
+        ],
+      },
+      {
+        name: 'convocatorias',
+        label: 'Convocatorias',
+        label_singular: 'Convocatoria',
+        folder: 'convocatorias',
+        create: true,
+        extension: 'md',
+        format: 'frontmatter',
+        identifier_field: 'title',
+        ...medios,
+        slug: '{{slug}}',
+        summary: '{{title}}',
+        fields: [
+          campoTitulo(),
+          campoFecha(),
+          campoCuerpo(),
+          campoLicencia(),
+          campoIdioma(idioma),
+          campoSlug(),
+          campoType('file'),
+        ],
+      },
+      {
         name: 'menu',
         label: 'Menú',
         files: [
@@ -345,6 +422,12 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
       },
     ],
   };
+
+  const colecciones = (config.collections as Array<Record<string, unknown>>).filter((col) => {
+    const folder = col.folder;
+    return typeof folder !== 'string' || existsSync(join(cwd, folder));
+  });
+  (config as { collections: unknown[] }).collections = colecciones;
 
   ocultarDespuesDelBody(config.collections);
 
@@ -502,7 +585,7 @@ export async function initSveltia(cwd: string): Promise<void> {
 
   const [indexCreado, configCreado] = await Promise.all([
     writeExclusive(adminIndex, ADMIN_INDEX),
-    writeExclusive(adminConfig, configuracionSveltia(language, repo, rama, slug)),
+    writeExclusive(adminConfig, configuracionSveltia(language, repo, rama, slug, cwd)),
   ]);
   const vendorCreado = await copiarVendorSveltia(vendor);
 
