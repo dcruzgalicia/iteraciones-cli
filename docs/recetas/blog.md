@@ -140,8 +140,11 @@ links:
 ```
 
 El menú es una página (`menu.html`) y también alimenta el header. El footer
-muestra los primeros enlaces; el resto queda en la página del menú. Los
-enlaces internos se escriben relativos al proyecto (`./texto.html`).
+muestra los primeros enlaces; el resto queda en la página del menú. Las rutas
+se escriben desde la raíz del proyecto, no desde `menu.md`: una página en
+`paginas/contacto.md` se enlaza como `./paginas/contacto.html`, y una lista en
+`listas/publicaciones.md` como `./publicaciones.html`. Si un enlace da 404,
+corrige la ruta en `menu.md`; no hay resolución automática.
 
 Las páginas `texto.html`, `creadora.html` y `coleccion.html` solo se generan
 cuando hay más de un documento de ese type. Si tu proyecto tiene uno solo,

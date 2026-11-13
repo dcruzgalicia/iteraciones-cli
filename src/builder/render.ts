@@ -40,6 +40,10 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   ]);
   if (!vars.subject) args.push('--metadata=subject:');
   const bandas: Array<[string, string | undefined]> = [
+    ['hero', vars.hero],
+    ['label-formatos', vars.labelFormatos],
+    ['label-indice', vars.labelIndice],
+    ['label-referencias', vars.labelReferencias],
     ['doc-chip', vars.docChip],
     ['doc-chip-href', vars.docChipHref],
     ['content-chip', vars.contentChip],
@@ -146,7 +150,7 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
     env: imagePathsEnv(opts.imagePaths),
     inputTarget: opts.inputTarget,
   });
-  const final = await minifyHtml(postProcessHtml(html, refsCardTemplate));
+  const final = await minifyHtml(postProcessHtml(html, refsCardTemplate, vars.labelReferencias));
 
   const postArgv =
     final !== html && opts.scriptOutputPath !== undefined

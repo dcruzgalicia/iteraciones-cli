@@ -46,6 +46,7 @@ format:
     site:
       title: Proyecto de ejemplo
       description: Publicaciones del proyecto.
+      url: https://ejemplo.org/proyecto
       logo: assets/images/logo.svg
       logoSize: 50px
       theme: dark
@@ -119,9 +120,36 @@ frontmatter > format.pdf > raíz
 | `site.color` | color | `lime` | Color de acento: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`, `taupe`, `mauve`, `mist`, `olive`. |
 | `site.license` | texto o `false` | hereda de la raíz | Licencia que se muestra en el sitio. |
 | `site.links` | lista | — | Enlaces de redes: `name` y `url`. Se muestran en el header y el footer. |
+| `site.url` | URL absoluta | — | Necesaria para canonical, sitemap y RSS. Sin ella no se generan feed ni sitemap. |
+| `site.home` | objeto | — | Hero opcional solo en `index.html`: `title`, `text`, `image`, `alt`, `url`, `label`. |
+| `site.search` | booleano | `false` | Genera `buscar.html` y `buscar.json` con búsqueda y filtros por type, autora, palabra clave y año. |
+| `site.labels` | objeto | `{}` | Sobrescribe etiquetas de interfaz: `menu`, `recientes`, `palabras-clave`, `formatos`, `indice`, `referencias`, `texto`, `contenido`, `colaboradora` y `leer-texto-completo`. |
+| `site.oai` | booleano | `false` | Genera `oai.xml` estático con un `ListRecords` Dublin Core. No es un endpoint OAI-PMH dinámico. |
 
 El frontmatter puede sobrescribir algunos valores del sitio con `site-title`,
 `tagline`, `theme`, `accent` y `css`.
+
+Ejemplo de etiquetas:
+
+```yaml
+format:
+  html:
+    site:
+      labels:
+        menu: Navegar
+        recientes: Novedades
+        palabras-clave: Temas
+        formatos: Descargas
+        indice: Contenido
+        referencias: Bibliografía
+        texto: Publicación
+        contenido: Contenido
+        colaboradora: Autora
+        leer-texto-completo: Abrir
+```
+
+El idioma de la interfaz sale de `language`; no se mezcla con el `language`
+del frontmatter de cada documento.
 
 ### `format.pdf`
 
@@ -191,3 +219,27 @@ iteraciones build --full           # build sin caché
 iteraciones build --json           # resultado para consumo programático
 iteraciones list-filters           # filtros Lua disponibles
 ```
+
+
+## Imágenes y formatos
+
+- Las imágenes web se procesan a `webp` con variantes de 200, 320, 640 y 960
+  px; el HTML usa `srcset`/`sizes` y declara dimensiones.
+- Los retratos usan `sizes="100px"`.
+- Las imágenes de contenido usan `sizes` según la columna principal; las que
+  quedan bajo el pliegue llevan `loading="lazy"` y `decoding="async"`.
+- `frontCover` y `backCover` son opcionales; si se declaran y el archivo no
+  existe, el build avisa. La ruta es relativa al Markdown que las declara.
+
+### Formatos por type
+
+| Type | Formatos no-HTML | Metadatos y portadas |
+|---|---|---|
+| `file` | PDF, EPUB, LaTeX y Markdown | Todos los campos Dublin Core; portada con `frontCover`/`backCover`. |
+| `collection` | PDF, EPUB, LaTeX y Markdown | `collectionCreator`, `files`, resumen, identificadores y portadas. |
+| `intervention` | PDF, LaTeX y Markdown | Páginas, membrete y longitud de línea. No genera HTML. |
+| `creator`, `list`, `menu`, `announcement` | Ninguno | Solo HTML. |
+
+Para PDF y EPUB, llena al menos `title`, `creator`, `date`, `publisher`,
+`identifier` (o `doi`/`isbn`), `abstract`, `keywords` y `license`. Los campos
+vacíos se omiten del documento y de `oai.xml`.
