@@ -69,7 +69,7 @@ export async function compileTailwindCss(
   const outPath = join(outputDir, ASSETS_CSS_FILE);
   if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new BuildError(`acento desconocido: "${accent}"`);
   const accentTheme = ACCENT_SHADES.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
-  const styleImport = style === DEFAULT_HTML_STYLE ? [] : [`@import "${join(STYLES_DIR, `${style}.css`)}";`];
+  const styleImport = [`@import "${join(STYLES_DIR, `${style}.css`)}";`];
   const input = [`@import "${STYLES_SRC}";`, ...styleImport, `@source "${outputDir}/**/*.html";`, '@theme {', accentTheme, '}'].join('\n');
 
   await mkdir(inputDir, { recursive: true });
@@ -111,9 +111,7 @@ export async function computeCssHash(
   const style = htmlStyle(site?.style);
   hasher.update(htmlStyleColor(site?.style, site?.color));
   hasher.update(style);
-  if (style !== DEFAULT_HTML_STYLE) {
-    hasher.update(await Bun.file(join(STYLES_DIR, `${style}.css`)).arrayBuffer());
-  }
+  hasher.update(await Bun.file(join(STYLES_DIR, `${style}.css`)).arrayBuffer());
   for (const font of STYLE_FONTS[style]) {
     hasher.update(await Bun.file(join(FONTS_SRC, font.source)).arrayBuffer());
   }
