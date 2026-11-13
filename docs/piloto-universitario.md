@@ -17,7 +17,7 @@ si vale la pena.
 | Formatos | HTML, PDF y EPUB; Markdown fuente para preservación. |
 | Duración | 6 semanas de preparación y cierre. |
 | Equipo | 1 editor/a, 1 asistente editorial, 1 persona técnica, autores. |
-| Fuera de alcance | OJS completo, DSpace completo, revisión por pares, OAI-PMH, DOI, SSO. |
+| Fuera de alcance | OJS completo, DSpace completo, revisión por pares, OAI-PMH dinámico, DOI, SSO. |
 
 El mismo esquema sirve para un cuaderno de prácticas o una memoria: cambia el
 título y el número de piezas, no la arquitectura.
@@ -145,7 +145,7 @@ manual o semiautomática.
 
 ### Lo que no se integra
 
-- **OAI-PMH:** no hay endpoint ni cosecha automática.
+- **OAI-PMH dinámico:** no hay endpoint ni cosecha automática. El piloto genera un `oai.xml` estático para revisar el mapeo.
 - **API de OJS o DSpace:** no hay depósito automático, autenticación ni
   sincronización.
 - **Flujo editorial de OJS:** envíos, revisión por pares, roles, decisiones y
@@ -157,8 +157,38 @@ manual o semiautomática.
   buscador facetado.
 - **Multi-revista o multi-número:** el piloto es un número.
 
-La exportación OAI-PMH/DSpace es un trabajo posterior al piloto; este
-documento solo define el mapeo y la prueba de carga manual.
+### Exportación OAI-PMH estática
+
+El piloto incluye una prueba acotada de exportación: `format.html.site.oai: true`
+genera `oai.xml` con un `ListRecords` Dublin Core. No es un servidor OAI-PMH;
+sirve para validar el mapeo antes de conectar un repositorio.
+
+Pasos del piloto:
+
+1. Activar `site.oai` y `site.url` en el proyecto del número.
+2. Construir el sitio y revisar que `oai.xml` tenga un registro por artículo y
+   por colección.
+3. Comparar los campos con la plantilla de carga de la biblioteca.
+4. Cargar una muestra de cinco registros en DSpace u OJS y confirmar que los
+   metadatos y las URLs resuelven.
+
+Mapeo Dublin Core:
+
+| Elemento | Origen |
+|---|---|
+| `dc:title` | `title` |
+| `dc:creator` | `creator`; si falta, «Anónima». |
+| `dc:subject` | `keywords` |
+| `dc:description` | `abstract` o `description` |
+| `dc:date` | `date`; si falta, la fecha de modificación del archivo. |
+| `dc:publisher` | `publisher` |
+| `dc:identifier` | `identifier`, `doi`, `isbn` o la ruta del Markdown. |
+| `dc:rights` | `rights` o `license` |
+| `dc:type` | `Text` para `file`; `Collection` para `collection`. |
+| `dc:language` | `language` del frontmatter, si existe. |
+
+La exportación es reproducible: el orden de los registros se ordena por ruta y
+solo cambia el `responseDate` de cada corrida.
 
 ## Criterios de éxito
 

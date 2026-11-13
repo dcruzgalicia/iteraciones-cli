@@ -71,6 +71,17 @@ const ImageFieldsSchema = {
   backCover: z.string().optional(),
 };
 
+const HtmlHomeSchema = z
+  .object({
+    title: z.string().optional(),
+    text: z.string().optional(),
+    image: z.string().optional(),
+    alt: z.string().optional(),
+    url: z.string().optional(),
+    label: z.string().optional(),
+  })
+  .strict();
+
 const HtmlSiteSchema = z
   .object({
     title: z.string().default(DEFAULT_HTML_FORMAT.site.title),
@@ -84,6 +95,10 @@ const HtmlSiteSchema = z
     rss: z.boolean().default(DEFAULT_HTML_FORMAT.site.rss),
     links: z.array(z.object({ name: z.string(), url: z.string() }).strict()).optional(),
     license: z.union([z.string(), z.literal(false)]).optional(),
+    home: HtmlHomeSchema.optional(),
+    search: z.boolean().optional(),
+    oai: z.boolean().optional(),
+    labels: z.record(z.string(), z.string()).optional(),
     url: z
       .string()
       .url()

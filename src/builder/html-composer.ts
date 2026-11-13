@@ -139,6 +139,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
     .replace('$page-type-class$', `page-${pageType}`)
     .replace(slot('header'), () => header)
     .replace(slot('footer'), () => footer);
+  html = fillSlot(html, 'hero', '$if(hero)$$hero$$endif$');
   html = fillSlot(html, 'page-header', metadata);
   html = fillSlot(html, 'main', main);
   html = fillSlot(html, 'publications', publications);
@@ -169,6 +170,10 @@ export interface HtmlPageVars {
   docTitle?: string;
   subtitle?: string;
   abstract?: string;
+  hero?: string;
+  labelFormatos?: string;
+  labelIndice?: string;
+  labelReferencias?: string;
   date?: string;
   dateIso?: string;
   showDates?: boolean;
