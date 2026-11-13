@@ -12,6 +12,7 @@ import { SiteConfigSchema } from '../config/config-schema.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { todayIso } from '../lib/date.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
+import { htmlStyleColor } from '../lib/html-styles.js';
 import { fail, logError, logInfo, logSuccess, writeJson } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { isDir } from '../lib/paths.js';
@@ -172,7 +173,8 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
   const theme = html?.site?.theme ?? '(por defecto)';
-  const accent = html?.site?.color ?? '(por defecto)';
+  const style = html?.site?.style ?? '(por defecto)';
+  const accent = htmlStyleColor(html?.site?.style, html?.site?.color);
 
   const preambleConfigLabel = 'filters de preámbulo desactivados (config):';
   const preambleDefaultsLabel = 'filters de preámbulo desactivados (defaults del paquete):';
@@ -184,6 +186,7 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
     ['pandoc:', pandocVersion],
     ['formatos activos:', activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'],
     ['tema HTML:', theme],
+    ['estilo HTML:', style],
     ['acento HTML:', accent],
     ['filters desactivados:', disabledFilters],
     [preambleConfigLabel, preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'],

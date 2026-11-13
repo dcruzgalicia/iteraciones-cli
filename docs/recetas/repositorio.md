@@ -34,6 +34,7 @@ format:
       title: Repositorio de ejemplo
       description: Publicaciones del proyecto.
       theme: light
+      style: institucional
       color: blue
   pdf:
     generate: true

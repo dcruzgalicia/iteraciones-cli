@@ -30,7 +30,8 @@ Si no existe, se usan estos valores por defecto:
     format.html.site.title: ${html.site?.title}
     format.html.site.description: ${html.site?.description}
     format.html.site.theme: ${html.site?.theme}                     light | dark
-    format.html.site.color: ${html.site?.color}                     ${colores}
+    format.html.site.style: ${html.site?.style}                 clasico | expresivo | editorial | institucional
+    format.html.site.color: ${html.site?.color ?? '(según style)'}                     ${colores}
     format.html.site.logo: ${html.site?.logo || "''"}
     format.html.site.logoSize: ${html.site?.logoSize}           tamaño del logo (px, rem, em…)
     format.html.site.showDates: ${html.site?.showDates}         muestra las fechas en tarjetas y páginas

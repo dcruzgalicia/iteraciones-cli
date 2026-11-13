@@ -13,6 +13,7 @@ Característica: init repositorio
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" contiene "publisher:"
       Y el archivo "iteraciones.config.yaml" contiene "license: CC-BY-NC-ND-4.0"
+      Y el archivo "iteraciones.config.yaml" contiene "style: institucional"
       Y el archivo "iteraciones.config.yaml" contiene "ponytail:"
       Y el archivo "index.md" contiene "type: list"
       Y el archivo "index.md" contiene "path: documentos/"

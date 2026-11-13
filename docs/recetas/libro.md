@@ -38,6 +38,7 @@ format:
       title: Libro de ejemplo
       description: Un libro hecho con iteraciones.
       theme: dark
+      style: editorial
       color: amber
   pdf:
     generate: true
