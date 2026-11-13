@@ -1,44 +1,20 @@
-@font-face {
-  font-family: "Space Grotesk";
-  src: url("../fonts/space-grotesk-latin.woff2") format("woff2");
-  font-weight: 300 700;
-  font-style: normal;
-  font-display: optional;
-}
-
-@font-face {
-  font-family: "Chakra Petch";
-  src: url("../fonts/chakra-petch-600-latin.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: optional;
-}
-
 [data-style="clasico"] body {
   font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
-  background-color: #fff8e7;
+  background-color: color-mix(in oklab, var(--color-accent-500) 6%, #fff8e7);
 }
 
 [data-style="clasico"] body.bg-paper-grid {
-  background-image:
-    linear-gradient(to right, rgb(17 17 17 / 0.07) 1px, transparent 1px), linear-gradient(to bottom, rgb(17 17 17 / 0.07) 1px, transparent 1px),
-    linear-gradient(to right, rgb(17 17 17 / 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgb(17 17 17 / 0.03) 1px, transparent 1px);
-  background-size:
-    64px 64px,
-    64px 64px,
-    16px 16px,
-    16px 16px;
+  --grid-bold: color-mix(in oklab, var(--color-accent-700) 18%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-700) 8%, transparent);
 }
 
 [data-style="clasico"][data-theme="dark"] body {
-  background-color: #0d0c0a;
+  background-color: color-mix(in oklab, var(--color-accent-500) 8%, #0d0c0a);
 }
 
 [data-style="clasico"][data-theme="dark"] body.bg-paper-grid {
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px),
-    linear-gradient(to right, rgb(255 255 255 / 0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.025) 1px, transparent 1px);
+  --grid-bold: color-mix(in oklab, var(--color-accent-300) 16%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-300) 6%, transparent);
 }
 
 [data-style="clasico"] h1,
@@ -50,44 +26,28 @@
 }
 
 [data-style="clasico"] .tarjeta {
-  background-color: #fffdf5;
-  border: 3px solid #111;
+  background-color: color-mix(in oklab, var(--color-accent-500) 3%, #fffdf5);
+  border: 3px solid var(--color-accent-700);
   border-radius: 0;
-  box-shadow: 8px 8px 0 #111;
+  box-shadow: 8px 8px 0 var(--color-accent-500);
 }
 
 [data-style="clasico"] .tarjeta:hover {
-  border-color: #111;
-  box-shadow: 10px 10px 0 #111;
+  border-color: var(--color-accent-800);
+  box-shadow: 10px 10px 0 var(--color-accent-600);
 }
 
 [data-style="clasico"] .tarjeta [class*="rounded-"] {
   border-radius: 0;
 }
 
-[data-style="clasico"] .tarjeta [class*="border-accent"] {
-  border-color: #111;
-}
-
-[data-style="clasico"] .tarjeta [class*="shadow-accent"] {
-  --tw-shadow-color: #111;
-}
-
 [data-style="clasico"][data-theme="dark"] .tarjeta {
-  background-color: #171512;
-  border-color: #f5f5f4;
+  background-color: color-mix(in oklab, var(--color-accent-500) 6%, #171512);
+  border-color: var(--color-accent-300);
   box-shadow: 8px 8px 0 var(--color-accent-500);
 }
 
 [data-style="clasico"][data-theme="dark"] .tarjeta:hover {
-  border-color: #fff;
+  border-color: var(--color-accent-200);
   box-shadow: 10px 10px 0 var(--color-accent-400);
-}
-
-[data-style="clasico"][data-theme="dark"] .tarjeta [class*="border-accent"] {
-  border-color: #f5f5f4;
-}
-
-[data-style="clasico"][data-theme="dark"] .tarjeta [class*="shadow-accent"] {
-  --tw-shadow-color: #f5f5f4;
 }
