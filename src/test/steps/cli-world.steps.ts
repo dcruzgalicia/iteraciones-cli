@@ -253,6 +253,7 @@ function nuevoMundo() {
     snapshotPrevio: undefined as Snapshot | undefined,
     snapshotNuevo: undefined as Snapshot | undefined,
     previewListo: undefined as unknown,
+    previewUrl: '',
   };
 }
 

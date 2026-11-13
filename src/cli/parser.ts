@@ -6,7 +6,7 @@ import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
 import { configHelp } from './config-help.js';
 import { runCover } from './cover.js';
-import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
+import { isNewDocumentType, NEW_DOCUMENT_TYPES, runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 import { runMarkdown } from './markdown.js';
 import { runMarkdownClean } from './markdown-clean.js';
 import { runMerge } from './merge.js';
@@ -14,6 +14,7 @@ import { runCollectPdf } from './pdf.js';
 import { runPost } from './post.js';
 import { runPrepare } from './prepare.js';
 import { runPreview } from './preview.js';
+import { TEMPLATE_NAMES } from './project-templates/index.js';
 import { runSnapshots, type SnapshotsOptions } from './snapshots.js';
 import { runTemplate } from './template.js';
 import { runTypography, type TypographyOptions } from './typography.js';
@@ -37,6 +38,21 @@ function translateCommanderError(message: string): string {
     .join('\n');
 }
 
+const EDITORIAL_COMMANDS = ['init', 'new', 'build', 'preview', 'validate', 'clean', 'doctor', 'list-filters'];
+
+function rangoEditorial(name: string): number {
+  const indice = EDITORIAL_COMMANDS.indexOf(name);
+  return indice < 0 ? EDITORIAL_COMMANDS.length : indice;
+}
+
+function agruparAyuda(program: Command): void {
+  for (const command of program.commands) {
+    command.helpGroup(rangoEditorial(command.name()) < EDITORIAL_COMMANDS.length ? 'Flujo editorial:' : 'Comandos avanzados:');
+  }
+  const ordenados = [...program.commands].sort((a, b) => rangoEditorial(a.name()) - rangoEditorial(b.name()));
+  (program as unknown as { commands: Command[] }).commands = ordenados;
+}
+
 export function buildProgram(): Command {
   const program = new Command();
 
@@ -44,7 +60,8 @@ export function buildProgram(): Command {
     .name(packageJson.name.replace(/-cli$/, ''))
     .version(packageJson.version, '-V, --version', 'muestra la versión')
     .helpOption('-h, --help', 'muestra la ayuda')
-    .helpCommand('help [comando]', 'muestra la ayuda de un comando');
+    .helpCommand('help [comando]', 'muestra la ayuda de un comando')
+    .commandsGroup('Comandos avanzados:');
   program.addHelpText(
     'before',
     `escribir, compartir, re-existir
@@ -52,9 +69,11 @@ export function buildProgram(): Command {
 Construye documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Markdown (pandoc + Tailwind CSS).
 
 Primeros pasos:
-  iteraciones init                 crea la estructura del proyecto
-  iteraciones new posts/doc.md     crea un documento
+  iteraciones init blog             crea un proyecto con una plantilla (blog, libro, colectiva, repositorio)
+  iteraciones new texto             crea un documento del type indicado
+  iteraciones new posts/doc.md      crea un documento con frontmatter mínimo
   iteraciones build                 construye los documentos del proyecto
+  iteraciones preview               construye y sirve el sitio en local
 `,
   );
   program.addHelpText(
@@ -415,19 +434,22 @@ empezar en otro punto. El folio sí se usa, para no reportarlo como línea de un
 
   program
     .command('init [tipo]')
-    .description('crea el .gitignore mínimo; con "sveltia" agrega el admin y el layout')
+    .description('crea el .gitignore mínimo; con una plantilla crea un proyecto compilable, y con "sveltia" agrega el admin')
     .addHelpText(
       'after',
       `
+Plantillas: ${TEMPLATE_NAMES.join(' | ')}
+
 Ejemplos:
-  iteraciones init           prepara el .gitignore del proyecto en el directorio actual
-  iteraciones init sveltia   agrega el admin de Sveltia y el layout para publicarlo
+  iteraciones init                  prepara el .gitignore del proyecto en el directorio actual
+  iteraciones init blog             crea un proyecto de blog sin contenido de ejemplo
+  iteraciones init libro            crea un proyecto de libro con PDF y EPUB
+  iteraciones init colectiva        crea portada, menú y carpetas para una colectiva
+  iteraciones init repositorio      crea catálogo, metadatos y licencias
+  iteraciones init sveltia          agrega el admin de Sveltia y el layout para publicarlo
 `,
     )
     .action(async (tipo?: string) => {
-      if (tipo !== undefined && tipo !== 'sveltia') {
-        program.error(`tipo de init desconocido: "${tipo}"; el único tipo es "sveltia"`);
-      }
       await runInit(projectRoot(), tipo);
     });
 
@@ -449,23 +471,29 @@ Ejemplos:
 
   program
     .command('preview [paths...]')
-    .description('construye el proyecto y vuelve a construirlo con cada cambio; Ctrl+C para salir')
+    .description('construye, sirve el sitio y el admin en local, y reconstruye con cada cambio; Ctrl+C para salir')
     .option('--verbose', 'muestra información adicional de progreso')
+    .option('--port <puerto>', 'puerto del servidor local (por defecto: 4321)')
     .addHelpText(
       'after',
       `
-No levanta servidor: el build escribe los PDF en la salida y tu visor los muestra.
+El servidor sirve dist/files y /admin/; el navegador recarga cuando termina un build.
 Un cambio durante un build no se pierde: el build siguiente lo recoge.
 Acepta los mismos paths que build.
 
 Ejemplos:
-  iteraciones preview                 construye y reconstruye el proyecto entero
+  iteraciones preview                 construye, sirve y reconstruye el proyecto entero
   iteraciones preview posts/x.md      reconstruye solo ese documento
+  iteraciones preview --port 8080     sirve en otro puerto
   iteraciones preview --verbose       muestra el detalle de cada build
 `,
     )
-    .action(async (paths: string[], opts: { verbose?: boolean }) => {
-      await runPreview(projectRoot(), { verbose: opts.verbose, only: paths.length > 0 ? paths : undefined });
+    .action(async (paths: string[], opts: { verbose?: boolean; port?: string }) => {
+      const port = opts.port === undefined ? undefined : Number.parseInt(opts.port, 10);
+      if (port !== undefined && (!Number.isInteger(port) || port < 0 || port > 65535)) {
+        program.error(`puerto inválido: "${opts.port}"`);
+      }
+      await runPreview(projectRoot(), { verbose: opts.verbose, only: paths.length > 0 ? paths : undefined, port });
     });
 
   program
@@ -488,21 +516,30 @@ Ejemplos:
     });
 
   program
-    .command('new <path>')
-    .description(
-      'crea un archivo Markdown con frontmatter mínimo (el título se infiere del nombre del archivo, capitalizando cada palabra; usa --title para un título distinto)',
-    )
+    .command('new [tipoOrPath] [path]')
+    .description('crea un archivo Markdown con el frontmatter de su type; con una ruta suelta conserva el frontmatter mínimo')
     .option('-t, --title <title>', 'título del documento (por defecto: inferido del nombre del archivo)')
     .addHelpText(
       'after',
       `
+Types: ${NEW_DOCUMENT_TYPES.join(' | ')}
+
 Ejemplos:
-  iteraciones new posts/mi-articulo.md    crea el archivo con title, date y frontmatter
-  iteraciones new --title "Mi artículo" posts/mi-articulo.md   crea el archivo con un título explícito
+  iteraciones new texto                    crea texto.md con type file y date
+  iteraciones new creadora ana-ruiz        crea ana-ruiz.md con type creator y name
+  iteraciones new lista lectura            crea lectura.md con type list
+  iteraciones new posts/mi-articulo.md     crea el archivo con title, date y frontmatter mínimo
+  iteraciones new --title "Mi artículo" posts/mi-articulo.md   usa un título explícito
 `,
     )
-    .action(async (path: string, opts: { title?: string }) => {
-      await runNew(projectRoot(), path, { title: opts.title });
+    .action(async (tipoOrPath: string | undefined, path: string | undefined, opts: { title?: string }) => {
+      if (tipoOrPath === undefined) {
+        program.error("error: falta el argumento requerido 'path'");
+        return;
+      }
+      const type = isNewDocumentType(tipoOrPath) ? tipoOrPath : undefined;
+      const destino = type === undefined ? tipoOrPath : (path ?? `${type}.md`);
+      await runNew(projectRoot(), destino, { title: opts.title, type });
     });
 
   program
@@ -536,5 +573,6 @@ Ejemplos:
     )
     .action((options: { verbose?: boolean; json?: boolean }) => runFilters(projectRoot(), options));
 
+  agruparAyuda(program);
   return program;
 }
