@@ -781,7 +781,7 @@ function htmlVars(args: {
     docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: opcional(extras),
     sidebarExtras: opcional(sidebarExtras),
-    recientes: opcional(esListaIndex ? '' : recentesCard(discoveryIndex, dir)),
+    recientes: opcional(esListaIndex || doc.frontmatter.type === 'creator' ? '' : recentesCard(discoveryIndex, dir)),
     siteKeywords: opcional(siteKeywordsCard(discoveryIndex, dir, esPaginaKeyword ? undefined : keywordIndexHref(dir, discoveryIndex))),
     pagination: opcional(pagination),
   };
