@@ -10,6 +10,8 @@ showDate: false
 format:
   html:
     generate: true
+    site:
+      theme: light
   pdf:
     generate: true
   epub:
@@ -18,10 +20,11 @@ format:
 
 export const LIBRO: ProjectTemplate = {
   config: CONFIG,
-  dirs: ['capitulos'],
+  dirs: ['paginas', 'capitulos'],
   files: {
     'index.md': '---\ntitle: Mi libro\ntype: collection\nfiles:\n  - capitulos/00-inicio.md\n---\n',
     'menu.md': MENU([{ name: 'Inicio', url: './index.html' }]),
+    'paginas/.gitkeep': '',
     'capitulos/00-inicio.md': '---\ntitle: Inicio\n---\n\n<!-- Escribe aquí el contenido del libro. -->\n',
   },
 };

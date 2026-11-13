@@ -16,19 +16,21 @@ format:
 
 export const COLECTIVA: ProjectTemplate = {
   config: CONFIG,
-  dirs: ['textos', 'creadoras', 'colecciones', 'convocatorias', 'anuncios', 'palabras-clave'],
+  dirs: ['paginas', 'textos', 'creadoras', 'colecciones', 'convocatorias', 'anuncios', 'palabras-clave', 'listas'],
   files: {
     'index.md': '---\ntitle: Mi colectiva\n---\n\n<!-- Presenta aquí a la colectiva. -->\n',
-    'convocatorias.md': '---\ntitle: Convocatorias\ntype: list\nfilter:\n  path: convocatorias/\norder: date-desc\n---\n',
+    'convocatorias.md': '---\ntitle: Convocatorias\ntype: list\nfilter:\n  path: convocatorias/\norder: date-desc\n---\n\nConvocatorias abiertas.\n',
     'menu.md': MENU([
       { name: 'Inicio', url: './index.html' },
       { name: 'Convocatorias', url: './convocatorias.html' },
     ]),
+    'paginas/.gitkeep': '',
     'textos/.gitkeep': '',
     'creadoras/.gitkeep': '',
     'colecciones/.gitkeep': '',
     'convocatorias/.gitkeep': '',
     'anuncios/.gitkeep': '',
     'palabras-clave/.gitkeep': '',
+    'listas/.gitkeep': '',
   },
 };

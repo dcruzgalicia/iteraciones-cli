@@ -15,9 +15,15 @@ Característica: init blog
       Y el archivo "iteraciones.config.yaml" contiene "showDate: true"
       Y el archivo "index.md" contiene "type: list"
       Y el archivo "index.md" contiene "order: date-desc"
+      Y el archivo "index.md" contiene "filter:"
+      Y el archivo "index.md" contiene "path: textos/"
+      Y el directorio "paginas" existe
+      Y el directorio "creadoras" existe
+      Y el directorio "listas" existe
       Y el archivo "menu.md" contiene "type: menu"
       Y el directorio "textos" existe
       Y el archivo "textos/ejemplo.md" no existe
       Cuando construyo el proyecto
       Entonces el comando termina con el código de salida 0
+      Y el proyecto recién creado pasa validate
       Y el archivo "dist/files/index.html" existe

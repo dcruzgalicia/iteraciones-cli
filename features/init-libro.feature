@@ -13,12 +13,15 @@ Característica: init libro
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" contiene "toc: true"
       Y el archivo "iteraciones.config.yaml" contiene "showDate: false"
+      Y el archivo "iteraciones.config.yaml" contiene "theme: light"
+      Y el directorio "paginas" existe
       Y el archivo "iteraciones.config.yaml" contiene "frontCover"
       Y el archivo "iteraciones.config.yaml" contiene "Formatos"
       Y el archivo "iteraciones.config.yaml" contiene "Descargas"
       Y el archivo "menu.md" contiene "type: menu"
       Cuando construyo el proyecto
       Entonces el comando termina con el código de salida 0
+      Y el proyecto recién creado pasa validate
       Y el archivo "dist/files/index.html" existe
       Y el archivo "dist/files/index.pdf" existe
       Y el archivo "dist/files/index.epub" existe

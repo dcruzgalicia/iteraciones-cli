@@ -15,10 +15,13 @@ Característica: init colectiva
       Y el directorio "creadoras" existe
       Y el directorio "colecciones" existe
       Y el directorio "convocatorias" existe
+      Y el directorio "paginas" existe
+      Y el directorio "listas" existe
       Y el archivo "index.md" existe
       Y el archivo "convocatorias.md" contiene "type: list"
       Y el archivo "menu.md" contiene "Convocatorias"
       Cuando construyo el proyecto
       Entonces el comando termina con el código de salida 0
+      Y el proyecto recién creado pasa validate
       Y el archivo "dist/files/index.html" existe
       Y el archivo "dist/files/convocatorias.html" existe
