@@ -128,7 +128,7 @@ function responsiveSizes(tag: string): string {
   if (tag.includes('h-full w-full object-cover')) {
     return '(min-width:1536px) 33vw, (min-width:1280px) 33vw, (min-width:1024px) 50vw, (min-width:768px) 100vw, (min-width:640px) 50vw, 100vw';
   }
-  return '(min-width:1280px) 50vw, (min-width:1024px) 66vw, 100vw';
+  return '(min-width:1536px) 50vw, (min-width:1280px) 50vw, (min-width:1024px) 66vw, (min-width:768px) 66vw, 100vw';
 }
 
 export function addResponsiveImages(html: string, variants: Map<string, ImageVariant[]> | undefined): string {
