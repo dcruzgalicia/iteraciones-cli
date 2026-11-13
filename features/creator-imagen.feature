@@ -43,6 +43,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Y el archivo "dist/files/ana-garcia.html" dice "sm:w-[45%] md:w-2/5 lg:w-1/3 xl:w-1/4 2xl:w-1/4"
       Y el archivo "dist/files/ana-garcia.html" dice "shadow-[3px_3px_0_0] shadow-accent-500/30"
       Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "assets/images/ana-garcia-ana"
+      Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-document\"" antes que "assets/images/ana-garcia-ana"
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "Bio de Ana García."
 
     Escenario: El retrato queda antes de los textos de la creadora
