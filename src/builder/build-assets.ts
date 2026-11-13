@@ -59,17 +59,13 @@ export async function resolveTailwindBin(): Promise<string> {
 }
 
 async function fontFaceCss(style: HtmlStyle): Promise<string> {
-  const faces: string[] = [];
-  for (const font of STYLE_FONTS[style]) {
-    const data = await Bun.file(join(FONTS_SRC, font.source)).arrayBuffer();
-    const base64 = Buffer.from(data).toString('base64');
-    faces.push(
-      `@font-face{font-family:"${font.family}";src:url(data:font/woff2;base64,${base64}) format("woff2");font-weight:${font.weight};font-style:${font.style ?? 'normal'};font-display:block}`,
-    );
-  }
-  return faces.join('\n');
+  return STYLE_FONTS[style]
+    .map(
+      (font) =>
+        `@font-face{font-family:"${font.family}";src:url("../fonts/${font.destination}") format("woff2");font-weight:${font.weight};font-style:${font.style ?? 'normal'};font-display:swap}`,
+    )
+    .join('\n');
 }
-
 export async function compileTailwindCss(
   outputDir: string,
   accent: string,

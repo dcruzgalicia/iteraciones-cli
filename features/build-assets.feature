@@ -46,7 +46,8 @@ Característica: los assets de la salida
       Y el CSS sí dice:
         """
         @font-face
-        data:font/woff2;base64
+        url(../fonts/caveat-latin.woff2)
+        font-display:swap
         Caveat
         """
 

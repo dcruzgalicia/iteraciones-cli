@@ -217,7 +217,7 @@ Then('el HTML de dist lleva el data-theme {string}', (tema: string) => {
 Then('el CSS se compila sobre los HTML finales', () => {
   const css = salida(join('assets', 'css', 'styles.css'));
 
-  exige(css, 'styles.css', ['prose-xl', 'oklch(76.8% .233 130.85)', 'bg-teal-300']);
+  exige(css, 'styles.css', ['prose', 'oklch(76.8% .233 130.85)', 'bg-teal-300']);
 
   prohibe(css, 'styles.css', ['bg-fuchsia-700', 'bg-indigo-700']);
 });

@@ -184,6 +184,7 @@ Then('sus únicas utilidades son las que tienen caso atrás', () => {
     'logo-fill',
     'nombres-enlazados',
     'preview-grid',
+    'prose',
     'scroll-reveal',
     'smallcaps',
     'tarjeta',
