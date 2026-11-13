@@ -13,7 +13,7 @@ Característica: estilos visuales del sitio
     Y el archivo "dist/files/assets/fonts/space-grotesk-latin.woff2" existe
     Y el archivo "dist/files/assets/css/styles.css" contiene "Space Grotesk"
     Y el archivo "dist/files/assets/css/styles.css" contiene "url(../fonts/space-grotesk-latin.woff2)"
-    Y el archivo "dist/files/assets/css/styles.css" contiene "font-display:swap"
+    Y el archivo "dist/files/assets/css/styles.css" contiene "font-display:fallback"
     Y el archivo "dist/files/assets/css/styles.css" no contiene "fonts.googleapis.com"
     Y el archivo "dist/files/assets/css/styles.css" no contiene "caveat-latin.woff2"
 
@@ -45,7 +45,7 @@ Característica: estilos visuales del sitio
     Y el archivo "dist/files/assets/css/styles.css" contiene "@font-face"
     Y el archivo "dist/files/assets/css/styles.css" contiene "<familia>"
     Y el archivo "dist/files/assets/css/styles.css" contiene "url(../fonts/<fuente>)"
-    Y el archivo "dist/files/assets/css/styles.css" contiene "font-display:swap"
+    Y el archivo "dist/files/assets/css/styles.css" contiene "font-display:fallback"
     Y el archivo "dist/files/assets/fonts/<fuente>" existe
     Y el archivo "dist/files/assets/fonts/<licencia>" existe
     Y el archivo "dist/files/assets/css/styles.css" no contiene "fonts.googleapis.com"
