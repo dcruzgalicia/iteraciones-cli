@@ -20,16 +20,14 @@ format:
 
 export const REPOSITORIO: ProjectTemplate = {
   config: CONFIG,
-  dirs: ['documentos', 'autoras', 'palabras-clave'],
+  dirs: ['paginas', 'documentos', 'creadoras', 'palabras-clave', 'listas'],
   files: {
-    'index.md': '---\ntitle: Catálogo\ntype: list\norder: title-asc\n---\n',
-    'catalogo.md': '---\ntitle: Buscar en el catálogo\ntype: list\norder: title-asc\n---\n',
-    'menu.md': MENU([
-      { name: 'Inicio', url: './index.html' },
-      { name: 'Catálogo', url: './catalogo.html' },
-    ]),
+    'index.md': '---\ntitle: Catálogo\ntype: list\norder: title-asc\nfilter:\n  path: documentos/\n---\n\nCatálogo de documentos del repositorio.\n',
+    'menu.md': MENU([{ name: 'Inicio', url: './index.html' }]),
+    'paginas/.gitkeep': '',
     'documentos/.gitkeep': '',
-    'autoras/.gitkeep': '',
+    'creadoras/.gitkeep': '',
     'palabras-clave/.gitkeep': '',
+    'listas/.gitkeep': '',
   },
 };

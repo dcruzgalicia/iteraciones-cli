@@ -16,12 +16,14 @@ format:
 
 export const BLOG: ProjectTemplate = {
   config: CONFIG,
-  dirs: ['textos', 'autoras', 'palabras-clave'],
+  dirs: ['paginas', 'textos', 'creadoras', 'palabras-clave', 'listas'],
   files: {
-    'index.md': '---\ntitle: Publicaciones\ntype: list\norder: date-desc\n---\n',
+    'index.md': '---\ntitle: Publicaciones\ntype: list\norder: date-desc\nfilter:\n  path: textos/\n---\n\nTodas las publicaciones del blog.\n',
     'menu.md': MENU([{ name: 'Inicio', url: './index.html' }]),
+    'paginas/.gitkeep': '',
     'textos/.gitkeep': '',
-    'autoras/.gitkeep': '',
+    'creadoras/.gitkeep': '',
     'palabras-clave/.gitkeep': '',
+    'listas/.gitkeep': '',
   },
 };
