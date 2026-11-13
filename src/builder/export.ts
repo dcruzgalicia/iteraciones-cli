@@ -88,7 +88,7 @@ export async function convertToEpub(
       { key: 'description', value: fmTrimmedString(fm.description) ?? fmTrimmedString(fm.abstract) },
       { key: 'rights', value: fmTrimmedString(fm.rights) ?? fmTrimmedString(fm.license) },
       { key: 'publisher', value: fmTrimmedString(fm.publisher) },
-      { key: 'identifier', value: fmTrimmedString(fm.identifier) },
+      { key: 'identifier', value: fmTrimmedString(fm.identifier) ?? fmTrimmedString(fm.isbn) ?? fmTrimmedString(fm.doi) },
       { key: 'isbn', value: fmTrimmedString(fm.isbn) },
       { key: 'doi', value: fmTrimmedString(fm.doi) },
     ]),

@@ -393,7 +393,10 @@ export async function emitRss(args: {
   discoveryIndex: Map<string, DiscoveryEntry>;
 }): Promise<void> {
   const base = args.siteUrl?.trim().replace(/\/+$/, '');
-  if (base === undefined || base === '') return;
+  if (base === undefined || base === '') {
+    logWarning('rss está activo pero falta site.url; no se generó feed.xml', 'config');
+    return;
+  }
   const items = [...args.discoveryIndex.entries()]
     .filter(([, entry]) => {
       if (entry.date === undefined || entry.slug === undefined) return false;
@@ -950,10 +953,16 @@ export async function readCollectionEntries(
   return entries;
 }
 
-async function readCollectionFiles(doc: BuildDocument, cwd: string): Promise<CollectionEntry[]> {
+async function readCollectionFiles(doc: BuildDocument, cwd: string, collectionCreator?: unknown): Promise<CollectionEntry[]> {
   const files = doc.frontmatter.files;
   if (!files || files.length === 0) return [];
-  return readCollectionEntries(files, doc.relativePath, [cwd, join(cwd, dirname(doc.relativePath))]);
+  const entradas = await readCollectionEntries(files, doc.relativePath, [cwd, join(cwd, dirname(doc.relativePath))]);
+  const fallback = parseAuthors(collectionCreator);
+  if (fallback.length === 0) return entradas;
+  for (const entrada of entradas) {
+    if (entrada.creator.length === 0 && entrada.type !== 'intervention') entrada.creator = [...fallback];
+  }
+  return entradas;
 }
 
 export function memberSlugMap(rootFiles: string[], discoveryIndex: Map<string, DiscoveryEntry>): Map<string, string> {
@@ -1125,14 +1134,18 @@ function htmlPathFor(relativePath: string, slug: string | undefined): string {
   return posix(join(dirname(relativePath), `${htmlSlugFor(relativePath, slug)}.html`));
 }
 
-export function memberHtmlHrefs(collectionPath: string, entries: CollectionEntry[], slugIndex: Map<string, DiscoveryEntry>): Map<string, string> {
-  const dir = dirname(collectionPath);
+export function memberHtmlHrefs(
+  collectionPath: string,
+  entries: CollectionEntry[],
+  slugIndex: Map<string, DiscoveryEntry>,
+  baseDir = dirname(collectionPath),
+): Map<string, string> {
   const hrefs = new Map<string, string>();
   for (const e of entries) {
     const slug = slugIndex.get(e.file)?.slug;
     if (slug === undefined) continue;
     const html = htmlPathFor(e.file, slug);
-    hrefs.set(e.file, relativeHref(dir, html));
+    hrefs.set(e.file, relativeHref(baseDir, html));
   }
   return hrefs;
 }
@@ -1689,12 +1702,7 @@ function keywordIndexHref(dir: string, discoveryIndex: Map<string, DiscoveryEntr
 }
 
 function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string): string {
-  const recientes = miembrosDeUnType(discoveryIndex, 'all')
-    .filter((ruta) => {
-      const entry = discoveryIndex.get(ruta);
-      return entry !== undefined && tipoDe(entry) !== 'list';
-    })
-    .slice(0, RECENTES_LIMIT);
+  const recientes = miembrosDeUnType(discoveryIndex, 'file').slice(0, RECENTES_LIMIT);
   if (recientes.length === 0) return '';
   const items = recientes
     .map((ruta) => {
@@ -2037,13 +2045,13 @@ async function emitKeywordIndex(args: {
   const doc: BuildDocument = {
     filePath: join(cwd, `${KEYWORD_INDEX_SLUG}.md`),
     relativePath: `${KEYWORD_INDEX_SLUG}.md`,
-    frontmatter: { title: 'Palabras clave', date: '', creator: [], type: 'file', files: listas.flatMap((lista) => lista.miembros) },
+    frontmatter: { title: 'Palabras clave', date: '', creator: [], type: 'list', files: listas.flatMap((lista) => lista.miembros) },
   };
   const outputs: DocumentOutputs = {
     slug: KEYWORD_INDEX_SLUG,
     outSlug: KEYWORD_INDEX_SLUG,
     dir: '.',
-    fm: { title: 'Palabras clave', type: 'file' },
+    fm: { title: 'Palabras clave', type: 'list' },
     content: '',
     outBase: (name: string): string => join(outputDir, name),
   };
@@ -2136,7 +2144,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     return;
   }
 
-  const memberHrefs = memberHtmlHrefs(relativePath, entradas, discoveryIndex);
+  const memberHrefs = memberHtmlHrefs(relativePath, entradas, discoveryIndex, dir);
   const paginas = collectionCardsPages(
     entradas,
     memberHrefs,
@@ -2322,7 +2330,7 @@ function chipsDePertenencia(
   const chips: string[] = [];
   for (const ruta of contenedores) {
     const contenedor = discoveryIndex?.get(ruta);
-    if (contenedor?.type !== 'collection' && contenedor?.type !== 'list') continue;
+    if (contenedor?.type !== 'collection') continue;
     const titulo = Bun.escapeHTML(contenedor.title || ruta);
     if (ruta === pagePath) {
       chips.push(`<span class="${CHIP_OUTLINE_CLASSES}">${titulo}</span>`);
@@ -3007,7 +3015,7 @@ async function emitCollectionHtml(
   if (!(plan.activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html'))) return;
 
   const entradasTarjetas = doc.frontmatter.type === 'creator' ? entradasCreadora : collectionEntries;
-  const memberHrefs = memberHtmlHrefs(doc.relativePath, entradasTarjetas, discoveryIndex);
+  const memberHrefs = memberHtmlHrefs(doc.relativePath, entradasTarjetas, discoveryIndex, outputs.dir);
   const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
   const pageSize = formatCfg?.html?.pageSize ?? DEFAULT_HTML_FORMAT.pageSize;
   const showDates = mergedFm.showDates === false ? false : mergedFm.showDates === true ? true : formatCfg?.html?.site?.showDates === true;
@@ -3372,6 +3380,7 @@ export async function emitDefaultLists(args: {
   );
 
   for (const { slug, title, type, miembros, entradas, description } of listas) {
+    if (type === 'all' && discoveryIndex.has('index.md')) continue;
     if (type === 'all' ? miembros.length === 0 : miembros.length < 2) continue;
     await emitListPage({
       cwd,
@@ -3417,15 +3426,14 @@ export async function processDocumentFormats(
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
 
   const outSlug = doc.frontmatter.type === 'menu' ? 'menu' : htmlSlugFor(doc.relativePath, slug);
-  const dir = dirname(doc.relativePath);
-
   const isCollection = doc.frontmatter.type === 'collection';
   const isList = doc.frontmatter.type === 'list';
+  const dir = isList && doc.relativePath.startsWith('listas/') ? '.' : dirname(doc.relativePath);
   if (isCollection && entry?.aggregatedCreator) {
     doc.frontmatter.creator = entry.aggregatedCreator;
     entry.fm = { ...entry.fm, creator: entry.aggregatedCreator };
   }
-  const collectionEntries = isCollection || isList ? await readCollectionFiles(doc, ctx.cwd) : [];
+  const collectionEntries = isCollection || isList ? await readCollectionFiles(doc, ctx.cwd, entry?.fm?.collectionCreator) : [];
   if (isCollection && collectionEntries.length === 0) {
     logWarning(`"${doc.relativePath}": collection sin contenido en files; se omite del build`, 'build');
     return;

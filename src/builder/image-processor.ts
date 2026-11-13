@@ -371,7 +371,12 @@ async function collectFieldSources(fm: Record<string, unknown>, docDir: string, 
     const membrete = field === LETTERHEAD_FIELD;
     for (const value of fmStringList(fm[field]) ?? []) {
       const absPath = isAbsolute(value) ? value : resolve(docDir, value);
-      if (!(await Bun.file(absPath).exists())) continue;
+      if (!(await Bun.file(absPath).exists())) {
+        if (FULL_PAGE_COVER_FIELDS.includes(field)) {
+          logWarning(`portada declarada pero no encontrada en "${field}": "${value}"`, 'images');
+        }
+        continue;
+      }
       push(membrete ? { absPath, kind: 'title', cover: false, field, heightMm: alturaMembrete } : { absPath, kind: 'cover', cover, field });
     }
   }

@@ -72,6 +72,10 @@
   \fi\fi
 }
 \renewcommand{\maketitle}{%
+  \ifdefined\hypersetup
+    \ifdefined\@title\hypersetup{pdftitle={\@title}}\fi
+    \ifdefined\@author\hypersetup{pdfauthor={\@author}}\fi
+  \fi
   \ifnum\l@covercount>0
     \titlepageguardstrue
   \fi
