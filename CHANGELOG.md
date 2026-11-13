@@ -1,5 +1,70 @@
 # Changelog
 
+## [0.28.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.27.0...v0.28.0) (2026-11-13)
+
+
+### Features
+
+* **builder:** definir la matriz de formatos por type ([#2806](https://github.com/dcruzgalicia/iteraciones-cli/issues/2806)) ([6349f96](https://github.com/dcruzgalicia/iteraciones-cli/commit/6349f9686be8fb878e7b915f57db9ea8a05ba100))
+* **config:** agregar la URL base del sitio ([#2785](https://github.com/dcruzgalicia/iteraciones-cli/issues/2785)) ([286e2b1](https://github.com/dcruzgalicia/iteraciones-cli/commit/286e2b1084ef29bce2188d199f04cbc96d302f33))
+* **epub:** completar metadatos e imágenes de la collection ([#2810](https://github.com/dcruzgalicia/iteraciones-cli/issues/2810)) ([1f16fad](https://github.com/dcruzgalicia/iteraciones-cli/commit/1f16fade4374c483669de64d80741c084dd0bfd9))
+* **epub:** separar los miembros de una collection en capítulos ([#2807](https://github.com/dcruzgalicia/iteraciones-cli/issues/2807)) ([cbd966e](https://github.com/dcruzgalicia/iteraciones-cli/commit/cbd966ebc8d45719de38a38d2c6627d966113fe2))
+* **epub:** usar titleImage como respaldo de la portada ([#2808](https://github.com/dcruzgalicia/iteraciones-cli/issues/2808)) ([66647dd](https://github.com/dcruzgalicia/iteraciones-cli/commit/66647ddd4b32bbd9bf168d9f87c1d8b04fa7791e))
+* **html:** adaptar el grid de collections y listas al número de tarjetas ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788)) ([855c798](https://github.com/dcruzgalicia/iteraciones-cli/commit/855c7981991fa2cb8be0045120a97d65849bfb0b))
+* **html:** afinar tipografía, retratos y chips de las tarjetas ([2bfb852](https://github.com/dcruzgalicia/iteraciones-cli/commit/2bfb8520dce18a8cf14daae00b512608dc3748f9))
+* **html:** agregar bloque Cómo citar y exportación BibTeX/RIS ([#2821](https://github.com/dcruzgalicia/iteraciones-cli/issues/2821)) ([e5e4265](https://github.com/dcruzgalicia/iteraciones-cli/commit/e5e4265af7a7e5f5344cf20de0fcc8fbdb5e7533))
+* **html:** agregar canonical absoluto a las páginas ([#2796](https://github.com/dcruzgalicia/iteraciones-cli/issues/2796)) ([cf15fa4](https://github.com/dcruzgalicia/iteraciones-cli/commit/cf15fa4eee55c746ac5a536aa0fa3ea03621e620))
+* **html:** agregar datos estructurados JSON-LD ([#2801](https://github.com/dcruzgalicia/iteraciones-cli/issues/2801)) ([9eb7668](https://github.com/dcruzgalicia/iteraciones-cli/commit/9eb76685225666ebb9c24777cf71377202c2f32c))
+* **html:** agregar Open Graph y Twitter Card ([#2797](https://github.com/dcruzgalicia/iteraciones-cli/issues/2797)) ([fc45401](https://github.com/dcruzgalicia/iteraciones-cli/commit/fc454018e953de712d5177acc8ae2558668d09f5))
+* **html:** ajustar la portada al 45% en sm ([9c3a425](https://github.com/dcruzgalicia/iteraciones-cli/commit/9c3a425da0cca22b9cb69f93672923dc042e4369))
+* **html:** ajustar las columnas del grid por breakpoint ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788)) ([9807e62](https://github.com/dcruzgalicia/iteraciones-cli/commit/9807e6294a57c53022738f5bdcb3a9698d3c0bac))
+* **html:** ampliar la portada al 50% en sm ([1f5fa5f](https://github.com/dcruzgalicia/iteraciones-cli/commit/1f5fa5f1def2771bb391571d1c3001f52fa8bba8))
+* **html:** ampliar la portada móvil y bordearla con el acento ([4498186](https://github.com/dcruzgalicia/iteraciones-cli/commit/44981866e0a36cb1ac974da559b03252ca710b98))
+* **html:** aplicar el grid natural a todos los tipos ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788)) ([149ba45](https://github.com/dcruzgalicia/iteraciones-cli/commit/149ba454494834a5129840f938aaf4ee4b1a04d1))
+* **html:** cambiar el pageSize por defecto a 12 ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788)) ([7e9e927](https://github.com/dcruzgalicia/iteraciones-cli/commit/7e9e927aae28e705e95c7b79242adcf2a8b5cf46))
+* **html:** cargar en diferido las imágenes bajo el pliegue ([#2813](https://github.com/dcruzgalicia/iteraciones-cli/issues/2813)) ([d616a39](https://github.com/dcruzgalicia/iteraciones-cli/commit/d616a39f75f84b4dfd2370a9811cf87e1431c78f))
+* **html:** colapsar la segunda columna cuando no hay contenido relacionado ([#2787](https://github.com/dcruzgalicia/iteraciones-cli/issues/2787)) ([3113a87](https://github.com/dcruzgalicia/iteraciones-cli/commit/3113a87f002fe559f1ffdb988d5893c8cc31cbf0))
+* **html:** definir y probar el orden móvil de las tarjetas ([#2789](https://github.com/dcruzgalicia/iteraciones-cli/issues/2789)) ([8d03030](https://github.com/dcruzgalicia/iteraciones-cli/commit/8d03030aaca9228eb6704a093e3657880329b236))
+* **html:** dejar la portada elevada de forma permanente ([f4b1b4b](https://github.com/dcruzgalicia/iteraciones-cli/commit/f4b1b4ba4cf0285835164402acd7999936e70577))
+* **html:** destacar la primera publicación y estirar la foto de creadora ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788)) ([851c9e0](https://github.com/dcruzgalicia/iteraciones-cli/commit/851c9e0cecb722f5bccd053550f4dd7fc0a9c125))
+* **html:** elevar la portada al hover ([010e3ed](https://github.com/dcruzgalicia/iteraciones-cli/commit/010e3edaba3b8cac1970dececb9a3f9abba8ba51))
+* **html:** fusionar el estilo Brite con el tema del sitio ([ad95b28](https://github.com/dcruzgalicia/iteraciones-cli/commit/ad95b2807569fb7f38b8e9f4f6201906528fa99e))
+* **html:** generar feed RSS para contenidos con fecha ([#2819](https://github.com/dcruzgalicia/iteraciones-cli/issues/2819)) ([090dd76](https://github.com/dcruzgalicia/iteraciones-cli/commit/090dd76be2cb18f5588445dc5cb7fda8609ff843))
+* **html:** generar meta description por página ([#2795](https://github.com/dcruzgalicia/iteraciones-cli/issues/2795)) ([8514a7b](https://github.com/dcruzgalicia/iteraciones-cli/commit/8514a7b82cf3a28a07a3f832d67a5f638e46b51e))
+* **html:** generar página 404 con identidad y enlaces ([#2800](https://github.com/dcruzgalicia/iteraciones-cli/issues/2800)) ([5c12874](https://github.com/dcruzgalicia/iteraciones-cli/commit/5c1287473d85289c6ee41a6200588806cfa17e6d))
+* **html:** generar robots.txt con referencia al sitemap ([#2799](https://github.com/dcruzgalicia/iteraciones-cli/issues/2799)) ([a773ea4](https://github.com/dcruzgalicia/iteraciones-cli/commit/a773ea46efd0f12752ee32f08d858c51e5dc7ac7))
+* **html:** generar sitemap.xml con las páginas públicas ([#2798](https://github.com/dcruzgalicia/iteraciones-cli/issues/2798)) ([616e439](https://github.com/dcruzgalicia/iteraciones-cli/commit/616e439056a8f792d658b4da47e34452760bec8b))
+* **html:** integrar metadatos en el encabezado y ajustar el grid ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788), [#2820](https://github.com/dcruzgalicia/iteraciones-cli/issues/2820)) ([8c836e1](https://github.com/dcruzgalicia/iteraciones-cli/commit/8c836e1edb0b0756ca0feaaf3c14a05fc22cfb24))
+* **html:** mostrar fechas con showDates global y por documento ([#2790](https://github.com/dcruzgalicia/iteraciones-cli/issues/2790)) ([8d57b34](https://github.com/dcruzgalicia/iteraciones-cli/commit/8d57b3416ae3bc67ffbc9b0945b4873cce9eae0b))
+* **html:** mostrar ficha de metadatos de publicación ([#2820](https://github.com/dcruzgalicia/iteraciones-cli/issues/2820)) ([49ce2d2](https://github.com/dcruzgalicia/iteraciones-cli/commit/49ce2d256b2568796049112b4d734ffd7a3aa48a))
+* **html:** mover el retrato de creadora a la tarjeta de bio ([4236200](https://github.com/dcruzgalicia/iteraciones-cli/commit/4236200d3b79b4651584d57f011b56178ebc56df))
+* **html:** mover la portada al encabezado y la contraportada a related ([e4ef554](https://github.com/dcruzgalicia/iteraciones-cli/commit/e4ef5548569f4bdc5a837c5241b8f8f4614b6642))
+* **html:** mover la tarjeta de referencias a la segunda columna ([#2786](https://github.com/dcruzgalicia/iteraciones-cli/issues/2786)) ([dcb676a](https://github.com/dcruzgalicia/iteraciones-cli/commit/dcb676af32233b632c830b93edcab892b1e2886a))
+* **html:** mover portadas a related como tarjetas ([f9d5384](https://github.com/dcruzgalicia/iteraciones-cli/commit/f9d538475ffd44846bf6153685b733b8c6f189c9))
+* **html:** pulir chips, metadatos y alineación del encabezado ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788), [#2820](https://github.com/dcruzgalicia/iteraciones-cli/issues/2820)) ([4472bd0](https://github.com/dcruzgalicia/iteraciones-cli/commit/4472bd019a1f09e56913f22c4086c8d6ac297396))
+* **html:** reducir la portada a 40% en sm ([bd4562a](https://github.com/dcruzgalicia/iteraciones-cli/commit/bd4562a3f26298be3cd44b815465176fd85e01a0))
+* **html:** unificar contenido y sidebar en un solo grid ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788)) ([efd0df6](https://github.com/dcruzgalicia/iteraciones-cli/commit/efd0df6a6ea2bc252e9993aa68e3b627a4f6fbfc))
+* **menu:** permitir anidación libre y validar su forma ([#2803](https://github.com/dcruzgalicia/iteraciones-cli/issues/2803)) ([8bd088c](https://github.com/dcruzgalicia/iteraciones-cli/commit/8bd088c13f53fadbef13edef76074311557fe119))
+* **menu:** renderizar el menú anidado en menu.html ([#2804](https://github.com/dcruzgalicia/iteraciones-cli/issues/2804)) ([d4f73fd](https://github.com/dcruzgalicia/iteraciones-cli/commit/d4f73fda564a6ea6da8eb6797e31895546bfe604))
+
+
+### Bug Fixes
+
+* **build:** reproducir 404, robots, sitemap y feed en build.sh ([#2798](https://github.com/dcruzgalicia/iteraciones-cli/issues/2798), [#2799](https://github.com/dcruzgalicia/iteraciones-cli/issues/2799), [#2800](https://github.com/dcruzgalicia/iteraciones-cli/issues/2800), [#2819](https://github.com/dcruzgalicia/iteraciones-cli/issues/2819)) ([0d4d60a](https://github.com/dcruzgalicia/iteraciones-cli/commit/0d4d60aca49c69c508e4cb16a2c4f9a69ba35234))
+* **epub:** listar todos los capítulos en el índice de la collection ([#2809](https://github.com/dcruzgalicia/iteraciones-cli/issues/2809)) ([6dcadee](https://github.com/dcruzgalicia/iteraciones-cli/commit/6dcadee8155384d8e63ce65708697719a85660cf))
+* **html:** agregar width y height al logo y a los iconos ([#2793](https://github.com/dcruzgalicia/iteraciones-cli/issues/2793)) ([ecc6411](https://github.com/dcruzgalicia/iteraciones-cli/commit/ecc6411eb546a91e2e1c45d6b923d1e5ddd1aa4c))
+* **html:** ampliar el área de toque de los enlaces de autora y título ([#2792](https://github.com/dcruzgalicia/iteraciones-cli/issues/2792)) ([c715f86](https://github.com/dcruzgalicia/iteraciones-cli/commit/c715f8623d9c2c11ca48e5535dc60ea14c4e53f9))
+* **html:** dar nombre accesible a los enlaces de imagen ([#2791](https://github.com/dcruzgalicia/iteraciones-cli/issues/2791)) ([05146b7](https://github.com/dcruzgalicia/iteraciones-cli/commit/05146b7141fb51fd8798eda67db0ee56f387d372))
+* **html:** evitar duplicar la publicación destacada y estirar la foto ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788)) ([2f0e482](https://github.com/dcruzgalicia/iteraciones-cli/commit/2f0e482a1ec9d7070473c3c28ed16941b1cd560d))
+* **html:** servir los iconos de menú y flecha al tamaño esperado ([#2794](https://github.com/dcruzgalicia/iteraciones-cli/issues/2794)) ([8af627b](https://github.com/dcruzgalicia/iteraciones-cli/commit/8af627bbe847c8db42f251bb4f94cbd9e78df8fa))
+* **html:** unir related y sidebar para evitar huecos ([#2788](https://github.com/dcruzgalicia/iteraciones-cli/issues/2788)) ([c48f4d0](https://github.com/dcruzgalicia/iteraciones-cli/commit/c48f4d09fd4c0180881998201d5578ce974fdff2))
+* **html:** usar un alt genérico en la imagen de tarjeta ([#2791](https://github.com/dcruzgalicia/iteraciones-cli/issues/2791)) ([5f21006](https://github.com/dcruzgalicia/iteraciones-cli/commit/5f21006f410ba2257c2a58c2428d186308cc7988))
+
+
+### Performance Improvements
+
+* **html:** quitar pointer-events de la animación scroll-reveal ([#2805](https://github.com/dcruzgalicia/iteraciones-cli/issues/2805)) ([2648c52](https://github.com/dcruzgalicia/iteraciones-cli/commit/2648c5256f9ce51120a5dc0dad5f53d48582aa3a))
+
 ## [0.27.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.26.0...v0.27.0) (2026-11-06)
 
 
