@@ -241,6 +241,21 @@ export const NEW_DOCUMENT_TYPES = ['texto', 'pagina', 'documento', 'coleccion', 
 
 export type NewDocumentType = (typeof NEW_DOCUMENT_TYPES)[number];
 
+const NEW_DOCUMENT_FOLDERS: Record<NewDocumentType, string> = {
+  texto: 'textos',
+  pagina: 'paginas',
+  documento: 'documentos',
+  coleccion: 'colecciones',
+  creadora: 'creadoras',
+  libro: 'colecciones',
+  anuncio: 'anuncios',
+  lista: 'listas',
+};
+
+export function defaultNewDocumentPath(type: NewDocumentType): string {
+  return `${NEW_DOCUMENT_FOLDERS[type]}/${type}.md`;
+}
+
 export function isNewDocumentType(value: string): value is NewDocumentType {
   return (NEW_DOCUMENT_TYPES as readonly string[]).includes(value);
 }
