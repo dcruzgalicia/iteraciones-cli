@@ -8,10 +8,8 @@
   --grid-fine: color-mix(in srgb, var(--color-accent-700) 4%, transparent);
   --grid-bold: color-mix(in srgb, var(--color-accent-700) 7%, transparent);
   background-image:
-    linear-gradient(to right, var(--grid-bold) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-bold) 1px, transparent 1px),
-    linear-gradient(to right, var(--grid-fine) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-bold) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-bold) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-fine) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
   background-size:
     64px 64px,
     64px 64px,
@@ -133,11 +131,18 @@
       grid-template-columns: 3fr 2fr;
       grid-template-areas:
         "header header"
-        "main main"
-        "publications aside";
+        "content aside";
 
       & .page-content {
-        display: contents;
+        display: grid;
+        grid-area: content;
+        align-content: start;
+        gap: 1.5rem;
+
+        & > .page-main,
+        & > .page-publications {
+          grid-area: auto;
+        }
       }
     }
   }
@@ -168,8 +173,11 @@
       grid-template-columns: 2fr 1fr;
       grid-template-areas:
         "header header"
-        "main main"
-        "publications aside";
+        "content aside";
+
+      & .page-content {
+        gap: 2rem;
+      }
     }
   }
 
@@ -198,8 +206,7 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-areas:
         "header header header header"
-        "main main main main"
-        "publications publications publications aside";
+        "content content content aside";
     }
   }
 
@@ -217,7 +224,6 @@
         grid-template-columns: subgrid;
       }
     }
-
   }
 
   &.page-file:not(:has(.page-related)),
@@ -257,7 +263,6 @@
       grid-area: publications;
     }
   }
-
 }
 
 @utility preview-grid {
@@ -427,7 +432,6 @@
     font-size: inherit;
   }
 }
-
 
 @utility contenido-compacto {
   line-height: 1.25;
