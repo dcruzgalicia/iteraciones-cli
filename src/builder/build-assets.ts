@@ -58,6 +58,18 @@ export async function resolveTailwindBin(): Promise<string> {
   throw new BuildError(`no se encontró el binario de Tailwind CSS (@tailwindcss/cli). Verifica que el paquete esté instalado (bun install).`);
 }
 
+async function fontFaceCss(style: HtmlStyle): Promise<string> {
+  const faces: string[] = [];
+  for (const font of STYLE_FONTS[style]) {
+    const data = await Bun.file(join(FONTS_SRC, font.source)).arrayBuffer();
+    const base64 = Buffer.from(data).toString('base64');
+    faces.push(
+      `@font-face{font-family:"${font.family}";src:url(data:font/woff2;base64,${base64}) format("woff2");font-weight:${font.weight};font-style:${font.style ?? 'normal'};font-display:block}`,
+    );
+  }
+  return faces.join('\n');
+}
+
 export async function compileTailwindCss(
   outputDir: string,
   accent: string,
@@ -70,7 +82,8 @@ export async function compileTailwindCss(
   if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new BuildError(`acento desconocido: "${accent}"`);
   const accentTheme = ACCENT_SHADES.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
   const styleImport = [`@import "${join(STYLES_DIR, `${style}.css`)}";`];
-  const input = [`@import "${STYLES_SRC}";`, ...styleImport, `@source "${outputDir}/**/*.html";`, '@theme {', accentTheme, '}'].join('\n');
+  const fontFaces = await fontFaceCss(style);
+  const input = [`@import "${STYLES_SRC}";`, ...styleImport, fontFaces, `@source "${outputDir}/**/*.html";`, '@theme {', accentTheme, '}'].join('\n');
 
   await mkdir(inputDir, { recursive: true });
   await writeFile(inputPath, input, 'utf8');

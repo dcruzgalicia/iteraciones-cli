@@ -1,38 +1,20 @@
-@font-face {
-  font-family: "Caveat";
-  src: url("../fonts/caveat-latin.woff2") format("woff2");
-  font-weight: 400 700;
-  font-style: normal;
-  font-display: optional;
-}
-
-@font-face {
-  font-family: "Kalam";
-  src: url("../fonts/kalam-400-latin.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: optional;
-}
-
 [data-style="expresivo"] body {
   font-family: "Kalam", "Bradley Hand", "Comic Sans MS", cursive;
   background-color: #fbf5e7;
-  background-image:
-    radial-gradient(circle at 12% 8%, color-mix(in oklab, var(--color-accent-500) 10%, transparent), transparent 32%),
-    radial-gradient(circle at 88% 92%, color-mix(in oklab, var(--color-accent-500) 7%, transparent), transparent 30%);
-  background-size: auto;
-  background-position: center;
-  background-repeat: no-repeat;
+}
+
+[data-style="expresivo"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-700) 10%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-700) 4%, transparent);
 }
 
 [data-style="expresivo"][data-theme="dark"] body {
   background-color: #1d1915;
-  background-image:
-    radial-gradient(circle at 12% 8%, color-mix(in oklab, var(--color-accent-500) 12%, transparent), transparent 32%),
-    radial-gradient(circle at 88% 92%, color-mix(in oklab, var(--color-accent-500) 8%, transparent), transparent 30%);
-  background-size: auto;
-  background-position: center;
-  background-repeat: no-repeat;
+}
+
+[data-style="expresivo"][data-theme="dark"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-300) 12%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-300) 5%, transparent);
 }
 
 [data-style="expresivo"] h1 {
@@ -55,11 +37,6 @@
 
 [data-style="expresivo"] .tarjeta:hover {
   box-shadow: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 42%, transparent);
-}
-
-[data-style="expresivo"] blockquote {
-  border-left-style: dashed;
-  font-style: italic;
 }
 
 [data-style="expresivo"][data-theme="dark"] .tarjeta {

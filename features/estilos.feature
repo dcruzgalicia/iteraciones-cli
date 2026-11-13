@@ -10,9 +10,9 @@ Característica: estilos visuales del sitio
     Cuando hago un build del proyecto
     Entonces el comando termina con el código de salida 0
     Y el archivo "dist/files/index.html" contiene "data-style=\"clasico\""
-    Y el archivo "dist/files/index.html" contiene "space-grotesk-latin.woff2"
     Y el archivo "dist/files/assets/fonts/space-grotesk-latin.woff2" existe
     Y el archivo "dist/files/assets/css/styles.css" contiene "Space Grotesk"
+    Y el archivo "dist/files/assets/css/styles.css" contiene "data:font/woff2;base64"
     Y el archivo "dist/files/assets/css/styles.css" no contiene "fonts.googleapis.com"
     Y el archivo "dist/files/assets/css/styles.css" no contiene "caveat-latin.woff2"
 
@@ -42,18 +42,18 @@ Característica: estilos visuales del sitio
     Entonces el comando termina con el código de salida 0
     Y el archivo "dist/files/index.html" contiene "data-style=\"<estilo>\""
     Y el archivo "dist/files/assets/css/styles.css" contiene "@font-face"
-    Y el archivo "dist/files/index.html" contiene "<fuente>"
-    Y el archivo "dist/files/assets/css/styles.css" contiene "<fuente>"
+    Y el archivo "dist/files/assets/css/styles.css" contiene "<familia>"
+    Y el archivo "dist/files/assets/css/styles.css" contiene "data:font/woff2;base64"
     Y el archivo "dist/files/assets/fonts/<fuente>" existe
     Y el archivo "dist/files/assets/fonts/<licencia>" existe
     Y el archivo "dist/files/assets/css/styles.css" no contiene "fonts.googleapis.com"
 
     Ejemplos:
-      | estilo        | fuente                              | licencia                     |
-      | clasico       | space-grotesk-latin.woff2           | space-grotesk-OFL.txt        |
-      | expresivo     | caveat-latin.woff2                  | caveat-OFL.txt               |
-      | editorial     | libre-baskerville-regular-latin.woff2 | libre-baskerville-OFL.txt  |
-      | institucional | public-sans-latin.woff2             | public-sans-OFL.txt          |
+      | estilo        | familia           | fuente                              | licencia                     |
+      | clasico       | Space Grotesk     | space-grotesk-latin.woff2           | space-grotesk-OFL.txt        |
+      | expresivo     | Caveat            | caveat-latin.woff2                  | caveat-OFL.txt               |
+      | editorial     | Libre Baskerville | libre-baskerville-regular-latin.woff2 | libre-baskerville-OFL.txt  |
+      | institucional | Public Sans       | public-sans-latin.woff2             | public-sans-OFL.txt          |
 
   Escenario: Un estilo expresivo conserva el modo oscuro
     Dado que la raíz del proyecto tiene un proyecto de prueba
