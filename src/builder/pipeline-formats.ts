@@ -1309,7 +1309,7 @@ const PAGINATION_BUTTON_CLASSES =
 const PAGINATION_ACTIVE_CLASSES =
   'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500 bg-accent-500/20 px-1.5 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-900 shadow-[3px_3px_0_0] shadow-accent-500/40 dark:text-accent-100';
 
-const PAGINATION_NAV_CLASSES = 'mt-8 flex flex-wrap items-center justify-start gap-2 sm:mt-10 lg:mt-12';
+const PAGINATION_NAV_CLASSES = 'col-span-full mt-8 flex flex-wrap items-center justify-start gap-2 sm:mt-10 lg:mt-12';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
