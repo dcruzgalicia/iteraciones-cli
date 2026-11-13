@@ -810,6 +810,7 @@ export interface EmitHtmlPageArgs {
   announcementsBottom?: string;
   docChipHrefOverride?: string;
   contentChipOverride?: string;
+  synthetic?: boolean;
 }
 
 export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
@@ -836,12 +837,13 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
     announcementsBottom,
     docChipHrefOverride,
     contentChipOverride,
+    synthetic = false,
   } = args;
   const { ctx, plan } = renderCtx;
   const { outBase, outSlug, content } = outputs;
   const cwd = ctx.cwd;
 
-  const formats = formatLinksFor(plan, outSlug, doc.frontmatter.type);
+  const formats = synthetic ? undefined : formatLinksFor(plan, outSlug, doc.frontmatter.type);
   const hasHomePage = discoveryIndex.has('index.md') || discoveryIndex.size > 0;
   const available = availableDefaultListSlugs(discoveryIndex);
 
@@ -2045,13 +2047,13 @@ async function emitKeywordIndex(args: {
   const doc: BuildDocument = {
     filePath: join(cwd, `${KEYWORD_INDEX_SLUG}.md`),
     relativePath: `${KEYWORD_INDEX_SLUG}.md`,
-    frontmatter: { title: 'Palabras clave', date: '', creator: [], type: 'list', files: listas.flatMap((lista) => lista.miembros) },
+    frontmatter: { title: 'Palabras clave', date: '', creator: [], type: 'file', files: listas.flatMap((lista) => lista.miembros) },
   };
   const outputs: DocumentOutputs = {
     slug: KEYWORD_INDEX_SLUG,
     outSlug: KEYWORD_INDEX_SLUG,
     dir: '.',
-    fm: { title: 'Palabras clave', type: 'list' },
+    fm: { title: 'Palabras clave', type: 'file' },
     content: '',
     outBase: (name: string): string => join(outputDir, name),
   };
@@ -2089,6 +2091,7 @@ async function emitKeywordIndex(args: {
     announcementsBottom: anunciosBottom,
     docChipHrefOverride: '',
     contentChipOverride: 'Palabras clave',
+    synthetic: true,
   });
 }
 
