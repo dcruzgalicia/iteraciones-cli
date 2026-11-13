@@ -11,6 +11,7 @@ format:
   html:
     generate: true
     site:
+      style: editorial
       theme: light
   pdf:
     generate: true

@@ -50,6 +50,7 @@ format:
       logo: assets/images/logo.svg
       logoSize: 50px
       theme: dark
+      style: clasico
       color: lime
       license: CC-BY-NC-ND-4.0
       links:
@@ -116,7 +117,8 @@ frontmatter > format.pdf > raíz
 | `site.description` | texto | `escribir, compartir, re-existir` | Descripción o lema. |
 | `site.logo` | ruta | — | Logo relativo al proyecto. No admite `/` inicial ni `..`. |
 | `site.logoSize` | medida | `50px` | Tamaño del logo: `px`, `rem`, `em`, `vw`, `vh` o `%`. |
-| `site.theme` | `light` o `dark` | `dark` | Tema visual. |
+| `site.theme` | `light` o `dark` | `dark` | Modo visual: claro u oscuro. |
+| `site.style` | `clasico`, `expresivo`, `editorial` o `institucional` | `clasico` | Identidad visual: tipografía, bordes, sombras, fondo y acento por defecto. |
 | `site.color` | color | `lime` | Color de acento: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`, `taupe`, `mauve`, `mist`, `olive`. |
 | `site.license` | texto o `false` | hereda de la raíz | Licencia que se muestra en el sitio. |
 | `site.links` | lista | — | Enlaces de redes: `name` y `url`. Se muestran en el header y el footer. |
@@ -150,6 +152,32 @@ format:
 
 El idioma de la interfaz sale de `language`; no se mezcla con el `language`
 del frontmatter de cada documento.
+
+### Estilos visuales
+
+`site.style` elige una identidad visual. `site.theme` sigue controlando el modo
+claro/oscuro y `site.color` el acento. Si no declaras `color`, cada estilo usa
+su acento por defecto.
+
+| Estilo | Para | Acento por defecto | Rasgos |
+|---|---|---|---|
+| `clasico` | Sitios mixtos y compatibilidad | `lime` | El look actual: tarjetas, sombras desplazadas y grid de papel. |
+| `expresivo` | Personal, diario, colectiva, taller | `amber` | Papel cálido, títulos con aire manuscrito, bordes irregulares y sombras desplazadas. |
+| `editorial` | Libro, antología, revista | `stone` | Serif, papel crema, líneas finas, portada protagonista y menos tarjetas. |
+| `institucional` | Proyecto, centro, repositorio | `blue` | Sans sobria, fondo neutro, tarjetas discretas y metadatos legibles. |
+
+```yaml
+format:
+  html:
+    site:
+      style: expresivo
+      theme: light
+      color: amber
+```
+
+Los tres estilos con tipografía propia descargan sus fuentes desde
+`assets/fonts/`; no hay peticiones a Google Fonts en el sitio publicado.
+`clasico` usa la tipografía del sistema.
 
 ### `format.pdf`
 
@@ -223,6 +251,8 @@ iteraciones list-filters           # filtros Lua disponibles
 
 ## Imágenes y formatos
 
+- Los estilos con fuente propia incluyen solo los archivos de esa fuente en
+  `assets/fonts/`, junto con su licencia OFL.
 - Las imágenes web se procesan a `webp` con variantes de 200, 320, 640 y 960
   px; el HTML usa `srcset`/`sizes` y declara dimensiones.
 - Los retratos usan `sizes="100px"`.

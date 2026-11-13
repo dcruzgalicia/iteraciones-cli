@@ -171,6 +171,7 @@ export interface HtmlPageVars {
   subtitle?: string;
   abstract?: string;
   hero?: string;
+  style?: string;
   labelFormatos?: string;
   labelIndice?: string;
   labelReferencias?: string;

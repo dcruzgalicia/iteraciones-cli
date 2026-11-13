@@ -341,6 +341,7 @@ export async function emit404(args: {
   const siteTitle = site?.title ?? 'iteraciones';
   const tagline = site?.description ?? '';
   const theme = site?.theme ?? 'dark';
+  const style = site?.style ?? 'clasico';
   const logo =
     args.renderCtx.logo === undefined
       ? ''
@@ -365,7 +366,7 @@ export async function emit404(args: {
     )
     .join('');
   const html = `<!DOCTYPE html>
-<html lang="${Bun.escapeHTML(ctx.siteConfig.language)}" data-theme="${theme}">
+<html lang="${Bun.escapeHTML(ctx.siteConfig.language)}" data-theme="${theme}" data-style="${style}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -470,9 +471,10 @@ export async function emitSearch(args: {
   await writeStatic(cwd, outputDir, 'buscar.json', `${JSON.stringify(entradas, null, 2)}\n`);
   const datos = JSON.stringify(entradas).replace(/</g, '\\u003c');
   const theme = site?.theme === 'light' ? 'light' : 'dark';
+  const style = site?.style ?? 'clasico';
   const title = site?.title ?? 'iteraciones';
   const html = `<!doctype html>
-<html lang="${Bun.escapeHTML(renderCtx.lang)}" data-theme="${theme}">
+<html lang="${Bun.escapeHTML(renderCtx.lang)}" data-theme="${theme}" data-style="${style}">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Buscar · ${Bun.escapeHTML(title)}</title>
@@ -884,6 +886,7 @@ function htmlVars(args: {
   return {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
     hero,
+    style: htmlConfig?.site?.style ?? 'clasico',
     labelFormatos: label('formatos', 'Formatos'),
     labelIndice: label('indice', 'Índice'),
     labelReferencias: label('referencias', 'Referencias'),

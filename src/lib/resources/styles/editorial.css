@@ -1,0 +1,44 @@
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../fonts/source-serif-4-latin.woff2") format("woff2");
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+[data-style="editorial"] body {
+  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  background-color: #faf6ec;
+  background-image: none;
+}
+
+[data-style="editorial"][data-theme="dark"] body {
+  background-color: #17140f;
+}
+
+[data-style="editorial"] h1,
+[data-style="editorial"] h2,
+[data-style="editorial"] h3 {
+  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+[data-style="editorial"] .tarjeta {
+  background-color: #fffdf7;
+  border-width: 1px;
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+[data-style="editorial"] .tarjeta:hover {
+  border-color: color-mix(in oklab, var(--color-accent-500) 70%, transparent);
+  box-shadow: none;
+}
+
+[data-style="editorial"][data-theme="dark"] .tarjeta {
+  background-color: #211d16;
+}
+
+[data-style="editorial"] blockquote {
+  font-style: italic;
+}

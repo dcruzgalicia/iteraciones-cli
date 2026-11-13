@@ -52,6 +52,7 @@ format:
       title: Sitio de ejemplo
       description: Textos de la comunidad.
       theme: dark
+      style: expresivo
       color: lime
   pdf:
     generate: true

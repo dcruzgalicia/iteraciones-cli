@@ -11,6 +11,7 @@ Característica: init libro
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init libro" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
+      Y el archivo "iteraciones.config.yaml" contiene "style: editorial"
       Y el archivo "iteraciones.config.yaml" contiene "toc: true"
       Y el archivo "iteraciones.config.yaml" contiene "showDate: false"
       Y el archivo "iteraciones.config.yaml" contiene "theme: light"

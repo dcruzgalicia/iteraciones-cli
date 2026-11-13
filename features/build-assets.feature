@@ -31,6 +31,26 @@ Característica: los assets de la salida
         Space Mono
         """
 
+    Escenario: Un estilo con fuente propia copia solo sus fuentes
+      Dado que la raíz del proyecto está vacía
+      Y una salida para los assets con estilo "expresivo"
+      Cuando construyo los assets con ese estilo
+      Entonces en los assets hay:
+        """
+        assets/fonts/caveat-latin.woff2
+        assets/fonts/lora-latin.woff2
+        assets/fonts/caveat-OFL.txt
+        """
+      Y en los assets NO hay:
+        """
+        assets/fonts/source-serif-4-latin.woff2
+        """
+      Y el CSS sí dice:
+        """
+        @font-face
+        url(../fonts/caveat-latin.woff2)
+        """
+
     Escenario: El CSS propio del sitio sigue dentro
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets

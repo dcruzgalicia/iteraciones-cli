@@ -1,0 +1,71 @@
+@font-face {
+  font-family: "Caveat";
+  src: url("../fonts/caveat-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lora";
+  src: url("../fonts/lora-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+[data-style="expresivo"] body {
+  font-family: "Lora", "Iowan Old Style", Georgia, serif;
+  background-color: #fbf5e7;
+  background-image:
+    radial-gradient(circle at 12% 8%, color-mix(in oklab, var(--color-accent-500) 10%, transparent), transparent 32%),
+    radial-gradient(circle at 88% 92%, color-mix(in oklab, var(--color-accent-500) 7%, transparent), transparent 30%);
+  background-size: auto;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+[data-style="expresivo"][data-theme="dark"] body {
+  background-color: #1d1915;
+  background-image:
+    radial-gradient(circle at 12% 8%, color-mix(in oklab, var(--color-accent-500) 12%, transparent), transparent 32%),
+    radial-gradient(circle at 88% 92%, color-mix(in oklab, var(--color-accent-500) 8%, transparent), transparent 30%);
+  background-size: auto;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+[data-style="expresivo"] h1 {
+  font-family: "Caveat", "Bradley Hand", cursive;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+[data-style="expresivo"] h2,
+[data-style="expresivo"] h3 {
+  font-family: "Lora", "Iowan Old Style", Georgia, serif;
+}
+
+[data-style="expresivo"] .tarjeta {
+  border-radius: 14px 5px 16px 6px;
+  border-width: 2px;
+  box-shadow: 4px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 32%, transparent);
+}
+
+[data-style="expresivo"] .tarjeta:hover {
+  box-shadow: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 42%, transparent);
+}
+
+[data-style="expresivo"] blockquote {
+  border-left-style: dashed;
+  font-style: italic;
+}
+
+[data-style="expresivo"][data-theme="dark"] .tarjeta {
+  background-color: color-mix(in oklab, var(--color-accent-500) 4%, #211c17);
+  box-shadow: 4px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 26%, transparent);
+}
+
+[data-style="expresivo"][data-theme="dark"] .tarjeta:hover {
+  box-shadow: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 36%, transparent);
+}
