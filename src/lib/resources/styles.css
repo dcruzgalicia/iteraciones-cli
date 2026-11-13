@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@plugin "@tailwindcss/typography";
-
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @utility bg-paper-grid {
@@ -575,4 +573,154 @@
 
 .prose :where(a):not(:where([class~="not-prose"] *)):hover {
   text-decoration: underline;
+}
+
+/* Tipografía de contenido sin el plugin completo */
+@utility prose {
+  color: var(--color-stone-800);
+  line-height: 1.7;
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    color: var(--color-stone-200);
+  }
+
+  & > :first-child {
+    margin-top: 0;
+  }
+
+  & > :last-child {
+    margin-bottom: 0;
+  }
+
+  & p,
+  & ul,
+  & ol,
+  & dl,
+  & figure,
+  & table,
+  & pre,
+  & blockquote {
+    margin-block: 1.15em;
+  }
+
+  & h1,
+  & h2,
+  & h3,
+  & h4,
+  & h5,
+  & h6 {
+    color: var(--color-stone-900);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-block: 1.6em 0.55em;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) :is(h1, h2, h3, h4, h5, h6) {
+    color: var(--color-stone-100);
+  }
+
+  & h1 { font-size: 2.15em; }
+  & h2 { font-size: 1.65em; }
+  & h3 { font-size: 1.35em; }
+  & h4 { font-size: 1.15em; }
+  & h5,
+  & h6 { font-size: 1em; }
+
+  & ul,
+  & ol {
+    padding-inline-start: 1.5em;
+  }
+
+  & ul { list-style: disc; }
+  & ol { list-style: decimal; }
+  & li { margin-block: 0.25em; }
+  & li::marker { color: var(--color-accent-700); }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) li::marker {
+    color: var(--color-accent-300);
+  }
+
+  & blockquote {
+    border-inline-start: 3px solid var(--color-accent-500);
+    color: var(--color-stone-700);
+    font-style: italic;
+    padding-inline-start: 1em;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) blockquote {
+    color: var(--color-stone-300);
+  }
+
+  & code {
+    background-color: var(--color-stone-100);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 0.15em 0.35em;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) code {
+    background-color: var(--color-stone-800);
+  }
+
+  & pre {
+    background-color: var(--color-stone-900);
+    border-radius: 6px;
+    color: var(--color-stone-100);
+    overflow-x: auto;
+    padding: 1em;
+  }
+
+  & pre code {
+    background: transparent;
+    color: inherit;
+    font-size: 0.9em;
+    padding: 0;
+  }
+
+  & table {
+    border-collapse: collapse;
+    font-size: 0.92em;
+    width: 100%;
+  }
+
+  & th,
+  & td {
+    border-bottom: 1px solid var(--color-stone-300);
+    padding: 0.45em 0.6em;
+    text-align: start;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) :is(th, td) {
+    border-color: var(--color-stone-700);
+  }
+
+  & th { font-weight: 700; }
+
+  & img {
+    margin-inline: auto;
+  }
+
+  & figcaption {
+    color: var(--color-stone-500);
+    font-size: 0.85em;
+    margin-top: 0.5em;
+    text-align: center;
+  }
+
+  & hr {
+    border: 0;
+    border-top: 1px solid var(--color-stone-300);
+    margin-block: 2em;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) hr {
+    border-color: var(--color-stone-700);
+  }
+
+  & sup,
+  & sub {
+    font-size: 0.75em;
+    line-height: 0;
+  }
 }
