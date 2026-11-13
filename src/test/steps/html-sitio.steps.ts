@@ -175,6 +175,22 @@ Then('el chip {string} del HTML de {string} sólo se subraya al pasar el ratón'
   }
 });
 
+Then('el chip {string} del HTML de {string} tiene efecto de elevación', (etiqueta: string, archivo: string) => {
+  const chip = chipDelHtml(archivo, etiqueta);
+  const clases = /class="([^"]*)"/.exec(chip)?.[1] ?? '';
+  if (!clases.includes('hover:-translate-x-0.5') || !clases.includes('hover:shadow-[3px_3px_0_0]')) {
+    throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no se eleva al pasar el ratón`);
+  }
+});
+
+Then('el chip {string} del HTML de {string} no tiene efecto de elevación', (etiqueta: string, archivo: string) => {
+  const chip = chipDelHtml(archivo, etiqueta);
+  const clases = /class="([^"]*)"/.exec(chip)?.[1] ?? '';
+  if (clases.includes('hover:-translate') || clases.includes('hover:shadow')) {
+    throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} se eleva y no debería`);
+  }
+});
+
 Then('el chip {string} del HTML de {string} enlaza a {string}', (etiqueta: string, archivo: string, href: string) => {
   const chip = chipDelHtml(archivo, etiqueta);
   if (!chip.includes(`href="${href}"`)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no enlaza a ${href}`);

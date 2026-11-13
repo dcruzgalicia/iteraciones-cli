@@ -17,6 +17,7 @@ Característica: metadatos de publicación en el encabezado
     Y el archivo "dist/files/test-document.html" contiene "DOI"
     Y el archivo "dist/files/test-document.html" contiene "10.1234/ejemplo"
     Y el archivo "dist/files/test-document.html" contiene "Colaboradoras"
+    Y el archivo "dist/files/test-document.html" contiene "<span class=\"whitespace-nowrap\">Ana</span>, <span class=\"whitespace-nowrap\">Otra</span>"
     Y el archivo "dist/files/test-document.html" contiene "Identificador"
     Y el archivo "dist/files/test-document.html" contiene "https://example.com/id"
     Y el archivo "dist/files/test-document.html" no contiene ">Publicación</h2>"
