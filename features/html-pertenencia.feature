@@ -2,10 +2,10 @@
 Característica: los chips de pertenencia en las tarjetas de colecciones y listas
 
   Como quien recorre una antología o un listado
-  Quiero ver en cada tarjeta a qué colecciones y listas pertenece el texto
+  Quiero ver en cada tarjeta a qué colección pertenece el texto
   Para llegar a los otros lugares donde aparece sin abrir el texto
 
-  Regla de negocio: Cada tarjeta lleva un chip por contenedor
+  Regla de negocio: Cada tarjeta lleva un chip por colección
 
     Escenario: Un texto en dos colecciones lleva el chip de la otra colección
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -46,8 +46,8 @@ Característica: los chips de pertenencia en las tarjetas de colecciones y lista
 
   Regla de negocio: Una lista propia también cuenta
 
-    Escenario: En un listado, el texto lleva el chip de la lista a la que pertenece
+    Escenario: En un listado, el texto no lleva el chip de la lista dinámica
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con un texto en una lista
       Cuando hago un build del proyecto
-      Entonces en el HTML de "texto.html" el chip "Selección" enlaza a "./seleccion.html"
+      Entonces el archivo "dist/files/texto.html" no contiene ">Selección</a>"
