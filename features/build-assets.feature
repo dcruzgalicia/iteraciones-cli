@@ -5,9 +5,9 @@ Característica: los assets de la salida
   Quiero que la salida lleve el CSS y el logo, y nada que sobre
   Para que el build no crezca con archivos que nadie pidió
 
-  Regla de negocio: El sitio usa las fuentes del navegador (#2487)
+  Regla de negocio: El estilo clásico usa fuentes locales con aire técnico
 
-    Escenario: El CSS usa la sans y la mono del sistema
+    Escenario: El CSS del estilo clásico usa Space Grotesk y Chakra Petch
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Cuando construyo los assets
@@ -15,15 +15,13 @@ Característica: los assets de la salida
         """
         assets/css/styles.css
         assets/images/favicon.png
-        """
-      Y en los assets NO hay:
-        """
-        assets/fonts
+        assets/fonts/space-grotesk-latin.woff2
+        assets/fonts/chakra-petch-600-latin.woff2
         """
       Y el CSS sí dice:
         """
-        -apple-system
-        ui-monospace
+        Space Grotesk
+        Chakra Petch
         """
       Y el CSS no menciona:
         """
@@ -38,12 +36,12 @@ Característica: los assets de la salida
       Entonces en los assets hay:
         """
         assets/fonts/caveat-latin.woff2
-        assets/fonts/lora-latin.woff2
+        assets/fonts/kalam-400-latin.woff2
         assets/fonts/caveat-OFL.txt
         """
       Y en los assets NO hay:
         """
-        assets/fonts/source-serif-4-latin.woff2
+        assets/fonts/public-sans-latin.woff2
         """
       Y el CSS sí dice:
         """
@@ -55,14 +53,10 @@ Característica: los assets de la salida
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Cuando construyo los assets
-      Entonces el CSS no menciona:
-        """
-        @font-face
-        url(../fonts/
-        """
-      Y el CSS sí dice:
+      Entonces el CSS sí dice:
         """
         @keyframes scroll-reveal
+        --color-accent-500
         """
 
   Regla de negocio: El logo raster vive en assets y el HTML lo referencia

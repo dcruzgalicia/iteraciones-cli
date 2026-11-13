@@ -1,13 +1,21 @@
 @font-face {
-  font-family: "Source Serif 4";
-  src: url("../fonts/source-serif-4-latin.woff2") format("woff2");
-  font-weight: 200 900;
+  font-family: "Libre Baskerville";
+  src: url("../fonts/libre-baskerville-regular-latin.woff2") format("woff2");
+  font-weight: 400;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
+}
+
+@font-face {
+  font-family: "Libre Baskerville";
+  src: url("../fonts/libre-baskerville-italic-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: optional;
 }
 
 [data-style="editorial"] body {
-  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  font-family: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
   background-color: #faf6ec;
   background-image: none;
 }
@@ -19,8 +27,8 @@
 [data-style="editorial"] h1,
 [data-style="editorial"] h2,
 [data-style="editorial"] h3 {
-  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
-  letter-spacing: -0.01em;
+  font-family: "Libre Baskerville", Baskerville, Georgia, serif;
+  letter-spacing: -0.015em;
 }
 
 [data-style="editorial"] .tarjeta {
@@ -35,10 +43,18 @@
   box-shadow: none;
 }
 
-[data-style="editorial"][data-theme="dark"] .tarjeta {
-  background-color: #211d16;
+[data-style="editorial"] .page-main .prose > p:first-of-type::first-letter {
+  float: left;
+  font-size: 3.2em;
+  font-weight: 700;
+  line-height: 0.82;
+  padding-right: 0.08em;
 }
 
 [data-style="editorial"] blockquote {
   font-style: italic;
+}
+
+[data-style="editorial"][data-theme="dark"] .tarjeta {
+  background-color: #211d16;
 }
