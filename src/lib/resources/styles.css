@@ -133,18 +133,11 @@
       grid-template-columns: 3fr 2fr;
       grid-template-areas:
         "header header"
-        "content aside";
+        "main main"
+        "publications aside";
 
       & .page-content {
-        display: grid;
-        grid-area: content;
-        align-content: start;
-        gap: 1.5rem;
-
-        & > .page-main,
-        & > .page-publications {
-          grid-area: auto;
-        }
+        display: contents;
       }
     }
   }
@@ -175,11 +168,8 @@
       grid-template-columns: 2fr 1fr;
       grid-template-areas:
         "header header"
-        "content aside";
-
-      & .page-content {
-        gap: 2rem;
-      }
+        "main main"
+        "publications aside";
     }
   }
 
@@ -208,7 +198,8 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-areas:
         "header header header header"
-        "content content content aside";
+        "main main main main"
+        "publications publications publications aside";
     }
   }
 
