@@ -39,13 +39,11 @@ Característica: el retrato de la creadora en sus tarjetas
       Y el archivo "dist/files/ana-garcia.html" dice "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" dice "assets/images/ana-garcia-ana"
       Y el archivo "dist/files/ana-garcia.html" dice "rounded-lg"
-      Y el archivo "dist/files/ana-garcia.html" dice "grid sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2"
-      Y el archivo "dist/files/ana-garcia.html" dice "sm:h-auto"
-      Y el archivo "dist/files/ana-garcia.html" dice "md:h-[30rem]"
-      Y el archivo "dist/files/ana-garcia.html" dice "lg:h-auto"
-      Y el archivo "dist/files/ana-garcia.html" dice "object-cover object-center"
+      Y el archivo "dist/files/ana-garcia.html" dice "w-full shrink-0 rounded-lg border-2 border-accent-500/70 object-contain"
+      Y el archivo "dist/files/ana-garcia.html" dice "sm:w-[45%] md:w-2/5 lg:w-1/3 xl:w-1/4 2xl:w-1/4"
+      Y el archivo "dist/files/ana-garcia.html" dice "shadow-[3px_3px_0_0] shadow-accent-500/30"
       Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "assets/images/ana-garcia-ana"
-      Y el archivo "dist/files/ana-garcia.html" pone "Bio de Ana García." antes que "Retrato de Ana García"
+      Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "Bio de Ana García."
 
     Escenario: El retrato queda antes de los textos de la creadora
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -56,7 +54,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/ana-garcia.html" pone "content-grid page-creator" antes que "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "tarjeta-fragmento"
-      Y el archivo "dist/files/ana-garcia.html" dice "object-cover object-center"
+      Y el archivo "dist/files/ana-garcia.html" dice "object-contain"
 
     Escenario: Sin retrato la bio y los textos se apilan
       Dado que la raíz del proyecto tiene un proyecto de prueba
