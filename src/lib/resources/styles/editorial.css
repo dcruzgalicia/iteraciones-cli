@@ -1,27 +1,20 @@
-@font-face {
-  font-family: "Libre Baskerville";
-  src: url("../fonts/libre-baskerville-regular-latin.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: optional;
-}
-
-@font-face {
-  font-family: "Libre Baskerville";
-  src: url("../fonts/libre-baskerville-italic-latin.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
-  font-display: optional;
-}
-
 [data-style="editorial"] body {
   font-family: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
   background-color: #faf6ec;
-  background-image: none;
+}
+
+[data-style="editorial"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-700) 6%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-700) 3%, transparent);
 }
 
 [data-style="editorial"][data-theme="dark"] body {
   background-color: #17140f;
+}
+
+[data-style="editorial"][data-theme="dark"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-300) 8%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-300) 3%, transparent);
 }
 
 [data-style="editorial"] h1,
@@ -41,18 +34,6 @@
 [data-style="editorial"] .tarjeta:hover {
   border-color: color-mix(in oklab, var(--color-accent-500) 70%, transparent);
   box-shadow: none;
-}
-
-[data-style="editorial"] .page-main .prose > p:first-of-type::first-letter {
-  float: left;
-  font-size: 3.2em;
-  font-weight: 700;
-  line-height: 0.82;
-  padding-right: 0.08em;
-}
-
-[data-style="editorial"] blockquote {
-  font-style: italic;
 }
 
 [data-style="editorial"][data-theme="dark"] .tarjeta {

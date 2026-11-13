@@ -161,10 +161,10 @@ su acento por defecto.
 
 | Estilo | Para | Acento por defecto | Rasgos |
 |---|---|---|---|
-| `clasico` | Sitios mixtos y compatibilidad | `lime` | Neobrutalismo: bordes negros gruesos, sombras duras, esquinas rectas y Space Grotesk + Chakra Petch. |
-| `expresivo` | Personal, diario, colectiva, taller | `amber` | Papel cálido, Kalam para el cuerpo y Caveat para los títulos; bordes irregulares y sombras desplazadas. |
-| `editorial` | Libro, antología, revista | `stone` | Libre Baskerville, papel crema, líneas finas, capitular y portada protagonista. |
-| `institucional` | Proyecto, centro, repositorio | `blue` | Public Sans, fondo neutro, tarjetas discretas y metadatos legibles. |
+| `clasico` | Sitios mixtos y compatibilidad | `lime` | Neobrutalismo en tonos del acento: papel milimétrico, bordes gruesos, sombras duras, esquinas rectas y Space Grotesk + Chakra Petch. |
+| `expresivo` | Personal, diario, colectiva, taller | `amber` | Papel milimétrico cálido, Kalam para el cuerpo y Caveat para los títulos; bordes irregulares y sombras desplazadas. |
+| `editorial` | Libro, antología, revista | `stone` | Libre Baskerville, papel milimétrico crema, líneas finas y portada protagonista. |
+| `institucional` | Proyecto, centro, repositorio | `blue` | Public Sans, papel milimétrico neutro, tarjetas discretas y metadatos legibles. |
 
 ```yaml
 format:
@@ -175,10 +175,13 @@ format:
       color: amber
 ```
 
-Los cuatro estilos descargan sus fuentes desde `assets/fonts/`; no hay
-peticiones a Google Fonts en el sitio publicado. Las fuentes se precargan en
-el `<head>` y usan `font-display: optional` para evitar el parpadeo al cambiar
-de tipografía.
+Todos los estilos comparten un fondo de papel milimétrico; cambia el tono de
+las líneas según el acento y el modo. No hay gradientes ni figuras de fondo.
+
+Los cuatro estilos incrustan sus fuentes en el CSS desde la copia local de
+`src/lib/resources/fonts/` y también dejan los archivos en `assets/fonts/`.
+No hay peticiones a Google Fonts ni un intercambio de tipografía después del
+primer pintado.
 
 ### `format.pdf`
 
@@ -252,8 +255,8 @@ iteraciones list-filters           # filtros Lua disponibles
 
 ## Imágenes y formatos
 
-- Los estilos con fuente propia incluyen solo los archivos de esa fuente en
-  `assets/fonts/`, junto con su licencia OFL.
+- Cada estilo incluye solo los archivos de su fuente en `assets/fonts/`, con
+  su licencia OFL, y los incrusta en el CSS para evitar parpadeos.
 - Las imágenes web se procesan a `webp` con variantes de 200, 320, 640 y 960
   px; el HTML usa `srcset`/`sizes` y declara dimensiones.
 - Los retratos usan `sizes="100px"`.
