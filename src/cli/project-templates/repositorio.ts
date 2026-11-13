@@ -16,6 +16,7 @@ format:
     site:
       title: Mi repositorio
       description: Documentos, metadatos y licencias
+      style: institucional
 `;
 
 export const REPOSITORIO: ProjectTemplate = {
