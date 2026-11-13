@@ -331,16 +331,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         ...medios,
         slug: '{{slug}}',
         summary: '{{title}}',
-        fields: [
-          campoTitulo(),
-          campoSubtitulo(),
-          campoCuerpo(),
-          campoFecha(),
-          campoLicencia(),
-          campoIdioma(idioma),
-          campoSlug(),
-          campoType('file'),
-        ],
+        fields: [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFecha(), campoLicencia(), campoIdioma(idioma), campoSlug(), campoType('file')],
       },
       {
         name: 'documentos',
@@ -385,15 +376,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         ...medios,
         slug: '{{slug}}',
         summary: '{{title}}',
-        fields: [
-          campoTitulo(),
-          campoFecha(),
-          campoCuerpo(),
-          campoLicencia(),
-          campoIdioma(idioma),
-          campoSlug(),
-          campoType('file'),
-        ],
+        fields: [campoTitulo(), campoFecha(), campoCuerpo(), campoLicencia(), campoIdioma(idioma), campoSlug(), campoType('file')],
       },
       {
         name: 'menu',
@@ -569,9 +552,20 @@ export async function initSveltia(cwd: string): Promise<void> {
   const rama = detectarRama(cwd);
 
   await Promise.all(
-    ['admin', 'admin/vendor', 'textos', 'creadoras', 'colecciones', 'listas', 'anuncios', 'intervenciones', 'palabras-clave'].map((dir) =>
-      mkdir(join(cwd, dir), { recursive: true }),
-    ),
+    [
+      'admin',
+      'admin/vendor',
+      'paginas',
+      'textos',
+      'documentos',
+      'creadoras',
+      'colecciones',
+      'convocatorias',
+      'listas',
+      'anuncios',
+      'intervenciones',
+      'palabras-clave',
+    ].map((dir) => mkdir(join(cwd, dir), { recursive: true })),
   );
 
   const report = (created: boolean, archivo: string): void => {

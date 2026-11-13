@@ -7,7 +7,19 @@ import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { generateCoverImages } from './export.js';
 import { PDF_WORK_BASE } from './output-layout.js';
 import { createPdfConsumer } from './pdf-pool.js';
-import { emit404, emitDefaultLists, emitKeywordLists, emitRobots, emitRss, emitSitemap, preparaImagenesDeAnuncios, processDocumentFormats } from './pipeline-formats.js';
+import {
+  emit404,
+  emitDefaultLists,
+  emitKeywordLists,
+  emitOai,
+  emitRobots,
+  emitRss,
+  emitSearch,
+  emitSitemap,
+  preparaImagenesDeAnuncios,
+  processDocumentFormats,
+  setHtmlLabels,
+} from './pipeline-formats.js';
 import {
   buildPoolContexts,
   type ExportContext,
@@ -81,6 +93,7 @@ export async function documentPipeline(
   }
 
   const { renderCtx, exportCtx, formatWorkSets } = await buildPoolContexts(ctx, plan, work, templates, pdfConsumer);
+  setHtmlLabels(ctx.siteConfig.format?.html?.site?.labels);
 
   if (activeFormats.html) {
     renderCtx.announcementImages = await preparaImagenesDeAnuncios({
@@ -122,6 +135,12 @@ export async function documentPipeline(
     const htmlSite = ctx.siteConfig.format?.html?.site;
     await emitSitemap({ cwd: ctx.cwd, outputDir: ctx.outputDir, siteUrl });
     await emitRobots({ cwd: ctx.cwd, outputDir: ctx.outputDir, siteUrl });
+    if (htmlSite?.oai === true) {
+      await emitOai({ cwd: ctx.cwd, outputDir: ctx.outputDir, siteUrl, siteTitle: htmlSite.title ?? 'iteraciones', discoveryIndex });
+    }
+    if (htmlSite?.search === true) {
+      await emitSearch({ cwd: ctx.cwd, outputDir: ctx.outputDir, renderCtx, discoveryIndex });
+    }
     if (htmlSite?.rss === true) {
       await emitRss({
         cwd: ctx.cwd,

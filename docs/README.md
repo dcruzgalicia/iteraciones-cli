@@ -97,6 +97,7 @@ servidor: abre los archivos de `dist/files/` con tu navegador.
   cómo se descubre el contenido y cómo se resuelven los metadatos.
 - [Configuración](configuracion.md): referencia de las claves de
   `iteraciones.config.yaml` y del frontmatter.
+- [Sveltia y layout](sveltia.md): carpetas, types, menú y colecciones del admin.
 
 ## Recetas
 
