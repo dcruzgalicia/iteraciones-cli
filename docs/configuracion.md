@@ -119,7 +119,7 @@ frontmatter > format.pdf > raíz
 | `site.logoSize` | medida | `50px` | Tamaño del logo: `px`, `rem`, `em`, `vw`, `vh` o `%`. |
 | `site.theme` | `light` o `dark` | `dark` | Modo visual: claro u oscuro. |
 | `site.style` | `clasico`, `expresivo`, `editorial` o `institucional` | `clasico` | Identidad visual: tipografía, bordes, sombras, fondo y acento por defecto. |
-| `site.color` | color | `lime` | Color de acento: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`, `taupe`, `mauve`, `mist`, `olive`. |
+| `site.color` | color | según `style` | Color de acento: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`, `taupe`, `mauve`, `mist`, `olive`. |
 | `site.license` | texto o `false` | hereda de la raíz | Licencia que se muestra en el sitio. |
 | `site.links` | lista | — | Enlaces de redes: `name` y `url`. Se muestran en el header y el footer. |
 | `site.url` | URL absoluta | — | Necesaria para canonical, sitemap y RSS. Sin ella no se generan feed ni sitemap. |
