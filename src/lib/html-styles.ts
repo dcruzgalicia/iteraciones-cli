@@ -18,12 +18,30 @@ export interface HtmlFont {
   source: string;
   destination: string;
   weight: string;
+  style?: string;
   license: string;
   licenseDestination: string;
 }
 
 export const STYLE_FONTS: Record<HtmlStyle, HtmlFont[]> = {
-  clasico: [],
+  clasico: [
+    {
+      family: 'Space Grotesk',
+      source: 'space-grotesk/SpaceGrotesk-latin.woff2',
+      destination: 'space-grotesk-latin.woff2',
+      weight: '300 700',
+      license: 'space-grotesk/OFL.txt',
+      licenseDestination: 'space-grotesk-OFL.txt',
+    },
+    {
+      family: 'Chakra Petch',
+      source: 'chakra-petch/ChakraPetch-600-latin.woff2',
+      destination: 'chakra-petch-600-latin.woff2',
+      weight: '600',
+      license: 'chakra-petch/OFL.txt',
+      licenseDestination: 'chakra-petch-OFL.txt',
+    },
+  ],
   expresivo: [
     {
       family: 'Caveat',
@@ -34,22 +52,31 @@ export const STYLE_FONTS: Record<HtmlStyle, HtmlFont[]> = {
       licenseDestination: 'caveat-OFL.txt',
     },
     {
-      family: 'Lora',
-      source: 'lora/Lora-latin.woff2',
-      destination: 'lora-latin.woff2',
-      weight: '400 700',
-      license: 'lora/OFL.txt',
-      licenseDestination: 'lora-OFL.txt',
+      family: 'Kalam',
+      source: 'kalam/Kalam-400-latin.woff2',
+      destination: 'kalam-400-latin.woff2',
+      weight: '400',
+      license: 'kalam/OFL.txt',
+      licenseDestination: 'kalam-OFL.txt',
     },
   ],
   editorial: [
     {
-      family: 'Source Serif 4',
-      source: 'source-serif-4/SourceSerif4-latin.woff2',
-      destination: 'source-serif-4-latin.woff2',
-      weight: '200 900',
-      license: 'source-serif-4/OFL.txt',
-      licenseDestination: 'source-serif-4-OFL.txt',
+      family: 'Libre Baskerville',
+      source: 'libre-baskerville/LibreBaskerville-Regular-latin.woff2',
+      destination: 'libre-baskerville-regular-latin.woff2',
+      weight: '400',
+      license: 'libre-baskerville/OFL.txt',
+      licenseDestination: 'libre-baskerville-OFL.txt',
+    },
+    {
+      family: 'Libre Baskerville',
+      source: 'libre-baskerville/LibreBaskerville-Italic-latin.woff2',
+      destination: 'libre-baskerville-italic-latin.woff2',
+      weight: '400',
+      style: 'italic',
+      license: 'libre-baskerville/OFL.txt',
+      licenseDestination: 'libre-baskerville-OFL.txt',
     },
   ],
   institucional: [

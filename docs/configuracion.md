@@ -161,10 +161,10 @@ su acento por defecto.
 
 | Estilo | Para | Acento por defecto | Rasgos |
 |---|---|---|---|
-| `clasico` | Sitios mixtos y compatibilidad | `lime` | El look actual: tarjetas, sombras desplazadas y grid de papel. |
-| `expresivo` | Personal, diario, colectiva, taller | `amber` | Papel cálido, títulos con aire manuscrito, bordes irregulares y sombras desplazadas. |
-| `editorial` | Libro, antología, revista | `stone` | Serif, papel crema, líneas finas, portada protagonista y menos tarjetas. |
-| `institucional` | Proyecto, centro, repositorio | `blue` | Sans sobria, fondo neutro, tarjetas discretas y metadatos legibles. |
+| `clasico` | Sitios mixtos y compatibilidad | `lime` | Neobrutalismo: bordes negros gruesos, sombras duras, esquinas rectas y Space Grotesk + Chakra Petch. |
+| `expresivo` | Personal, diario, colectiva, taller | `amber` | Papel cálido, Kalam para el cuerpo y Caveat para los títulos; bordes irregulares y sombras desplazadas. |
+| `editorial` | Libro, antología, revista | `stone` | Libre Baskerville, papel crema, líneas finas, capitular y portada protagonista. |
+| `institucional` | Proyecto, centro, repositorio | `blue` | Public Sans, fondo neutro, tarjetas discretas y metadatos legibles. |
 
 ```yaml
 format:
@@ -175,9 +175,10 @@ format:
       color: amber
 ```
 
-Los tres estilos con tipografía propia descargan sus fuentes desde
-`assets/fonts/`; no hay peticiones a Google Fonts en el sitio publicado.
-`clasico` usa la tipografía del sistema.
+Los cuatro estilos descargan sus fuentes desde `assets/fonts/`; no hay
+peticiones a Google Fonts en el sitio publicado. Las fuentes se precargan en
+el `<head>` y usan `font-display: optional` para evitar el parpadeo al cambiar
+de tipografía.
 
 ### `format.pdf`
 

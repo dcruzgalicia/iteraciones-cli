@@ -9,6 +9,7 @@
   $if(json-ld)$<script type="application/ld+json">$json-ld$</script>$endif$
   <title>$title$$if(site-title)$ · $site-title$$endif$</title>
   $if(author-meta)$<meta name="author" content="$author-meta$">$endif$
+  $if(font-preloads)$$font-preloads$$endif$
   $if(css)$<link rel="stylesheet" href="$css$">$endif$
   $if(favicon)$$favicon$$endif$
   $if(keywords)$<meta name="keywords" content="$keywords$">$endif$

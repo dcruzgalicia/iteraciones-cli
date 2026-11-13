@@ -3,19 +3,19 @@
   src: url("../fonts/caveat-latin.woff2") format("woff2");
   font-weight: 400 700;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
-  font-family: "Lora";
-  src: url("../fonts/lora-latin.woff2") format("woff2");
-  font-weight: 400 700;
+  font-family: "Kalam";
+  src: url("../fonts/kalam-400-latin.woff2") format("woff2");
+  font-weight: 400;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 [data-style="expresivo"] body {
-  font-family: "Lora", "Iowan Old Style", Georgia, serif;
+  font-family: "Kalam", "Bradley Hand", "Comic Sans MS", cursive;
   background-color: #fbf5e7;
   background-image:
     radial-gradient(circle at 12% 8%, color-mix(in oklab, var(--color-accent-500) 10%, transparent), transparent 32%),
@@ -43,12 +43,13 @@
 
 [data-style="expresivo"] h2,
 [data-style="expresivo"] h3 {
-  font-family: "Lora", "Iowan Old Style", Georgia, serif;
+  font-family: "Kalam", "Bradley Hand", cursive;
 }
 
 [data-style="expresivo"] .tarjeta {
-  border-radius: 14px 5px 16px 6px;
+  background-color: #fffaf0;
   border-width: 2px;
+  border-radius: 14px 5px 16px 6px;
   box-shadow: 4px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 32%, transparent);
 }
 
