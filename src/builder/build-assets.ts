@@ -62,7 +62,7 @@ async function fontFaceCss(style: HtmlStyle): Promise<string> {
   return STYLE_FONTS[style]
     .map(
       (font) =>
-        `@font-face{font-family:"${font.family}";src:url("../fonts/${font.destination}") format("woff2");font-weight:${font.weight};font-style:${font.style ?? 'normal'};font-display:fallback}`,
+        `@font-face{font-family:"${font.family}";src:url("../fonts/${font.destination}") format("woff2");font-weight:${font.weight};font-style:${font.style ?? 'normal'};font-display:swap}`,
     )
     .join('\n');
 }
