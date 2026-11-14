@@ -1,4 +1,3 @@
-# language: es
 Característica: Los exportadores respetan el contrato de pandoc
   Como quien produce un EPUB o un Markdown desde el CLI
   Quiero que pandoc se invoque con los argumentos correctos

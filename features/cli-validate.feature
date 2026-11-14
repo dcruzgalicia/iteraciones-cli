@@ -1,4 +1,3 @@
-# language: es
 Característica: validate revisa el proyecto y dice qué corregir
 
   Como quien escribe y no quiere que pandoc le cobre el error a mitad del build

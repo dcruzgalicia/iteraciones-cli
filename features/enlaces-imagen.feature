@@ -1,4 +1,3 @@
-# language: es
 Característica: nombre accesible de los enlaces de imagen
 
   Para que Lighthouse no marque enlaces sin nombre

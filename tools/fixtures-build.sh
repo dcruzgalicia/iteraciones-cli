@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Compila las fixtures de los dos proyectos de ejemplo en directorios temporales.
-# Sirve para verificar que siguen compilando sin tocar los proyectos originales.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

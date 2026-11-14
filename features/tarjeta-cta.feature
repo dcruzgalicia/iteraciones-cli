@@ -1,4 +1,3 @@
-# language: es
 Característica: el CTA de las tarjetas y la etiqueta Colaboradora
 
   Como quien navega el sitio

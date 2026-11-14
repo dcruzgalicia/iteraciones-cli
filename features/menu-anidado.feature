@@ -1,4 +1,3 @@
-# language: es
 Característica: menú anidado
 
   Para que una colectiva o universidad agrupe secciones

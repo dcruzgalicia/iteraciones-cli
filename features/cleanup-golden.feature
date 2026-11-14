@@ -1,4 +1,3 @@
-# language: es
 Característica: lo que queda en la salida
 
   Como quien publica y luego cambia de opinión

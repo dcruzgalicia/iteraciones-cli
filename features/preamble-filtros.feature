@@ -1,4 +1,3 @@
-# language: es
 Característica: los filtros de preámbulo que maquetan el documento
 
   Como quien maquetó su libro con LaTeX

@@ -1,4 +1,3 @@
-# language: es
 Característica: la corrección tipográfica del markdown
 
   Como quien revisa un PDF antes de mandarlo a imprenta

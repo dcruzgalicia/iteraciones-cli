@@ -1,4 +1,3 @@
-# language: es
 Característica: qué formatos se generan
 
   Como quien escribe un libro que sólo necesita PDF

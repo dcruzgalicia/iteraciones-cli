@@ -1,4 +1,3 @@
-# language: es
 Característica: el nombre del archivo de salida
 
   Como quien descarga su PDF

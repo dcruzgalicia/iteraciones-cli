@@ -1,4 +1,3 @@
-# language: es
 Característica: sitemap.xml
 
   Para que los buscadores reciban un mapa de las páginas públicas

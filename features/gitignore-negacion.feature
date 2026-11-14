@@ -1,4 +1,3 @@
-# language: es
 Característica: la negación en `.gitignore`
 
   Como que tengo notas en markdown dentro del proyecto

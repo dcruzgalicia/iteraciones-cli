@@ -1,4 +1,3 @@
-# language: es
 Característica: Open Graph y Twitter Card
 
   Para que una página compartida muestre título, descripción e imagen

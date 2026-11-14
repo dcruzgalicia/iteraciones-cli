@@ -1,4 +1,3 @@
-# language: es
 Característica: la tarjeta de entradas recientes del sidebar
 
   Como quien visita el sitio

@@ -1,4 +1,3 @@
-# language: es
 Característica: los chips de pertenencia en las tarjetas de colecciones y listas
 
   Como quien recorre una antología o un listado

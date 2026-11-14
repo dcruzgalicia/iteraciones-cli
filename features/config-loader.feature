@@ -1,4 +1,3 @@
-# language: es
 Característica: la configuración del proyecto
 
   Como quien escribe su `iteraciones.config.yaml`

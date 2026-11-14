@@ -1,4 +1,3 @@
-# language: es
 Característica: el preámbulo LaTeX que se entrega al autor
 
   Como quien abre su PDF en un lector

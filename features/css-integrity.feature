@@ -1,4 +1,3 @@
-# language: es
 Característica: El CSS se compila sólo con lo que aparece en el HTML
   Como quien mantiene el diseño del sitio
   Quiero que el CSS generado contenga exactamente las clases del HTML final

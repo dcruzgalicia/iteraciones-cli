@@ -1,4 +1,3 @@
-# language: es
 Característica: Los composers definen el contrato de argumentos sobre fixtures
   Como quien mantiene la frontera con pandoc
   Quiero ver exactamente qué argumentos y en qué orden salen hacia pandoc

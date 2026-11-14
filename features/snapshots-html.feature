@@ -1,4 +1,3 @@
-# language: es
 Característica: los snapshots del HTML
 
   Como quien publica un sitio

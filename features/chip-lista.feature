@@ -1,4 +1,3 @@
-# language: es
 Característica: El chip de tipo lleva a la lista de ese type
 
   Como quien recorre una antología

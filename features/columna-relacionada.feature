@@ -1,4 +1,3 @@
-# language: es
 Característica: colapsar la columna relacionada vacía
 
   Para que el texto use todo el ancho cuando no hay contenido relacionado

@@ -1,4 +1,3 @@
-# language: es
 Característica: init agrega node_modules al .gitignore
 
   Como quien va a instalar dependencias del proyecto

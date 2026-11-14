@@ -1,4 +1,3 @@
-# language: es
 Característica: la ayuda separa el flujo editorial de los comandos avanzados
 
   Como quien empieza un proyecto

@@ -36,6 +36,26 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "src/builder/html-postprocess.ts",
+        "src/builder/image-processor.ts",
+        "src/cli/markdown-clean.ts",
+        "src/cli/markdown.ts",
+        "src/cli/merge.ts",
+        "src/lib/pdf-spacing.ts",
+        "src/builder/pipeline-formats.ts",
+        "src/builder/pipeline.ts",
+        "src/builder/project-validator.ts"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          }
+        }
+      }
     }
   ],
   "javascript": {

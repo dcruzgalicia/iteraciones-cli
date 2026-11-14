@@ -1,4 +1,3 @@
-# language: es
 Característica: preview construye el proyecto y lo vuelve a construir con cada cambio
 
   Como quien escribe un PDF largo y lo relee mientras lo corrige

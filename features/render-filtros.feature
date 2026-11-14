@@ -1,4 +1,3 @@
-# language: es
 Característica: los nombres de los filtros del paquete
 
   Como quien desactiva un filtro en su config

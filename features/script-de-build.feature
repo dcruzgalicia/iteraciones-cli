@@ -1,4 +1,3 @@
-# language: es
 Característica: La clave script produce un build.sh portable y numerado de forma estable
   Como quien necesita reproducir un build en otra máquina
   Quiero que el build escriba un .sh con rutas relativas al proyecto y pasos numerados

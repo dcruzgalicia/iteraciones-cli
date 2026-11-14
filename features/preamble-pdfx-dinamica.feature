@@ -1,4 +1,3 @@
-# language: es
 Característica: las boxes del PDF/X-1a y la dinámica de la cola
 
   Como quien certifica su PDF en PDF/X-1a

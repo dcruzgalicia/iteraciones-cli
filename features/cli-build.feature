@@ -1,4 +1,3 @@
-# language: es
 Característica: El build falla bien y responde en la misma forma
 
   Como quien lee un error de build a las dos de la mañana

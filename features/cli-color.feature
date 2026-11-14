@@ -1,4 +1,3 @@
-# language: es
 Característica: El logger no colorea cuando el entorno pide no usar color
   Como quien corre el CLI en una tubería de un test
   Quiero que los códigos ANSI no aparezcan nunca en la salida de error

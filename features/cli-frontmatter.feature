@@ -1,4 +1,3 @@
-# language: es
 Característica: El frontmatter del documento gana sobre la configuración
 
   Como quien escribe un documento en otro idioma dentro de un proyecto en español

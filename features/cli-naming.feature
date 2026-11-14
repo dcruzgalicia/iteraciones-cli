@@ -1,4 +1,3 @@
-# language: es
 Característica: index.md se llama index en todos los formatos
 
   Como quien tiene la portada del sitio

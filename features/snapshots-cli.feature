@@ -1,4 +1,3 @@
-# language: es
 Característica: los snapshots de la regresión visual
 
   Como quien revisa un PDF antes de mandarlo a imprenta

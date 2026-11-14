@@ -1,4 +1,3 @@
-# language: es
 Característica: detectar el espaciado defectuoso de un PDF
 
   Como quien revisa la maqueta de un libro justificado

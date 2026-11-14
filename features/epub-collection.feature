@@ -1,4 +1,3 @@
-# language: es
 Característica: EPUB de una colección
 
   Para que un libro se pueda navegar por capítulos y llevar sus metadatos

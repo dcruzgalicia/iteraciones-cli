@@ -1,4 +1,3 @@
-# language: es
 Característica: init blog
 
   Como quien publica notas con fecha

@@ -1,4 +1,3 @@
-# language: es
 Característica: la banda de título nombra el tipo del documento y su portada
 
   Como quien abre un documento generado

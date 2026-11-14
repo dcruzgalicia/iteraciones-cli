@@ -1,4 +1,3 @@
-# language: es
 Característica: la licencia en los formatos exportados
 
   Como quien publica el proyecto en varios formatos

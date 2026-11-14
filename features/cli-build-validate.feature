@@ -1,4 +1,3 @@
-# language: es
 Característica: build y validate dicen lo mismo
 
   Como quien lee un error de build y después corre validate

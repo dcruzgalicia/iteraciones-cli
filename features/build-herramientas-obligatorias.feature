@@ -1,4 +1,3 @@
-# language: es
 Característica: el build exige las herramientas necesarias
 
   Como quien publica desde una máquina nueva

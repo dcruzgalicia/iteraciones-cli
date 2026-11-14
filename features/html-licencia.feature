@@ -1,4 +1,3 @@
-# language: es
 Característica: la tarjeta de licencia del sitio
 
   Como quien publica el sitio

@@ -6,6 +6,7 @@ import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmString, fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import { htmlStyle, STYLE_FONTS } from '../lib/html-styles.js';
 import { logWarning } from '../lib/logger.js';
 import { minifyHtml } from '../lib/minify.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
@@ -60,7 +61,6 @@ import {
 } from './output-layout.js';
 import { espaciosNormales, formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
 import { type ExportContext, type FormatWorkSets, htmlKindFor, latexKindFor, type RenderContext } from './pipeline-setup.js';
-import { htmlStyle, STYLE_FONTS } from '../lib/html-styles.js';
 import { htmlPageFromMarkdown } from './render.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
@@ -772,8 +772,7 @@ function fontPreloadTags(style: string | undefined, dir: string): string | undef
   if (fonts.length === 0) return undefined;
   return fonts
     .map(
-      (font) =>
-        `<link rel="preload" href="${relativeHref(dir, `${ASSETS_FONTS_DIR}/${font.destination}`)}" as="font" type="font/woff2" crossorigin>`,
+      (font) => `<link rel="preload" href="${relativeHref(dir, `${ASSETS_FONTS_DIR}/${font.destination}`)}" as="font" type="font/woff2" crossorigin>`,
     )
     .join('\n  ');
 }

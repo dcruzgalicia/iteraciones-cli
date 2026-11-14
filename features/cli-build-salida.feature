@@ -1,4 +1,3 @@
-# language: es
 Característica: El build dice qué hizo y por qué
 
   Como quien corre build un millón de veces por día

@@ -1,4 +1,3 @@
-# language: es
 Característica: las fechas, los plurales y el documento exportado
 
   Como quien escribe la portada de un libro

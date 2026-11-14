@@ -1,4 +1,3 @@
-# language: es
 Característica: los assets de la salida
 
   Como quien publica un sitio con su propia tipografía

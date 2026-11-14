@@ -1,4 +1,3 @@
-# language: es
 Característica: los filtros Lua del paquete, por capa
 
   Como quien ajusta el resultado de una transformación
