@@ -1,5 +1,5 @@
 [data-style="editorial"] body {
-  font-family: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
   background-color: #faf6ec;
 }
 
@@ -20,7 +20,7 @@
 [data-style="editorial"] h1,
 [data-style="editorial"] h2,
 [data-style="editorial"] h3 {
-  font-family: "Libre Baskerville", Baskerville, Georgia, serif;
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
   letter-spacing: -0.015em;
 }
 

@@ -1,5 +1,5 @@
 [data-style="expresivo"] body {
-  font-family: "Kalam", "Bradley Hand", "Comic Sans MS", cursive;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background-color: #fbf5e7;
 }
 
@@ -18,14 +18,14 @@
 }
 
 [data-style="expresivo"] h1 {
-  font-family: "Caveat", "Bradley Hand", cursive;
+  font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
 
 [data-style="expresivo"] h2,
 [data-style="expresivo"] h3 {
-  font-family: "Kalam", "Bradley Hand", cursive;
+  font-family: Georgia, "Times New Roman", serif;
 }
 
 [data-style="expresivo"] .tarjeta {
