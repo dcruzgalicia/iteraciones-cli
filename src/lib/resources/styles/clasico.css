@@ -1,5 +1,5 @@
 [data-style="clasico"] body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   background-color: color-mix(in oklab, var(--color-accent-500) 6%, #fff8e7);
 }
 
@@ -20,7 +20,7 @@
 [data-style="clasico"] h1,
 [data-style="clasico"] h2,
 [data-style="clasico"] h3 {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Chakra Petch", "Space Grotesk", system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -50,4 +50,8 @@
 [data-style="clasico"][data-theme="dark"] .tarjeta:hover {
   border-color: var(--color-accent-200);
   box-shadow: 10px 10px 0 var(--color-accent-400);
+}
+
+[data-style="clasico"] .chip-title {
+  font-family: "Chakra Petch", "Space Grotesk", system-ui, sans-serif;
 }
