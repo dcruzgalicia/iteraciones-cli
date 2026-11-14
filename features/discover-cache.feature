@@ -1,4 +1,3 @@
-# language: es
 Característica: la caché del descubrimiento
 
   Como quien edita un párrafo y recompila

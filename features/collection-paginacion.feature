@@ -1,4 +1,3 @@
-# language: es
 Característica: La paginación de las colecciones
 
   Como quien publica una antología de cuarenta textos

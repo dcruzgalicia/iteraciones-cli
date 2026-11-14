@@ -1,4 +1,3 @@
-# language: es
 Característica: referencias en la segunda columna
 
   Para que la bibliografía no compita con el cuerpo del texto

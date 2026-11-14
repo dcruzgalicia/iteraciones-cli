@@ -1,4 +1,3 @@
-# language: es
 Característica: una copia de la salida que vuelve a construir
 
   Como quien manda el PDF a otra máquina

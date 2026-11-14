@@ -1,4 +1,3 @@
-# language: es
 @accesibilidad
 Característica: validate reporta la accesibilidad del HTML construido
 

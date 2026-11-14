@@ -1,4 +1,3 @@
-# language: es
 Característica: imágenes responsivas en HTML
 
   Como quien publica un sitio con imágenes

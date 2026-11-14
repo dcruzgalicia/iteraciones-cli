@@ -1,4 +1,3 @@
-# language: es
 Característica: URL base del sitio
 
   Para generar canonical, sitemap y feeds

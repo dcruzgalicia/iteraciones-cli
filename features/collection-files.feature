@@ -1,4 +1,3 @@
-# language: es
 Característica: las rutas de los files[] de una colección
 
   Como quien organiza un libro en carpetas

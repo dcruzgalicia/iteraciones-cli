@@ -1,4 +1,3 @@
-# language: es
 Característica: doctor y list-filters cuentan qué le falta al proyecto
 
   Como quien acaba de instalar el CLI o demudarse de máquina

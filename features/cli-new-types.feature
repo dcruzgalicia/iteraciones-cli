@@ -1,4 +1,3 @@
-# language: es
 Característica: new crea documentos por type
 
   Como quien agrega una colección, una creadora o un anuncio

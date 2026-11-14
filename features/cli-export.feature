@@ -1,4 +1,3 @@
-# language: es
 Característica: El PDF y el EPUB llevan los metadatos del documento
 
   Como quien exporta a PDF o a EPUB para el Kindle

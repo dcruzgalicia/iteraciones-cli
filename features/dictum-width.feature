@@ -1,4 +1,3 @@
-# language: es
 Característica: el ancho de los dictum
 
   Como quien escribe texto corrido en la página

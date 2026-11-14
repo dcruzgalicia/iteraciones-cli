@@ -1,4 +1,3 @@
-# language: es
 Característica: El filtro de rutas de imagen reescribe lo que el preproceso movió
   Como quien tiene imágenes que el preproceso copia a assets
   Quiero que el .tex y el HTML apunten a la copia

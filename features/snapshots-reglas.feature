@@ -1,4 +1,3 @@
-# language: es
 Característica: las reglas de los snapshots
 
   Como quien cambia una coma en el frontmatter

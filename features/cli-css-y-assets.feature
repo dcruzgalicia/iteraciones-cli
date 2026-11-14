@@ -1,4 +1,3 @@
-# language: es
 Característica: el CSS y los assets que deja un build
 
   Como quien instala el resultado en su servidor

@@ -1,4 +1,3 @@
-# language: es
 Característica: los defaults del esquema y las vías de carga
 
   Como quien abre un proyecto que nunca compiló

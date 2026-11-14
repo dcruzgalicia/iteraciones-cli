@@ -1,4 +1,3 @@
-# language: es
 Característica: las fronteras del builder
 
   Como quien mantiene el pipeline

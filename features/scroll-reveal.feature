@@ -1,4 +1,3 @@
-# language: es
 Característica: animación compositada del botón volver arriba
 
   Para que Lighthouse no marque una animación no compositada

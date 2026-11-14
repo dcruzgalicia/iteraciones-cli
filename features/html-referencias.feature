@@ -1,4 +1,3 @@
-# language: es
 Característica: la tarjeta de referencias se sostiene sola
 
   Como quien tiene citas en su texto

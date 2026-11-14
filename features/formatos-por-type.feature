@@ -1,4 +1,3 @@
-# language: es
 Característica: formatos por type
 
   Para no generar PDF, EPUB y LaTeX de documentos que sólo existen en HTML

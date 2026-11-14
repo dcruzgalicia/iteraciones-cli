@@ -1,4 +1,3 @@
-# language: es
 Característica: dimensiones del logo y los iconos
 
   Para que el navegador reserve el espacio antes de cargar las imágenes

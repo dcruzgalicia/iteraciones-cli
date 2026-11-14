@@ -1,4 +1,3 @@
-# language: es
 Característica: preview sirve el sitio y el admin en local
 
   Como quien revisa el HTML y el admin mientras escribe

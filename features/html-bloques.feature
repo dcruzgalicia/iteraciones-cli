@@ -1,4 +1,3 @@
-# language: es
 Característica: las tarjetas del layout salen en el orden que el autor espera
 
   Como quien lee el resultado en el navegador

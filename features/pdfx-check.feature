@@ -1,4 +1,3 @@
-# language: es
 Característica: la validación PDF/X de la salida
 
   Como quien manda a imprimir

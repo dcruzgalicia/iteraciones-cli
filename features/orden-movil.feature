@@ -1,4 +1,3 @@
-# language: es
 Característica: orden móvil de las tarjetas
 
   Para que al apilarse todo en una columna el orden siga siendo claro

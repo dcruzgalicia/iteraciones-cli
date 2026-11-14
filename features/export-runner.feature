@@ -1,4 +1,3 @@
-# language: es
 Característica: el markdown exportado
 
   Como quien edita un texto ya publicado

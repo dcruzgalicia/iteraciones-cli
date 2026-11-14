@@ -110,7 +110,7 @@ When('comparo las reglas de iteraciones con git check-ignore', async () => {
   if (diferencias.length > 0) {
     throw new Error(
       `iteraciones se aparta de git en ${diferencias.length} caso(s) sin documentar:\n  ${diferencias.join('\n  ')}\n` +
-        'Si es un límite real, decláralo en DIVERGENCIAS_CONOCIDAS y en docs/architecture.md.',
+        'Si es un límite real, decláralo en DIVERGENCIAS_CONOCIDAS.',
     );
   }
 });

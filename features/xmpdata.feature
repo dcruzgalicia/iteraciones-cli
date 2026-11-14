@@ -1,4 +1,3 @@
-# language: es
 Característica: los metadatos del PDF
 
   Como quien recibe un PDF de una editorial

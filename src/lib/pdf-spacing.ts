@@ -63,7 +63,6 @@ function numero(valor: string | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: parser de XML plano, sin dependencias
 export function parseBboxLayout(xml: string): PageBox[] {
   const pages: PageBox[] = [];
   for (const pageMatch of xml.matchAll(/<page\b([^>]*)>([\s\S]*?)<\/page>/g)) {
@@ -165,7 +164,6 @@ interface Camino {
   xMax: number;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: DFS de canales; separar más oscurece el algoritmo
 function riverDePagina(page: PageBox, lineas: LineBox[]): TypographyIncidence[] {
   const ordenadas = [...lineas].sort((a, b) => a.yMin - b.yMin);
   const huecosPorLinea = ordenadas.map(huecos);
@@ -254,7 +252,6 @@ function riverDePagina(page: PageBox, lineas: LineBox[]): TypographyIncidence[] 
   return salida;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orquesta las tres reglas; los helpers ya están separados
 export function analyzeBoxes(pages: PageBox[], opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
   const pedidas = new Set<string>(opciones.reglas ?? GEOMETRY_RULES);
   const alturas = pages.flatMap((page) => page.lines.flatMap((line) => line.words.map((word) => word.yMax - word.yMin)));

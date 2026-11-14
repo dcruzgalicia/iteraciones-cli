@@ -1,4 +1,3 @@
-# language: es
 Característica: metadatos de publicación en el encabezado
 
   Para que el sitio muestre los metadatos que antes sólo iban al PDF

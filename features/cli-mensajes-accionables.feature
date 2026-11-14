@@ -1,4 +1,3 @@
-# language: es
 Característica: El CLI habla en español y dice qué hacer
 
   Como quien escribe en la terminal a las doce de la noche

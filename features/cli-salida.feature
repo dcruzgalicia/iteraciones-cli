@@ -1,4 +1,3 @@
-# language: es
 Característica: El nombre de la salida y la portada se validan antes de compilar
 
   Como quien publica y no quiere descubrir un slug roto cuando ya compartí el link

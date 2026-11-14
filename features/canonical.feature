@@ -1,4 +1,3 @@
-# language: es
 Característica: canonical absoluto
 
   Para que los buscadores sepan la URL preferida de cada página

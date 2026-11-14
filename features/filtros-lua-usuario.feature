@@ -1,4 +1,3 @@
-# language: es
 Característica: Los filtros de usuario se aplican y se condicionan por formato
   Como quien escribe su propio filtro Lua para el proyecto
   Quiero que el build lo aplique y que pueda cambiar según el formato de salida

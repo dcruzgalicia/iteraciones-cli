@@ -1,4 +1,3 @@
-# language: es
 Característica: lazy loading de imágenes de tarjeta
 
   Para que las imágenes bajo el pliegue no bloqueen la primera pintura

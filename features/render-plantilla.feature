@@ -1,4 +1,3 @@
-# language: es
 Característica: la plantilla HTML que se entrega a pandoc
 
   Como quien abre el resultado en el navegador

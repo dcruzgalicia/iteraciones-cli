@@ -1,4 +1,3 @@
-# language: es
 Característica: el bloque de autoras de un texto llega al LaTeX
 
   Como quien escribe un texto firmado

@@ -1,4 +1,3 @@
-# language: es
 Característica: las imágenes de las páginas de título
 
   Como quien pone una imagen en la contraportada

@@ -30,7 +30,6 @@ export async function limpiaMarkdown(file: string, content: string): Promise<str
 }
 
 export async function runMarkdownClean(cwd: string, args: string[], options: MarkdownCleanOptions = {}): Promise<void> {
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: el cuerpo se movió tal cual a runCommand
   await runCommand('clean-markdown', async () => {
     const archivos = args.length > 0 ? args.map((ruta) => resolve(cwd, ruta)) : (await listMarkdownDocuments(cwd)).map((rel) => join(cwd, rel));
     if (archivos.length === 0) throw new BuildError('no hay archivos markdown que limpiar');

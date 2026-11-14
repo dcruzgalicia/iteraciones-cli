@@ -1,4 +1,3 @@
-# language: es
 Característica: el post-proceso del HTML y los formatos del argv
 
   Como quien abre el resultado en el navegador

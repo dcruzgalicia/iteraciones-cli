@@ -1,4 +1,3 @@
-# language: es
 Característica: Un build a medias no envenena la caché ni pierde documentos
 
   Como quien corta un build con Ctrl-C y vuelve a correrlo

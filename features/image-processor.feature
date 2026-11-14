@@ -1,4 +1,3 @@
-# language: es
 Característica: el reemplazo de rutas de imagen en el markdown
 
   Como quien tiene imágenes en su markdown y en su frontmatter

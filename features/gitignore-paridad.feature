@@ -1,4 +1,3 @@
-# language: es
 Característica: las reglas del proyecto se comportan como las de git
 
   Como quien ya tiene un `.gitignore` en su repositorio

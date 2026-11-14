@@ -1,4 +1,3 @@
-# language: es
 Característica: el idioma, la disabled list y las dependencias entre filtros
 
   Como quien prepara un PDF

@@ -500,7 +500,6 @@ async function processSources(sources: ImageSource[], profile: ImageProfile, tar
     const propias: ImageVariant[] = [];
     const baseDim = await imageDimensions(result);
     if (baseDim !== undefined) propias.push({ src: result, ...baseDim });
-    // ponytail: juego fijo de anchos; añade tamaños solo si un caso real los pide.
     for (const width of [200, 320, 640, 960]) {
       if (baseDim === undefined || width >= baseDim.width) continue;
       const variantPath = join(profile.outputDir, variantName(baseName, width));

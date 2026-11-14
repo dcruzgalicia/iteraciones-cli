@@ -1,4 +1,3 @@
-# language: es
 Característica: el maketitle y las páginas de título
 
   Como quien mira la portada de su libro
