@@ -1,4 +1,3 @@
-# language: es
 Característica: el sangrado del crop
 
   Como quien imprime en una imprenta

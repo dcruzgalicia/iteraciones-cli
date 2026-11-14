@@ -1,0 +1,45 @@
+[data-style="editorial"] body {
+  font-family: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
+  background-color: #faf6ec;
+}
+
+[data-style="editorial"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-700) 6%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-700) 3%, transparent);
+}
+
+[data-style="editorial"][data-theme="dark"] body {
+  background-color: #17140f;
+}
+
+[data-style="editorial"][data-theme="dark"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-300) 8%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-300) 3%, transparent);
+}
+
+[data-style="editorial"] h1,
+[data-style="editorial"] h2,
+[data-style="editorial"] h3 {
+  font-family: "Playfair Display", "Iowan Old Style", Baskerville, Georgia, serif;
+  letter-spacing: -0.015em;
+}
+
+[data-style="editorial"] .tarjeta {
+  background-color: #fffdf7;
+  border-width: 1px;
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+[data-style="editorial"] .tarjeta:hover {
+  border-color: color-mix(in oklab, var(--color-accent-500) 70%, transparent);
+  box-shadow: none;
+}
+
+[data-style="editorial"][data-theme="dark"] .tarjeta {
+  background-color: #211d16;
+}
+
+[data-style="editorial"] .chip-title {
+  font-family: "Playfair Display", "Iowan Old Style", Baskerville, Georgia, serif;
+}

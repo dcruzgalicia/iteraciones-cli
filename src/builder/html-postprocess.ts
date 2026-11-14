@@ -1,5 +1,6 @@
 import { logWarning } from '../lib/logger.js';
 import { type HtmlDocType, loadCard } from './html-composer.js';
+import type { ImageVariant } from './image-processor.js';
 
 const REFS = '<div id="block-referencias"></div>';
 const INTRO = '<div id="block-intro"></div>';
@@ -32,9 +33,9 @@ function removeEmptyGridSlots(html: string): string {
   return resultado.replace(/<aside id="slot-aside"[^>]*>\s*<\/aside>/, '');
 }
 
-export function postProcessHtml(html: string, refsCardTemplate: string): string {
+export function postProcessHtml(html: string, refsCardTemplate: string, refsLabel = 'Referencias'): string {
   const withIntro = moveCollectionIntro(removeTocReferencesLink(html));
-  const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate);
+  const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate, refsLabel);
   if (block === undefined) return removeEmptyGridSlots(clean);
   if (!clean.includes(REFS)) {
     logWarning('no se encontró el marcador de la tarjeta de referencias; la bibliografía no se inserta en la página', 'html');
@@ -96,7 +97,7 @@ function findBalancedDivEnd(html: string, divStart: number, que = 'las referenci
   return i;
 }
 
-export function extractReferencesBlock(html: string, cardTemplate: string): { html: string; block?: string } {
+export function extractReferencesBlock(html: string, cardTemplate: string, refsLabel = 'Referencias'): { html: string; block?: string } {
   const refsIdPos = html.indexOf('id="refs-heading"');
   const refsDivPos = html.indexOf('<div id="refs"');
   if (refsIdPos < 0 && refsDivPos < 0) return { html };
@@ -112,5 +113,45 @@ export function extractReferencesBlock(html: string, cardTemplate: string): { ht
   if (end === undefined) return { html };
 
   const listChunk = html.slice(divStart, end);
-  return { html: html.slice(0, start) + html.slice(end), block: cardTemplate.replace('{{refs-list}}', listChunk) };
+  return {
+    html: html.slice(0, start) + html.slice(end),
+    block: cardTemplate.replace('{{refs-list}}', listChunk).replace('{{label-referencias}}', refsLabel),
+  };
+}
+
+function responsiveSizes(tag: string): string {
+  if (tag.includes('width:100px') || tag.includes('rounded-full')) return '100px';
+  if (tag.includes('object-contain') && tag.includes('border-accent-500/70')) {
+    return '(min-width:1536px) 25vw, (min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:768px) 40vw, (min-width:640px) 45vw, 100vw';
+  }
+  if (tag.includes('h-full w-full object-cover')) {
+    return '(min-width:1536px) 33vw, (min-width:1280px) 33vw, (min-width:1024px) 50vw, (min-width:768px) 100vw, (min-width:640px) 50vw, 100vw';
+  }
+  return '(min-width:1536px) 50vw, (min-width:1280px) 50vw, (min-width:1024px) 66vw, (min-width:768px) 66vw, 100vw';
+}
+
+export function addResponsiveImages(html: string, variants: Map<string, ImageVariant[]> | undefined): string {
+  if (variants === undefined || variants.size === 0) return html;
+  return html.replace(/<img\b[^>]*>/g, (tag) => {
+    const src = /src="([^"]+)"/.exec(tag)?.[1];
+    if (src === undefined) return tag;
+    const base = src.split('/').pop();
+    if (base === undefined) return tag;
+    const propias = variants.get(base);
+    if (propias === undefined || propias.length === 0) return tag;
+    const mayor = propias[propias.length - 1];
+    if (mayor === undefined) return tag;
+    const srcDir = src.slice(0, src.lastIndexOf('/') + 1);
+    const srcset =
+      propias.length < 2 || tag.includes('srcset=')
+        ? ''
+        : ` srcset="${propias.map((v) => `${srcDir}${v.src.split('/').pop()} ${v.width}w`).join(', ')}" sizes="${responsiveSizes(tag)}"`;
+    const width = /\swidth="/.test(tag) ? '' : ` width="${mayor.width}"`;
+    const height = /\sheight="/.test(tag) ? '' : ` height="${mayor.height}"`;
+    let salida = tag.replace(/\s*\/?>$/, (fin) => `${srcset}${width}${height}${fin}`);
+    if (!salida.includes('loading=') && !tag.includes('object-cover') && !tag.includes('object-contain') && !tag.includes('width:100px')) {
+      salida = salida.replace('<img', '<img loading="lazy" decoding="async"');
+    }
+    return salida;
+  });
 }

@@ -1,4 +1,3 @@
-# language: es
 Característica: el analizador tipográfico de los PDF
 
   Como quien revisa un PDF antes de mandarlo a imprenta

@@ -1,4 +1,3 @@
-# language: es
 Característica: robots.txt
 
   Para que los buscadores encuentren el sitemap

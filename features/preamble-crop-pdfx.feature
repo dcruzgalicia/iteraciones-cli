@@ -1,4 +1,3 @@
-# language: es
 Característica: el crop y el PDF/X-1a del papel
 
   Como quien imprime en una imprenta

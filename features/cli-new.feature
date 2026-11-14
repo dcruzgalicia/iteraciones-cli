@@ -1,4 +1,3 @@
-# language: es
 Característica: new crea el documento e infiere el título
 
   Como quien arranca un artículo a las tres de la mañana

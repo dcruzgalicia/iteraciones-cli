@@ -1,4 +1,3 @@
-# language: es
 Característica: fechas visibles en HTML
 
   Para que un blog muestre sus fechas y un libro las oculte

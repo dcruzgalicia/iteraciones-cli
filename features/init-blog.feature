@@ -1,4 +1,3 @@
-# language: es
 Característica: init blog
 
   Como quien publica notas con fecha
@@ -11,6 +10,7 @@ Característica: init blog
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init blog" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
+      Y el archivo "iteraciones.config.yaml" contiene "style: expresivo"
       Y el archivo "iteraciones.config.yaml" contiene "toc: false"
       Y el archivo "iteraciones.config.yaml" contiene "showDate: true"
       Y el archivo "index.md" contiene "type: list"

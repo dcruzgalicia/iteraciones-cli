@@ -178,7 +178,6 @@ async function composeFor(
 }
 
 export async function runMerge(cwd: string, input: string, options: { output?: string; format?: string; slug?: string }): Promise<void> {
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: el cuerpo se movió tal cual a runCommand
   await runCommand('merge', async () => {
     const format = options.format;
     if (format === undefined || format === '') throw new BuildError(`falta --format (-f): esperado ${FORMATS.join(' | ')}`);

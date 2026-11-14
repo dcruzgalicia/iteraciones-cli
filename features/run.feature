@@ -1,4 +1,3 @@
-# language: es
 Característica: el trabajo en paralelo y los procesos que no terminan
 
   Como quien compila cuarenta documentos

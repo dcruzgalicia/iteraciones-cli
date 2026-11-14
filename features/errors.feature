@@ -1,4 +1,3 @@
-# language: es
 Característica: cómo se le enseña un error al autor
 
   Como a quien le falla el build

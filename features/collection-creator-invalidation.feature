@@ -1,4 +1,3 @@
-# language: es
 Característica: editar una creadora reconstruye las collections que la listan
 
   Como quien edita la bio de una colaboradora

@@ -1,4 +1,3 @@
-# language: es
 Característica: los anuncios del sitio
 
   Como quien publica un aviso

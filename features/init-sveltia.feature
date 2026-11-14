@@ -1,4 +1,3 @@
-# language: es
 Característica: init sveltia deja un proyecto listo para el admin
 
   Como quien publica un sitio con Sveltia
@@ -40,6 +39,9 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la configuración de Sveltia declara la colección "intervenciones" en la carpeta "intervenciones"
       Y la configuración de Sveltia declara la colección "listas" en la carpeta "listas"
       Y la configuración de Sveltia declara la colección "anuncios" en la carpeta "anuncios"
+      Y la configuración de Sveltia declara la colección "paginas" en la carpeta "paginas"
+      Y la configuración de Sveltia declara la colección "documentos" en la carpeta "documentos"
+      Y la configuración de Sveltia declara la colección "convocatorias" en la carpeta "convocatorias"
       Y la configuración de Sveltia declara el archivo "menu.md"
       Y la configuración de Sveltia declara el campo "collectionCreator" en la colección "colecciones"
       Y la configuración de Sveltia declara el campo "placement" en la colección "anuncios"

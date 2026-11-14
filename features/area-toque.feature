@@ -1,4 +1,3 @@
-# language: es
 Característica: área de toque de los enlaces de tarjeta
 
   Para que los enlaces de autora y título cumplan 24x24 px

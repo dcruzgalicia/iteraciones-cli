@@ -6,6 +6,7 @@
       "languages": ["es"],
       "default": "es"
     },
-    "format": ["summary"]
+    "format": ["summary"],
+    "language": "es"
   }
 }

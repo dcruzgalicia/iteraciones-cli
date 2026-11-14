@@ -1,4 +1,3 @@
-# language: es
 Característica: cómo se lee un campo del frontmatter
 
   Como quien escribe un libro con varios autores

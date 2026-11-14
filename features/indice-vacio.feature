@@ -1,4 +1,3 @@
-# language: es
 Característica: el índice del PDF no sale vacío
 
   Como quien arma un texto para imprimir

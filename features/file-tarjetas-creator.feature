@@ -1,4 +1,3 @@
-# language: es
 Característica: Las tarjetas que van al final de la página de un texto
 
   Como quien lee un texto

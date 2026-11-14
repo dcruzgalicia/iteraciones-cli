@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ACCENT_COLORS } from '../lib/accent-palettes.js';
+import { DEFAULT_HTML_STYLE, HTML_STYLES } from '../lib/html-styles.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
@@ -71,6 +72,17 @@ const ImageFieldsSchema = {
   backCover: z.string().optional(),
 };
 
+const HtmlHomeSchema = z
+  .object({
+    title: z.string().optional(),
+    text: z.string().optional(),
+    image: z.string().optional(),
+    alt: z.string().optional(),
+    url: z.string().optional(),
+    label: z.string().optional(),
+  })
+  .strict();
+
 const HtmlSiteSchema = z
   .object({
     title: z.string().default(DEFAULT_HTML_FORMAT.site.title),
@@ -78,12 +90,17 @@ const HtmlSiteSchema = z
     logo: z.string().default(DEFAULT_HTML_FORMAT.site.logo),
     logoSize: z.string().optional().default(DEFAULT_HTML_FORMAT.site.logoSize),
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
-    color: z.enum(ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.site.color),
+    style: z.enum(HTML_STYLES).optional().default(DEFAULT_HTML_STYLE),
+    color: z.enum(ACCENT_COLORS).optional(),
     showDates: z.boolean().default(DEFAULT_HTML_FORMAT.site.showDates),
     showCitation: z.boolean().optional(),
     rss: z.boolean().default(DEFAULT_HTML_FORMAT.site.rss),
     links: z.array(z.object({ name: z.string(), url: z.string() }).strict()).optional(),
     license: z.union([z.string(), z.literal(false)]).optional(),
+    home: HtmlHomeSchema.optional(),
+    search: z.boolean().optional(),
+    oai: z.boolean().optional(),
+    labels: z.record(z.string(), z.string()).optional(),
     url: z
       .string()
       .url()

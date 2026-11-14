@@ -1,4 +1,3 @@
-# language: es
 Característica: qué documentos se compilan
 
   Como quien tiene un proyecto con borradores y notas privadas

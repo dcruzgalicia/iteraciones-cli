@@ -1,4 +1,3 @@
-# language: es
 Característica: el build parcial produce lo mismo que el completo
 
   Como quien itera sobre un capítulo

@@ -1,4 +1,3 @@
-# language: es
 Característica: lo que el build borra y lo que deja
 
   Como quien borra un capítulo del libro

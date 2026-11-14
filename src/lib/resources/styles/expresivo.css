@@ -1,0 +1,53 @@
+[data-style="expresivo"] body {
+  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background-color: #fbf5e7;
+}
+
+[data-style="expresivo"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-700) 10%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-700) 4%, transparent);
+}
+
+[data-style="expresivo"][data-theme="dark"] body {
+  background-color: #1d1915;
+}
+
+[data-style="expresivo"][data-theme="dark"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-300) 12%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-300) 5%, transparent);
+}
+
+[data-style="expresivo"] h1 {
+  font-family: "Caveat", "Bradley Hand", cursive;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+[data-style="expresivo"] h2,
+[data-style="expresivo"] h3 {
+  font-family: "Caveat", "Bradley Hand", cursive;
+}
+
+[data-style="expresivo"] .tarjeta {
+  background-color: #fffaf0;
+  border-width: 2px;
+  border-radius: 14px 5px 16px 6px;
+  box-shadow: 4px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 32%, transparent);
+}
+
+[data-style="expresivo"] .tarjeta:hover {
+  box-shadow: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 42%, transparent);
+}
+
+[data-style="expresivo"][data-theme="dark"] .tarjeta {
+  background-color: color-mix(in oklab, var(--color-accent-500) 4%, #211c17);
+  box-shadow: 4px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 26%, transparent);
+}
+
+[data-style="expresivo"][data-theme="dark"] .tarjeta:hover {
+  box-shadow: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 36%, transparent);
+}
+
+[data-style="expresivo"] .chip-title {
+  font-family: "Caveat", "Bradley Hand", cursive;
+}

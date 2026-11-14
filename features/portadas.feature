@@ -1,4 +1,3 @@
-# language: es
 Característica: las portadas del PDF
 
   Como quien diseña un libro

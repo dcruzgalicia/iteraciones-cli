@@ -1,9 +1,6 @@
 import { MENU, type ProjectTemplate } from './engine.js';
 
-const CONFIG = `# Repositorio: metadatos, licencias y catálogo ordenado por título.
-# ponytail: la búsqueda y las facetas dependen de #2817/#2818
-# (format.html.site.search); no se activan aquí hasta que el schema las acepte.
-language: es-MX
+const CONFIG = `language: es-MX
 toc: false
 showDate: true
 license: CC-BY-NC-ND-4.0
@@ -16,6 +13,7 @@ format:
     site:
       title: Mi repositorio
       description: Documentos, metadatos y licencias
+      style: institucional
 `;
 
 export const REPOSITORIO: ProjectTemplate = {

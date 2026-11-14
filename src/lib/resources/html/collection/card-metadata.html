@@ -7,9 +7,9 @@
         <div class="flex flex-wrap items-center gap-2">
           $if(doc-chip)$
           $if(doc-chip-href)$
-          <a href="$doc-chip-href$" class="not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 hover:border-accent-500 hover:bg-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200">$doc-chip$</a>
+          <a href="$doc-chip-href$" class="not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 hover:border-accent-500 hover:bg-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200">$doc-chip$</a>
           $else$
-          <span class="not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200">$doc-chip$</span>
+          <span class="not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200">$doc-chip$</span>
           $endif$
           $endif$
           $if(collection-chips)$$collection-chips$$endif$

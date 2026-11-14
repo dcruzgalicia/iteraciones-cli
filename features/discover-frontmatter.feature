@@ -1,4 +1,3 @@
-# language: es
 Característica: el frontmatter del documento
 
   Como quien escribe un documento en markdown

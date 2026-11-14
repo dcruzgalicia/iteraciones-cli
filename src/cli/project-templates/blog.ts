@@ -11,6 +11,7 @@ format:
     site:
       title: Mi blog
       description: Notas y ensayos
+      style: expresivo
       theme: light
 `;
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="$lang$" data-theme="$theme$">
+<html lang="$lang$" data-theme="$theme$" data-style="$style$">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,7 @@
   $if(json-ld)$<script type="application/ld+json">$json-ld$</script>$endif$
   <title>$title$$if(site-title)$ · $site-title$$endif$</title>
   $if(author-meta)$<meta name="author" content="$author-meta$">$endif$
+  $if(font-preloads)$$font-preloads$$endif$
   $if(css)$<link rel="stylesheet" href="$css$">$endif$
   $if(favicon)$$favicon$$endif$
   $if(keywords)$<meta name="keywords" content="$keywords$">$endif$
@@ -21,6 +22,8 @@
     <header>
       <div id="slot-header"></div>
     </header>
+
+    <div id="slot-hero"></div>
 
     <div class="content-grid $page-type-class$">
       <main id="contenido" class="contents">

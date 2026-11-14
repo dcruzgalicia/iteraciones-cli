@@ -12,13 +12,14 @@ format:
     site:
       title: Mi colectiva
       description: Publicaciones de la colectiva
+      style: expresivo
 `;
 
 export const COLECTIVA: ProjectTemplate = {
   config: CONFIG,
   dirs: ['paginas', 'textos', 'creadoras', 'colecciones', 'convocatorias', 'anuncios', 'palabras-clave', 'listas'],
   files: {
-    'index.md': '---\ntitle: Mi colectiva\n---\n\n<!-- Presenta aquí a la colectiva. -->\n',
+    'index.md': '---\ntitle: Mi colectiva\n---\n\nPresenta aquí a la colectiva.\n',
     'convocatorias.md': '---\ntitle: Convocatorias\ntype: list\nfilter:\n  path: convocatorias/\norder: date-desc\n---\n\nConvocatorias abiertas.\n',
     'menu.md': MENU([
       { name: 'Inicio', url: './index.html' },

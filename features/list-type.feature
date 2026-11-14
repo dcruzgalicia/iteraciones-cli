@@ -1,4 +1,3 @@
-# language: es
 Característica: El type list, una colección que se arma sola
 
   Como quien publica una antología que cambia cada mes

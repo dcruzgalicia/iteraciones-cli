@@ -1,4 +1,3 @@
-# language: es
 Característica: el fragmento que muestra la tarjeta de un miembro
 
   Como quien tiene una colección de cuarenta documentos

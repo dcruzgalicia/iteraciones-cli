@@ -6,6 +6,7 @@ import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmString, fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import { htmlStyle, STYLE_FONTS } from '../lib/html-styles.js';
 import { logWarning } from '../lib/logger.js';
 import { minifyHtml } from '../lib/minify.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
@@ -20,8 +21,10 @@ import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { CHIP_OUTLINE_CLASSES, creatorPortraitHtml, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
+import { addResponsiveImages } from './html-postprocess.js';
 import {
   type DocumentImages,
+  type ImageVariant,
   imageNamerFor,
   imagePathsMap,
   LETTERHEAD_HEIGHT_MM,
@@ -48,6 +51,7 @@ import { detectPageSize } from './latex-preamble.js';
 import { fechaOrdenable } from './list-filter.js';
 import {
   ASSETS_CSS_FILE,
+  ASSETS_FONTS_DIR,
   ASSETS_IMAGES_DIR,
   ASSETS_LOGO_WEBP,
   ASSETS_PDF_IMAGES_DIR,
@@ -81,6 +85,16 @@ interface TypeMeta {
   cta?: string;
 }
 
+let htmlLabels: Record<string, string> = {};
+
+export function setHtmlLabels(labels: Record<string, string> | undefined): void {
+  htmlLabels = labels ?? {};
+}
+
+function uiLabel(key: string, fallback: string): string {
+  return htmlLabels[key] ?? fallback;
+}
+
 const TYPE_META: Record<string, TypeMeta> = {
   file: { chip: 'Texto', contentChip: 'Contenido', memberLabel: 'Texto', cta: 'Leer texto completo' },
   collection: { chip: 'Colección', memberLabel: 'Colección', cta: 'Ver colección completa' },
@@ -92,7 +106,9 @@ const TYPE_META: Record<string, TypeMeta> = {
 };
 
 function docChipLabel(type: string | undefined): string {
-  return TYPE_META[type ?? 'file']?.chip ?? 'Texto';
+  if (type === undefined || type === 'file') return uiLabel('texto', 'Texto');
+  if (type === 'creator') return uiLabel('colaboradora', 'Colaboradora');
+  return TYPE_META[type]?.chip ?? 'Texto';
 }
 
 export interface DocumentOutputs {
@@ -247,7 +263,7 @@ function epubCoverPath(fm: Record<string, unknown>, docDir: string, epubMap: Map
 }
 
 function contentChipPara(type: string | undefined): string | undefined {
-  return type === undefined || type === 'file' ? 'Contenido' : TYPE_META[type]?.contentChip;
+  return type === undefined || type === 'file' ? uiLabel('contenido', 'Contenido') : TYPE_META[type]?.contentChip;
 }
 
 function docChipHrefPara(dir: string, type: string | undefined, available?: Set<string>): string | undefined {
@@ -327,6 +343,8 @@ export async function emit404(args: {
   const siteTitle = site?.title ?? 'iteraciones';
   const tagline = site?.description ?? '';
   const theme = site?.theme ?? 'dark';
+  const style = site?.style ?? 'clasico';
+  const fontPreloads = fontPreloadTags(style, '.');
   const logo =
     args.renderCtx.logo === undefined
       ? ''
@@ -351,12 +369,13 @@ export async function emit404(args: {
     )
     .join('');
   const html = `<!DOCTYPE html>
-<html lang="${Bun.escapeHTML(ctx.siteConfig.language)}" data-theme="${theme}">
+<html lang="${Bun.escapeHTML(ctx.siteConfig.language)}" data-theme="${theme}" data-style="${style}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
   <title>Página no encontrada · ${Bun.escapeHTML(siteTitle)}</title>
+  ${fontPreloads === undefined ? '' : fontPreloads}
   ${ctx.needsCss ? `<link rel="stylesheet" href="${relativeHref('.', ASSETS_CSS_FILE)}">` : ''}
 </head>
 <body class="font-sans antialiased text-base text-stone-900 sm:text-lg dark:text-stone-100 bg-paper bg-paper-grid">
@@ -366,7 +385,7 @@ export async function emit404(args: {
         ${logo}
         <div class="flex min-w-0 flex-col items-start">
           <a href="./index.html" class="font-semibold text-base leading-none text-accent-800 no-underline hover:underline sm:text-lg lg:text-xl 2xl:text-2xl dark:text-accent-300">${Bun.escapeHTML(siteTitle)}</a>
-          ${tagline === '' ? '' : `<span class="mt-1 text-[11px] sm:text-xs lg:text-sm italic leading-none text-stone-600 dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
+          ${tagline === '' ? '' : `<span class="mt-1 text-xs lg:text-sm italic leading-none text-stone-600 dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
         </div>
       </div>
     </header>
@@ -417,6 +436,139 @@ export async function emitRss(args: {
     .join('\n');
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>${escapeXml(args.siteTitle)}</title>\n    <link>${escapeXml(`${base}/`)}</link>\n    <description>${escapeXml(args.siteDescription)}</description>\n${xmlItems}\n  </channel>\n</rss>\n`;
   await writeStatic(args.cwd, args.outputDir, 'feed.xml', xml);
+}
+
+export async function emitSearch(args: {
+  cwd: string;
+  outputDir: string;
+  renderCtx: RenderContext;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+}): Promise<void> {
+  const { cwd, outputDir, renderCtx, discoveryIndex } = args;
+  const site = renderCtx.formatCfg?.html?.site;
+  const entradas: Array<Record<string, unknown>> = [];
+  for (const [ruta, entry] of discoveryIndex.entries()) {
+    const tipo = entry.type ?? 'file';
+    if (tipo !== 'file' && tipo !== 'collection' && tipo !== 'creator') continue;
+    if (entry.slug === undefined) continue;
+    const crudo = await Bun.file(join(cwd, ruta))
+      .text()
+      .catch(() => '');
+    const texto = splitFrontmatter(crudo)
+      .body.replace(/```[\s\S]*?```/g, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[#*_>`[\]()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 1200);
+    entradas.push({
+      title: entry.title,
+      url: htmlPathFor(ruta, entry.slug),
+      type: tipo,
+      creator: entry.creator,
+      keywords: keywordsOf(entry),
+      date: entry.date,
+      text: texto,
+    });
+  }
+  entradas.sort((a, b) => String(a.title).localeCompare(String(b.title), 'es'));
+  await writeStatic(cwd, outputDir, 'buscar.json', `${JSON.stringify(entradas, null, 2)}\n`);
+  const datos = JSON.stringify(entradas).replace(/</g, '\\u003c');
+  const theme = site?.theme === 'light' ? 'light' : 'dark';
+  const style = site?.style ?? 'clasico';
+  const fontPreloads = fontPreloadTags(style, '.');
+  const title = site?.title ?? 'iteraciones';
+  const html = `<!doctype html>
+<html lang="${Bun.escapeHTML(renderCtx.lang)}" data-theme="${theme}" data-style="${style}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buscar · ${Bun.escapeHTML(title)}</title>
+${fontPreloads === undefined ? '' : fontPreloads}
+<link rel="stylesheet" href="./assets/css/styles.css">
+</head>
+<body class="bg-paper bg-paper-grid font-sans text-stone-900 dark:text-stone-100">
+<main class="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+<div class="tarjeta rounded-lg p-4 sm:p-6 lg:p-8">
+<h1 class="m-0 text-3xl font-bold text-accent-900 dark:text-accent-100">Buscar</h1>
+<p class="mt-2 text-sm text-stone-600 dark:text-stone-300">Busca por título, autora, palabra clave o texto.</p>
+<div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+<input id="q" type="search" placeholder="Buscar…" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900 sm:col-span-2">
+<select id="tipo" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900"></select>
+<select id="autora" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900"></select>
+<select id="keyword" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900"></select>
+<select id="anio" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900"></select>
+</div>
+<p id="estado" class="mt-3 text-sm text-stone-600 dark:text-stone-300"></p>
+<ul id="resultados" class="mt-5 space-y-3"></ul>
+</div>
+</main>
+<script>
+const datos = ${datos};
+const $ = (id) => document.getElementById(id);
+const opts = (sel, valores, etiqueta) => { const unicos = [...new Set(valores.flat().filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')); sel.innerHTML = '<option value="">' + etiqueta + '</option>' + unicos.map(v => '<option>' + v + '</option>').join(''); };
+opts($('tipo'), datos.map(d => d.type), 'Todos los tipos');
+opts($('autora'), datos.map(d => d.creator), 'Todas las autoras');
+opts($('keyword'), datos.map(d => d.keywords), 'Todas las palabras clave');
+opts($('anio'), datos.map(d => d.date ? String(d.date).slice(0,4) : ''), 'Todos los años');
+const filtrar = () => { const q = $('q').value.toLowerCase().trim(); const tipo = $('tipo').value; const autora = $('autora').value; const keyword = $('keyword').value; const anio = $('anio').value; const res = datos.filter(d => (!tipo || d.type === tipo) && (!autora || d.creator.includes(autora)) && (!keyword || d.keywords.includes(keyword)) && (!anio || String(d.date || '').startsWith(anio)) && (!q || (d.title + ' ' + d.text + ' ' + d.creator.join(' ') + ' ' + d.keywords.join(' ')).toLowerCase().includes(q))); $('estado').textContent = res.length + (res.length === 1 ? ' resultado' : ' resultados'); $('resultados').innerHTML = res.map(d => '<li class="rounded-md border-2 border-stone-300 p-3 dark:border-stone-600"><a class="font-semibold text-accent-800 underline-offset-4 hover:underline dark:text-accent-200" href="./' + d.url + '">' + d.title + '</a><p class="mt-1 text-sm text-stone-600 dark:text-stone-300">' + [d.type, d.creator.join(', '), d.date].filter(Boolean).join(' · ') + '</p></li>').join(''); };
+['q','tipo','autora','keyword','anio'].forEach(id => $(id).addEventListener('input', filtrar));
+filtrar();
+</script>
+</body></html>`;
+  await writeStatic(cwd, outputDir, 'buscar.html', html);
+}
+
+export async function emitOai(args: {
+  cwd: string;
+  outputDir: string;
+  siteUrl: string | undefined;
+  siteTitle: string;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+}): Promise<void> {
+  const base = args.siteUrl?.trim().replace(/\/+$/, '') ?? '';
+  const records: string[] = [];
+  const rutas = [...args.discoveryIndex.keys()].sort((a, b) => a.localeCompare(b, 'es'));
+  for (const ruta of rutas) {
+    const entry = args.discoveryIndex.get(ruta);
+    if (entry === undefined) continue;
+    const tipo = entry.type ?? 'file';
+    if (tipo !== 'file' && tipo !== 'collection') continue;
+    if (entry.slug === undefined) continue;
+    const fm = entry.fm ?? {};
+    const titulo = entry.title;
+    const creadores = entry.creator.length > 0 ? entry.creator : ['Anónima'];
+    const fecha =
+      entry.date !== undefined && entry.date !== ''
+        ? entry.date
+        : entry.mtime !== undefined
+          ? new Date(entry.mtime).toISOString().slice(0, 10)
+          : '1970-01-01';
+    const id = String(fm.identifier ?? fm.doi ?? fm.isbn ?? ruta);
+    const descripcion = String(fm.abstract ?? fm.description ?? '');
+    const derechos = String(fm.rights ?? fm.license ?? '');
+    const idioma = typeof fm.language === 'string' ? fm.language : '';
+    const dcType = tipo === 'collection' ? 'Collection' : 'Text';
+    records.push(`  <record>
+    <header><identifier>oai:${escapeXml(base.replace(/^https?:\/\//, ''))}:${escapeXml(id)}</identifier><datestamp>${escapeXml(fecha)}</datestamp></header>
+    <metadata><oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${escapeXml(titulo)}</dc:title>${creadores.map((c) => `<dc:creator>${escapeXml(c)}</dc:creator>`).join('')}${keywordsFromFm(
+      fm,
+    )
+      .map((k) => `<dc:subject>${escapeXml(k)}</dc:subject>`)
+      .join(
+        '',
+      )}${descripcion === '' ? '' : `<dc:description>${escapeXml(descripcion)}</dc:description>`}<dc:date>${escapeXml(fecha)}</dc:date>${fm.publisher === undefined ? '' : `<dc:publisher>${escapeXml(String(fm.publisher))}</dc:publisher>`}<dc:identifier>${escapeXml(id)}</dc:identifier>${derechos === '' ? '' : `<dc:rights>${escapeXml(derechos)}</dc:rights>`}<dc:type>${dcType}</dc:type>${idioma === '' ? '' : `<dc:language>${escapeXml(idioma)}</dc:language>`}</oai_dc:dc></metadata>
+  </record>`);
+  }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+  <responseDate>${new Date().toISOString()}</responseDate>
+  <request verb="ListRecords">${escapeXml(base)}/oai.xml</request>
+  <ListRecords>
+${records.join('\n')}
+  </ListRecords>
+</OAI-PMH>
+`;
+  await writeStatic(args.cwd, args.outputDir, 'oai.xml', xml);
 }
 
 export async function emitRobots(args: { cwd: string; outputDir: string; siteUrl: string | undefined }): Promise<void> {
@@ -568,7 +720,7 @@ function citationBlockHtml(args: {
   return [
     '<div class="min-w-0">',
     '<section class="relative rounded-lg tarjeta p-4 text-xs!  sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! ">',
-    '<h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Cómo citar</h2>',
+    '<h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Cómo citar</h2>',
     `<p class="m-0 text-stone-800 dark:text-stone-200">${Bun.escapeHTML(apa)}</p>`,
     `<div class="mt-4 flex flex-wrap gap-2">${enlace('cita.bib', bibtex)}${enlace('cita.ris', ris)}</div>`,
     `<details class="mt-4"><summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">BibTeX</summary><pre class="mt-2 overflow-x-auto rounded-lg bg-stone-100 p-3 text-xs dark:bg-stone-950/70">${Bun.escapeHTML(bibtex)}</pre></details>`,
@@ -615,6 +767,16 @@ function subjectVisible(subject: string | undefined, keywords: string[]): string
   return esSubjectDuplicado(subject, keywords) ? undefined : subject;
 }
 
+function fontPreloadTags(style: string | undefined, dir: string): string | undefined {
+  const fonts = STYLE_FONTS[htmlStyle(style)];
+  if (fonts.length === 0) return undefined;
+  return fonts
+    .map(
+      (font) => `<link rel="preload" href="${relativeHref(dir, `${ASSETS_FONTS_DIR}/${font.destination}`)}" as="font" type="font/woff2" crossorigin>`,
+    )
+    .join('\n  ');
+}
+
 function htmlVars(args: {
   doc: BuildDocument;
   outputs: DocumentOutputs;
@@ -626,6 +788,7 @@ function htmlVars(args: {
   docChip?: string;
   covers?: { front?: string; back?: string };
   creatorImage?: string;
+  heroImage?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
   collectionChips?: string;
@@ -652,6 +815,7 @@ function htmlVars(args: {
     docChip,
     covers,
     creatorImage,
+    heroImage,
     menuHeader,
     menuFooterPlain,
     collectionChips,
@@ -728,8 +892,21 @@ function htmlVars(args: {
   });
   const esListaIndex = doc.relativePath === 'index.md' && doc.frontmatter.type === 'list';
   const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
+  const labels = htmlConfig?.site?.labels ?? {};
+  const label = (key: string, fallback: string): string => labels[key] ?? fallback;
+  const home = htmlConfig?.site?.home;
+  const hero =
+    home !== undefined && doc.relativePath === 'index.md'
+      ? `<section class="tarjeta relative rounded-lg p-4 sm:p-6 lg:p-8"><div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">${heroImage === undefined ? '' : `<img src="${heroImage}" alt="${Bun.escapeHTML(home.alt ?? home.title ?? '')}" class="w-full shrink-0 rounded-lg object-cover sm:w-2/5 lg:w-1/3">`}<div class="min-w-0 flex-1">${home.title === undefined ? '' : `<h2 class="m-0 text-2xl font-bold text-accent-900 sm:text-3xl lg:text-4xl dark:text-accent-100">${Bun.escapeHTML(home.title)}</h2>`}${home.text === undefined ? '' : `<p class="mt-3 text-base leading-relaxed text-stone-700 sm:text-lg dark:text-stone-300">${Bun.escapeHTML(home.text)}</p>`}${home.url === undefined ? '' : `<p class="mt-4"><a href="${Bun.escapeHTML(home.url)}" class="inline-flex items-center rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-3 py-2 text-sm font-semibold text-accent-800 no-underline hover:bg-accent-500/30 dark:text-accent-200">${Bun.escapeHTML(home.label ?? 'Conocer más')}</a></p>`}</div></div></section>`
+      : undefined;
   return {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
+    hero,
+    style: htmlConfig?.site?.style ?? 'clasico',
+    fontPreloads: fontPreloadTags(htmlConfig?.site?.style, dir),
+    labelFormatos: label('formatos', 'Formatos'),
+    labelIndice: label('indice', 'Índice'),
+    labelReferencias: label('referencias', 'Referencias'),
     title: titulo,
     siteTitle: fmString(htmlConfig?.site?.title, 'iteraciones'),
     tagline: fmString(htmlConfig?.site?.description, 'escribir, compartir, re-existir'),
@@ -781,8 +958,15 @@ function htmlVars(args: {
     docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
     extras: opcional(extras),
     sidebarExtras: opcional(sidebarExtras),
-    recientes: opcional(esListaIndex || doc.frontmatter.type === 'creator' ? '' : recentesCard(discoveryIndex, dir)),
-    siteKeywords: opcional(siteKeywordsCard(discoveryIndex, dir, esPaginaKeyword ? undefined : keywordIndexHref(dir, discoveryIndex))),
+    recientes: opcional(esListaIndex || doc.frontmatter.type === 'creator' ? '' : recentesCard(discoveryIndex, dir, label('recientes', 'Recientes'))),
+    siteKeywords: opcional(
+      siteKeywordsCard(
+        discoveryIndex,
+        dir,
+        esPaginaKeyword ? undefined : keywordIndexHref(dir, discoveryIndex),
+        label('palabras-clave', 'Palabras clave'),
+      ),
+    ),
     pagination: opcional(pagination),
   };
 }
@@ -802,6 +986,7 @@ export interface EmitHtmlPageArgs {
   covers?: { front?: string; back?: string };
   indices?: string[];
   creatorImage?: string;
+  heroImage?: string;
   menuHeader?: string;
   menuFooterPlain?: string;
   collectionChips?: string;
@@ -811,6 +996,7 @@ export interface EmitHtmlPageArgs {
   docChipHrefOverride?: string;
   contentChipOverride?: string;
   synthetic?: boolean;
+  imageVariants?: Map<string, ImageVariant[]>;
 }
 
 export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
@@ -829,6 +1015,7 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
     covers,
     indices,
     creatorImage,
+    heroImage,
     menuHeader,
     menuFooterPlain,
     collectionChips,
@@ -838,6 +1025,7 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
     docChipHrefOverride,
     contentChipOverride,
     synthetic = false,
+    imageVariants,
   } = args;
   const { ctx, plan } = renderCtx;
   const { outBase, outSlug, content } = outputs;
@@ -873,6 +1061,7 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
         docChip: docChipOverride,
         covers,
         creatorImage,
+        heroImage,
         menuHeader,
         menuFooterPlain,
         collectionChips,
@@ -894,7 +1083,13 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
       luaFilters: exportCtx.filters,
       scriptOutputPath: htmlPath,
     });
-    await writeOutput(htmlPath, html);
+    if (imageVariants !== undefined && imageVariants.size > 0) {
+      const datos = Object.fromEntries(
+        [...imageVariants].map(([nombre, propias]) => [nombre, propias.map(({ src, width, height }) => ({ src: basename(src), width, height }))]),
+      );
+      await writeOutput(join(cwd, '.iteraciones', 'variants', `${relative(cwd, htmlPath)}.json`), JSON.stringify(datos));
+    }
+    await writeOutput(htmlPath, addResponsiveImages(html, imageVariants));
   }
 }
 
@@ -1133,7 +1328,8 @@ function buildCollectionSectionsHtml(entries: CollectionEntry[]): string {
 }
 
 function htmlPathFor(relativePath: string, slug: string | undefined): string {
-  return posix(join(dirname(relativePath), `${htmlSlugFor(relativePath, slug)}.html`));
+  const visible = relativePath.startsWith('listas/') ? relativePath.slice('listas/'.length) : relativePath;
+  return posix(join(dirname(visible), `${htmlSlugFor(relativePath, slug)}.html`));
 }
 
 export function memberHtmlHrefs(
@@ -1304,12 +1500,12 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500/40 bg-accent-500/10 px-1.5 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/30 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-none dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
+  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500/40 bg-accent-500/10 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/30 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-none dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
 const PAGINATION_ACTIVE_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500 bg-accent-500/20 px-1.5 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-900 shadow-[3px_3px_0_0] shadow-accent-500/40 dark:text-accent-100';
+  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500 bg-accent-500/20 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-900 shadow-[3px_3px_0_0] shadow-accent-500/40 dark:text-accent-100';
 
-const PAGINATION_NAV_CLASSES = 'mt-8 flex flex-wrap items-center justify-start gap-2 sm:mt-10 lg:mt-12';
+const PAGINATION_NAV_CLASSES = 'col-span-full flex flex-wrap items-center justify-start gap-2';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
@@ -1400,7 +1596,7 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
         : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
     })
     .join('');
-  const indice = `<div class="min-w-0" id="indice-completo"><nav class="contenido-tamano contenido-compacto relative rounded-lg tarjeta p-4 sm:p-6 "><h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
+  const indice = `<div class="min-w-0" id="indice-completo"><nav class="contenido-tamano contenido-compacto relative rounded-lg tarjeta p-4 sm:p-6 "><h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
   return Array.from({ length: total }, () => indice);
 }
 
@@ -1441,18 +1637,20 @@ const CHIP_HOVER_EFFECT_CLASSES =
   'transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30';
 
 const PILL_BASE =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-[11px] sm:text-xs lg:text-sm font-normal uppercase tracking-wide leading-none text-accent-800 dark:text-accent-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none text-accent-800 dark:text-accent-300';
 
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
-const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
+const EXTRA_PILL_CLASSES = `${PILL_BASE} chip-title mt-0 mb-0`;
 const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
 const MEMBER_BADGE_CLASSES =
-  'inline-block shrink-0 rounded-md border-2 border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border-2 border-stone-300 bg-stone-200/70 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
 function memberTypeLabel(type: string | undefined): string {
-  return TYPE_META[type ?? 'file']?.memberLabel ?? 'Texto';
+  if (type === undefined || type === 'file') return uiLabel('texto', 'Texto');
+  if (type === 'creator') return uiLabel('colaboradora', 'Colaboradora');
+  return TYPE_META[type]?.memberLabel ?? 'Texto';
 }
 
 const CHIP_HOVER_CLASSES = `${CHIP_HOVER_EFFECT_CLASSES} hover:underline`;
@@ -1477,26 +1675,27 @@ function chipHtml(
 const MEMBER_LINK_CLASSES = 'py-1 no-underline underline-offset-4 transition-colors duration-200 hover:underline';
 
 const CARD_CTA_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-3 lg:px-3.5 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/40 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline hover:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/40 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline hover:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30 dark:hover:text-accent-100';
 
 const MENU_BUTTON_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/35 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/35 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
 const MENU_LINK_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
 
 const HEADER_COLLECTION_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/50 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200';
 const HEADER_KEYWORD_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
 const RECENTES_LIMIT = 5;
 const KEYWORD_INDEX_SLUG = 'keyword';
 const SIDEBAR_KEYWORD_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
 const KEYWORD_BADGE_CLASSES =
   'inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
 function ctaDeTarjeta(type: string | undefined): string {
-  return TYPE_META[type ?? 'file']?.cta ?? 'Leer texto completo';
+  if (type === undefined || type === 'file') return uiLabel('leer-texto-completo', 'Leer texto completo');
+  return TYPE_META[type]?.cta ?? 'Leer texto completo';
 }
 
 const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-lg tarjeta p-3 text-xs! [overflow-wrap:anywhere] sm:p-4 sm:text-xs! md:text-sm! lg:p-5 lg:text-base! ${CARD_TEXT_CLASSES}`;
@@ -1671,7 +1870,7 @@ export function containersCard(
   return extraCard([`<div class="flex flex-wrap items-center gap-2 mb-4">${chips.join('')}</div>`, '', items].join('\n'));
 }
 
-function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], titleHref?: string): string {
+function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], titleHref?: string, label = 'Palabras clave'): string {
   if (keywords.length === 0) return '';
   const chips = keywords
     .map((keyword) => {
@@ -1681,18 +1880,18 @@ function keywordChipsCard(keywords: { titulo: string; href: string; count?: numb
     .join('');
   const titulo =
     titleHref === undefined
-      ? `<h2 class="${EXTRA_PILL_CLASSES}">Palabras clave</h2>`
-      : `<a href="${titleHref}" class="${EXTRA_PILL_CLASSES} ${CHIP_HOVER_EFFECT_CLASSES} hover:underline">Palabras clave</a>`;
+      ? `<h2 class="${EXTRA_PILL_CLASSES}">${Bun.escapeHTML(label)}</h2>`
+      : `<a href="${titleHref}" class="${EXTRA_PILL_CLASSES} ${CHIP_HOVER_EFFECT_CLASSES} hover:underline">${Bun.escapeHTML(label)}</a>`;
   return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2">${titulo}</div><div class="flex flex-wrap gap-2">${chips}</div></div>`;
 }
 
-function siteKeywordsCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, titleHref?: string): string {
+function siteKeywordsCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, titleHref?: string, titulo = 'Palabras clave'): string {
   const keywords = keywordListsOf(discoveryIndex).map(({ slug, label }) => ({
     titulo: label,
     href: keywordHref(dir, slug),
     count: keywordMembers(discoveryIndex, slug).length,
   }));
-  return keywordChipsCard(keywords, titleHref);
+  return keywordChipsCard(keywords, titleHref, titulo);
 }
 
 function keywordIndexAvailable(discoveryIndex: Map<string, DiscoveryEntry>): boolean {
@@ -1703,7 +1902,7 @@ function keywordIndexHref(dir: string, discoveryIndex: Map<string, DiscoveryEntr
   return keywordIndexAvailable(discoveryIndex) ? relativeHref(dir, `${KEYWORD_INDEX_SLUG}.html`) : undefined;
 }
 
-function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string): string {
+function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, label = 'Recientes'): string {
   const recientes = miembrosDeUnType(discoveryIndex, 'file').slice(0, RECENTES_LIMIT);
   if (recientes.length === 0) return '';
   const items = recientes
@@ -1713,7 +1912,7 @@ function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string):
       return `<li><a href="${relativeHref(dir, html)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(entry?.title ?? ruta)}</a></li>`;
     })
     .join('');
-  return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Recientes</h2></div><ul class="m-0 list-disc space-y-1 ps-5">${items}</ul></div>`;
+  return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">${Bun.escapeHTML(label)}</h2></div><ul class="m-0 list-disc space-y-1 ps-5">${items}</ul></div>`;
 }
 
 interface EnlaceMenu {
@@ -1752,10 +1951,10 @@ function enlacesListasPorDefecto(available: Set<string>, conKeywords: boolean): 
   return conKeywords ? [...enlaces, { name: 'Palabras clave', url: `./${KEYWORD_INDEX_SLUG}.html` }] : enlaces;
 }
 
-function menuDelSitio(links: EnlaceMenu[], siteTitle: string, dir: string): { header?: string; footer?: string } {
+function menuDelSitio(links: EnlaceMenu[], siteTitle: string, dir: string, menuLabel = 'Menú'): { header?: string; footer?: string } {
   if (links.length === 0) return {};
   const conInicio = enlacesConInicio(links, siteTitle);
-  return { header: menuHeaderLink(conInicio, dir), footer: menuFooterContent(conInicio, dir) };
+  return { header: menuHeaderLink(conInicio, dir, menuLabel), footer: menuFooterContent(conInicio, dir, menuLabel) };
 }
 
 function esEnlaceExterno(url: string): boolean {
@@ -1772,14 +1971,14 @@ function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
   return `<a href="${Bun.escapeHTML(hrefDeMenu(enlace.url, dir))}" class="${MENU_LINK_CLASSES}"${attrs}>${Bun.escapeHTML(enlace.name)}</a>`;
 }
 
-function menuHeaderLink(links: EnlaceMenu[], dir: string): string | undefined {
+function menuHeaderLink(links: EnlaceMenu[], dir: string, menuLabel = 'Menú'): string | undefined {
   if (links.length === 0) return undefined;
-  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="Menú"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" width="24" height="24" class="h-6 w-6"><span>Menú</span></a>`;
+  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="${Bun.escapeHTML(menuLabel)}"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" width="24" height="24" class="h-6 w-6"><span>${Bun.escapeHTML(menuLabel)}</span></a>`;
 }
 
-function menuFooterContent(links: EnlaceMenu[], dir: string): string | undefined {
+function menuFooterContent(links: EnlaceMenu[], dir: string, menuLabel = 'Menú'): string | undefined {
   if (links.length === 0) return undefined;
-  const boton = menuHeaderLink(links, dir);
+  const boton = menuHeaderLink(links, dir, menuLabel);
   const enlaces = links
     .slice(0, 10)
     .map((enlace) => enlaceDeMenuChip(enlace, dir))
@@ -2043,7 +2242,7 @@ async function emitKeywordIndex(args: {
   const hrefsCreadores = creatorHrefs(discoveryIndex, '.');
   const available = availableDefaultListSlugs(discoveryIndex);
   const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
-  const menu = menuDelSitio(enlacesDelMenu(discoveryIndex), siteTitle, '.');
+  const menu = menuDelSitio(enlacesDelMenu(discoveryIndex), siteTitle, '.', formatCfg?.html?.site?.labels?.menu ?? 'Menú');
   const doc: BuildDocument = {
     filePath: join(cwd, `${KEYWORD_INDEX_SLUG}.md`),
     relativePath: `${KEYWORD_INDEX_SLUG}.md`,
@@ -2113,6 +2312,7 @@ interface EmitListPageArgs {
   available: Set<string>;
   imageKey: string;
   imageMap: Map<string, string>;
+  imageVariants?: Map<string, ImageVariant[]>;
   docChip: string;
   docChipHref?: string;
   warning: (dueno: string) => string;
@@ -2137,6 +2337,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     available,
     imageKey,
     imageMap,
+    imageVariants,
     docChip,
     docChipHref,
     warning,
@@ -2176,7 +2377,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
   };
   const imagePaths = await writeListImagePaths(cwd, imageKey, imageMap);
   const siteTitle = renderCtx.formatCfg?.html?.site?.title ?? 'iteraciones';
-  const menu = menuDelSitio(enlacesDelMenu(discoveryIndex), siteTitle, dir);
+  const menu = menuDelSitio(enlacesDelMenu(discoveryIndex), siteTitle, dir, renderCtx.formatCfg?.html?.site?.labels?.menu ?? 'Menú');
   const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
     discoveryIndex,
     cwd,
@@ -2197,6 +2398,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     exportCtx,
     discoveryIndex,
     imagePaths,
+    imageVariants,
     paginas,
     creatorHrefs: hrefsCreadores,
     menuHeader: menu.header,
@@ -2272,6 +2474,7 @@ export async function emitKeywordLists(args: {
       available,
       imageKey: `${KEYWORDS_DIR}-${slug}`,
       imageMap: procesadas.imageMap,
+      imageVariants: procesadas.variants,
       docChip: 'Palabra clave',
       docChipHref: keywordIndexAvailable(discoveryIndex) ? relativeHref(KEYWORDS_DIR, `${KEYWORD_INDEX_SLUG}.html`) : '',
       warning: () => `no se escribió la lista de "${label}" porque "${KEYWORDS_DIR}/${slug}.html" es el archivo de ese documento`,
@@ -2926,6 +3129,9 @@ async function preprocessDocImages(
 
     extraImages: [
       ...(collectionEntries.length > 0 || extraEntries.length > 0 ? imagenesDeLasTarjetas([...collectionEntries, ...extraEntries], ctx.cwd) : []),
+      ...(doc.relativePath === 'index.md' && formatCfg?.html?.site?.home?.image !== undefined
+        ? [resolve(ctx.cwd, formatCfg.html.site.home.image)]
+        : []),
       ...(doc.frontmatter.type === 'creator' ? retratoDeLaPagina(outputs.fm, dirname(doc.filePath)) : []),
     ],
   });
@@ -3012,11 +3218,14 @@ async function emitCollectionHtml(
   mergedFm: Record<string, unknown>,
   docDir: string,
   webMap: Map<string, string>,
+  imageVariants: Map<string, ImageVariant[]> | undefined,
   creatorLinks: { name: string; url: string }[],
 ): Promise<void> {
   const { ctx, plan, formatCfg } = renderCtx;
   if (!(plan.activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html'))) return;
 
+  const homeImage = formatCfg?.html?.site?.home?.image;
+  const heroImage = homeImage === undefined ? undefined : relImageMapFor(webMap).get(resolve(ctx.cwd, homeImage));
   const entradasTarjetas = doc.frontmatter.type === 'creator' ? entradasCreadora : collectionEntries;
   const memberHrefs = memberHtmlHrefs(doc.relativePath, entradasTarjetas, discoveryIndex, outputs.dir);
   const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
@@ -3026,7 +3235,7 @@ async function emitCollectionHtml(
   const esMenu = doc.frontmatter.type === 'menu';
   const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
   const enlaces = enlacesDelMenu(discoveryIndex);
-  const menu = menuDelSitio(enlaces, siteTitle, outputs.dir);
+  const menu = menuDelSitio(enlaces, siteTitle, outputs.dir, formatCfg?.html?.site?.labels?.menu ?? 'Menú');
   const menuHeader = esMenu ? undefined : menu.header;
   const menuFooterPlain = menu.footer;
   const enlacesMenuPage = [...enlacesConInicio(enlaces, siteTitle), ...enlacesListasPorDefecto(available, keywordIndexAvailable(discoveryIndex))];
@@ -3113,6 +3322,7 @@ async function emitCollectionHtml(
     exportCtx: exportCtx,
     discoveryIndex: discoveryIndex,
     imagePaths: imagePaths,
+    imageVariants,
     paginas: contenidos,
     creatorHrefs: hrefsCreadores,
     extras: extras,
@@ -3120,6 +3330,7 @@ async function emitCollectionHtml(
     covers: covers,
     indices: indices,
     creatorImage: creatorImage,
+    heroImage: heroImage,
     menuHeader: menuHeader,
     menuFooterPlain: menuFooterPlain,
     collectionChips: collectionChips,
@@ -3152,7 +3363,7 @@ async function emitCollectionFormats(
   const mergedFm = mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd);
   const entradasCreadora = doc.frontmatter.type === 'creator' ? await entradasDeLaCreadora(doc, outputs, discoveryIndex, ctx.cwd) : [];
   const images = await preprocessDocImages(doc, outputs, collectionEntries, creatorDocs, content, renderCtx, entradasCreadora);
-  const pdfImages = images.pdf ?? { imageMap: new Map<string, string>(), processedFiles: [] };
+  const pdfImages = images.pdf ?? { imageMap: new Map<string, string>(), processedFiles: [], variants: new Map() };
   const webMap = images.web?.imageMap ?? new Map<string, string>();
   const epubMap = images.epub?.imageMap ?? new Map<string, string>();
   const relImageMap = relImageMapFor(webMap);
@@ -3198,6 +3409,7 @@ async function emitCollectionFormats(
     mergedFm,
     docDir,
     webMap,
+    images.web?.variants,
     creatorLinks,
   );
 
@@ -3403,6 +3615,7 @@ export async function emitDefaultLists(args: {
       available,
       imageKey: slug,
       imageMap: procesadas.imageMap,
+      imageVariants: procesadas.variants,
       docChip: 'Lista',
       warning: (dueno) =>
         `no se escribió la lista de ${type} porque "${slug}.html" es el archivo de "${dueno}": renombra ese documento (con "slug:" en su frontmatter) para que la lista exista`,

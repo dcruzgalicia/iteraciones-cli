@@ -1,4 +1,3 @@
-# language: es
 Característica: la página por defecto de palabras clave
 
   Como quien explora los temas del sitio

@@ -1,4 +1,3 @@
-# language: es
 Característica: cuando el slug de un documento cambia
 
   Como quien renombra un documento Adding a su autor

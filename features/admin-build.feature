@@ -1,4 +1,3 @@
-# language: es
 Característica: el build publica el admin de Sveltia
 
   Como quien administra el sitio

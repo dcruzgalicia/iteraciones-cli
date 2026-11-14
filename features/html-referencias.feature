@@ -1,4 +1,3 @@
-# language: es
 Característica: la tarjeta de referencias se sostiene sola
 
   Como quien tiene citas en su texto
@@ -73,3 +72,20 @@ Característica: la tarjeta de referencias se sostiene sola
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el índice no ofrece referencias pero la tarjeta las conserva
+
+    Escenario: La etiqueta de referencias se puede sobrescribir
+      Dado que la raíz del proyecto tiene un proyecto con una cita
+      Y que el archivo "iteraciones.config.yaml" tiene este contenido
+      """
+      language: es-MX
+      format:
+        html:
+          generate: true
+          site:
+            title: Etiquetas
+            labels:
+              referencias: Bibliografía
+      """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/test-document.html" contiene ">Bibliografía</h2>"

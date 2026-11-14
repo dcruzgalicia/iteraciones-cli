@@ -1,4 +1,3 @@
-# language: es
 Característica: el CTA de las tarjetas y la etiqueta Colaboradora
 
   Como quien navega el sitio
@@ -86,6 +85,7 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/index.html" dice "inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20"
       Y el archivo "dist/files/index.html" dice "focus-visible:outline"
+      Y el archivo "dist/files/index.html" dice "dark:hover:text-accent-100"
 
     Escenario: El botón del menú usa el mismo chip que las tarjetas
       Dado que la raíz del proyecto tiene un proyecto de prueba

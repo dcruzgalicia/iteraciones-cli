@@ -1,0 +1,57 @@
+[data-style="clasico"] body {
+  font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background-color: color-mix(in oklab, var(--color-accent-500) 6%, #fff8e7);
+}
+
+[data-style="clasico"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-700) 18%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-700) 8%, transparent);
+}
+
+[data-style="clasico"][data-theme="dark"] body {
+  background-color: color-mix(in oklab, var(--color-accent-500) 8%, #0d0c0a);
+}
+
+[data-style="clasico"][data-theme="dark"] body.bg-paper-grid {
+  --grid-bold: color-mix(in oklab, var(--color-accent-300) 16%, transparent);
+  --grid-fine: color-mix(in oklab, var(--color-accent-300) 6%, transparent);
+}
+
+[data-style="clasico"] h1,
+[data-style="clasico"] h2,
+[data-style="clasico"] h3 {
+  font-family: "Chakra Petch", "Space Grotesk", system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+[data-style="clasico"] .tarjeta {
+  background-color: color-mix(in oklab, var(--color-accent-500) 3%, #fffdf5);
+  border: 3px solid var(--color-accent-700);
+  border-radius: 0;
+  box-shadow: 8px 8px 0 var(--color-accent-500);
+}
+
+[data-style="clasico"] .tarjeta:hover {
+  border-color: var(--color-accent-800);
+  box-shadow: 10px 10px 0 var(--color-accent-600);
+}
+
+[data-style="clasico"] .tarjeta [class*="rounded-"] {
+  border-radius: 0;
+}
+
+[data-style="clasico"][data-theme="dark"] .tarjeta {
+  background-color: color-mix(in oklab, var(--color-accent-500) 6%, #171512);
+  border-color: var(--color-accent-300);
+  box-shadow: 8px 8px 0 var(--color-accent-500);
+}
+
+[data-style="clasico"][data-theme="dark"] .tarjeta:hover {
+  border-color: var(--color-accent-200);
+  box-shadow: 10px 10px 0 var(--color-accent-400);
+}
+
+[data-style="clasico"] .chip-title {
+  font-family: "Chakra Petch", "Space Grotesk", system-ui, sans-serif;
+}

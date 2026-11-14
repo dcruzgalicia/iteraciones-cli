@@ -1,4 +1,3 @@
-# language: es
 Característica: datos estructurados JSON-LD
 
   Para que un buscador sepa si una página es un artículo o una persona

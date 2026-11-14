@@ -344,9 +344,16 @@ export interface ImageSource {
   heightMm?: number;
 }
 
+export interface ImageVariant {
+  src: string;
+  width: number;
+  height: number;
+}
+
 export interface ProcessedImages {
   imageMap: Map<string, string>;
   processedFiles: string[];
+  variants: Map<string, ImageVariant[]>;
 }
 
 export interface DocumentImages {
@@ -448,9 +455,27 @@ function grayscaleFor(source: ImageSource, profile: ImageProfile): boolean {
   return true;
 }
 
+async function imageDimensions(path: string): Promise<{ width: number; height: number } | undefined> {
+  try {
+    const result = await exec('magick', ['identify', '-format', '%w %h', path]);
+    const [width, height] = result.stdout.trim().split(/\s+/).map(Number);
+    return width !== undefined && height !== undefined && width > 0 && height > 0 ? { width, height } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function variantName(base: string, width: number): string {
+  const match = /\.([^.]+)$/.exec(base);
+  const ext = match?.[1] !== undefined ? `.${match[1]}` : '';
+  const stem = ext === '' ? base : base.slice(0, -ext.length);
+  return `${stem}-${width}${ext}`;
+}
+
 async function processSources(sources: ImageSource[], profile: ImageProfile, targets: ProcessTargets): Promise<ProcessedImages> {
   const imageMap = new Map<string, string>();
   const processedFiles: string[] = [];
+  const variants = new Map<string, ImageVariant[]>();
   const processed = await mapWithConcurrency(sources, cpuConcurrency(4), (source) => {
     const geometry = geometryFor(source, profile, targets);
     return processImage(source.absPath, {
@@ -470,8 +495,33 @@ async function processSources(sources: ImageSource[], profile: ImageProfile, tar
     if (source === undefined || result === undefined) continue;
     imageMap.set(source.absPath, result);
     if (result !== source.absPath) processedFiles.push(result);
+    if (profile.kind !== 'web' || result === source.absPath) continue;
+    const baseName = basename(result);
+    const propias: ImageVariant[] = [];
+    const baseDim = await imageDimensions(result);
+    if (baseDim !== undefined) propias.push({ src: result, ...baseDim });
+    for (const width of [200, 320, 640, 960]) {
+      if (baseDim === undefined || width >= baseDim.width) continue;
+      const variantPath = join(profile.outputDir, variantName(baseName, width));
+      const variantResult = await processImage(source.absPath, {
+        outPath: variantPath,
+        resize: `${width}x>`,
+        density300: profile.density300,
+        grayscale: grayscaleFor(source, profile),
+        quality: profile.quality,
+        maxBytes: profile.maxBytes,
+        minQuality: profile.minQuality,
+        flatten: profile.flatten,
+      });
+      if (variantResult === source.absPath) continue;
+      const dim = await imageDimensions(variantResult);
+      if (dim !== undefined) propias.push({ src: variantResult, ...dim });
+      processedFiles.push(variantResult);
+    }
+    propias.sort((a, b) => a.width - b.width);
+    variants.set(baseName, propias);
   }
-  return { imageMap, processedFiles };
+  return { imageMap, processedFiles, variants };
 }
 
 interface PreprocessArgs {
@@ -524,7 +574,7 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
         outputDir: args.dirs.web,
         naming: imageNamerFor(args.outSlug, 'webp'),
         kind: 'web',
-        maxWidthPx: 1024,
+        maxWidthPx: 1280,
         quality: 75,
         maxBytes: 100 * 1024,
         minQuality: 40,
@@ -569,7 +619,7 @@ export async function processWebImages(
 ): Promise<ProcessedImages> {
   if (!(await detector())) {
     warnMissingMagick(pdfxActive);
-    return { imageMap: new Map(), processedFiles: [] };
+    return { imageMap: new Map(), processedFiles: [], variants: new Map() };
   }
   const sources = [...new Set(inlineImages)].map((absPath): ImageSource => ({ absPath, kind: 'inline', cover: false }));
   return processSources(
@@ -578,7 +628,7 @@ export async function processWebImages(
       outputDir,
       naming,
       kind: 'web',
-      maxWidthPx: 1024,
+      maxWidthPx: 1280,
       quality: 75,
       maxBytes: 100 * 1024,
       minQuality: 40,

@@ -1,4 +1,3 @@
-# language: es
 Característica: la tarjeta de cada miembro de una colección
 
   Como quien publica una antología

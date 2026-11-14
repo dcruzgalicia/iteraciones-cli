@@ -1,4 +1,3 @@
-# language: es
 Característica: feed RSS
 
   Para que un blog o una convocatoria tenga un feed
@@ -18,3 +17,21 @@ Característica: feed RSS
     Cuando hago un build del proyecto
     Entonces el comando termina con el código de salida 0
     Y el archivo "dist/files/feed.xml" no existe
+
+  Escenario: RSS sin URL avisa
+    Dado que la raíz del proyecto tiene un proyecto de prueba
+    Y el proyecto produce html
+    Y que el archivo "iteraciones.config.yaml" tiene este contenido
+      """
+      language: es-MX
+      format:
+        html:
+          generate: true
+          site:
+            title: Sin URL
+            rss: true
+      """
+    Cuando hago un build del proyecto
+    Entonces el comando termina con el código de salida 0
+    Y el archivo "dist/files/feed.xml" no existe
+    Y la salida dice "site.url"

@@ -1,4 +1,3 @@
-# language: es
 Característica: los escenarios de la suite comprueban algo
 
   Como quien mantiene la suite

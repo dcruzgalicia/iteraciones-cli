@@ -1,4 +1,3 @@
-# language: es
 Característica: los enlaces del sitio y el índice paginado de una colección
 
   Regla de negocio: Los enlaces del proyecto se muestran como redes

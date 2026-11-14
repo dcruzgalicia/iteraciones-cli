@@ -1,4 +1,3 @@
-# language: es
 Característica: los defaults del esquema y las vías de carga
 
   Como quien abre un proyecto que nunca compiló
@@ -51,6 +50,14 @@ Característica: los defaults del esquema y las vías de carga
       """
       Cuando cargo la configuración del proyecto
       Entonces la configuración tiene "format.html.generate" con el valor "true"
+
+    Escenario: El estilo por defecto es clasico
+      Dado que la raíz del proyecto está vacía
+      Y que el archivo de configuración es:
+      """
+      """
+      Cuando cargo la configuración del proyecto
+      Entonces la configuración tiene "format.html.site.style" con el valor "clasico"
 
     Escenario: El tema por defecto es dark
       Dado que la raíz del proyecto está vacía

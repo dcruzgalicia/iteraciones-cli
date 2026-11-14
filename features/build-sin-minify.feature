@@ -1,4 +1,3 @@
-# language: es
 Característica: el build no requiere minify
 
   Como quien publica HTML sin herramientas opcionales

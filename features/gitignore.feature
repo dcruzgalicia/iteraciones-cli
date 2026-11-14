@@ -1,4 +1,3 @@
-# language: es
 Característica: las reglas de `.gitignore` deciding qué se compila
 
   Como quien tiene notas de trabajo en el repositorio

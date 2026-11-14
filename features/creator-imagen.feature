@@ -1,4 +1,3 @@
-# language: es
 Característica: el retrato de la creadora en sus tarjetas
 
   Como quien recorre las creadoras del sitio

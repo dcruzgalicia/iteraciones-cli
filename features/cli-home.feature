@@ -1,4 +1,3 @@
-# language: es
 Característica: El home y la bibliografía se resuelven antes de publicar
 
   Como quien tiene un proyecto con un artículo y una portada

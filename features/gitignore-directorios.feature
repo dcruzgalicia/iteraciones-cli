@@ -1,4 +1,3 @@
-# language: es
 Característica: un directorio ignorado se salta entero
 
   Como quien tiene `dist/` y `node_modules/` en el proyecto

@@ -1,4 +1,3 @@
-# language: es
 Característica: el span para insertar espacios duros
 
   Como quien escribe versos con sangría
