@@ -47,7 +47,7 @@ Característica: los assets de la salida
         """
         @font-face
         url(../fonts/caveat-latin.woff2)
-        font-display:fallback
+        font-display:swap
         Caveat
         """
 
