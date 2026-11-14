@@ -6,13 +6,10 @@ import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, hasLega
 import type { BuildContext, DiscoveryEntry } from '../../builder/types.js';
 import { runBuild } from '../../cli/dispatcher.js';
 import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
-import type { HtmlStyle } from '../../lib/html-styles.js';
 import { distPath } from '../helpers.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 const salida = (): string => distPath(world.root);
-
-let estiloAssets: HtmlStyle = 'clasico';
 
 function ctx(): BuildContext {
   return {
@@ -28,18 +25,13 @@ function entradaBorrada(ruta: string, slug: string): [string, DiscoveryEntry] {
   return [ruta, { title: 'T', creator: [], date: '', mtime: 0, size: 0, hash: '', slug }];
 }
 
-Given('una salida para los assets', () => {
-  mkdirSyncWorld(salida());
-});
-
-Given('una salida para los assets con estilo {string}', (estilo: string) => {
-  estiloAssets = estilo as HtmlStyle;
-  mkdirSyncWorld(salida());
-});
-
 function mkdirSyncWorld(dir: string): void {
   mkdirSync(dir, { recursive: true });
 }
+
+Given('una salida para los assets', () => {
+  mkdirSyncWorld(salida());
+});
 
 When('construyo los assets', async () => {
   await buildAssets(salida(), world.root, DEFAULT_SITE_CONFIG);
@@ -47,20 +39,6 @@ When('construyo los assets', async () => {
 
 When('construyo los assets otra vez', async () => {
   await buildAssets(salida(), world.root, DEFAULT_SITE_CONFIG);
-});
-
-When('construyo los assets con ese estilo', async () => {
-  const config = {
-    ...DEFAULT_SITE_CONFIG,
-    format: {
-      ...DEFAULT_SITE_CONFIG.format,
-      html: {
-        ...DEFAULT_SITE_CONFIG.format.html,
-        site: { ...DEFAULT_SITE_CONFIG.format.html?.site, style: estiloAssets },
-      },
-    },
-  };
-  await buildAssets(salida(), world.root, config);
 });
 
 Given('un proyecto con un logo propio', () => {
