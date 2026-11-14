@@ -42,6 +42,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   const bandas: Array<[string, string | undefined]> = [
     ['hero', vars.hero],
     ['style', vars.style ?? 'clasico'],
+    ['font-preloads', vars.fontPreloads],
     ['label-formatos', vars.labelFormatos],
     ['label-indice', vars.labelIndice],
     ['label-referencias', vars.labelReferencias],

@@ -1,5 +1,5 @@
 [data-style="expresivo"] body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
   background-color: #fbf5e7;
 }
 
@@ -18,14 +18,14 @@
 }
 
 [data-style="expresivo"] h1 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Caveat", "Bradley Hand", cursive;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
 
 [data-style="expresivo"] h2,
 [data-style="expresivo"] h3 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Caveat", "Bradley Hand", cursive;
 }
 
 [data-style="expresivo"] .tarjeta {
@@ -46,4 +46,8 @@
 
 [data-style="expresivo"][data-theme="dark"] .tarjeta:hover {
   box-shadow: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 36%, transparent);
+}
+
+[data-style="expresivo"] .chip-title {
+  font-family: "Caveat", "Bradley Hand", cursive;
 }

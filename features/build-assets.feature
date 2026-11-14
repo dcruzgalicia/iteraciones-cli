@@ -4,9 +4,9 @@ Característica: los assets de la salida
   Quiero que la salida lleve el CSS y el logo, y nada que sobre
   Para que el build no crezca con archivos que nadie pidió
 
-  Regla de negocio: El sitio usa las fuentes del sistema
+  Regla de negocio: El estilo clásico usa fuentes locales con aire técnico
 
-    Escenario: El CSS usa las fuentes del sistema
+    Escenario: El CSS del estilo clásico usa Space Grotesk y Chakra Petch
       Dado que la raíz del proyecto está vacía
       Y una salida para los assets
       Cuando construyo los assets
@@ -14,20 +14,40 @@ Característica: los assets de la salida
         """
         assets/css/styles.css
         assets/images/favicon.png
-        """
-      Y en los assets NO hay:
-        """
-        assets/fonts
+        assets/fonts/space-grotesk-latin.woff2
+        assets/fonts/chakra-petch-600-latin.woff2
         """
       Y el CSS sí dice:
         """
-        system-ui
+        Space Grotesk
+        Chakra Petch
         """
       Y el CSS no menciona:
         """
-        @font-face
         Exo 2
         Space Mono
+        """
+
+    Escenario: Un estilo con fuente propia copia solo sus fuentes
+      Dado que la raíz del proyecto está vacía
+      Y una salida para los assets con estilo "expresivo"
+      Cuando construyo los assets con ese estilo
+      Entonces en los assets hay:
+        """
+        assets/fonts/caveat-latin.woff2
+        assets/fonts/nunito-latin.woff2
+        assets/fonts/caveat-OFL.txt
+        """
+      Y en los assets NO hay:
+        """
+        assets/fonts/public-sans-latin.woff2
+        """
+      Y el CSS sí dice:
+        """
+        @font-face
+        url(../fonts/caveat-latin.woff2)
+        font-display:fallback
+        Caveat
         """
 
     Escenario: El CSS propio del sitio sigue dentro

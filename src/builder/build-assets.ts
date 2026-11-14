@@ -6,18 +6,27 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import { ACCENT_COLORS, ACCENT_SHADES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
-import { DEFAULT_HTML_STYLE, type HtmlStyle, htmlStyle, htmlStyleColor } from '../lib/html-styles.js';
+import { DEFAULT_HTML_STYLE, type HtmlStyle, htmlStyle, htmlStyleColor, STYLE_FONTS } from '../lib/html-styles.js';
 import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import { spawnMagick } from './image-processor.js';
-import { ASSETS_CSS_FILE, ASSETS_FAVICON_PNG, ASSETS_FAVICON_SVG, ASSETS_IMAGES_DIR, ASSETS_LOGO_SVG, ASSETS_LOGO_WEBP } from './output-layout.js';
+import {
+  ASSETS_CSS_FILE,
+  ASSETS_FAVICON_PNG,
+  ASSETS_FAVICON_SVG,
+  ASSETS_FONTS_DIR,
+  ASSETS_IMAGES_DIR,
+  ASSETS_LOGO_SVG,
+  ASSETS_LOGO_WEBP,
+} from './output-layout.js';
 import { hashGlobbedFiles } from './state-hash.js';
 import type { FileCacheMap } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const STYLES_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles');
+const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
 const LICENSE_DIR = join(PKG_ROOT, 'src', 'lib', 'resources', 'license');
 const LICENSE_ICONS = [
   { name: 'cc', file: 'cc.svg' },
@@ -49,6 +58,14 @@ export async function resolveTailwindBin(): Promise<string> {
   throw new BuildError(`no se encontró el binario de Tailwind CSS (@tailwindcss/cli). Verifica que el paquete esté instalado (bun install).`);
 }
 
+async function fontFaceCss(style: HtmlStyle): Promise<string> {
+  return STYLE_FONTS[style]
+    .map(
+      (font) =>
+        `@font-face{font-family:"${font.family}";src:url("../fonts/${font.destination}") format("woff2");font-weight:${font.weight};font-style:${font.style ?? 'normal'};font-display:fallback}`,
+    )
+    .join('\n');
+}
 export async function compileTailwindCss(
   outputDir: string,
   accent: string,
@@ -61,7 +78,8 @@ export async function compileTailwindCss(
   if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new BuildError(`acento desconocido: "${accent}"`);
   const accentTheme = ACCENT_SHADES.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
   const styleImport = [`@import "${join(STYLES_DIR, `${style}.css`)}";`];
-  const input = [`@import "${STYLES_SRC}";`, ...styleImport, `@source "${outputDir}/**/*.html";`, '@theme {', accentTheme, '}'].join('\n');
+  const fontFaces = await fontFaceCss(style);
+  const input = [`@import "${STYLES_SRC}";`, ...styleImport, fontFaces, `@source "${outputDir}/**/*.html";`, '@theme {', accentTheme, '}'].join('\n');
 
   await mkdir(inputDir, { recursive: true });
   await writeFile(inputPath, input, 'utf8');
@@ -103,6 +121,9 @@ export async function computeCssHash(
   hasher.update(htmlStyleColor(site?.style, site?.color));
   hasher.update(style);
   hasher.update(await Bun.file(join(STYLES_DIR, `${style}.css`)).arrayBuffer());
+  for (const font of STYLE_FONTS[style]) {
+    hasher.update(await Bun.file(join(FONTS_SRC, font.source)).arrayBuffer());
+  }
   const tailwindBin = await resolveTailwindBin().catch(() => '');
   if (tailwindBin) {
     const binStat = await Bun.file(tailwindBin)
@@ -336,10 +357,23 @@ async function copyLicenseIcons(outputDir: string, licenseIcons?: Set<string>): 
   }
 }
 
+async function copyFontAssets(outputDir: string, style: HtmlStyle): Promise<void> {
+  const dest = join(outputDir, ASSETS_FONTS_DIR);
+  await rm(dest, { recursive: true, force: true });
+  const fonts = STYLE_FONTS[style];
+  if (fonts.length === 0) return;
+  await mkdir(dest, { recursive: true });
+  for (const font of fonts) {
+    await cp(join(FONTS_SRC, font.source), join(dest, font.destination));
+    await cp(join(FONTS_SRC, font.license), join(dest, font.licenseDestination));
+  }
+}
+
 export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, licenseIcons?: Set<string>): Promise<void> {
   await writeLogoAssets(cwd, outputDir, siteConfig);
   await copyLicenseIcons(outputDir, licenseIcons);
   await writeIconAssets(outputDir, siteConfig);
+  await copyFontAssets(outputDir, htmlStyle(siteConfig.format?.html?.site?.style));
 }
 
 export async function copyAdminSite(cwd: string, outputDir: string): Promise<void> {

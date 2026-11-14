@@ -1,5 +1,5 @@
 [data-style="institucional"] body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
   background-color: #f6f8f7;
 }
 
@@ -20,7 +20,7 @@
 [data-style="institucional"] h1,
 [data-style="institucional"] h2,
 [data-style="institucional"] h3 {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   letter-spacing: -0.02em;
 }
 
@@ -43,4 +43,8 @@
 
 [data-style="institucional"][data-theme="dark"] .tarjeta:hover {
   box-shadow: 0 6px 16px rgb(0 0 0 / 0.35);
+}
+
+[data-style="institucional"] .chip-title {
+  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
