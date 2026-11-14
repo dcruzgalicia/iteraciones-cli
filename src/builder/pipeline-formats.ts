@@ -6,7 +6,6 @@ import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmString, fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
-import { htmlStyle, STYLE_FONTS } from '../lib/html-styles.js';
 import { logWarning } from '../lib/logger.js';
 import { minifyHtml } from '../lib/minify.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
@@ -51,7 +50,6 @@ import { detectPageSize } from './latex-preamble.js';
 import { fechaOrdenable } from './list-filter.js';
 import {
   ASSETS_CSS_FILE,
-  ASSETS_FONTS_DIR,
   ASSETS_IMAGES_DIR,
   ASSETS_LOGO_WEBP,
   ASSETS_PDF_IMAGES_DIR,
@@ -344,7 +342,6 @@ export async function emit404(args: {
   const tagline = site?.description ?? '';
   const theme = site?.theme ?? 'dark';
   const style = site?.style ?? 'clasico';
-  const fontPreloads = fontPreloadTags(style, '.');
   const logo =
     args.renderCtx.logo === undefined
       ? ''
@@ -375,7 +372,6 @@ export async function emit404(args: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
   <title>Página no encontrada · ${Bun.escapeHTML(siteTitle)}</title>
-  ${fontPreloads === undefined ? '' : fontPreloads}
   ${ctx.needsCss ? `<link rel="stylesheet" href="${relativeHref('.', ASSETS_CSS_FILE)}">` : ''}
 </head>
 <body class="font-sans antialiased text-base text-stone-900 sm:text-lg dark:text-stone-100 bg-paper bg-paper-grid">
@@ -476,14 +472,12 @@ export async function emitSearch(args: {
   const datos = JSON.stringify(entradas).replace(/</g, '\\u003c');
   const theme = site?.theme === 'light' ? 'light' : 'dark';
   const style = site?.style ?? 'clasico';
-  const fontPreloads = fontPreloadTags(style, '.');
   const title = site?.title ?? 'iteraciones';
   const html = `<!doctype html>
 <html lang="${Bun.escapeHTML(renderCtx.lang)}" data-theme="${theme}" data-style="${style}">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Buscar · ${Bun.escapeHTML(title)}</title>
-${fontPreloads === undefined ? '' : fontPreloads}
 <link rel="stylesheet" href="./assets/css/styles.css">
 </head>
 <body class="bg-paper bg-paper-grid font-sans text-stone-900 dark:text-stone-100">
@@ -767,16 +761,6 @@ function subjectVisible(subject: string | undefined, keywords: string[]): string
   return esSubjectDuplicado(subject, keywords) ? undefined : subject;
 }
 
-function fontPreloadTags(style: string | undefined, dir: string): string | undefined {
-  const fonts = STYLE_FONTS[htmlStyle(style)];
-  if (fonts.length === 0) return undefined;
-  return fonts
-    .map(
-      (font) => `<link rel="preload" href="${relativeHref(dir, `${ASSETS_FONTS_DIR}/${font.destination}`)}" as="font" type="font/woff2" crossorigin>`,
-    )
-    .join('\n  ');
-}
-
 function htmlVars(args: {
   doc: BuildDocument;
   outputs: DocumentOutputs;
@@ -903,7 +887,6 @@ function htmlVars(args: {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
     hero,
     style: htmlConfig?.site?.style ?? 'clasico',
-    fontPreloads: fontPreloadTags(htmlConfig?.site?.style, dir),
     labelFormatos: label('formatos', 'Formatos'),
     labelIndice: label('indice', 'Índice'),
     labelReferencias: label('referencias', 'Referencias'),

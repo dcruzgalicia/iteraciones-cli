@@ -1,5 +1,5 @@
 [data-style="institucional"] body {
-  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background-color: #f6f8f7;
 }
 
@@ -20,7 +20,7 @@
 [data-style="institucional"] h1,
 [data-style="institucional"] h2,
 [data-style="institucional"] h3 {
-  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   letter-spacing: -0.02em;
 }
 
