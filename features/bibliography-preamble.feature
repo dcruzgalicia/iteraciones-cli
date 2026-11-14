@@ -1,4 +1,3 @@
-# language: es
 Característica: la bibliografía cuando el proyecto no cita nada
 
   Como quien escribe un libro sin bibliografía

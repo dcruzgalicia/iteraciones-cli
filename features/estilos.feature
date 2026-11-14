@@ -1,4 +1,3 @@
-# language: es
 Característica: estilos visuales del sitio
 
   Para elegir una identidad visual sin cambiar el modo claro/oscuro

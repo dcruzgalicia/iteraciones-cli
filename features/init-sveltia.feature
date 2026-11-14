@@ -1,4 +1,3 @@
-# language: es
 Característica: init sveltia deja un proyecto listo para el admin
 
   Como quien publica un sitio con Sveltia

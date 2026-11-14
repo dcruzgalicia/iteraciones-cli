@@ -1,4 +1,3 @@
-# language: es
 Característica: extensiones opcionales del sitio HTML
 
   Escenario: La búsqueda genera página e índice

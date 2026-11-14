@@ -1,4 +1,3 @@
-# language: es
 Característica: las tarjetas de textos y colecciones en la página de la autora
 
   Como quien visita la página de una autora

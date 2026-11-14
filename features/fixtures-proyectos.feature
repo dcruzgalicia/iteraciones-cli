@@ -1,4 +1,3 @@
-# language: es
 Característica: Las fixtures congeladas de los proyectos compilan
   Como quien cuida la regresión de los dos proyectos de ejemplo
   Quiero compilar fixtures mínimas sin tocar los proyectos originales

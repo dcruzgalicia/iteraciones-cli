@@ -1,4 +1,3 @@
-# language: es
 Característica: init colectiva
 
   Como quien coordina una colectiva

@@ -575,7 +575,6 @@
   text-decoration: underline;
 }
 
-/* Tipografía de contenido sin el plugin completo */
 @utility prose {
   color: var(--color-stone-800);
   line-height: 1.7;

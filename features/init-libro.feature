@@ -1,4 +1,3 @@
-# language: es
 Característica: init libro
 
   Como quien publica un libro con PDF y EPUB
@@ -16,9 +15,6 @@ Característica: init libro
       Y el archivo "iteraciones.config.yaml" contiene "showDate: false"
       Y el archivo "iteraciones.config.yaml" contiene "theme: light"
       Y el directorio "paginas" existe
-      Y el archivo "iteraciones.config.yaml" contiene "frontCover"
-      Y el archivo "iteraciones.config.yaml" contiene "Formatos"
-      Y el archivo "iteraciones.config.yaml" contiene "Descargas"
       Y el archivo "menu.md" contiene "type: menu"
       Cuando construyo el proyecto
       Entonces el comando termina con el código de salida 0

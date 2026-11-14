@@ -1,4 +1,3 @@
-# language: es
 Característica: qué se recompila y qué no
 
   Como quien edita un párrafo de un libro de doscientos capítulos

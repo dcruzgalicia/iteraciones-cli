@@ -1,4 +1,3 @@
-# language: es
 Característica: el QR y su URL
 
   Como quien pone un QR en el texto

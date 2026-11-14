@@ -1,4 +1,3 @@
-# language: es
 Característica: limpiar las marcas tipográficas del markdown de origen
 
   Como quien mantiene los textos

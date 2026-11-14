@@ -1,4 +1,3 @@
-# language: es
 Característica: el menú del sitio
 
   Como quien navega el sitio

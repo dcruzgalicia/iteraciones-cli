@@ -1,4 +1,3 @@
-# language: es
 Característica: El markdown exportado a dist se puede re-procesar
   Como quien vuelve a procesar la salida del build como si fuera el origen
   Quiero que dist se pueda reprocesar sin perder nada

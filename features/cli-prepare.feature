@@ -1,4 +1,3 @@
-# language: es
 Característica: preparar los directorios que asumen los comandos externos
 
   Como quien va a correr pandoc y latexmk a mano

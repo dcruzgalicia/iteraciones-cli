@@ -1,4 +1,3 @@
-# language: es
 Característica: cuántos autores caben en el nombre del archivo
 
   Como quien escribe en coautoría

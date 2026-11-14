@@ -1,4 +1,3 @@
-# language: es
 Característica: bloque Cómo citar
 
   Para citar una publicación sin reconstruir sus metadatos

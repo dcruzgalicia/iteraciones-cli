@@ -1,4 +1,3 @@
-# language: es
 Característica: los créditos de una colección
 
   Como quien publica una antología

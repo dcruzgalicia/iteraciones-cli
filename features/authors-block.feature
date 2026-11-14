@@ -1,4 +1,3 @@
-# language: es
 Característica: el bloque de autoras de una collection llega al LaTeX siempre que hay creators
 
   Como quien publica una antología sin que el proyecto cite nada

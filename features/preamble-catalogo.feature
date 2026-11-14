@@ -1,4 +1,3 @@
-# language: es
 Característica: los filtros de preámbulo que trae el paquete
 
   Como quien ajusta el diseño de su PDF

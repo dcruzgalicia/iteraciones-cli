@@ -1,4 +1,3 @@
-# language: es
 Característica: init con plantillas de proyecto
 
   Como quien arranca un proyecto editorial desde cero

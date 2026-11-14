@@ -1,4 +1,3 @@
-# language: es
 Característica: Los nombres de las autoras enlazan a su página
 
   Como quien lee una antología

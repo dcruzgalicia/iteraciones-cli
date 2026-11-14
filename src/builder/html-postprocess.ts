@@ -119,7 +119,6 @@ export function extractReferencesBlock(html: string, cardTemplate: string, refsL
   };
 }
 
-// ponytail: heurística por clases del template; si cambia el grid, ajusta estos breakpoints.
 function responsiveSizes(tag: string): string {
   if (tag.includes('width:100px') || tag.includes('rounded-full')) return '100px';
   if (tag.includes('object-contain') && tag.includes('border-accent-500/70')) {

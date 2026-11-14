@@ -1,4 +1,3 @@
-# language: es
 Característica: limpiar el párrafo de un hallazgo tipográfico
 
   Como quien corrige el markdown después de revisar el PDF

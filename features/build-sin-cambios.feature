@@ -1,4 +1,3 @@
-# language: es
 Característica: El build atajo corta cuando nada cambió
   Como quien recompila sin haber tocado nada
   Quiero que el build pare antes de reprocesar

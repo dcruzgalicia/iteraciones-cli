@@ -1,4 +1,3 @@
-# language: es
 Característica: la imagen de cabecera de las tarjetas
 
   Como quien recorre una lista de textos

@@ -1,4 +1,3 @@
-# language: es
 Característica: meta description por página
 
   Para que los buscadores y las vistas previas tengan un resumen

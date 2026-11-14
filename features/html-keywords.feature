@@ -1,4 +1,3 @@
-# language: es
 Característica: las palabras clave del proyecto
 
   Como quien publica textos con temas

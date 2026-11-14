@@ -1,4 +1,3 @@
-# language: es
 Característica: página 404
 
   Para que quien llega a una URL rota encuentre el sitio

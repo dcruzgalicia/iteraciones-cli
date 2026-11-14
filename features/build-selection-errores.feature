@@ -1,4 +1,3 @@
-# language: es
 Característica: qué pasa cuando la selección está mal
 
   Como quien escribe `iteraciones build cap1.md`

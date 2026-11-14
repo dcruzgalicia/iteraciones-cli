@@ -39,7 +39,6 @@ async function collectionFiles(cwd: string, relativePath: string, fm: Record<str
 }
 
 export async function runMarkdown(cwd: string, input: string, options: { output?: string }): Promise<void> {
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: el cuerpo se movió tal cual a runCommand
   await runCommand('markdown', async () => {
     if (options.output === undefined || options.output === '') {
       throw new BuildError('falta --output (-o): indica la ruta del .md de salida');

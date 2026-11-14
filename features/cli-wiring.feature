@@ -1,4 +1,3 @@
-# language: es
 Característica: El argv llega entero hasta el comando
 
   Como quien escribe el comando en la terminal

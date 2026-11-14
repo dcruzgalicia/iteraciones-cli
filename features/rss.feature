@@ -1,4 +1,3 @@
-# language: es
 Característica: feed RSS
 
   Para que un blog o una convocatoria tenga un feed

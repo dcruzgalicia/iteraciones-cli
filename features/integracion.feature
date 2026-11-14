@@ -1,4 +1,3 @@
-# language: es
 Característica: init, build y validate funcionan de punta a punta
   Como quien empieza un proyecto desde cero
   Quiero que el CLI cree el proyecto y lo construya sin pasos manuales

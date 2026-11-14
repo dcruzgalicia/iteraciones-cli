@@ -1,4 +1,3 @@
-# language: es
 Característica: el pipeline avisa a quien lo embedda
 
   Como quien mete `build()` en otro programa en vez de usar el CLI

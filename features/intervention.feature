@@ -1,4 +1,3 @@
-# language: es
 Característica: el tipo `intervention`
 
   Como quien edita una regla de imprenta

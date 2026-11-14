@@ -1,4 +1,3 @@
-# language: es
 Característica: markdown y merge dicen qué está mal en el frontmatter
 
   Como quien escribe y corrigió el mismo archivo cuatro veces porque el error no decía nada

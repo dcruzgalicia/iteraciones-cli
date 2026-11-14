@@ -1,4 +1,3 @@
-# language: es
 Característica: columnas del grid por breakpoint
 
   Para que las tarjetas y el contenido no se aprieten en ningún ancho
