@@ -729,3 +729,7 @@
     line-height: 0;
   }
 }
+
+[class~="not-prose"][class~="inline-flex"] {
+  line-height: 1;
+}
