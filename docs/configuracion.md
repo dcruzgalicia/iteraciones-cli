@@ -180,7 +180,7 @@ las líneas según el acento y el modo. No hay gradientes ni figuras de fondo.
 
 Los cuatro estilos sirven sus fuentes desde `assets/fonts/`, con una copia
 local en `src/lib/resources/fonts/`. Se precargan en el `<head>` y usan
-`font-display: swap` para mostrar el texto de inmediato mientras cargan las fuentes. No hay peticiones a
+`font-display: fallback` para bloquear el texto un instante y evitar el parpadeo. No hay peticiones a
 Google Fonts.
 
 ### `format.pdf`

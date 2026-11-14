@@ -385,7 +385,7 @@ export async function emit404(args: {
         ${logo}
         <div class="flex min-w-0 flex-col items-start">
           <a href="./index.html" class="font-semibold text-base leading-none text-accent-800 no-underline hover:underline sm:text-lg lg:text-xl 2xl:text-2xl dark:text-accent-300">${Bun.escapeHTML(siteTitle)}</a>
-          ${tagline === '' ? '' : `<span class="mt-1 text-[11px] sm:text-xs lg:text-sm italic leading-none text-stone-600 dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
+          ${tagline === '' ? '' : `<span class="mt-1 text-xs lg:text-sm italic leading-none text-stone-600 dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
         </div>
       </div>
     </header>
@@ -720,7 +720,7 @@ function citationBlockHtml(args: {
   return [
     '<div class="min-w-0">',
     '<section class="relative rounded-lg tarjeta p-4 text-xs!  sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! ">',
-    '<h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Cómo citar</h2>',
+    '<h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Cómo citar</h2>',
     `<p class="m-0 text-stone-800 dark:text-stone-200">${Bun.escapeHTML(apa)}</p>`,
     `<div class="mt-4 flex flex-wrap gap-2">${enlace('cita.bib', bibtex)}${enlace('cita.ris', ris)}</div>`,
     `<details class="mt-4"><summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">BibTeX</summary><pre class="mt-2 overflow-x-auto rounded-lg bg-stone-100 p-3 text-xs dark:bg-stone-950/70">${Bun.escapeHTML(bibtex)}</pre></details>`,
@@ -1501,10 +1501,10 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 }
 
 const PAGINATION_BUTTON_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500/40 bg-accent-500/10 px-1.5 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/30 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-none dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
+  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500/40 bg-accent-500/10 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/30 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-none dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
 const PAGINATION_ACTIVE_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500 bg-accent-500/20 px-1.5 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-900 shadow-[3px_3px_0_0] shadow-accent-500/40 dark:text-accent-100';
+  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500 bg-accent-500/20 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-900 shadow-[3px_3px_0_0] shadow-accent-500/40 dark:text-accent-100';
 
 const PAGINATION_NAV_CLASSES = 'col-span-full flex flex-wrap items-center justify-start gap-2';
 
@@ -1597,7 +1597,7 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
         : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
     })
     .join('');
-  const indice = `<div class="min-w-0" id="indice-completo"><nav class="contenido-tamano contenido-compacto relative rounded-lg tarjeta p-4 sm:p-6 "><h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
+  const indice = `<div class="min-w-0" id="indice-completo"><nav class="contenido-tamano contenido-compacto relative rounded-lg tarjeta p-4 sm:p-6 "><h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
   return Array.from({ length: total }, () => indice);
 }
 
@@ -1638,7 +1638,7 @@ const CHIP_HOVER_EFFECT_CLASSES =
   'transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30';
 
 const PILL_BASE =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-[11px] sm:text-xs lg:text-sm font-normal uppercase tracking-wide leading-none text-accent-800 dark:text-accent-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none text-accent-800 dark:text-accent-300';
 
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
@@ -1646,7 +1646,7 @@ const EXTRA_PILL_CLASSES = `${PILL_BASE} mt-0 mb-0`;
 const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
 const MEMBER_BADGE_CLASSES =
-  'inline-block shrink-0 rounded-md border-2 border-stone-300 bg-stone-200/70 px-2 py-1 font-semibold text-xs leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border-2 border-stone-300 bg-stone-200/70 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
 
 function memberTypeLabel(type: string | undefined): string {
   if (type === undefined || type === 'file') return uiLabel('texto', 'Texto');
@@ -1676,22 +1676,22 @@ function chipHtml(
 const MEMBER_LINK_CLASSES = 'py-1 no-underline underline-offset-4 transition-colors duration-200 hover:underline';
 
 const CARD_CTA_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-3 lg:px-3.5 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/40 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline hover:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30 dark:hover:text-accent-100';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/40 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline hover:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30 dark:hover:text-accent-100';
 
 const MENU_BUTTON_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/35 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/35 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
 
 const MENU_LINK_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
+  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
 
 const HEADER_COLLECTION_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/50 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/50 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200';
 const HEADER_KEYWORD_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
 const RECENTES_LIMIT = 5;
 const KEYWORD_INDEX_SLUG = 'keyword';
 const SIDEBAR_KEYWORD_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-[11px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
 const KEYWORD_BADGE_CLASSES =
   'inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
 function ctaDeTarjeta(type: string | undefined): string {
