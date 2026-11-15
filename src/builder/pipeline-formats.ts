@@ -2501,8 +2501,8 @@ function partesDeColeccion(titleHtml: string, href: string | undefined): string[
   const texto = 'Varias colaboradoras';
   const etiqueta =
     href === undefined
-      ? `<h2 class="not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${texto}</h2>`
-      : `<h2 class="not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${texto}</a></h2>`;
+      ? `<h2 class="card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${texto}</h2>`
+      : `<h2 class="card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${texto}</a></h2>`;
   return [etiqueta, '', titleHtml];
 }
 
@@ -2636,7 +2636,7 @@ function cabeceraDeTarjeta(
   const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
   const creator = nombres === undefined ? '' : nombres.length > 0 ? renderNombres(nombres, tono, creatorHrefs) : AUTORA_POR_DEFECTO;
   if (creator !== '')
-    cuerpo.push(`<h2 class="not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`, '');
+    cuerpo.push(`<h2 class="card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`, '');
   cuerpo.push(titleHtml);
   if (e.subtitle) cuerpo.push('', `<h4 class="text-left text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
   if (page?.showDates === true && e.date !== undefined) {

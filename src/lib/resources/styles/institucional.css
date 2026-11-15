@@ -48,3 +48,7 @@
 [data-style="institucional"] .chip-title {
   font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+
+[data-style="institucional"] .card-creator {
+  font-family: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+}

@@ -51,3 +51,7 @@
 [data-style="expresivo"] .chip-title {
   font-family: "Caveat", "Bradley Hand", cursive;
 }
+
+[data-style="expresivo"] .card-creator {
+  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
