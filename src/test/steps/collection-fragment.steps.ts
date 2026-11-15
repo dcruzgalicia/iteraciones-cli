@@ -80,7 +80,6 @@ Then('el fragmento no dice {string}', (texto: string) => {
 });
 
 import type { CollectionEntry } from '../../builder/pipeline-formats.js';
-
 import {
   collectionBaseContent,
   collectionCardsContent,
@@ -89,6 +88,7 @@ import {
   memberHtmlHrefs,
   paginationNav,
 } from '../../builder/pipeline-formats.js';
+import type { DiscoveryEntry } from '../../builder/types.js';
 
 function miembro(over: Partial<CollectionEntry> = {}): CollectionEntry {
   return {
@@ -144,11 +144,28 @@ Given('que la colección tiene un cuerpo propio con {int} palabras y un segundo 
   world.miembros = [miembro({ body: `${palabras(cuantas)}.\n\nSegundo párrafo que sí debe aparecer.` })];
 });
 
+Given('que la colección está dentro de una colección con un título larguísimo', () => {
+  world.tituloContenedor = 'Una colección con un título larguísimo que no cabe en la tarjeta';
+});
+
 When('compogo las tarjetas de la página HTML', () => {
+  const entradas = coleccion(world.miembros);
+  const discovery =
+    world.tituloContenedor === undefined
+      ? undefined
+      : new Map<string, DiscoveryEntry>([
+          ['doc.md', { title: 'Documento', creator: [], containedBy: ['contenedora.md'] }],
+          ['contenedora.md', { title: world.tituloContenedor, creator: [], type: 'collection', slug: 'contenedora' }],
+        ]);
   world.html = collectionCardsContent(
-    coleccion(world.miembros),
-    memberHtmlHrefs(world.rutaColeccion, coleccion(world.miembros), indiceDeSlugs()),
+    entradas,
+    memberHtmlHrefs(world.rutaColeccion, entradas, indiceDeSlugs()),
     world.cuerpoColeccion,
+    new Map(),
+    '.',
+    undefined,
+    discovery,
+    discovery === undefined ? undefined : { path: 'otra.md' },
   );
 });
 
@@ -206,11 +223,28 @@ Then('los badges de las tarjetas son {string}', (esperados: string) => {
 });
 
 Then('el chip y el badge van en la misma fila', () => {
-  const inicio = world.html.indexOf('<div class="flex items-start justify-between gap-4">');
+  const inicio = world.html.indexOf('tarjeta-cabecera');
   if (inicio < 0) throw new Error('el chip y el badge no van en una fila con el chip a la izquierda y el badge a la derecha');
   const badge = world.html.indexOf('min-w-6', inicio);
   if (badge < 0) throw new Error('la fila no tiene el badge');
   if (!world.html.slice(inicio, badge).includes('<h2')) throw new Error('la fila no tiene el chip');
+});
+
+Then('el chip largo no empuja el badge fuera de la tarjeta', () => {
+  const fila = /<div class="tarjeta-cabecera[^"]*">[\s\S]*?<span class="[^"]*shrink-0[^"]*">\d+<\/span><\/div>/.exec(world.html)?.[0];
+  if (fila === undefined) throw new Error('la cabecera no tiene el chip y el badge en la misma fila');
+  if (!/class="tarjeta-cabecera[^"]*\bmin-w-0\b/.test(fila)) throw new Error('la fila de la cabecera no puede encogerse: falta min-w-0');
+  const columna = /<div class="(flex [^"]*)">/.exec(fila)?.[1] ?? '';
+  if (!columna.includes('min-w-0') || !columna.includes('flex-1')) throw new Error(`la columna de chips no encoge: ${columna}`);
+  const chip = /<h2 class="([^"]*)">[\s\S]*?<a\b[^>]*class="([^"]*)"/.exec(fila);
+  if (chip === null) throw new Error('la tarjeta no tiene el chip largo como enlace');
+  const [, clasesChip = '', clasesEnlace = ''] = chip;
+  for (const clase of ['min-w-0', 'max-w-full', 'truncate']) {
+    if (!clasesChip.split(/\s+/).includes(clase)) throw new Error(`el chip no trunca: falta ${clase} en ${clasesChip}`);
+  }
+  if (!clasesEnlace.split(/\s+/).includes('truncate')) throw new Error(`el enlace del chip no trunca: ${clasesEnlace}`);
+  if (world.tituloContenedor !== undefined && !fila.includes(world.tituloContenedor))
+    throw new Error('la tarjeta no muestra el título largo de la colección');
 });
 
 Then('el HTML no tiene triple salto de línea', () => {

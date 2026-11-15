@@ -18,7 +18,6 @@ export interface HtmlFont {
   source: string;
   destination: string;
   weight: string;
-  style?: string;
   license: string;
   licenseDestination: string;
 }

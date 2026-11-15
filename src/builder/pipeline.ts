@@ -11,7 +11,6 @@ import {
   emit404,
   emitDefaultLists,
   emitKeywordLists,
-  emitOai,
   emitRobots,
   emitRss,
   emitSearch,
@@ -135,9 +134,6 @@ export async function documentPipeline(
     const htmlSite = ctx.siteConfig.format?.html?.site;
     await emitSitemap({ cwd: ctx.cwd, outputDir: ctx.outputDir, siteUrl });
     await emitRobots({ cwd: ctx.cwd, outputDir: ctx.outputDir, siteUrl });
-    if (htmlSite?.oai === true) {
-      await emitOai({ cwd: ctx.cwd, outputDir: ctx.outputDir, siteUrl, siteTitle: htmlSite.title ?? 'iteraciones', discoveryIndex });
-    }
     if (htmlSite?.search === true) {
       await emitSearch({ cwd: ctx.cwd, outputDir: ctx.outputDir, renderCtx, discoveryIndex });
     }

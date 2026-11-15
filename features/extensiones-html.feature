@@ -95,39 +95,6 @@ Característica: extensiones opcionales del sitio HTML
     Entonces el comando termina con el código de salida 0
     Y el archivo "dist/files/index.html" contiene ">Navegar</span>"
 
-  Escenario: OAI-PMH genera un ListRecords Dublin Core
-    Dado que la raíz del proyecto tiene un proyecto de prueba
-    Y el proyecto produce html
-    Y que el archivo "iteraciones.config.yaml" tiene este contenido
-      """
-      language: es-MX
-      format:
-        html:
-          generate: true
-          site:
-            title: Repositorio
-            url: https://repo.example
-            oai: true
-      """
-    Y que el archivo "documento.md" tiene este contenido
-      """
-      ---
-      title: Documento
-      creator: Ana Ruiz
-      date: 2026-01-01
-      identifier: REP-001
-      ---
-
-      Contenido.
-      """
-    Cuando hago un build del proyecto
-    Entonces el comando termina con el código de salida 0
-    Y el archivo "dist/files/oai.xml" existe
-    Y el archivo "dist/files/oai.xml" contiene "<OAI-PMH"
-    Y el archivo "dist/files/oai.xml" contiene "REP-001"
-    Y el archivo "dist/files/oai.xml" contiene "<dc:creator>Ana Ruiz</dc:creator>"
-    Y el archivo "dist/files/oai.xml" contiene "<dc:type>Text</dc:type>"
-
   Escenario: Las listas en listas/ enlazan a su salida en la raíz
     Dado que la raíz del proyecto tiene un proyecto de prueba
     Y el proyecto produce html
@@ -214,5 +181,5 @@ Característica: extensiones opcionales del sitio HTML
     Entonces el comando termina con el código de salida 0
     Y el archivo "dist/files/textos/uno.html" contiene "Novedades"
     Y el archivo "dist/files/textos/uno.html" contiene "Temas"
-    Y el archivo "dist/files/texto.html" contiene ">Publicación</h2>"
+    Y el archivo "dist/files/textos/uno.html" contiene ">Publicación</a>"
     Y el archivo "dist/files/texto.html" contiene "Abrir →"

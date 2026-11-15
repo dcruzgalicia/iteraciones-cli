@@ -139,6 +139,7 @@ function nuevoMundo() {
     nombresEnlazados: [] as string[],
     cuerpoColeccion: '',
     rutaColeccion: 'coleccion.md',
+    tituloContenedor: undefined as string | undefined,
     html: '',
     enlaces: new Map<string, string>() as ReadonlyMap<string, string>,
     fragmento: '',

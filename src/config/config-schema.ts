@@ -99,7 +99,6 @@ const HtmlSiteSchema = z
     license: z.union([z.string(), z.literal(false)]).optional(),
     home: HtmlHomeSchema.optional(),
     search: z.boolean().optional(),
-    oai: z.boolean().optional(),
     labels: z.record(z.string(), z.string()).optional(),
     url: z
       .string()

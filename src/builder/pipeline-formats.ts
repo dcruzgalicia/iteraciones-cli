@@ -20,7 +20,14 @@ import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { CHIP_OUTLINE_CLASSES, creatorPortraitHtml, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
+import {
+  CHIP_OUTLINE_CLASSES,
+  CHIP_SIZE_CLASSES,
+  CHIP_TRUNCATE_CLASSES,
+  creatorPortraitHtml,
+  type HtmlPageVars,
+  logoBlockHtml,
+} from './html-composer.js';
 import { addResponsiveImages } from './html-postprocess.js';
 import {
   type DocumentImages,
@@ -328,10 +335,6 @@ async function writeStatic(cwd: string, outputDir: string, name: string, content
   recordSupportCommand('resources', name, ['cp', relative(cwd, staging), relative(cwd, destino)]);
 }
 
-function escapeXml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-}
-
 export async function emit404(args: {
   cwd: string;
   outputDir: string;
@@ -431,10 +434,10 @@ export async function emitRss(args: {
   const xmlItems = items
     .map(
       (item) =>
-        `    <item>\n      <title>${escapeXml(item.entry.title)}</title>\n      <link>${escapeXml(item.url)}</link>\n      <guid>${escapeXml(item.url)}</guid>\n      <pubDate>${new Date(item.fecha).toUTCString()}</pubDate>\n    </item>`,
+        `    <item>\n      <title>${Bun.escapeHTML(item.entry.title)}</title>\n      <link>${Bun.escapeHTML(item.url)}</link>\n      <guid>${Bun.escapeHTML(item.url)}</guid>\n      <pubDate>${new Date(item.fecha).toUTCString()}</pubDate>\n    </item>`,
     )
     .join('\n');
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>${escapeXml(args.siteTitle)}</title>\n    <link>${escapeXml(`${base}/`)}</link>\n    <description>${escapeXml(args.siteDescription)}</description>\n${xmlItems}\n  </channel>\n</rss>\n`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>${Bun.escapeHTML(args.siteTitle)}</title>\n    <link>${Bun.escapeHTML(`${base}/`)}</link>\n    <description>${Bun.escapeHTML(args.siteDescription)}</description>\n${xmlItems}\n  </channel>\n</rss>\n`;
   await writeStatic(args.cwd, args.outputDir, 'feed.xml', xml);
 }
 
@@ -518,59 +521,6 @@ filtrar();
   await writeStatic(cwd, outputDir, 'buscar.html', html);
 }
 
-export async function emitOai(args: {
-  cwd: string;
-  outputDir: string;
-  siteUrl: string | undefined;
-  siteTitle: string;
-  discoveryIndex: Map<string, DiscoveryEntry>;
-}): Promise<void> {
-  const base = args.siteUrl?.trim().replace(/\/+$/, '') ?? '';
-  const records: string[] = [];
-  const rutas = [...args.discoveryIndex.keys()].sort((a, b) => a.localeCompare(b, 'es'));
-  for (const ruta of rutas) {
-    const entry = args.discoveryIndex.get(ruta);
-    if (entry === undefined) continue;
-    const tipo = entry.type ?? 'file';
-    if (tipo !== 'file' && tipo !== 'collection') continue;
-    if (entry.slug === undefined) continue;
-    const fm = entry.fm ?? {};
-    const titulo = entry.title;
-    const creadores = entry.creator.length > 0 ? entry.creator : ['Anónima'];
-    const fecha =
-      entry.date !== undefined && entry.date !== ''
-        ? entry.date
-        : entry.mtime !== undefined
-          ? new Date(entry.mtime).toISOString().slice(0, 10)
-          : '1970-01-01';
-    const id = String(fm.identifier ?? fm.doi ?? fm.isbn ?? ruta);
-    const descripcion = String(fm.abstract ?? fm.description ?? '');
-    const derechos = String(fm.rights ?? fm.license ?? '');
-    const idioma = typeof fm.language === 'string' ? fm.language : '';
-    const dcType = tipo === 'collection' ? 'Collection' : 'Text';
-    records.push(`  <record>
-    <header><identifier>oai:${escapeXml(base.replace(/^https?:\/\//, ''))}:${escapeXml(id)}</identifier><datestamp>${escapeXml(fecha)}</datestamp></header>
-    <metadata><oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${escapeXml(titulo)}</dc:title>${creadores.map((c) => `<dc:creator>${escapeXml(c)}</dc:creator>`).join('')}${keywordsFromFm(
-      fm,
-    )
-      .map((k) => `<dc:subject>${escapeXml(k)}</dc:subject>`)
-      .join(
-        '',
-      )}${descripcion === '' ? '' : `<dc:description>${escapeXml(descripcion)}</dc:description>`}<dc:date>${escapeXml(fecha)}</dc:date>${fm.publisher === undefined ? '' : `<dc:publisher>${escapeXml(String(fm.publisher))}</dc:publisher>`}<dc:identifier>${escapeXml(id)}</dc:identifier>${derechos === '' ? '' : `<dc:rights>${escapeXml(derechos)}</dc:rights>`}<dc:type>${dcType}</dc:type>${idioma === '' ? '' : `<dc:language>${escapeXml(idioma)}</dc:language>`}</oai_dc:dc></metadata>
-  </record>`);
-  }
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
-  <responseDate>${new Date().toISOString()}</responseDate>
-  <request verb="ListRecords">${escapeXml(base)}/oai.xml</request>
-  <ListRecords>
-${records.join('\n')}
-  </ListRecords>
-</OAI-PMH>
-`;
-  await writeStatic(args.cwd, args.outputDir, 'oai.xml', xml);
-}
-
 export async function emitRobots(args: { cwd: string; outputDir: string; siteUrl: string | undefined }): Promise<void> {
   const base = args.siteUrl?.trim().replace(/\/+$/, '');
   const sitemap = base === undefined || base === '' ? '' : `\nSitemap: ${base}/sitemap.xml\n`;
@@ -588,7 +538,7 @@ export async function emitSitemap(args: { cwd: string; outputDir: string; siteUr
     const info = await stat(join(args.outputDir, path));
     const lastmod = info.mtime.toISOString().slice(0, 10);
     const loc = `${base}/${path}`.replace(/index\.html$/, '');
-    urls.push(`  <url>\n    <loc>${escapeXml(loc)}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`);
+    urls.push(`  <url>\n    <loc>${Bun.escapeHTML(loc)}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`);
   }
   await writeStatic(
     args.cwd,
@@ -746,10 +696,6 @@ function socialMetaTags(args: { title: string; description?: string; type: strin
   tags.push(`<meta name="twitter:title" content="${Bun.escapeHTML(args.title)}">`);
   if (args.description !== undefined) tags.push(`<meta name="twitter:description" content="${Bun.escapeHTML(args.description)}">`);
   return tags.join('\n  ');
-}
-
-function formatosOpcionales(formats: HtmlPageVars['formats']): HtmlPageVars['formats'] {
-  return formats !== undefined && formats.length > 0 ? formats : undefined;
 }
 
 function esSubjectDuplicado(subject: string | undefined, keywords: string[]): boolean {
@@ -929,7 +875,7 @@ function htmlVars(args: {
     dateIso: opcional(doc.frontmatter.date),
     showDates,
     homeHref: cuando(hasHomePage, relativeHref(dir, 'index.html')),
-    formats: formatosOpcionales(formats),
+    formats: formats !== undefined && formats.length > 0 ? formats : undefined,
 
     titlehead: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
     subject: subjectVisible(subject, keywords),
@@ -1636,16 +1582,14 @@ const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[26rem] flex-
 const CHIP_HOVER_EFFECT_CLASSES =
   'transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30';
 
-const PILL_BASE =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none text-accent-800 dark:text-accent-300';
+const PILL_BASE = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 font-normal uppercase tracking-wide text-accent-800 dark:text-accent-300`;
 
 const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
 const EXTRA_PILL_CLASSES = `${PILL_BASE} chip-title mt-0 mb-0`;
 const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
 
-const MEMBER_BADGE_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border-2 border-stone-300 bg-stone-200/70 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold leading-none mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300';
+const MEMBER_BADGE_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} min-w-6 sm:min-w-7 lg:min-w-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border-2 border-stone-300 bg-stone-200/70 px-1.5 sm:px-2.5 lg:px-3 font-semibold mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300`;
 
 function memberTypeLabel(type: string | undefined): string {
   if (type === undefined || type === 'file') return uiLabel('texto', 'Texto');
@@ -1655,7 +1599,11 @@ function memberTypeLabel(type: string | undefined): string {
 
 const CHIP_HOVER_CLASSES = `${CHIP_HOVER_EFFECT_CLASSES} hover:underline`;
 
-const CHIP_LINK_CLASSES = 'text-inherit no-underline transition-colors duration-200 hover:underline';
+const CHIP_LINK_CLASSES = 'min-w-0 max-w-full truncate text-inherit no-underline transition-colors duration-200 hover:underline';
+
+function chipLabel(label: string): string {
+  return `<span class="min-w-0 truncate">${label}</span>`;
+}
 
 function chipHtml(
   label: string,
@@ -1664,11 +1612,11 @@ function chipHtml(
   classes = MEMBER_PILL_CLASSES,
   available?: Set<string>,
   currentHref?: string,
+  omitIfUnlinked = false,
 ): string {
   const slug = defaultListSlug(type);
   const href = slug !== undefined && (available === undefined || available.has(slug)) ? defaultListHref(dir, type) : undefined;
-  const chip = `<h2 class="${classes}">${label}</h2>`;
-  if (href === undefined || href === currentHref) return chip;
+  if (href === undefined || href === currentHref) return omitIfUnlinked ? '' : `<h2 class="${classes}">${label}</h2>`;
   return `<h2 class="${classes} ${CHIP_HOVER_EFFECT_CLASSES}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
 }
 
@@ -1683,16 +1631,13 @@ const MENU_BUTTON_CLASSES =
 const MENU_LINK_CLASSES =
   'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
 
-const HEADER_COLLECTION_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/50 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200';
-const HEADER_KEYWORD_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+const HEADER_COLLECTION_CHIP_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center rounded-md border-2 border-accent-500/50 bg-transparent px-2 sm:px-2.5 lg:px-3 font-semibold uppercase tracking-wide text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200`;
+const HEADER_KEYWORD_CHIP_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 font-semibold uppercase tracking-wide text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300`;
 const RECENTES_LIMIT = 5;
 const KEYWORD_INDEX_SLUG = 'keyword';
-const SIDEBAR_KEYWORD_CHIP_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold uppercase tracking-wide leading-none no-underline text-stone-600 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300';
+const SIDEBAR_KEYWORD_CHIP_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 font-semibold uppercase tracking-wide no-underline text-stone-600 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300`;
 const KEYWORD_BADGE_CLASSES =
-  'inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
+  'inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
 function ctaDeTarjeta(type: string | undefined): string {
   if (type === undefined || type === 'file') return uiLabel('leer-texto-completo', 'Leer texto completo');
   return TYPE_META[type]?.cta ?? 'Leer texto completo';
@@ -2536,14 +2481,10 @@ function chipsDePertenencia(
   const chips: string[] = [];
   for (const ruta of contenedores) {
     const contenedor = discoveryIndex?.get(ruta);
-    if (contenedor?.type !== 'collection') continue;
+    if (contenedor?.type !== 'collection' || ruta === pagePath) continue;
     const titulo = Bun.escapeHTML(contenedor.title || ruta);
-    if (ruta === pagePath) {
-      chips.push(`<span class="${CHIP_OUTLINE_CLASSES}">${titulo}</span>`);
-      continue;
-    }
     const html = htmlPathFor(ruta, contenedor.slug);
-    chips.push(`<a href="${relativeHref(dir, html)}" class="${CHIP_OUTLINE_CLASSES} ${CHIP_HOVER_CLASSES}">${titulo}</a>`);
+    chips.push(`<a href="${relativeHref(dir, html)}" class="${CHIP_OUTLINE_CLASSES} ${CHIP_HOVER_CLASSES}">${chipLabel(titulo)}</a>`);
   }
   return chips;
 }
@@ -2583,10 +2524,10 @@ function chipsDeCabecera(
   const typeLabel = memberTypeLabel(e.type);
   if (typeLabel === undefined) return '';
   const chips = [
-    chipHtml(typeLabel, e.type, dir, `${PILL_BASE} mt-0 mb-0`, available, currentHref),
+    chipHtml(typeLabel, e.type, dir, `${PILL_BASE} mt-0 mb-0`, available, currentHref, true),
     ...chipsDePertenencia(e, dir, page?.path, discoveryIndex),
   ];
-  return `<div class="flex items-start justify-between gap-4"><div class="flex flex-wrap items-center gap-2 mb-6">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`;
+  return `<div class="tarjeta-cabecera mb-6 flex min-w-0 items-start justify-between gap-4"><div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`;
 }
 
 function imagenDeCabecera(
@@ -2636,7 +2577,10 @@ function cabeceraDeTarjeta(
   const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
   const creator = nombres === undefined ? '' : nombres.length > 0 ? renderNombres(nombres, tono, creatorHrefs) : AUTORA_POR_DEFECTO;
   if (creator !== '')
-    cuerpo.push(`<h2 class="card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`, '');
+    cuerpo.push(
+      `<h2 class="card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`,
+      '',
+    );
   cuerpo.push(titleHtml);
   if (e.subtitle) cuerpo.push('', `<h4 class="text-left text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
   if (page?.showDates === true && e.date !== undefined) {
@@ -3305,10 +3249,10 @@ async function emitCollectionHtml(
   const sidebarExtras = (await extrasDeLaPagina(extrasComunes, [], 'sidebar')) as string;
   const collectionChips = extrasComunes.contenedores
     .filter((contenedor) => contenedor.type === 'collection')
-    .map((contenedor) => `<a href="${contenedor.href}" class="${HEADER_COLLECTION_CHIP_CLASSES}">${Bun.escapeHTML(contenedor.titulo)}</a>`)
+    .map((contenedor) => `<a href="${contenedor.href}" class="${HEADER_COLLECTION_CHIP_CLASSES}">${chipLabel(Bun.escapeHTML(contenedor.titulo))}</a>`)
     .join('');
   const keywordChips = extrasComunes.palabrasClave
-    .map((keyword) => `<a href="${keyword.href}" class="${HEADER_KEYWORD_CHIP_CLASSES}">${Bun.escapeHTML(keyword.titulo)}</a>`)
+    .map((keyword) => `<a href="${keyword.href}" class="${HEADER_KEYWORD_CHIP_CLASSES}">${chipLabel(Bun.escapeHTML(keyword.titulo))}</a>`)
     .join('');
 
   const contenidos = paginas;

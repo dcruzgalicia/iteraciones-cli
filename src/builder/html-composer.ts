@@ -55,8 +55,11 @@ export function creatorPortraitHtml(image: string, alt: string): string {
   return `<figure class="relative m-0 h-[30rem] sm:h-auto md:h-[30rem] lg:h-auto"><img src="${Bun.escapeHTML(image)}" alt="${Bun.escapeHTML(alt)}" class="absolute inset-0 block h-full w-full object-cover object-center"></figure>`;
 }
 
-export const CHIP_OUTLINE_CLASSES =
-  'not-prose inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300';
+export const CHIP_SIZE_CLASSES = 'h-6 sm:h-7 lg:h-8 text-xs lg:text-sm leading-none';
+
+export const CHIP_TRUNCATE_CLASSES = 'min-w-0 max-w-full truncate';
+
+export const CHIP_OUTLINE_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-3 lg:px-3.5 font-normal uppercase tracking-wide no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300`;
 
 function frecuenciasInline(siteConfig: SiteConfig): string {
   const links = siteConfig.format?.html?.site?.links ?? [];

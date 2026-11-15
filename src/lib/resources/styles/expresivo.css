@@ -1,5 +1,9 @@
+[data-style="expresivo"] {
+  --font-title: "Caveat", "Bradley Hand", cursive;
+  --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 [data-style="expresivo"] body {
-  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
   background-color: #fbf5e7;
 }
 
@@ -18,14 +22,8 @@
 }
 
 [data-style="expresivo"] h1 {
-  font-family: "Caveat", "Bradley Hand", cursive;
   font-weight: 700;
   letter-spacing: 0.01em;
-}
-
-[data-style="expresivo"] h2,
-[data-style="expresivo"] h3 {
-  font-family: "Caveat", "Bradley Hand", cursive;
 }
 
 [data-style="expresivo"] .tarjeta {
@@ -46,12 +44,4 @@
 
 [data-style="expresivo"][data-theme="dark"] .tarjeta:hover {
   box-shadow: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 36%, transparent);
-}
-
-[data-style="expresivo"] .chip-title {
-  font-family: "Caveat", "Bradley Hand", cursive;
-}
-
-[data-style="expresivo"] .card-creator {
-  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
