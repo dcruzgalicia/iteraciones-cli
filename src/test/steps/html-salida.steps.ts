@@ -68,7 +68,10 @@ Given('que la raíz del proyecto tiene el tema {word}', (tema: string) => {
 Given('que la raíz del proyecto tiene un documento de cada tipo', () => {
   raizVacia();
   escribirEnProyecto('autora.md', '---\ntype: creator\nname: Autora\n---\n\nBio.\n');
+  escribirEnProyecto('otra-autora.md', '---\ntype: creator\nname: Otra autora\n---\n\nOtra bio.\n');
   escribirEnProyecto('coleccion.md', '---\ntitle: Antología\ntype: collection\nfiles:\n  - test.md\n---\n\nIntro.\n');
+  escribirEnProyecto('otra-coleccion.md', '---\ntitle: Otra antología\ntype: collection\nfiles:\n  - test.md\n---\n\nOtra intro.\n');
+  escribirEnProyecto('otro.md', '---\ntitle: Otro documento\n---\n\nOtro contenido.\n');
 });
 
 Given('que la raíz del proyecto tiene una colección con portada en markdown', () => {
