@@ -779,7 +779,7 @@ function htmlVars(args: {
   } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
-  const { dir, slug, fm } = outputs;
+  const { dir, slug, outSlug, fm } = outputs;
   const titulo = doc.frontmatter.title || slug;
   const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
   const abstractRaw = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'abstract');
@@ -840,6 +840,8 @@ function htmlVars(args: {
   const esPaginaKeyword = doc.relativePath === `${KEYWORD_INDEX_SLUG}.md`;
   const labels = htmlConfig?.site?.labels ?? {};
   const label = (key: string, fallback: string): string => labels[key] ?? fallback;
+  const docChipHref = docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available);
+  const paginaActual = relativeHref(dir, `${pageSlug ?? outSlug}.html`);
   const home = htmlConfig?.site?.home;
   const hero =
     home !== undefined && doc.relativePath === 'index.md'
@@ -901,7 +903,7 @@ function htmlVars(args: {
     collectionChips: opcional(collectionChips),
     keywordChips: opcional(keywordChips),
     indiceColeccion,
-    docChipHref: docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available),
+    docChipHref: docChipHref === '' || docChipHref === paginaActual ? undefined : docChipHref,
     extras: opcional(extras),
     sidebarExtras: opcional(sidebarExtras),
     recientes: opcional(esListaIndex || doc.frontmatter.type === 'creator' ? '' : recentesCard(discoveryIndex, dir, label('recientes', 'Recientes'))),
