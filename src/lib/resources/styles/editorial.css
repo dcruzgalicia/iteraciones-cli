@@ -43,3 +43,7 @@
 [data-style="editorial"] .chip-title {
   font-family: "Playfair Display", "Iowan Old Style", Baskerville, Georgia, serif;
 }
+
+[data-style="editorial"] .card-creator {
+  font-family: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
+}

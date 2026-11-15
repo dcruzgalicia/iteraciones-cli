@@ -55,3 +55,7 @@
 [data-style="clasico"] .chip-title {
   font-family: "Chakra Petch", "Space Grotesk", system-ui, sans-serif;
 }
+
+[data-style="clasico"] .card-creator {
+  font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
