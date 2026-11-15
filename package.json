@@ -32,7 +32,6 @@
   "dependencies": {
     "@sveltia/cms": "0.261.0",
     "@tailwindcss/cli": "4.3.3",
-    "@tailwindcss/typography": "0.5.20",
     "commander": "^15.0.0",
     "ignore": "^7.0.6",
     "yaml": "^2.9.0",

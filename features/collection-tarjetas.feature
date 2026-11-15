@@ -135,6 +135,15 @@ Característica: la tarjeta de cada miembro de una colección
       Cuando compogo las tarjetas de la página HTML
       Entonces el chip y el badge van en la misma fila
 
+    Escenario: Un chip largo trunca y no empuja el badge fuera de la tarjeta
+      Dado que la colección tiene 1 miembros
+      Y que la colección está dentro de una colección con un título larguísimo
+      Y que la colección tiene el cuerpo propio:
+      """
+      """
+      Cuando compogo las tarjetas de la página HTML
+      Entonces el chip largo no empuja el badge fuera de la tarjeta
+
     Escenario: Un archivo sin cuerpo no corre la numeración
       Dado que el proyecto tiene:
       """

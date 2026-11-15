@@ -20,12 +20,11 @@ Característica: los chips de pertenencia en las tarjetas de colecciones y lista
       Cuando hago un build del proyecto
       Entonces el chip "Otra antología" del HTML de "antologia.html" sólo se subraya al pasar el ratón
 
-    Escenario: El chip de la colección de la página no es un enlace
+    Escenario: La colección de la página no repite su chip
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con un texto en dos colecciones
       Cuando hago un build del proyecto
-      Entonces en el HTML de "antologia.html" el chip "Antología" no es un enlace
-      Y el chip "Antología" del HTML de "antologia.html" no tiene efecto de elevación
+      Entonces el chip "Antología" del HTML de "antologia.html" no aparece
 
     Escenario: La página del texto muestra sus colecciones en la cabecera
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -36,11 +35,11 @@ Característica: los chips de pertenencia en las tarjetas de colecciones y lista
 
   Regla de negocio: Los chips no enlazan a la página en la que estás
 
-    Escenario: En la lista de textos el chip del tipo no es un enlace
+    Escenario: En la lista de textos el chip del tipo no aparece
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con un texto en dos colecciones
       Cuando hago un build del proyecto
-      Entonces el chip "Texto" del HTML de "texto.html" no es un enlace
+      Entonces el chip "Texto" del HTML de "texto.html" no aparece
       Y el chip "Texto" del HTML de "antologia.html" enlaza a "./texto.html"
 
   Regla de negocio: Una lista propia también cuenta

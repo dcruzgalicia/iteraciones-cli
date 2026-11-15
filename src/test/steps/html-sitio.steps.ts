@@ -118,12 +118,15 @@ Given('un proyecto con un texto en una lista', () => {
   escribirEnProyecto('seleccion.md', '---\ntitle: Selección\ntype: list\n---\n\nElegidos.\n');
 });
 
+function patronChip(etiqueta: string): RegExp {
+  return new RegExp(
+    `<(h2|a|span)\\b[^>]*class="[^"]*rounded-(?:full|md)[^"]*"[^>]*>(?:<a\\b[^>]*>)?(?:<span\\b[^>]*>)?${RegExp.escape(etiqueta)}(?:</span>)?(?:</a>)?</\\1>`,
+  );
+}
+
 function chipDelHtml(archivo: string, etiqueta: string): string {
   const html = leer(`dist/files/${archivo}`);
-  const patron = new RegExp(
-    `<(h2|a|span)\\b[^>]*class="[^"]*rounded-(?:full|md)[^"]*"[^>]*>(?:<a\\b[^>]*>)?${RegExp.escape(etiqueta)}(?:</a>)?</\\1>`,
-  );
-  const chip = patron.exec(html);
+  const chip = patronChip(etiqueta).exec(html);
   if (chip !== null) return chip[0];
   const enlace = new RegExp(`<a\\b[^>]*class="[^"]*text-accent-700[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).exec(html);
   if (enlace !== null) return enlace[0];
@@ -136,6 +139,12 @@ Then('el chip {string} del HTML de {string} no es un enlace', (etiqueta: string,
   const chip = chipDelHtml(archivo, etiqueta);
   if (chip.startsWith('<a') || chip.includes('<a ')) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} es un enlace y no debería`);
+  }
+});
+
+Then('el chip {string} del HTML de {string} no aparece', (etiqueta: string, archivo: string) => {
+  if (patronChip(etiqueta).test(leer(`dist/files/${archivo}`))) {
+    throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} aparece y no debería`);
   }
 });
 
@@ -183,14 +192,6 @@ Then('el chip {string} del HTML de {string} tiene efecto de elevación', (etique
   }
 });
 
-Then('el chip {string} del HTML de {string} no tiene efecto de elevación', (etiqueta: string, archivo: string) => {
-  const chip = chipDelHtml(archivo, etiqueta);
-  const clases = /class="([^"]*)"/.exec(chip)?.[1] ?? '';
-  if (clases.includes('hover:-translate') || clases.includes('hover:shadow')) {
-    throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} se eleva y no debería`);
-  }
-});
-
 Then('el chip {string} del HTML de {string} enlaza a {string}', (etiqueta: string, archivo: string, href: string) => {
   const chip = chipDelHtml(archivo, etiqueta);
   if (!chip.includes(`href="${href}"`)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no enlaza a ${href}`);
@@ -198,17 +199,8 @@ Then('el chip {string} del HTML de {string} enlaza a {string}', (etiqueta: strin
 
 Then('en el HTML de {string} el chip {string} enlaza a {string}', (archivo: string, etiqueta: string, href: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const enlace = new RegExp(`<a href="${RegExp.escape(href)}"[^>]*>${RegExp.escape(etiqueta)}</a>`);
+  const enlace = new RegExp(`<a href="${RegExp.escape(href)}"[^>]*>(?:<span[^>]*>)?${RegExp.escape(etiqueta)}(?:</span>)?</a>`);
   if (!enlace.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no enlaza a ${href} en ${archivo}`);
-});
-
-Then('en el HTML de {string} el chip {string} no es un enlace', (archivo: string, etiqueta: string) => {
-  const html = leer(`dist/files/${archivo}`);
-  const chip = new RegExp(`<span class="[^"]*bg-transparent[^"]*">${RegExp.escape(etiqueta)}</span>`);
-  if (!chip.test(html)) throw new Error(`el chip ${JSON.stringify(etiqueta)} no aparece sin enlace en ${archivo}`);
-  if (new RegExp(`<a [^>]*class="[^"]*rounded-(?:full|md)[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).test(html)) {
-    throw new Error(`el chip ${JSON.stringify(etiqueta)} es un enlace y no debería`);
-  }
 });
 
 Then('ningún enlace del HTML lleva {string} por defecto', (clase: string) => {

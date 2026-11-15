@@ -1,5 +1,9 @@
+[data-style="editorial"] {
+  --font-title: "Playfair Display", "Iowan Old Style", Baskerville, Georgia, serif;
+  --font-body: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
+}
+
 [data-style="editorial"] body {
-  font-family: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
   background-color: #faf6ec;
 }
 
@@ -20,7 +24,6 @@
 [data-style="editorial"] h1,
 [data-style="editorial"] h2,
 [data-style="editorial"] h3 {
-  font-family: "Playfair Display", "Iowan Old Style", Baskerville, Georgia, serif;
   letter-spacing: -0.015em;
 }
 
@@ -38,12 +41,4 @@
 
 [data-style="editorial"][data-theme="dark"] .tarjeta {
   background-color: #211d16;
-}
-
-[data-style="editorial"] .chip-title {
-  font-family: "Playfair Display", "Iowan Old Style", Baskerville, Georgia, serif;
-}
-
-[data-style="editorial"] .card-creator {
-  font-family: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
 }

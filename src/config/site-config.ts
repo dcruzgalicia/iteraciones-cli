@@ -16,7 +16,6 @@ export const DEFAULT_HTML_FORMAT = {
     links: [] as { name: string; url: string }[],
     license: undefined as string | false | undefined,
     search: false,
-    oai: false,
     labels: {} as Record<string, string>,
     home: undefined as { title?: string; text?: string; image?: string; alt?: string; url?: string; label?: string } | undefined,
   },
