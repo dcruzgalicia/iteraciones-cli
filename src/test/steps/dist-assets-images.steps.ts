@@ -100,14 +100,15 @@ When('compilo el proyecto por el CLI', async () => {
   await runBuild(world.dir);
 });
 
-Then('la copia de cada imagen vive en el directorio de imágenes de su nivel', async () => {
+Then('la copia de cada imagen vive en el assets raíz', async () => {
   const foto = await imagenWeb('foto');
-  const grafico = await imagenWeb('grafico', join(world.dist, 'sub', 'assets', 'images'));
+  const grafico = await imagenWeb('grafico');
   const esperadas = [
     [join('assets', 'images', foto), true],
+    [join('assets', 'images', grafico), true],
     [join('assets', 'img', 'foto.jpg'), false],
     ['foto.jpg', false],
-    [join('sub', 'assets', 'images', grafico), true],
+    [join('sub', 'assets'), false],
   ] as const;
   for (const [ruta, debeExistir] of esperadas) {
     const hay = await existe(join(world.dist, ruta));
@@ -117,25 +118,26 @@ Then('la copia de cada imagen vive en el directorio de imágenes de su nivel', a
   }
 });
 
-Then('el formato exportado la referencia desde ese directorio', async () => {
+Then('el formato exportado la referencia desde el assets raíz', async () => {
   const foto = await imagenWeb('foto');
   for (const nombre of ['ejemplo.html', 'ejemplo.md']) {
     const content = await readFile(join(world.dist, nombre), 'utf8');
-    if (!content.includes(`assets/images/${foto}`)) {
-      throw new Error(`${nombre} no referencia la imagen desde assets/images`);
+    if (!content.includes(`./assets/images/${foto}`)) {
+      throw new Error(`${nombre} no referencia la imagen desde ./assets/images`);
     }
   }
 });
 
-Then('el anexo no sube con dos puntos para llegar a su directorio', async () => {
-  const grafico = await imagenWeb('grafico', join(world.dist, 'sub', 'assets', 'images'));
+Then('el anexo sube un nivel para llegar a assets', async () => {
+  const grafico = await imagenWeb('grafico');
   for (const nombre of ['anexo.html', 'anexo.md']) {
     const content = await readFile(join(world.dist, 'sub', nombre), 'utf8');
-    if (!content.includes(`./assets/images/${grafico}`)) {
-      throw new Error(`sub/${nombre} no referencia su imagen desde ./assets/images`);
+    if (!content.includes(`../assets/images/${grafico}`)) {
+      throw new Error(`sub/${nombre} no referencia su imagen desde ../assets/images`);
     }
-    if (content.includes(`../assets/images/${grafico}`)) {
-      throw new Error(`sub/${nombre} sube con ".." para llegar a su assets: la referencia debe ser relativa a su nivel`);
+    const enRaiz = new RegExp(`(?:^|["'(\\s])\\.\\/assets\\/images\\/${RegExp.escape(grafico)}`);
+    if (enRaiz.test(content)) {
+      throw new Error(`sub/${nombre} referencia assets como si estuviera en la raíz`);
     }
   }
 });
@@ -165,8 +167,14 @@ Then('el mapa de rutas por documento y formato existe', async () => {
   if (mapa[claveAbsoluta] !== destino) {
     throw new Error(`la clave absoluta ${claveAbsoluta} no apunta a ${destino}`);
   }
-  if (!(await existe(join(world.dir, '.iteraciones', 'paths', 'sub', 'anexo.md.html.json')))) {
+  const mapaAnexoPath = join(world.dir, '.iteraciones', 'paths', 'sub', 'anexo.md.html.json');
+  if (!(await existe(mapaAnexoPath))) {
     throw new Error('falta el mapa de rutas del anexo anidado');
+  }
+  const mapaAnexo = JSON.parse(await readFile(mapaAnexoPath, 'utf8')) as Record<string, string>;
+  const destinoAnexo = `../assets/images/${await imagenWeb('grafico')}`;
+  if (mapaAnexo['grafico.png'] !== destinoAnexo) {
+    throw new Error(`la clave relativa del anexo no apunta a ${destinoAnexo}: ${String(mapaAnexo['grafico.png'])}`);
   }
 });
 

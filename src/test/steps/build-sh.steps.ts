@@ -386,7 +386,7 @@ Then('el manifiesto de post-proceso incluye la imagen del documento', async () =
   const raw = await readFile(join(world.dir, '.iteraciones', 'post', 'ensayo.md.json'), 'utf8');
   const manifest = JSON.parse(raw) as { distribution?: Record<string, string> };
   const valores = Object.values(manifest.distribution ?? {});
-  if (!valores.some((valor) => valor.endsWith('ensayo-foto.jpg'))) {
+  if (!valores.some((valor) => valor.endsWith('-foto.jpg'))) {
     throw new Error(`el manifiesto no incluye la imagen procesada: ${JSON.stringify(valores)}`);
   }
 });
@@ -398,7 +398,7 @@ Then('el archivo de dist existe', async () => {
 
 Then('el archivo de dist contiene la ruta de la imagen procesada', async () => {
   const tex = await readFile(join(world.distPath, 'ensayo.tex'), 'utf8');
-  if (!tex.includes('assets/pdf/images/ensayo-foto.jpg')) {
+  if (!tex.includes('assets/pdf/images/') || !tex.includes('-foto.jpg')) {
     throw new Error('el .tex de dist no referencia la imagen procesada desde assets/pdf/images');
   }
 });
@@ -448,6 +448,28 @@ Then('las entradas de las colecciones se reconstruyen idénticas', async () => {
 Then('dist tiene el archivo {string}', async (relativa: string) => {
   const path = join(world.distPath, relativa);
   if (!(await Bun.file(path).exists())) throw new Error(`dist no tiene ${relativa} (sí hay: ${(await snapshot(world.distPath)).size} archivos)`);
+});
+
+async function imagenPdf(nombre: string): Promise<string> {
+  const dir = join(world.distPath, 'assets', 'pdf', 'images');
+  const encontradas = await Array.fromAsync(new Bun.Glob(`*-${nombre}.jpg`).scan({ cwd: dir, onlyFiles: true }));
+  const unica = encontradas[0];
+  if (encontradas.length !== 1 || unica === undefined) {
+    throw new Error(`esperaba una imagen PDF para "${nombre}" y hay ${encontradas.length}: ${encontradas.join(', ')}`);
+  }
+  return unica;
+}
+
+Then('dist tiene una imagen PDF para {string}', async (nombre: string) => {
+  await imagenPdf(nombre);
+});
+
+Then('el archivo {string} de dist contiene la imagen PDF para {string}', async (relativa: string, nombre: string) => {
+  const archivo = await imagenPdf(nombre);
+  const contenido = await readFile(join(world.distPath, relativa), 'utf8');
+  if (!contenido.includes(`assets/pdf/images/${archivo}`)) {
+    throw new Error(`${relativa} no referencia assets/pdf/images/${archivo}`);
+  }
 });
 
 Then('dist tiene una imagen web para {string}', async (nombre: string) => {

@@ -195,7 +195,7 @@ Then('el .tex de la colección enciende el membrete con {string} y {string}', (a
   const llamada = /\\letterheadsetup\{([^}]*)\}/.exec(tex)?.[1] ?? '';
   const partes = llamada.split(',').map((p) => basename(p));
   const esperadas = [a, b].map((n) => `${n}.jpg`);
-  if (partes.length !== esperadas.length || !esperadas.every((n, i) => partes[i] === n)) {
+  if (partes.length !== esperadas.length || !esperadas.every((n, i) => partes[i]?.endsWith(n) === true)) {
     throw new Error(`el membrete de la colección va como ${JSON.stringify(partes)} y esperaba ${JSON.stringify(esperadas)}`);
   }
 });
@@ -230,7 +230,7 @@ Then('el .tex de la intervention llama al membrete con {string}, {string} y {str
   const llamada = /\\letterheadsetup\{([^}]*)\}/.exec(tex)?.[1] ?? '';
   const partes = llamada.split(',').map((p) => basename(p));
   const esperadas = [a, b, c].map((n) => `${n}.jpg`);
-  if (partes.length !== esperadas.length || !esperadas.every((n, i) => partes[i] === n)) {
+  if (partes.length !== esperadas.length || !esperadas.every((n, i) => partes[i]?.endsWith(n) === true)) {
     throw new Error(`el membrete va como ${JSON.stringify(partes)} y esperaba ${JSON.stringify(esperadas)}`);
   }
 });

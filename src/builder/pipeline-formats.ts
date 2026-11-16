@@ -31,6 +31,7 @@ import {
   parseLetterheadHeight,
   preprocessDocumentImages,
   processWebImages,
+  relativeAssetHref,
   relImageMapFor,
   rewriteFmImagePaths,
   rewriteImagePaths,
@@ -142,9 +143,9 @@ function xmpMetadataFor(
   return meta as PdfXmpMetadata;
 }
 
-async function writePathsFile(path: string, imageMap: Map<string, string>, docDir: string, relativize: boolean): Promise<string> {
+async function writePathsFile(path: string, imageMap: Map<string, string>, docDir: string, relativize: boolean, fromDir = '.'): Promise<string> {
   await mkdir(dirname(path), { recursive: true });
-  await Bun.write(path, `${JSON.stringify(imagePathsMap(imageMap, docDir, relativize))}\n`);
+  await Bun.write(path, `${JSON.stringify(imagePathsMap(imageMap, docDir, relativize, fromDir))}\n`);
   return path;
 }
 
@@ -156,7 +157,8 @@ export async function writeImagePaths(
   docDir: string,
   relativize: boolean,
 ): Promise<string> {
-  return writePathsFile(resolve(cwd, '.iteraciones', 'paths', `${doc.relativePath}.${format}.json`), imageMap, docDir, relativize);
+  const fromDir = relativize ? posix(relative(cwd, docDir)) : '.';
+  return writePathsFile(resolve(cwd, '.iteraciones', 'paths', `${doc.relativePath}.${format}.json`), imageMap, docDir, relativize, fromDir);
 }
 
 async function emitLatexAndQueuePdf(
@@ -197,7 +199,8 @@ async function emitLatexAndQueuePdf(
 
   if (latexOn) {
     const texDir = dirname(texDistPath);
-    const distribution = buildTexDistribution(processedImages, images.names);
+    const fromDir = posix(relative(ctx.outputDir, dirname(texDistPath)));
+    const distribution = buildTexDistribution(processedImages, undefined, fromDir);
 
     const manifest: LatexPostManifest = {
       authorsBlock,
@@ -237,7 +240,7 @@ async function emitLatexAndQueuePdf(
   }
 }
 
-function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<string, string>): { front?: string; back?: string } {
+function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<string, string>, fromDir: string): { front?: string; back?: string } {
   const covers: { front?: string; back?: string } = {};
   for (const [field, key] of [
     ['frontCover', 'front'],
@@ -248,7 +251,7 @@ function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<
     const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
     const processed = webMap.get(abs);
     if (processed === undefined || processed === abs) continue;
-    covers[key] = `./${ASSETS_IMAGES_DIR}/${basename(processed)}`;
+    covers[key] = relativeAssetHref(fromDir, `${ASSETS_IMAGES_DIR}/${basename(processed)}`);
   }
   return covers;
 }
@@ -776,7 +779,7 @@ function htmlVars(args: {
     siteUrl === undefined
       ? undefined
       : covers?.front !== undefined
-        ? absoluteUrl(siteUrl, covers.front)
+        ? absoluteUrl(siteUrl, `${ASSETS_IMAGES_DIR}/${basename(covers.front)}`)
         : renderCtx.logo?.kind === 'file'
           ? absoluteUrl(siteUrl, ASSETS_LOGO_WEBP)
           : undefined;
@@ -1486,7 +1489,8 @@ export function hrefsDeImagenes(imageMap: Map<string, string>, outputDir: string
   const hrefs = new Map<string, string>();
   for (const [abs, processed] of imageMap) {
     if (processed === abs) continue;
-    hrefs.set(abs, `./${posix(relative(base, processed))}`);
+    const rel = posix(relative(base, processed));
+    hrefs.set(abs, rel.startsWith('.') ? rel : `./${rel}`);
   }
   return hrefs;
 }
@@ -3023,8 +3027,8 @@ async function preprocessDocImages(
     cropActive: renderCtx.cropActive,
     pdfxActive: renderCtx.pdfxActive,
     dirs: {
-      pdf: outputs.outBase(ASSETS_PDF_IMAGES_DIR),
-      web: outputs.outBase(ASSETS_IMAGES_DIR),
+      pdf: join(ctx.outputDir, ASSETS_PDF_IMAGES_DIR),
+      web: join(ctx.outputDir, ASSETS_IMAGES_DIR),
       epub: join(ctx.cwd, '.iteraciones', 'tmp', 'epub-images', outputs.dir === '.' ? '' : outputs.dir, outputs.outSlug),
     },
     wants: { pdf: active.latex || active.pdf, web: active.html || active.epub || active.markdown, epub: active.epub },
@@ -3127,7 +3131,8 @@ async function emitCollectionHtml(
   if (!(plan.activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html'))) return;
 
   const homeImage = formatCfg?.html?.site?.home?.image;
-  const heroImage = homeImage === undefined ? undefined : relImageMapFor(webMap).get(resolve(ctx.cwd, homeImage));
+  const heroImage =
+    homeImage === undefined ? undefined : relImageMapFor(webMap, ASSETS_IMAGES_DIR, undefined, outputs.dir).get(resolve(ctx.cwd, homeImage));
   const entradasTarjetas = doc.frontmatter.type === 'creator' ? entradasCreadora : collectionEntries;
   const memberHrefs = memberHtmlHrefs(doc.relativePath, entradasTarjetas, discoveryIndex, outputs.dir);
   const hrefsCreadores = creatorHrefs(discoveryIndex, outputs.dir);
@@ -3214,7 +3219,7 @@ async function emitCollectionHtml(
     .join('');
 
   const contenidos = paginas;
-  const covers = htmlCoverUrls(mergedFm, docDir, webMap);
+  const covers = htmlCoverUrls(mergedFm, docDir, webMap, outputs.dir);
   const indices = indicesDeColeccion(doc, outputs, collectionEntries, memberHrefs, pageSize, ctx.siteConfig);
 
   await emitHtmlPage({
@@ -3268,7 +3273,7 @@ async function emitCollectionFormats(
   const pdfImages = images.pdf ?? { imageMap: new Map<string, string>(), processedFiles: [], sizes: new Map(), names: new Map() };
   const webMap = images.web?.imageMap ?? new Map<string, string>();
   const epubMap = images.epub?.imageMap ?? new Map<string, string>();
-  const relImageMap = relImageMapFor(webMap);
+  const relImageMap = relImageMapFor(webMap, ASSETS_IMAGES_DIR, undefined, outputs.dir);
 
   const fmAssets = rewriteFmImagePaths(outputs.fm, relImageMap, docDir);
 
@@ -3526,7 +3531,7 @@ export async function emitDefaultLists(args: {
 }
 
 async function writeListImagePaths(cwd: string, slug: string, imageMap: Map<string, string>): Promise<string> {
-  return writePathsFile(join(cwd, '.iteraciones', 'paths', `_lista-${slug}.html.json`), imageMap, cwd, true);
+  return writePathsFile(join(cwd, '.iteraciones', 'paths', `_lista-${slug}.html.json`), imageMap, cwd, true, '.');
 }
 
 export async function processDocumentFormats(

@@ -59,8 +59,8 @@ Característica: la tubería entera produce una salida por formato
     Escenario: La imagen del frontmatter sale procesada a su directorio
       Dado un proyecto con todos los formatos, una colección y una creadora
       Cuando compilo el proyecto desde cero
-      Entonces dist tiene el archivo "assets/pdf/images/manuscrito-por-ana-ruiz-foto.jpg"
-      Y el archivo "manuscrito-por-ana-ruiz.tex" de dist contiene "assets/pdf/images/manuscrito-por-ana-ruiz-foto.jpg"
+      Entonces dist tiene una imagen PDF para "foto"
+      Y el archivo "manuscrito-por-ana-ruiz.tex" de dist contiene la imagen PDF para "foto"
       Y dist tiene una imagen web para "foto"
 
   Regla de negocio: Cada opción del PDF cambia sólo lo que le corresponde

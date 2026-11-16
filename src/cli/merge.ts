@@ -120,11 +120,12 @@ export async function buildImagesContext(opts: {
     },
     wants: { pdf: isPdf, web: !isPdf && !isEpub, epub: isEpub },
   });
+  const fromDir = posix(dirname(relativePath));
   const relImageMap = isPdf
-    ? relImageMapFor(images.pdf?.imageMap ?? new Map(), ASSETS_PDF_IMAGES_DIR, images.pdf?.names)
+    ? relImageMapFor(images.pdf?.imageMap ?? new Map(), ASSETS_PDF_IMAGES_DIR, undefined, fromDir)
     : isEpub
       ? (images.epub?.imageMap ?? new Map())
-      : relImageMapFor(images.web?.imageMap ?? new Map());
+      : relImageMapFor(images.web?.imageMap ?? new Map(), ASSETS_IMAGES_DIR, undefined, fromDir);
   return { doc, relImageMap, docDir };
 }
 

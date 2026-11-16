@@ -32,7 +32,8 @@ Característica: la licencia en los formatos exportados
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/documento.tex" dice "lowertitleback"
       Y el archivo "dist/files/documento.tex" dice "Algunos derechos reservados"
-      Y el archivo "dist/files/documento.tex" dice "assets/pdf/images/documento-cc.jpg"
+      Y el archivo "dist/files/documento.tex" dice "assets/pdf/images/"
+      Y el archivo "dist/files/documento.tex" dice "-cc.jpg"
       Y el archivo "dist/files/documento.md" dice "license: CC-BY-NC-ND-4.0"
       Y el archivo "dist/files/documento.md" dice "rights: Algunos derechos reservados."
       Y el EPUB "documento" contiene "Algunos derechos reservados"
@@ -185,5 +186,6 @@ Característica: la licencia en los formatos exportados
         """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/documento.tex" dice "assets/pdf/images/documento-pf.jpg"
+      Y el archivo "dist/files/documento.tex" dice "assets/pdf/images/"
+      Y el archivo "dist/files/documento.tex" dice "-pf.jpg"
       Y el archivo "dist/files/documento.tex" dice "Producción Feminista"
