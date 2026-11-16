@@ -716,12 +716,12 @@ a:hover {
 
 .sitio-marca--derecha .sitio-marca__fila {
   justify-content: flex-end;
-  text-align: right;
+  text-align: left;
 }
 
 .sitio-marca--derecha .sitio-marca__texto {
-  align-items: flex-end;
-  text-align: right;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .sitio-acciones {
