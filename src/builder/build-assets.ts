@@ -8,7 +8,6 @@ import { ACCENT_COLORS, ACCENT_SHADES, type AccentColor } from '../lib/accent-pa
 import { BuildError } from '../lib/errors.js';
 import { DEFAULT_HTML_STYLE, type HtmlStyle, htmlStyle, htmlStyleColor, STYLE_FONTS } from '../lib/html-styles.js';
 import { logWarning } from '../lib/logger.js';
-import { minifyCss } from '../lib/minify.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import { spawnMagick } from './image-processor.js';
@@ -47,9 +46,9 @@ async function fontFaceCss(style: HtmlStyle): Promise<string> {
   return STYLE_FONTS[style]
     .map(
       (font) =>
-        `@font-face{font-family:"${font.family}";src:url("../fonts/${font.destination}") format("woff2");font-weight:${font.weight};font-display:fallback}`,
+        `@font-face{font-family:"${font.family}";src:url(../fonts/${font.destination}) format("woff2");font-weight:${font.weight};font-display:fallback}`,
     )
-    .join('\n');
+    .join('');
 }
 
 function accentTokens(accent: AccentColor): string {
@@ -70,9 +69,19 @@ export async function compileCss(
   const styleCss = await readFile(join(STYLES_DIR, `${style}.css`), 'utf8');
   const darkCss = theme === 'dark' ? await readFile(join(STYLES_DIR, 'dark.css'), 'utf8') : '';
   const darkStyleCss = theme === 'dark' ? await readFile(join(STYLES_DIR, `dark-${style}.css`), 'utf8') : '';
-  const css = [await fontFaceCss(style), accentTokens(accent as AccentColor), base, styleCss, darkCss, darkStyleCss].join('\n');
-  await mkdir(dirname(outPath), { recursive: true });
-  await writeFile(outPath, await minifyCss(css), 'utf8');
+  const inputDir = await mkdtemp(join(tmpdir(), 'iteraciones-css-'));
+  try {
+    const inputPath = join(inputDir, 'styles.css');
+    await writeFile(inputPath, [accentTokens(accent as AccentColor), base, styleCss, darkCss, darkStyleCss].join('\n'), 'utf8');
+    const result = await Bun.build({ entrypoints: [inputPath], minify: true });
+    if (!result.success) throw new BuildError(`no se pudo compilar el CSS: ${result.logs.join('\n')}`);
+    const output = result.outputs[0];
+    if (output === undefined) throw new BuildError('no se pudo compilar el CSS: salida vacía');
+    await mkdir(dirname(outPath), { recursive: true });
+    await writeFile(outPath, (await fontFaceCss(style)) + (await output.text()).trim(), 'utf8');
+  } finally {
+    await rm(inputDir, { recursive: true, force: true });
+  }
 }
 
 export async function computeCssHash(siteConfig: SiteConfig): Promise<string> {
