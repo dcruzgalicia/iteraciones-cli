@@ -2,6 +2,11 @@
   color-scheme: dark;
   --texto: var(--color-stone-100);
   --texto-suave: var(--color-stone-300);
+  --texto-prosa: var(--color-stone-200);
+  --autor-tarjeta: var(--color-accent-300);
+  --titulo-tarjeta: var(--color-accent-300);
+  --titulo-pagina: var(--color-accent-100);
+  --subtitulo-pagina: var(--color-accent-200);
   --texto-tenue: var(--color-stone-400);
   --superficie: var(--color-stone-900);
   --superficie-suave: color-mix(in oklab, var(--color-stone-950) 70%, transparent);

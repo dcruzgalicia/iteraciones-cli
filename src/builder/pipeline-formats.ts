@@ -371,7 +371,7 @@ export async function emit404(args: {
 </head>
 <body class="sitio">
   <div class="marco">
-    <header class="tarjeta tarjeta--identidad">
+    <header class="tarjeta tarjeta--seccion">
       <div class="sitio-marca__fila">
         ${logo}
         <div class="sitio-marca__texto">
@@ -1522,7 +1522,7 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
       return href === undefined ? `<li>${titulo}</li>` : `<li><a href="${href}" class="enlace-acento">${titulo}</a></li>`;
     })
     .join('');
-  const indice = `<div id="indice-completo"><nav class="tarjeta tarjeta--seccion indice contenido-tamano contenido-compacto"><h2 class="chip chip--titulo">Índice</h2><ol class="lista-enlaces lista-enlaces--disco">${items}</ol></nav></div>`;
+  const indice = `<div id="indice-completo"><nav class="tarjeta tarjeta--seccion indice contenido-tamano contenido-compacto"><h2 class="chip chip--titulo">Índice</h2><ol class="lista-enlaces lista-enlaces--numerada">${items}</ol></nav></div>`;
   return Array.from({ length: total }, () => indice);
 }
 
@@ -1609,7 +1609,7 @@ function ctaDeTarjeta(type: string | undefined): string {
   return TYPE_META[type]?.cta ?? 'Leer texto completo';
 }
 
-const EXTRA_CARD_CLASSES = `tarjeta tarjeta--extra ${CARD_TEXT_CLASSES}`;
+const EXTRA_CARD_CLASSES = 'tarjeta tarjeta--extra prose contenido-compacto';
 
 function extraCard(inner: string): string {
   return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', inner, '', '::::'].join('\n');
@@ -1776,7 +1776,7 @@ export function containersCard(
   if (contenedores.some((c) => c.type === 'collection')) chips.push(chipHtml('Colecciones', 'collection', dir, EXTRA_PILL_CLASSES, available));
   if (contenedores.some((c) => c.type === 'list')) chips.push(chipHtml('Listas', 'list', dir, EXTRA_PILL_CLASSES, available));
   const items = contenedores.map((c) => `- [${c.titulo}](${c.href})`).join('\n');
-  return extraCard([`<div class="chips">${chips.join('')}</div>`, '', items].join('\n'));
+  return extraCard([`<div class="chips chips--compactos">${chips.join('')}</div>`, '', items].join('\n'));
 }
 
 function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], titleHref?: string, label = 'Palabras clave'): string {
@@ -1921,7 +1921,9 @@ function announcementCard(
       '',
       body,
       '',
-      href === undefined ? '' : `<p class="tarjeta-pie not-prose"><a href="${href}" class="${CARD_CTA_CLASSES}">Leer anuncio →</a></p>`,
+      href === undefined
+        ? ''
+        : `<p class="tarjeta-pie tarjeta-pie--anuncio not-prose"><a href="${href}" class="${CARD_CTA_CLASSES}">Leer anuncio →</a></p>`,
     ].join('\n'),
   );
 }

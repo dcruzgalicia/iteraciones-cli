@@ -134,8 +134,9 @@ Then('el CSS lleva el acento {string}', (accent: string) => {
   if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new Error(`la paleta ${accent} no existe`);
   const value = ACCENT_PALETTE_VALUES[accent as AccentColor][500];
   if (value === undefined) throw new Error(`la paleta ${accent} no tiene el tono 500`);
-  if (!world.css.includes('--color-accent-500:')) throw new Error('el CSS no define el tono 500 del acento');
-  if (!world.css.includes(value)) throw new Error(`el CSS no lleva el valor del tono 500 de ${accent}`);
+  const definido = /--color-accent-500:([^;}]+)/.exec(world.css)?.[1];
+  if (definido === undefined) throw new Error('el CSS no define el tono 500 del acento');
+  if (Bun.color(definido, 'hex') !== Bun.color(value, 'hex')) throw new Error(`el CSS no lleva el valor del tono 500 de ${accent}`);
 });
 
 Then('el CSS lleva el estilo {string}', (style: string) => {
