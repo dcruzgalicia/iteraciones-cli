@@ -68,3 +68,45 @@ Then('el EPUB {string} incluye una imagen', (nombre: string) => {
   }
 });
 
+function archivosEpub(nombre: string): string[] {
+  const epub = join(world.root, 'dist', 'files', `${nombre}.epub`);
+  const resultado = Bun.spawnSync(['unzip', '-Z1', epub]);
+  if (resultado.exitCode !== 0) throw new Error(`no se pudo listar ${nombre}.epub: ${resultado.stderr.toString()}`);
+  return resultado.stdout
+    .toString()
+    .split('\n')
+    .filter((linea) => linea.trim() !== '');
+}
+
+Then('el EPUB {string} no incluye fuentes incrustadas', (nombre: string) => {
+  const fuentes = archivosEpub(nombre).filter((archivo) => /\.(woff2?|ttf|otf)$/i.test(archivo));
+  if (fuentes.length > 0) throw new Error(`el EPUB ${nombre} incrusta fuentes: ${fuentes.join(', ')}`);
+});
+
+Then('el EPUB {string} no tiene @font-face', (nombre: string) => {
+  const epub = join(world.root, 'dist', 'files', `${nombre}.epub`);
+  for (const archivo of archivosEpub(nombre).filter((ruta) => ruta.endsWith('.css'))) {
+    const resultado = Bun.spawnSync(['unzip', '-p', epub, archivo]);
+    if (resultado.exitCode !== 0) throw new Error(`no se pudo leer ${archivo} de ${nombre}.epub`);
+    if (resultado.stdout.toString().includes('@font-face')) {
+      throw new Error(`el EPUB ${nombre} declara @font-face en ${archivo}`);
+    }
+  }
+});
+
+Then('las imágenes del EPUB {string} pesan menos de {int} KB', (nombre: string, kb: number) => {
+  const epub = join(world.root, 'dist', 'files', `${nombre}.epub`);
+  const resultado = Bun.spawnSync(['unzip', '-l', epub]);
+  if (resultado.exitCode !== 0) throw new Error(`no se pudo listar ${nombre}.epub: ${resultado.stderr.toString()}`);
+  const imagenes = resultado.stdout
+    .toString()
+    .split('\n')
+    .filter((linea) => /media\/.+\.(jpg|jpeg|png|webp)$/i.test(linea))
+    .map((linea) => Number.parseInt(linea.trim().split(/\s+/)[0] ?? '0', 10));
+  if (imagenes.length === 0) throw new Error(`el EPUB ${nombre} no tiene imágenes en media/`);
+  for (const bytes of imagenes) {
+    if (!Number.isFinite(bytes) || bytes <= 0 || bytes > kb * 1024) {
+      throw new Error(`una imagen de ${nombre}.epub pesa ${bytes} bytes y debía pesar menos de ${kb} KB`);
+    }
+  }
+});
