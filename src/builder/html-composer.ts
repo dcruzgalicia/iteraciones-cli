@@ -28,7 +28,7 @@ const IDENTITY_APERTURA = '<div id="card-identity"';
 const FOOTER_APERTURA = '<div id="card-identity-footer"';
 
 function comoFooter(card: string): string {
-  return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA);
+  return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA).replace('class="sitio-marca"', 'class="sitio-marca sitio-marca--derecha"');
 }
 
 export function htmlResourceFiles(): string[] {
@@ -72,11 +72,18 @@ function identityCard(children: string[]): string {
 }
 
 function headerHtml(identity: string, menuHeader: string, redes: string): string {
-  return identityCard([`<div>${identity}</div>`, `<div class="sitio-acciones">${menuHeader}${redes}</div>`]);
+  return [
+    '<div class="tarjeta tarjeta--identidad">',
+    '<div class="sitio-header__contenido">',
+    identity,
+    `<div class="sitio-acciones">${menuHeader}${redes}</div>`,
+    '</div>',
+    '</div>',
+  ].join('\n');
 }
 
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
-  return identityCard([`<div class="sitio-acciones">${menuFooterPlain}${redes}</div>`, `<div>${footerIdentity}</div>`]);
+  return identityCard([`<div class="sitio-acciones">${menuFooterPlain}${redes}</div>`, `<div class="sitio-pie__identidad">${footerIdentity}</div>`]);
 }
 
 function fillSlot(html: string, name: string, content: string): string {

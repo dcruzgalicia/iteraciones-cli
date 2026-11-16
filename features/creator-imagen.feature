@@ -27,7 +27,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Y un texto de "Ana García"
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Retrato de Ana García"
-      Y el archivo "dist/files/un-texto-por-ana-garcia.html" pone "Retrato de Ana García" antes que "class=\"not-prose tarjeta-titulo tarjeta-titulo--centrado\""
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" pone "Retrato de Ana García" antes que "class=\"not-prose tarjeta-titulo tarjeta-titulo--centrado tarjeta-titulo--creadora\""
 
     Escenario: La página de la creadora integra el retrato en la tarjeta de bio
       Dado que la raíz del proyecto tiene un proyecto de prueba

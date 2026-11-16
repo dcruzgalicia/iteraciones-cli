@@ -1561,7 +1561,7 @@ const COLLECTION_CARD_CLASSES = `tarjeta tarjeta--fragmento ${CARD_TEXT_CLASSES}
 const MEMBER_PILL_CLASSES = 'not-prose chip chip--tipo';
 
 const EXTRA_PILL_CLASSES = 'not-prose chip chip--titulo';
-const EXTRA_PILL_SPACED_CLASSES = 'not-prose chip chip--titulo';
+const EXTRA_PILL_SPACED_CLASSES = 'not-prose chip chip--titulo chip--espaciado';
 
 const MEMBER_BADGE_CLASSES = 'not-prose tarjeta-badge';
 
@@ -1760,7 +1760,7 @@ export function creatorCard(
       chipHtml('Colaboradora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
       '',
       ...(retrato === undefined ? [] : [retratoDeCreadora(retrato, doc.name, perfil), '']),
-      `<h2 class="not-prose tarjeta-titulo tarjeta-titulo--centrado">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
+      `<h2 class="not-prose tarjeta-titulo tarjeta-titulo--centrado tarjeta-titulo--creadora">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
       '',
       doc.body.trim(),
     ].join('\n'),
