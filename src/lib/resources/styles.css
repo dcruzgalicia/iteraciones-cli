@@ -655,6 +655,14 @@ a:hover {
   text-align: left;
 }
 
+.sitio-pie__identidad {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  height: 100%;
+}
+
 .sitio-marca__logo {
   flex-shrink: 0;
 }
@@ -698,6 +706,30 @@ a:hover {
   font-size: 0.6875rem;
   font-style: italic;
   line-height: 1;
+}
+
+.sitio-marca--derecha {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.sitio-marca--derecha .sitio-marca__fila {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.sitio-marca--derecha .sitio-marca__texto {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.sitio-header__contenido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 2rem;
+  min-height: 50px;
 }
 
 .sitio-acciones {
@@ -902,6 +934,15 @@ a:hover {
 .tarjeta-titulo.tarjeta-titulo--sidebar {
   margin-top: 1rem;
   font-size: 1rem;
+}
+
+.tarjeta-titulo.tarjeta-titulo--creadora {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.chip--espaciado {
+  margin-bottom: 1.5rem;
 }
 
 .nombre {
@@ -1954,7 +1995,7 @@ a:hover {
   }
 
   .sitio-acciones {
-    justify-content: flex-end;
+    justify-content: flex-start;
   }
 
   .chip {
@@ -1987,6 +2028,10 @@ a:hover {
   }
 
   .tarjeta-titulo.tarjeta-titulo--sidebar {
+    font-size: 1.125rem;
+  }
+
+  .tarjeta-titulo.tarjeta-titulo--creadora {
     font-size: 1.125rem;
   }
 
