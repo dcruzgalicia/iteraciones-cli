@@ -10,7 +10,7 @@ When('leo la utilidad scroll-reveal', async () => {
 Then('su keyframe no contiene {string}', (propiedad: string) => {
   const inicio = css.indexOf('@keyframes scroll-reveal');
   if (inicio === -1) throw new Error('no se encontró @keyframes scroll-reveal');
-  const fin = css.indexOf('@utility', inicio);
+  const fin = css.indexOf('\n.contenido-principal', inicio);
   const bloque = css.slice(inicio, fin === -1 ? undefined : fin);
   if (bloque.includes(propiedad)) throw new Error(`scroll-reveal anima ${propiedad}:\n${bloque}`);
 });

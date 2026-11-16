@@ -187,10 +187,7 @@ function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): s
   return invalidations;
 }
 
-export async function aggregateCollectionCreators(
-  entry: { files?: string[]; fm?: Record<string, unknown> },
-  cwd: string,
-): Promise<string[]> {
+export async function aggregateCollectionCreators(entry: { files?: string[]; fm?: Record<string, unknown> }, cwd: string): Promise<string[]> {
   const { with: withCreator, without: withoutCreator } = await countCreatorsByFile(entry.files ?? [], cwd);
   const fallback = parseAuthors(entry.fm?.collectionCreator);
   if (withCreator.length === 0 && fallback.length > 0) return fallback.sort((a, b) => a.localeCompare(b, 'es'));
@@ -750,18 +747,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   const needsAssets = ctx.needsCss;
 
   const runAssets = async (): Promise<void> => {
-    const { cssHash, cssFileCache } = await buildAssets(
-      ctx.outputDir,
-      ctx.cwd,
-      ctx.siteConfig,
-      prevState?.cssHash,
-      prevState?.cssFileCache,
-      licenseIcons,
-    );
-    if (pendingState) {
-      pendingState.cssHash = cssHash;
-      if (cssFileCache !== undefined) pendingState.cssFileCache = cssFileCache;
-    }
+    const { cssHash } = await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, prevState?.cssHash, licenseIcons);
+    if (pendingState) pendingState.cssHash = cssHash;
   };
 
   const closeDeps = {

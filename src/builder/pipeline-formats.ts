@@ -20,14 +20,7 @@ import { computeSlug, htmlSlugFor } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import {
-  CHIP_OUTLINE_CLASSES,
-  CHIP_SIZE_CLASSES,
-  CHIP_TRUNCATE_CLASSES,
-  creatorPortraitHtml,
-  type HtmlPageVars,
-  logoBlockHtml,
-} from './html-composer.js';
+import { creatorPortraitHtml, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
 import { addResponsiveImages } from './html-postprocess.js';
 import {
   type DocumentImages,
@@ -365,12 +358,7 @@ export async function emit404(args: {
     })),
     ...(keywordIndexAvailable(args.discoveryIndex) ? [{ href: `./${KEYWORD_INDEX_SLUG}.html`, label: 'Palabras clave' }] : []),
   ];
-  const items = enlaces
-    .map(
-      (enlace) =>
-        `<li><a href="${enlace.href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(enlace.label)}</a></li>`,
-    )
-    .join('');
+  const items = enlaces.map((enlace) => `<li><a href="${enlace.href}" class="enlace-acento">${Bun.escapeHTML(enlace.label)}</a></li>`).join('');
   const html = `<!DOCTYPE html>
 <html lang="${Bun.escapeHTML(ctx.siteConfig.language)}" data-theme="${theme}" data-style="${style}">
 <head>
@@ -381,22 +369,22 @@ export async function emit404(args: {
   ${fontPreloads === undefined ? '' : fontPreloads}
   ${ctx.needsCss ? `<link rel="stylesheet" href="${relativeHref('.', ASSETS_CSS_FILE)}">` : ''}
 </head>
-<body class="font-sans antialiased text-base text-stone-900 sm:text-lg dark:text-stone-100 bg-paper bg-paper-grid">
-  <div class="mx-auto max-w-[96rem] space-y-4 px-4 pt-4 pb-24 sm:space-y-5 sm:px-5 sm:pt-5 sm:pb-28 lg:space-y-7 lg:px-8 lg:pt-7 lg:pb-32">
-    <header class="tarjeta relative rounded-lg p-4  sm:p-6 ">
-      <div class="flex flex-col items-start gap-2 text-left sm:flex-row sm:gap-3">
+<body class="sitio">
+  <div class="marco">
+    <header class="tarjeta tarjeta--identidad">
+      <div class="sitio-marca__fila">
         ${logo}
-        <div class="flex min-w-0 flex-col items-start">
-          <a href="./index.html" class="font-semibold text-base leading-none text-accent-800 no-underline hover:underline sm:text-lg lg:text-xl 2xl:text-2xl dark:text-accent-300">${Bun.escapeHTML(siteTitle)}</a>
-          ${tagline === '' ? '' : `<span class="mt-1 text-xs lg:text-sm italic leading-none text-stone-600 dark:text-stone-400">${Bun.escapeHTML(tagline)}</span>`}
+        <div class="sitio-marca__texto">
+          <a href="./index.html" class="sitio-titulo">${Bun.escapeHTML(siteTitle)}</a>
+          ${tagline === '' ? '' : `<span class="sitio-lema">${Bun.escapeHTML(tagline)}</span>`}
         </div>
       </div>
     </header>
-    <main class="tarjeta relative rounded-lg p-6  sm:p-8 ">
-      <h1 class="text-2xl font-bold text-accent-900 sm:text-3xl dark:text-accent-100">Página no encontrada</h1>
-      <p class="mt-4 text-stone-700 dark:text-stone-300">La página que buscas no existe o cambió de lugar.</p>
-      <nav aria-label="Enlaces de recuperación" class="mt-6">
-        <ul class="flex flex-wrap gap-3 ps-0">${items}</ul>
+    <main class="tarjeta error-contenido">
+      <h1 class="error-titulo">Página no encontrada</h1>
+      <p class="error-texto">La página que buscas no existe o cambió de lugar.</p>
+      <nav aria-label="Enlaces de recuperación" class="error-nav">
+        <ul class="error-enlaces">${items}</ul>
       </nav>
     </main>
   </div>
@@ -489,20 +477,20 @@ export async function emitSearch(args: {
 ${fontPreloads === undefined ? '' : fontPreloads}
 <link rel="stylesheet" href="./assets/css/styles.css">
 </head>
-<body class="bg-paper bg-paper-grid font-sans text-stone-900 dark:text-stone-100">
-<main class="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-<div class="tarjeta rounded-lg p-4 sm:p-6 lg:p-8">
-<h1 class="m-0 text-3xl font-bold text-accent-900 dark:text-accent-100">Buscar</h1>
-<p class="mt-2 text-sm text-stone-600 dark:text-stone-300">Busca por título, autora, palabra clave o texto.</p>
-<div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-<input id="q" type="search" placeholder="Buscar…" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900 sm:col-span-2">
-<select id="tipo" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900"></select>
-<select id="autora" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900"></select>
-<select id="keyword" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900"></select>
-<select id="anio" class="rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-900"></select>
+<body class="sitio">
+<main class="buscar-marco">
+<div class="tarjeta tarjeta--seccion">
+<h1 class="titulo-pagina">Buscar</h1>
+<p class="buscar__descripcion">Busca por título, autora, palabra clave o texto.</p>
+<div class="buscar__form">
+<input id="q" type="search" placeholder="Buscar…" class="buscar__campo buscar__campo--ancho">
+<select id="tipo" class="buscar__campo"></select>
+<select id="autora" class="buscar__campo"></select>
+<select id="keyword" class="buscar__campo"></select>
+<select id="anio" class="buscar__campo"></select>
 </div>
-<p id="estado" class="mt-3 text-sm text-stone-600 dark:text-stone-300"></p>
-<ul id="resultados" class="mt-5 space-y-3"></ul>
+<p id="estado" class="buscar__estado"></p>
+<ul id="resultados" class="buscar__resultados"></ul>
 </div>
 </main>
 <script>
@@ -513,7 +501,7 @@ opts($('tipo'), datos.map(d => d.type), 'Todos los tipos');
 opts($('autora'), datos.map(d => d.creator), 'Todas las autoras');
 opts($('keyword'), datos.map(d => d.keywords), 'Todas las palabras clave');
 opts($('anio'), datos.map(d => d.date ? String(d.date).slice(0,4) : ''), 'Todos los años');
-const filtrar = () => { const q = $('q').value.toLowerCase().trim(); const tipo = $('tipo').value; const autora = $('autora').value; const keyword = $('keyword').value; const anio = $('anio').value; const res = datos.filter(d => (!tipo || d.type === tipo) && (!autora || d.creator.includes(autora)) && (!keyword || d.keywords.includes(keyword)) && (!anio || String(d.date || '').startsWith(anio)) && (!q || (d.title + ' ' + d.text + ' ' + d.creator.join(' ') + ' ' + d.keywords.join(' ')).toLowerCase().includes(q))); $('estado').textContent = res.length + (res.length === 1 ? ' resultado' : ' resultados'); $('resultados').innerHTML = res.map(d => '<li class="rounded-md border-2 border-stone-300 p-3 dark:border-stone-600"><a class="font-semibold text-accent-800 underline-offset-4 hover:underline dark:text-accent-200" href="./' + d.url + '">' + d.title + '</a><p class="mt-1 text-sm text-stone-600 dark:text-stone-300">' + [d.type, d.creator.join(', '), d.date].filter(Boolean).join(' · ') + '</p></li>').join(''); };
+const filtrar = () => { const q = $('q').value.toLowerCase().trim(); const tipo = $('tipo').value; const autora = $('autora').value; const keyword = $('keyword').value; const anio = $('anio').value; const res = datos.filter(d => (!tipo || d.type === tipo) && (!autora || d.creator.includes(autora)) && (!keyword || d.keywords.includes(keyword)) && (!anio || String(d.date || '').startsWith(anio)) && (!q || (d.title + ' ' + d.text + ' ' + d.creator.join(' ') + ' ' + d.keywords.join(' ')).toLowerCase().includes(q))); $('estado').textContent = res.length + (res.length === 1 ? ' resultado' : ' resultados'); $('resultados').innerHTML = res.map(d => '<li class="buscar__resultado"><a class="buscar__resultado-titulo" href="./' + d.url + '">' + d.title + '</a><p class="buscar__resultado-meta">' + [d.type, d.creator.join(', '), d.date].filter(Boolean).join(' · ') + '</p></li>').join(''); };
 ['q','tipo','autora','keyword','anio'].forEach(id => $(id).addEventListener('input', filtrar));
 filtrar();
 </script>
@@ -599,14 +587,14 @@ function publicationMetaHtml(args: {
       : (() => {
           const limpio = doi.replace(/^doi:\s*/i, '').trim();
           const href = /^https?:\/\//i.test(limpio) ? limpio : `https://doi.org/${limpio}`;
-          return `<a href="${Bun.escapeHTML(href)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(limpio)}</a>`;
+          return `<a href="${Bun.escapeHTML(href)}" class="enlace-acento">${Bun.escapeHTML(limpio)}</a>`;
         })();
   const identifier = campo('identifier');
   const identifierHtml =
     identifier === undefined
       ? undefined
       : /^https?:\/\//i.test(identifier)
-        ? `<a href="${Bun.escapeHTML(identifier)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(identifier)}</a>`
+        ? `<a href="${Bun.escapeHTML(identifier)}" class="enlace-acento">${Bun.escapeHTML(identifier)}</a>`
         : Bun.escapeHTML(identifier);
   const contributor = renderNombres(
     parseAuthors(resolveMetadataField(args.fm, args.formatCfg, args.siteConfig, 'contributor')),
@@ -623,10 +611,7 @@ function publicationMetaHtml(args: {
   const visibles = filas.filter(([, valor]) => valor !== undefined && valor.trim() !== '');
   if (visibles.length === 0) return undefined;
   const html = visibles
-    .map(
-      ([etiqueta, valor]) =>
-        `<div class="flex flex-col gap-1"><span class="text-[11px] sm:text-xs lg:text-[13px] xl:text-sm font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">${etiqueta}</span><span class="text-[15px] text-stone-800 sm:text-base lg:text-lg dark:text-stone-200">${valor}</span></div>`,
-    )
+    .map(([etiqueta, valor]) => `<div class="meta-item"><span class="meta-label">${etiqueta}</span><span class="meta-valor">${valor}</span></div>`)
     .join('');
   return html;
 }
@@ -666,15 +651,15 @@ function citationBlockHtml(args: {
   const bibtex = bibLineas.join('\n');
   const ris = risLineas.join('\n');
   const enlace = (nombre: string, contenido: string): string =>
-    `<a download="${nombre}" href="data:text/plain,${encodeURIComponent(contenido)}" class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/40 bg-accent-500/10 px-3 text-xs font-semibold text-accent-800 no-underline hover:bg-accent-500/20 dark:text-accent-300">${nombre}</a>`;
+    `<a download="${nombre}" href="data:text/plain,${encodeURIComponent(contenido)}" class="cita__descarga">${nombre}</a>`;
   return [
-    '<div class="min-w-0">',
-    '<section class="relative rounded-lg tarjeta p-4 text-xs!  sm:p-5 sm:text-xs! md:text-sm! lg:p-6 lg:text-base! ">',
-    '<h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Cómo citar</h2>',
-    `<p class="m-0 text-stone-800 dark:text-stone-200">${Bun.escapeHTML(apa)}</p>`,
-    `<div class="mt-4 flex flex-wrap gap-2">${enlace('cita.bib', bibtex)}${enlace('cita.ris', ris)}</div>`,
-    `<details class="mt-4"><summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">BibTeX</summary><pre class="mt-2 overflow-x-auto rounded-lg bg-stone-100 p-3 text-xs dark:bg-stone-950/70">${Bun.escapeHTML(bibtex)}</pre></details>`,
-    `<details class="mt-2"><summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">RIS</summary><pre class="mt-2 overflow-x-auto rounded-lg bg-stone-100 p-3 text-xs dark:bg-stone-950/70">${Bun.escapeHTML(ris)}</pre></details>`,
+    '<div>',
+    '<section class="tarjeta tarjeta--seccion cita">',
+    '<h2 class="chip chip--titulo">Cómo citar</h2>',
+    `<p class="cita__texto">${Bun.escapeHTML(apa)}</p>`,
+    `<div class="cita__descargas">${enlace('cita.bib', bibtex)}${enlace('cita.ris', ris)}</div>`,
+    `<details class="cita__detalle"><summary class="cita__resumen">BibTeX</summary><pre class="cita__pre">${Bun.escapeHTML(bibtex)}</pre></details>`,
+    `<details class="cita__detalle"><summary class="cita__resumen">RIS</summary><pre class="cita__pre">${Bun.escapeHTML(ris)}</pre></details>`,
     '</section>',
     '</div>',
   ].join('');
@@ -845,7 +830,7 @@ function htmlVars(args: {
   const home = htmlConfig?.site?.home;
   const hero =
     home !== undefined && doc.relativePath === 'index.md'
-      ? `<section class="tarjeta relative rounded-lg p-4 sm:p-6 lg:p-8"><div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">${heroImage === undefined ? '' : `<img src="${heroImage}" alt="${Bun.escapeHTML(home.alt ?? home.title ?? '')}" class="w-full shrink-0 rounded-lg object-cover sm:w-2/5 lg:w-1/3">`}<div class="min-w-0 flex-1">${home.title === undefined ? '' : `<h2 class="m-0 text-2xl font-bold text-accent-900 sm:text-3xl lg:text-4xl dark:text-accent-100">${Bun.escapeHTML(home.title)}</h2>`}${home.text === undefined ? '' : `<p class="mt-3 text-base leading-relaxed text-stone-700 sm:text-lg dark:text-stone-300">${Bun.escapeHTML(home.text)}</p>`}${home.url === undefined ? '' : `<p class="mt-4"><a href="${Bun.escapeHTML(home.url)}" class="inline-flex items-center rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-3 py-2 text-sm font-semibold text-accent-800 no-underline hover:bg-accent-500/30 dark:text-accent-200">${Bun.escapeHTML(home.label ?? 'Conocer más')}</a></p>`}</div></div></section>`
+      ? `<section class="tarjeta tarjeta--hero"><div class="hero__cuerpo">${heroImage === undefined ? '' : `<img src="${heroImage}" alt="${Bun.escapeHTML(home.alt ?? home.title ?? '')}" class="hero__imagen">`}<div class="hero__texto">${home.title === undefined ? '' : `<h2 class="hero__titulo">${Bun.escapeHTML(home.title)}</h2>`}${home.text === undefined ? '' : `<p class="hero__descripcion">${Bun.escapeHTML(home.text)}</p>`}${home.url === undefined ? '' : `<p class="hero__accion"><a href="${Bun.escapeHTML(home.url)}" class="boton boton--hero">${Bun.escapeHTML(home.label ?? 'Conocer más')}</a></p>`}</div></div></section>`
       : undefined;
   return {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
@@ -1329,10 +1314,7 @@ function nombreEnlazadoHtml(nombre: string, hrefs: Map<string, string>, tono: 'a
   const href = hrefs.get(nombre);
   if (href === undefined) return nombre;
   if (tono === 'plano') return `<a href="${href}">${nombre}</a>`;
-  const clases =
-    tono === 'gris'
-      ? 'py-1 text-stone-600 no-underline underline-offset-4 hover:underline dark:text-stone-400'
-      : 'py-1 text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300';
+  const clases = tono === 'gris' ? 'enlace-autor enlace-autor--gris' : 'enlace-autor';
   return `<a href="${href}" class="${clases}">${nombre}</a>`;
 }
 
@@ -1447,13 +1429,11 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
   return body.trim() === '' ? sections : `${sections}\n\n${body}`;
 }
 
-const PAGINATION_BUTTON_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500/40 bg-accent-500/10 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/30 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-none dark:border-accent-400/40 dark:bg-accent-500/10 dark:text-accent-300 dark:hover:bg-accent-500/20';
+const PAGINATION_BUTTON_CLASSES = 'boton boton--pagina';
 
-const PAGINATION_ACTIVE_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 min-w-6 sm:min-w-7 lg:min-w-8 items-center justify-center rounded-md border-2 border-accent-500 bg-accent-500/20 px-1.5 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-900 shadow-[3px_3px_0_0] shadow-accent-500/40 dark:text-accent-100';
+const PAGINATION_ACTIVE_CLASSES = 'boton boton--pagina boton--pagina-activa';
 
-const PAGINATION_NAV_CLASSES = 'col-span-full flex flex-wrap items-center justify-start gap-2';
+const PAGINATION_NAV_CLASSES = 'paginacion';
 
 function pageSlug(outSlug: string, pagina: number): string {
   return pagina === 1 ? outSlug : `${outSlug}-${pagina}`;
@@ -1481,17 +1461,17 @@ export function paginationNav(outSlug: string, pagina: number, total: number): s
   const anterior = pagina > 1 ? enlace(pagina - 1, '← Anterior') : '';
   const siguiente = pagina < total ? enlace(pagina + 1, 'Siguiente →') : '';
   const numeros = ventanaDePaginas(pagina, total)
-    .map((n) => (n === '…' ? '<span class="px-1 text-stone-500 dark:text-stone-400">…</span>' : n === pagina ? actual(n) : enlace(n, String(n))))
+    .map((n) => (n === '…' ? '<span class="pagina--puntos">…</span>' : n === pagina ? actual(n) : enlace(n, String(n))))
     .join('');
   return `<nav class="${PAGINATION_NAV_CLASSES}" aria-label="Paginación">${anterior}${numeros}${siguiente}</nav>`;
 }
 
-const CARD_IMAGE_CLASSES = 'mt-0! mb-3! flex h-[100px] w-full items-center justify-start overflow-hidden rounded-lg sm:mb-4!';
-const CARD_IMAGE_IMG_CLASSES = 'm-0! block h-full w-full object-cover';
-const CARD_IMAGE_LINK_CLASSES = 'block h-full w-full rounded-lg';
-const PORTRAIT_WRAPPER_CLASSES = 'mb-6 flex justify-center';
-const PORTRAIT_CLASSES = 'm-0! block rounded-full object-cover';
-const PORTRAIT_LINK_CLASSES = 'block overflow-hidden rounded-full [clip-path:circle(50%)]';
+const CARD_IMAGE_CLASSES = 'tarjeta-imagen';
+const CARD_IMAGE_IMG_CLASSES = 'tarjeta-imagen__img';
+const CARD_IMAGE_LINK_CLASSES = 'tarjeta-imagen__enlace';
+const PORTRAIT_WRAPPER_CLASSES = 'retrato__contenedor';
+const PORTRAIT_CLASSES = 'retrato__img';
+const PORTRAIT_LINK_CLASSES = 'retrato__enlace';
 
 const IMAGEN_MD_RE = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?/;
 const IMAGEN_HTML_RE = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i;
@@ -1539,12 +1519,10 @@ function collectionIndices(entries: CollectionEntry[], memberHrefs: Map<string, 
     .map((entrada) => {
       const href = memberHrefs.get(entrada.file);
       const titulo = Bun.escapeHTML(entrada.title || TITULO_POR_DEFECTO);
-      return href === undefined
-        ? `<li>${titulo}</li>`
-        : `<li><a href="${href}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${titulo}</a></li>`;
+      return href === undefined ? `<li>${titulo}</li>` : `<li><a href="${href}" class="enlace-acento">${titulo}</a></li>`;
     })
     .join('');
-  const indice = `<div class="min-w-0" id="indice-completo"><nav class="contenido-tamano contenido-compacto relative rounded-lg tarjeta p-4 sm:p-6 "><h2 class="inline-flex h-6 sm:h-7 lg:h-8 items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">Índice</h2><ol class="m-0 list-decimal space-y-2 ps-6">${items}</ol></nav></div>`;
+  const indice = `<div id="indice-completo"><nav class="tarjeta tarjeta--seccion indice contenido-tamano contenido-compacto"><h2 class="chip chip--titulo">Índice</h2><ol class="lista-enlaces lista-enlaces--disco">${items}</ol></nav></div>`;
   return Array.from({ length: total }, () => indice);
 }
 
@@ -1572,26 +1550,20 @@ function assertPaginasLibres(relativePath: string, dir: string, outSlug: string,
   }
 }
 
-const CARD_WRAPPER = '<div class="min-w-0">';
+const CARD_WRAPPER = '<div class="tarjeta-envoltura">';
 
 const CARD_PREVIEW_MAX_WORDS = 150;
 
-const CARD_TEXT_CLASSES =
-  'prose prose-sm dark:prose-invert max-w-none contenido-preview contenido-compacto [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] sm:prose-base md:prose-lg lg:prose-xl';
+const CARD_TEXT_CLASSES = 'prose contenido-preview contenido-compacto';
 
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative flex h-[26rem] flex-col overflow-hidden rounded-lg tarjeta p-3 [overflow-wrap:anywhere] [&_h3]:line-clamp-2 [&_h3]:pb-1.5 sm:h-[30rem] sm:p-4 lg:h-[34rem] lg:p-5 ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta tarjeta--fragmento ${CARD_TEXT_CLASSES}`;
 
-const CHIP_HOVER_EFFECT_CLASSES =
-  'transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30';
+const MEMBER_PILL_CLASSES = 'not-prose chip chip--tipo';
 
-const PILL_BASE = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 font-normal uppercase tracking-wide text-accent-800 dark:text-accent-300`;
+const EXTRA_PILL_CLASSES = 'not-prose chip chip--titulo';
+const EXTRA_PILL_SPACED_CLASSES = 'not-prose chip chip--titulo';
 
-const MEMBER_PILL_CLASSES = `${PILL_BASE} mt-0 mb-6`;
-
-const EXTRA_PILL_CLASSES = `${PILL_BASE} chip-title mt-0 mb-0`;
-const EXTRA_PILL_SPACED_CLASSES = `${PILL_BASE} mt-0 mb-6`;
-
-const MEMBER_BADGE_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} min-w-6 sm:min-w-7 lg:min-w-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border-2 border-stone-300 bg-stone-200/70 px-1.5 sm:px-2.5 lg:px-3 font-semibold mt-0 text-stone-600 dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300`;
+const MEMBER_BADGE_CLASSES = 'not-prose tarjeta-badge';
 
 function memberTypeLabel(type: string | undefined): string {
   if (type === undefined || type === 'file') return uiLabel('texto', 'Texto');
@@ -1599,12 +1571,8 @@ function memberTypeLabel(type: string | undefined): string {
   return TYPE_META[type]?.memberLabel ?? 'Texto';
 }
 
-const CHIP_HOVER_CLASSES = `${CHIP_HOVER_EFFECT_CLASSES} hover:underline`;
-
-const CHIP_LINK_CLASSES = 'min-w-0 max-w-full truncate text-inherit no-underline transition-colors duration-200 hover:underline';
-
 function chipLabel(label: string): string {
-  return `<span class="min-w-0 truncate">${label}</span>`;
+  return `<span class="chip__texto">${label}</span>`;
 }
 
 function chipHtml(
@@ -1619,33 +1587,29 @@ function chipHtml(
   const slug = defaultListSlug(type);
   const href = slug !== undefined && (available === undefined || available.has(slug)) ? defaultListHref(dir, type) : undefined;
   if (href === undefined || href === currentHref) return omitIfUnlinked ? '' : `<h2 class="${classes}">${label}</h2>`;
-  return `<h2 class="${classes} ${CHIP_HOVER_EFFECT_CLASSES}"><a href="${href}" class="${CHIP_LINK_CLASSES}">${label}</a></h2>`;
+  return `<h2 class="${classes} chip--enlace"><a href="${href}" class="chip__texto">${label}</a></h2>`;
 }
 
-const MEMBER_LINK_CLASSES = 'py-1 no-underline underline-offset-4 transition-colors duration-200 hover:underline';
+const MEMBER_LINK_CLASSES = 'enlace-miembro';
 
-const CARD_CTA_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-semibold text-accent-800 no-underline shadow-[3px_3px_0_0] shadow-accent-500/40 transition-all duration-200 hover:translate-x-[3px] hover:translate-y-[3px] hover:border-accent-500 hover:bg-accent-500/30 hover:text-accent-900 hover:no-underline hover:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30 dark:hover:text-accent-100';
+const CARD_CTA_CLASSES = 'boton boton--cta';
 
-const MENU_BUTTON_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/35 dark:border-accent-400/30 dark:bg-accent-500/12 dark:text-accent-300 dark:hover:bg-accent-500/20';
+const MENU_BUTTON_CLASSES = 'chip chip--menu';
 
-const MENU_LINK_CLASSES =
-  'inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-2.5 lg:px-3 text-xs lg:text-sm font-semibold text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:bg-accent-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/40 dark:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10';
+const MENU_LINK_CLASSES = 'chip chip--coleccion chip--enlace';
 
-const HEADER_COLLECTION_CHIP_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center rounded-md border-2 border-accent-500/50 bg-transparent px-2 sm:px-2.5 lg:px-3 font-semibold uppercase tracking-wide text-accent-800 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-accent-500 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-accent-500/30 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-accent-400/50 dark:text-accent-200`;
-const HEADER_KEYWORD_CHIP_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 font-semibold uppercase tracking-wide text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300`;
+const HEADER_COLLECTION_CHIP_CLASSES = 'not-prose chip chip--coleccion chip--enlace';
+const HEADER_KEYWORD_CHIP_CLASSES = 'not-prose chip chip--keyword chip--enlace';
 const RECENTES_LIMIT = 5;
 const KEYWORD_INDEX_SLUG = 'keyword';
-const SIDEBAR_KEYWORD_CHIP_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-2.5 lg:px-3 font-semibold uppercase tracking-wide no-underline text-stone-600 transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:underline hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:text-stone-300`;
-const KEYWORD_BADGE_CLASSES =
-  'inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-accent-600 px-1 text-[10px] font-bold leading-none text-white dark:bg-accent-500 dark:text-stone-950';
+const SIDEBAR_KEYWORD_CHIP_CLASSES = 'not-prose chip chip--keyword chip--enlace chip--conteo';
+const KEYWORD_BADGE_CLASSES = 'chip__badge';
 function ctaDeTarjeta(type: string | undefined): string {
   if (type === undefined || type === 'file') return uiLabel('leer-texto-completo', 'Leer texto completo');
   return TYPE_META[type]?.cta ?? 'Leer texto completo';
 }
 
-const EXTRA_CARD_CLASSES = `tarjeta-extras relative rounded-lg tarjeta p-3 text-xs! [overflow-wrap:anywhere] sm:p-4 sm:text-xs! md:text-sm! lg:p-5 lg:text-base! ${CARD_TEXT_CLASSES}`;
+const EXTRA_CARD_CLASSES = `tarjeta tarjeta--extra ${CARD_TEXT_CLASSES}`;
 
 function extraCard(inner: string): string {
   return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', inner, '', '::::'].join('\n');
@@ -1772,15 +1736,13 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string | f
   const licencia = licenciaResuelta(siteConfig, override);
   if (licencia === undefined) return undefined;
   const iconos = licencia.def.iconos
-    .map(
-      (nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.webp`)}" alt="" class="block my-0!" style="width:32px;height:32px">`,
-    )
+    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.webp`)}" alt="" class="licencia__icono">`)
     .join('');
-  const parrafos = licencia.def.parrafos.map((parrafo) => `<p class="m-0">${parrafo}</p>`).join('');
+  const parrafos = licencia.def.parrafos.map((parrafo) => `<p>${parrafo}</p>`).join('');
   return [
-    `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
-    `<div class="mb-3 flex items-center gap-2">${iconos}</div>`,
-    `<div class="contenido-compacto space-y-3">${parrafos}</div>`,
+    `<div class="chips"><h2 class="${EXTRA_PILL_CLASSES}">Licencia</h2></div>`,
+    `<div class="licencia__iconos">${iconos}</div>`,
+    `<div class="licencia__texto">${parrafos}</div>`,
   ].join('');
 }
 
@@ -1798,7 +1760,7 @@ export function creatorCard(
       chipHtml('Colaboradora', 'creator', dir, EXTRA_PILL_SPACED_CLASSES, available),
       '',
       ...(retrato === undefined ? [] : [retratoDeCreadora(retrato, doc.name, perfil), '']),
-      `<h2 class="not-prose mb-4 text-center text-base tracking-wide sm:text-lg">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
+      `<h2 class="not-prose tarjeta-titulo tarjeta-titulo--centrado">${nombreEnlazadoHtml(doc.name, creatorHrefs)}</h2>`,
       '',
       doc.body.trim(),
     ].join('\n'),
@@ -1814,7 +1776,7 @@ export function containersCard(
   if (contenedores.some((c) => c.type === 'collection')) chips.push(chipHtml('Colecciones', 'collection', dir, EXTRA_PILL_CLASSES, available));
   if (contenedores.some((c) => c.type === 'list')) chips.push(chipHtml('Listas', 'list', dir, EXTRA_PILL_CLASSES, available));
   const items = contenedores.map((c) => `- [${c.titulo}](${c.href})`).join('\n');
-  return extraCard([`<div class="flex flex-wrap items-center gap-2 mb-4">${chips.join('')}</div>`, '', items].join('\n'));
+  return extraCard([`<div class="chips">${chips.join('')}</div>`, '', items].join('\n'));
 }
 
 function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], titleHref?: string, label = 'Palabras clave'): string {
@@ -1822,14 +1784,14 @@ function keywordChipsCard(keywords: { titulo: string; href: string; count?: numb
   const chips = keywords
     .map((keyword) => {
       const badge = keyword.count === undefined ? '' : `<span class="${KEYWORD_BADGE_CLASSES}">${keyword.count}</span>`;
-      return `<a href="${keyword.href}" class="${SIDEBAR_KEYWORD_CHIP_CLASSES}">${Bun.escapeHTML(keyword.titulo)}${badge}</a>`;
+      return `<a href="${keyword.href}" class="${SIDEBAR_KEYWORD_CHIP_CLASSES}">${chipLabel(Bun.escapeHTML(keyword.titulo))}${badge}</a>`;
     })
     .join('');
   const titulo =
     titleHref === undefined
       ? `<h2 class="${EXTRA_PILL_CLASSES}">${Bun.escapeHTML(label)}</h2>`
-      : `<a href="${titleHref}" class="${EXTRA_PILL_CLASSES} ${CHIP_HOVER_EFFECT_CLASSES} hover:underline">${Bun.escapeHTML(label)}</a>`;
-  return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2">${titulo}</div><div class="flex flex-wrap gap-2">${chips}</div></div>`;
+      : `<a href="${titleHref}" class="${EXTRA_PILL_CLASSES} chip--enlace">${Bun.escapeHTML(label)}</a>`;
+  return `<div class="${EXTRA_CARD_CLASSES}"><div class="chips">${titulo}</div><div class="chips">${chips}</div></div>`;
 }
 
 function siteKeywordsCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, titleHref?: string, titulo = 'Palabras clave'): string {
@@ -1856,10 +1818,10 @@ function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, 
     .map((ruta) => {
       const entry = discoveryIndex.get(ruta);
       const html = htmlPathFor(ruta, entry?.slug);
-      return `<li><a href="${relativeHref(dir, html)}" class="text-accent-700 no-underline underline-offset-4 hover:underline dark:text-accent-300">${Bun.escapeHTML(entry?.title ?? ruta)}</a></li>`;
+      return `<li><a href="${relativeHref(dir, html)}" class="enlace-acento">${Bun.escapeHTML(entry?.title ?? ruta)}</a></li>`;
     })
     .join('');
-  return `<div class="${EXTRA_CARD_CLASSES}"><div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">${Bun.escapeHTML(label)}</h2></div><ul class="m-0 list-disc space-y-1 ps-5">${items}</ul></div>`;
+  return `<div class="${EXTRA_CARD_CLASSES}"><div class="chips"><h2 class="${EXTRA_PILL_CLASSES}">${Bun.escapeHTML(label)}</h2></div><ul class="lista-enlaces lista-enlaces--disco lista-enlaces--compacta">${items}</ul></div>`;
 }
 
 interface EnlaceMenu {
@@ -1920,7 +1882,7 @@ function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
 
 function menuHeaderLink(links: EnlaceMenu[], dir: string, menuLabel = 'Menú'): string | undefined {
   if (links.length === 0) return undefined;
-  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="${Bun.escapeHTML(menuLabel)}"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" width="24" height="24" class="h-6 w-6"><span>${Bun.escapeHTML(menuLabel)}</span></a>`;
+  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="${Bun.escapeHTML(menuLabel)}"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" width="24" height="24" class="menu-icono"><span>${Bun.escapeHTML(menuLabel)}</span></a>`;
 }
 
 function menuFooterContent(links: EnlaceMenu[], dir: string, menuLabel = 'Menú'): string | undefined {
@@ -1934,7 +1896,7 @@ function menuFooterContent(links: EnlaceMenu[], dir: string, menuLabel = 'Menú'
 }
 
 function tituloSidebarHtml(title: string, href: string | undefined): string {
-  const clases = 'not-prose mt-4 mb-4 text-left text-base font-bold text-accent-900 sm:text-lg dark:text-accent-300';
+  const clases = 'not-prose tarjeta-titulo tarjeta-titulo--sidebar';
   return href === undefined
     ? `<h3 class="${clases}">${title}</h3>`
     : `<h3 class="${clases}"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
@@ -1959,7 +1921,7 @@ function announcementCard(
       '',
       body,
       '',
-      href === undefined ? '' : `<p class="not-prose mt-4 text-left"><a href="${href}" class="${CARD_CTA_CLASSES}">Leer anuncio →</a></p>`,
+      href === undefined ? '' : `<p class="tarjeta-pie not-prose"><a href="${href}" class="${CARD_CTA_CLASSES}">Leer anuncio →</a></p>`,
     ].join('\n'),
   );
 }
@@ -2071,7 +2033,7 @@ export function creatorLinksCard(nombre: string, links: { name: string; url: str
   const items = links.map((l) => `- [${l.name}](<${l.url}>){target="_blank" rel="noopener noreferrer"}`).join('\n');
   return extraCard(
     [
-      `<div class="mb-6 flex flex-wrap items-center gap-2"><h2 class="${EXTRA_PILL_CLASSES}">Redes</h2><span class="${CHIP_OUTLINE_CLASSES}">${Bun.escapeHTML(nombre)}</span></div>`,
+      `<div class="chips"><h2 class="${EXTRA_PILL_CLASSES}">Redes</h2><span class="chip chip--red">${Bun.escapeHTML(nombre)}</span></div>`,
       '',
       items,
     ].join('\n'),
@@ -2117,7 +2079,7 @@ async function buildExtrasHtml(
     if (args.tarjetas === undefined || args.tarjetas === '') return parte === 'creator' ? '' : retrato;
     const tarjetasHtml = await render([args.tarjetas]);
     if (parte === 'creator') return tarjetasHtml;
-    return `<div class="grid gap-4 sm:gap-6 xl:grid-cols-2 xl:gap-6">${retrato}${tarjetasHtml}</div>`;
+    return `<div class="creator-publications-grid">${retrato}${tarjetasHtml}</div>`;
   }
 
   const partes: string[] = [];
@@ -2441,15 +2403,15 @@ function creadoresDeArchivosDeColeccion(e: CollectionEntry, discoveryIndex: Map<
 }
 
 function renderNombres(lista: string[], tono: 'accent' | 'gris' | 'plano', creatorHrefs: Map<string, string>): string {
-  return lista.map((n) => `<span class="whitespace-nowrap">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`).join(', ');
+  return lista.map((n) => `<span class="nombre">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`).join(', ');
 }
 
 function partesDeColeccion(titleHtml: string, href: string | undefined): string[] {
   const texto = 'Varias colaboradoras';
   const etiqueta =
     href === undefined
-      ? `<h2 class="card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${texto}</h2>`
-      : `<h2 class="card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${texto}</a></h2>`;
+      ? `<h2 class="not-prose tarjeta-autor">${texto}</h2>`
+      : `<h2 class="not-prose tarjeta-autor"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${texto}</a></h2>`;
   return [etiqueta, '', titleHtml];
 }
 
@@ -2461,10 +2423,9 @@ function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, Dis
 }
 
 function titleHtmlPara(title: string, href: string | undefined, center = false): string {
-  const alineacion = center ? 'text-center' : 'text-left';
-  if (href === undefined)
-    return `<h3 class="not-prose mb-4 ${alineacion} text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300">${title}</h3>`;
-  return `<h3 class="not-prose mb-4 ${alineacion} text-lg font-bold text-accent-900 sm:text-[22px] lg:text-2xl dark:text-accent-300"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
+  const alineacion = center ? ' tarjeta-titulo--centrado' : '';
+  if (href === undefined) return `<h3 class="not-prose tarjeta-titulo${alineacion}">${title}</h3>`;
+  return `<h3 class="not-prose tarjeta-titulo${alineacion}"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${title}</a></h3>`;
 }
 
 interface PageRef {
@@ -2486,7 +2447,7 @@ function chipsDePertenencia(
     if (contenedor?.type !== 'collection' || ruta === pagePath) continue;
     const titulo = Bun.escapeHTML(contenedor.title || ruta);
     const html = htmlPathFor(ruta, contenedor.slug);
-    chips.push(`<a href="${relativeHref(dir, html)}" class="${CHIP_OUTLINE_CLASSES} ${CHIP_HOVER_CLASSES}">${chipLabel(titulo)}</a>`);
+    chips.push(`<a href="${relativeHref(dir, html)}" class="not-prose chip chip--coleccion chip--enlace">${chipLabel(titulo)}</a>`);
   }
   return chips;
 }
@@ -2526,10 +2487,10 @@ function chipsDeCabecera(
   const typeLabel = memberTypeLabel(e.type);
   if (typeLabel === undefined) return '';
   const chips = [
-    chipHtml(typeLabel, e.type, dir, `${PILL_BASE} mt-0 mb-0`, available, currentHref, true),
+    chipHtml(typeLabel, e.type, dir, MEMBER_PILL_CLASSES, available, currentHref, true),
     ...chipsDePertenencia(e, dir, page?.path, discoveryIndex),
   ];
-  return `<div class="tarjeta-cabecera mb-6 flex min-w-0 items-start justify-between gap-4"><div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`;
+  return `<div class="tarjeta-cabecera"><div class="tarjeta-chips">${chips.join('')}</div><span class="${MEMBER_BADGE_CLASSES}">${e.posicion}</span></div>`;
 }
 
 function imagenDeCabecera(
@@ -2578,18 +2539,14 @@ function cabeceraDeTarjeta(
   }
   const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
   const creator = nombres === undefined ? '' : nombres.length > 0 ? renderNombres(nombres, tono, creatorHrefs) : AUTORA_POR_DEFECTO;
-  if (creator !== '')
-    cuerpo.push(
-      `<h2 class="card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300">${creator}</h2>`,
-      '',
-    );
+  if (creator !== '') cuerpo.push(`<h2 class="not-prose tarjeta-autor">${creator}</h2>`, '');
   cuerpo.push(titleHtml);
-  if (e.subtitle) cuerpo.push('', `<h4 class="text-left text-lg italic tracking-wide mb-4">${e.subtitle}</h4>`);
+  if (e.subtitle) cuerpo.push('', `<h4 class="not-prose tarjeta-subtitulo">${e.subtitle}</h4>`);
   if (page?.showDates === true && e.date !== undefined) {
     const fecha = e.date;
     cuerpo.push(
       '',
-      `<p class="not-prose mb-4 text-left text-xs font-mono text-stone-600 sm:text-sm dark:text-stone-400"><time datetime="${Bun.escapeHTML(fecha)}">${Bun.escapeHTML(formatHumanDate(fecha) ?? fecha)}</time></p>`,
+      `<p class="not-prose tarjeta-fecha"><time datetime="${Bun.escapeHTML(fecha)}">${Bun.escapeHTML(formatHumanDate(fecha) ?? fecha)}</time></p>`,
     );
   }
   return { chips, cuerpo };
@@ -2659,7 +2616,7 @@ function collectionCard(
     const estiloPreview =
       ' style="mask-image:linear-gradient(to bottom,black 70%,transparent);-webkit-mask-image:linear-gradient(to bottom,black 70%,transparent)"';
     const previewHtml = [
-      `<div class="tarjeta-preview-wrap min-h-0 flex-1 overflow-hidden"${estiloPreview}>`,
+      `<div class="tarjeta-preview-wrap"${estiloPreview}>`,
       `<p class="tarjeta-preview">${parrafos.map((parrafo) => Bun.escapeHTML(parrafo).replace(/\n/g, '<br>')).join('<br><br>')}</p>`,
       '</div>',
     ].join('\n');
@@ -2667,7 +2624,7 @@ function collectionCard(
   }
   card.push(...contenido);
   if (href !== undefined) {
-    card.push('', `<p class="not-prose mt-auto pt-4 text-left"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
+    card.push('', `<p class="tarjeta-pie not-prose"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
   }
   card.push('', '::::');
   return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');

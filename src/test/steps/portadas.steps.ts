@@ -204,22 +204,7 @@ Then('la portada del HTML va en la tarjeta de encabezado', () => {
   const encabezado = html.slice(inicio, fin);
   const portada = /<img[^>]*un-libro-frontCover\.webp[^>]*>/.exec(encabezado)?.[0];
   if (portada === undefined) throw new Error('la portada no está en la tarjeta de encabezado');
-  for (const clase of [
-    'w-full',
-    'sm:w-[45%]',
-    'md:w-2/5',
-    'lg:w-1/3',
-    'xl:w-1/4',
-    '2xl:w-1/4',
-    'rounded-lg',
-    'border-2',
-    'border-accent-500/70',
-    'shadow-[3px_3px_0_0]',
-    'shadow-accent-500/30',
-    'object-contain',
-  ]) {
-    if (!portada.includes(clase)) throw new Error(`la portada del encabezado no tiene ${clase}`);
-  }
+  if (!portada.includes('class="portada"')) throw new Error('la portada del encabezado no usa la clase portada');
   if (portada.includes('object-cover')) throw new Error('la portada del encabezado recorta la imagen');
   if (portada.includes('hover:')) throw new Error('la portada del encabezado no debe cambiar al hover');
   const primerDato = Math.min(...['<h1', 'not-prose'].map((marca) => encabezado.indexOf(marca)).filter((i) => i >= 0));

@@ -6,7 +6,18 @@ import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
 import { configHelp } from './config-help.js';
 import { runCover } from './cover.js';
-import { defaultNewDocumentPath, isNewDocumentType, NEW_DOCUMENT_TYPES, runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
+import {
+  defaultNewDocumentPath,
+  isNewDocumentType,
+  NEW_DOCUMENT_TYPES,
+  runBuild,
+  runClean,
+  runDoctor,
+  runFilters,
+  runInit,
+  runNew,
+  runValidate,
+} from './dispatcher.js';
 import { runMarkdown } from './markdown.js';
 import { runMarkdownClean } from './markdown-clean.js';
 import { runMerge } from './merge.js';
@@ -66,7 +77,7 @@ export function buildProgram(): Command {
     'before',
     `escribir, compartir, re-existir
 
-Construye documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Markdown (pandoc + Tailwind CSS).
+Construye documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Markdown (pandoc + CSS propio).
 
 Primeros pasos:
   iteraciones init blog             crea un proyecto con una plantilla (blog, libro, colectiva, repositorio)
@@ -199,7 +210,7 @@ Ejemplos:
 
   program
     .command('assets')
-    .description('copia al directorio de salida las fuentes del paquete y el logo que referencia el HTML')
+    .description('genera la hoja de estilos y copia al directorio de salida las fuentes del paquete y el logo que referencia el HTML')
     .requiredOption('-o, --output <path>', 'directorio de salida')
     .option('--licenses <nombres>', 'iconos de licencia a copiar, separados por coma')
     .addHelpText(

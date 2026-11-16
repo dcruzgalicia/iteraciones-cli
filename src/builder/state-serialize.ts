@@ -29,7 +29,6 @@ export interface BuildState {
   pdfxCache?: Record<string, string>;
   bibFileCache?: FileCacheMap;
   cssHash?: string;
-  cssFileCache?: FileCacheMap;
 
   completed?: boolean;
   entries: Map<string, DiscoveryEntry>;

@@ -4,7 +4,7 @@ import { relativeLabel } from './paths.js';
 
 const SCRIPT_DIR = ['.iteraciones', 'script'] as const;
 
-type Section = 'images' | 'resources' | 'latex' | 'html' | 'epub' | 'post' | 'css' | 'pdf' | 'covers' | 'validate' | 'other';
+type Section = 'images' | 'resources' | 'latex' | 'html' | 'epub' | 'post' | 'pdf' | 'covers' | 'validate' | 'other';
 
 const SECTIONS: ReadonlyArray<{ id: Section; title: string }> = [
   { id: 'images', title: 'Recursos: imágenes (ImageMagick)' },
@@ -13,7 +13,6 @@ const SECTIONS: ReadonlyArray<{ id: Section; title: string }> = [
   { id: 'html', title: 'Pandoc: HTML' },
   { id: 'epub', title: 'Pandoc: EPUB' },
   { id: 'post', title: 'Salidas de iteraciones (post-proceso y markdown)' },
-  { id: 'css', title: 'CSS (Tailwind)' },
   { id: 'pdf', title: 'PDF (latexmk)' },
   { id: 'covers', title: 'Portada (pdftoppm)' },
   { id: 'validate', title: 'Validación PDF/X' },

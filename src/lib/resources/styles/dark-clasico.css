@@ -1,0 +1,10 @@
+[data-style="clasico"] {
+  --paper-bg: color-mix(in oklab, var(--color-accent-500) 8%, #0d0c0a);
+  --grid-fine: color-mix(in oklab, var(--color-accent-300) 6%, transparent);
+  --grid-bold: color-mix(in oklab, var(--color-accent-300) 16%, transparent);
+  --card-bg: color-mix(in oklab, var(--color-accent-500) 6%, #171512);
+  --card-border: var(--color-accent-300);
+  --card-border-hover: var(--color-accent-200);
+  --card-shadow: 8px 8px 0 var(--color-accent-500);
+  --card-shadow-hover: 10px 10px 0 var(--color-accent-400);
+}

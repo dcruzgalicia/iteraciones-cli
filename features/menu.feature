@@ -111,7 +111,7 @@ Característica: el menú del sitio
         ---
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "<a href=\"./index.html\" class=\"inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/40 bg-transparent"
+      Entonces el archivo "dist/files/index.html" dice "<a href=\"./index.html\" class=\"chip chip--coleccion chip--enlace\""
       Y el archivo "dist/files/index.html" dice "href=\"https://www.facebook.com/Historikasmx\""
       Y el archivo "dist/files/index.html" dice "target=\"_blank\" rel=\"noopener noreferrer\""
 

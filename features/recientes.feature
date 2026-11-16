@@ -66,7 +66,7 @@ Característica: la tarjeta de entradas recientes del sidebar
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/texto-6.html" dice ">Recientes</h2>"
-      Y el archivo "dist/files/texto-6.html" dice "list-disc"
+      Y el archivo "dist/files/texto-6.html" dice "lista-enlaces--disco"
       Y el archivo "dist/files/texto-6.html" dice "Texto 6"
       Y el archivo "dist/files/texto-6.html" dice "Texto 5"
       Y el archivo "dist/files/texto-6.html" dice "Texto 4"
@@ -116,4 +116,4 @@ Característica: la tarjeta de entradas recientes del sidebar
         """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/texto-2.html" pone "Recientes" antes que "items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent"
+      Y el archivo "dist/files/texto-2.html" pone "Recientes" antes que "chip--conteo"

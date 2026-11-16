@@ -6,13 +6,12 @@ Característica: el CSS y los assets que deja un build
 
   Regla de negocio: El CSS se compila sobre los HTML finales
 
-    Escenario: El CSS se compila sobre los HTML finales, no sobre markdown suelto
+    Escenario: El CSS lleva el acento del sitio y no clases inventadas
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Dado que escribo markdown de relleno con clases inventadas
-      Dado que el documento tiene una clase que hay que compilar
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el CSS se compila sobre los HTML finales
+      Y el CSS lleva el acento del sitio y no clases inventadas
 
     Escenario: La página trae el botón de volver al principio
       Dado que la raíz del proyecto tiene un proyecto de prueba

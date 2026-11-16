@@ -22,8 +22,8 @@ Característica: la tarjeta de licencia del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/index.html" dice "Algunos derechos reservados."
       Y el archivo "dist/files/index.html" dice ">Licencia</h2>"
-      Y el archivo "dist/files/index.html" no dice "mb-2 flex items-center gap-2"
-      Y el archivo "dist/files/index.html" dice "my-0!"
+      Y el archivo "dist/files/index.html" no dice "licencia__iconos licencia__iconos--vacio"
+      Y el archivo "dist/files/index.html" dice "licencia__texto"
       Y el archivo "dist/files/index.html" dice "brindar un enlace a la&nbsp;licencia"
       Y el archivo "dist/files/index.html" pone "Algunos derechos reservados." antes que "card-identity-footer"
       Y el archivo "dist/files/assets/images/cc.webp" existe
@@ -98,7 +98,7 @@ Característica: la tarjeta de licencia del sitio
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/un-texto.html" pone "Palabras clave" antes que "Algunos derechos reservados."
-      Y el archivo "dist/files/un-texto.html" pone "items-center gap-1.5 rounded-md border-2 border-stone-500/60 bg-transparent" antes que "Algunos derechos reservados."
+      Y el archivo "dist/files/un-texto.html" pone "chip chip--keyword chip--enlace" antes que "Algunos derechos reservados."
       Y la licencia de "dist/files/un-texto.html" va antes de la segunda Redes
 
     Escenario: Los iconos se referencian desde cada página
@@ -116,7 +116,7 @@ Característica: la tarjeta de licencia del sitio
       Y una colección en "convocatorias" con 1 miembros
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/convocatorias/antologia.html" dice "src=\"./../assets/images/cc.webp\""
-      Y el archivo "dist/files/convocatorias/antologia.html" dice "width:32px;height:32px"
+      Y el archivo "dist/files/convocatorias/antologia.html" dice "licencia__icono"
 
     Escenario: Sin licencia configurada se muestra la CC por defecto
       Dado que la raíz del proyecto tiene un proyecto de prueba

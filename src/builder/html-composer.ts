@@ -24,8 +24,8 @@ export async function loadCard(type: HtmlDocType, name: string): Promise<string>
   return (await own.exists()) ? own.text() : Bun.file(join(HTML_RESOURCES_DIR, 'file', name)).text();
 }
 
-const IDENTITY_APERTURA = '    <div id="card-identity" class="min-w-0">\n\n';
-const FOOTER_APERTURA = '    <div id="card-identity-footer" class="min-w-0">\n';
+const IDENTITY_APERTURA = '<div id="card-identity"';
+const FOOTER_APERTURA = '<div id="card-identity-footer"';
 
 function comoFooter(card: string): string {
   return card.replace(IDENTITY_APERTURA, FOOTER_APERTURA);
@@ -47,19 +47,13 @@ function logoIntrinsicSize(logoSize?: string): number {
 
 export function logoBlockHtml(href: string, logoSize?: string, svg?: string): string {
   const size = logoIntrinsicSize(logoSize);
-  const inner = svg ?? `<img src="${href}" alt="" width="${size}" height="${size}" class="block h-auto w-full">`;
-  return `<span class="flex shrink-0 text-accent-500 logo-fill" style="width:${logoSizeCss(logoSize)}">${inner}</span>`;
+  const inner = svg ?? `<img src="${href}" alt="" width="${size}" height="${size}" class="sitio-logo__imagen">`;
+  return `<span class="sitio-logo logo-fill" style="width:${logoSizeCss(logoSize)}">${inner}</span>`;
 }
 
 export function creatorPortraitHtml(image: string, alt: string): string {
-  return `<figure class="relative m-0 h-[30rem] sm:h-auto md:h-[30rem] lg:h-auto"><img src="${Bun.escapeHTML(image)}" alt="${Bun.escapeHTML(alt)}" class="absolute inset-0 block h-full w-full object-cover object-center"></figure>`;
+  return `<figure class="retrato-pagina"><img src="${Bun.escapeHTML(image)}" alt="${Bun.escapeHTML(alt)}" class="retrato-pagina__imagen"></figure>`;
 }
-
-export const CHIP_SIZE_CLASSES = 'h-6 sm:h-7 lg:h-8 text-xs lg:text-sm leading-none';
-
-export const CHIP_TRUNCATE_CLASSES = 'min-w-0 max-w-full truncate';
-
-export const CHIP_OUTLINE_CLASSES = `not-prose inline-flex ${CHIP_SIZE_CLASSES} ${CHIP_TRUNCATE_CLASSES} items-center rounded-md border-2 border-accent-500/40 bg-transparent px-2 sm:px-3 lg:px-3.5 font-normal uppercase tracking-wide no-underline text-accent-700 dark:border-accent-400/40 dark:text-accent-300`;
 
 function frecuenciasInline(siteConfig: SiteConfig): string {
   const links = siteConfig.format?.html?.site?.links ?? [];
@@ -67,34 +61,22 @@ function frecuenciasInline(siteConfig: SiteConfig): string {
   const items = links
     .map(
       (link: { name: string; url: string }) =>
-        `<a href="${Bun.escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-stone-500/60 bg-transparent px-2 sm:px-3 lg:px-3.5 text-xs lg:text-sm font-semibold text-stone-600 no-underline transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-stone-600 hover:bg-stone-500/10 hover:shadow-[3px_3px_0_0] hover:shadow-stone-500/25 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:border-stone-400/60 dark:bg-transparent dark:text-stone-300 dark:hover:bg-stone-500/10">${Bun.escapeHTML(link.name)}</a>`,
+        `<a href="${Bun.escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer" class="chip chip--red chip--enlace">${Bun.escapeHTML(link.name)}</a>`,
     )
     .join('');
-  return `<nav aria-label="Redes" class="contents">${items}</nav>`;
+  return `<nav aria-label="Redes" class="redes">${items}</nav>`;
 }
 
 function identityCard(children: string[]): string {
-  return [
-    '<div class="tarjeta relative rounded-lg p-4 sm:p-6 lg:p-8">',
-    '<div class="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:gap-12">',
-    ...children,
-    '</div>',
-    '</div>',
-  ].join('\n');
+  return ['<div class="tarjeta tarjeta--identidad">', '<div class="identidad-grid">', ...children, '</div>', '</div>'].join('\n');
 }
 
 function headerHtml(identity: string, menuHeader: string, redes: string): string {
-  return identityCard([
-    `<div class="min-w-0">${identity}</div>`,
-    `<div class="flex flex-wrap items-start justify-start gap-2 sm:justify-end">${menuHeader}${redes}</div>`,
-  ]);
+  return identityCard([`<div>${identity}</div>`, `<div class="sitio-acciones">${menuHeader}${redes}</div>`]);
 }
 
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
-  return identityCard([
-    `<div class="flex flex-wrap items-start justify-start gap-2">${menuFooterPlain}${redes}</div>`,
-    `<div class="flex min-w-0 items-center justify-start">${footerIdentity}</div>`,
-  ]);
+  return identityCard([`<div class="sitio-acciones">${menuFooterPlain}${redes}</div>`, `<div>${footerIdentity}</div>`]);
 }
 
 function fillSlot(html: string, name: string, content: string): string {

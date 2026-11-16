@@ -1,26 +1,26 @@
 $if(formats)$
-<div class="min-w-0">
-      <section class="contenido-tamano contenido-compacto relative rounded-lg tarjeta p-4 sm:p-6 ">
-        <h2 class="inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-xs font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">$if(label-formatos)$$label-formatos$$else$Formatos$endif$</h2>
-        <ul class="m-0 list-disc space-y-3 ps-6">
+<div>
+      <section class="tarjeta tarjeta--seccion contenido-compacto">
+        <h2 class="chip chip--titulo">$if(label-formatos)$$label-formatos$$else$Formatos$endif$</h2>
+        <ul class="lista-enlaces lista-enlaces--disco">
 $if(fmt-pdf)$
         <li>
-          <a download target="_blank" href="$fmt-pdf$" class="text-accent-700 no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current dark:text-accent-300">PDF</a>
+          <a download target="_blank" href="$fmt-pdf$" class="enlace-acento">PDF</a>
         </li>
 $endif$
 $if(fmt-epub)$
         <li>
-          <a download target="_blank" href="$fmt-epub$" class="text-accent-700 no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current dark:text-accent-300">EPUB</a>
+          <a download target="_blank" href="$fmt-epub$" class="enlace-acento">EPUB</a>
         </li>
 $endif$
 $if(fmt-latex)$
         <li>
-          <a download target="_blank" href="$fmt-latex$" class="text-accent-700 no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current dark:text-accent-300">LaTeX</a>
+          <a download target="_blank" href="$fmt-latex$" class="enlace-acento">LaTeX</a>
         </li>
 $endif$
 $if(fmt-markdown)$
         <li>
-          <a download target="_blank" href="$fmt-markdown$" class="text-accent-700 no-underline underline-offset-4 decoration-current/40 transition-colors duration-200 hover:underline hover:decoration-current dark:text-accent-300">Markdown</a>
+          <a download target="_blank" href="$fmt-markdown$" class="enlace-acento">Markdown</a>
         </li>
 $endif$
         </ul>

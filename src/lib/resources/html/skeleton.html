@@ -14,42 +14,38 @@
   $if(favicon)$$favicon$$endif$
   $if(keywords)$<meta name="keywords" content="$keywords$">$endif$
 </head>
-<body id="top" class="font-sans antialiased text-base text-stone-900 sm:text-lg dark:text-stone-100 bg-paper bg-paper-grid">
+<body id="top" class="sitio">
 
-  <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-accent-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">Saltar al contenido</a>
+  <a href="#contenido" class="salto-contenido">Saltar al contenido</a>
 
-  <div class="mx-auto max-w-[96rem] space-y-4 px-4 pt-4 pb-24 sm:space-y-5 sm:px-5 sm:pt-5 sm:pb-28 lg:space-y-7 lg:px-8 lg:pt-7 lg:pb-32">
-    <header>
+  <div class="marco">
+    <header class="sitio-header">
       <div id="slot-header"></div>
     </header>
 
     <div id="slot-hero"></div>
 
     <div class="content-grid $page-type-class$">
-      <main id="contenido" class="contents">
-        <div id="slot-page-header" class="page-header min-w-0"></div>
-        <div class="page-content min-w-0">
-          <div id="slot-main" class="page-main min-w-0 space-y-4 sm:space-y-6 lg:space-y-8"></div>
-          <div id="slot-publications" class="page-publications creator-publications-grid min-w-0"></div>
+      <main id="contenido" class="contenido-principal">
+        <div id="slot-page-header" class="page-header"></div>
+        <div class="page-content">
+          <div id="slot-main" class="page-main"></div>
+          <div id="slot-publications" class="page-publications creator-publications-grid"></div>
         </div>
       </main>
-      <aside id="slot-aside" class="page-aside min-w-0" aria-label="Información">
-        <div id="slot-related" class="page-related min-w-0 space-y-4 sm:space-y-6 lg:space-y-8"></div>
-        <div id="slot-sidebar" class="page-sidebar min-w-0 space-y-4 sm:space-y-6 lg:space-y-8"></div>
+      <aside id="slot-aside" class="page-aside" aria-label="Información">
+        <div id="slot-related" class="page-related"></div>
+        <div id="slot-sidebar" class="page-sidebar"></div>
       </aside>
     </div>
 
-    <footer>
+    <footer class="sitio-footer">
       <div id="slot-footer"></div>
     </footer>
   </div>
 
-  <a
-    href="#top"
-    aria-label="Volver al principio"
-    class="scroll-reveal supports-[animation-timeline:scroll()]:opacity-0 fixed bottom-6 right-6 z-50 flex size-12 items-center justify-center rounded-full border-2 border-accent-500/50 bg-accent-500/20 text-accent-800 shadow-sm transition-colors duration-200 hover:border-accent-500 hover:bg-accent-500/30 dark:border-accent-400/50 dark:bg-accent-500/20 dark:text-accent-200 dark:hover:bg-accent-500/30"
-  >
-    <img src="$icon-top$" alt="" width="36" height="36" class="h-9 w-9">
+  <a href="#top" aria-label="Volver al principio" class="volver-arriba">
+    <img src="$icon-top$" alt="" width="36" height="36" class="volver-arriba__icono">
   </a>
 </body>
 </html>

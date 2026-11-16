@@ -46,7 +46,7 @@ export function postProcessHtml(html: string, refsCardTemplate: string, refsLabe
 
 export function moveCollectionIntro(html: string): string {
   const marker = INTRO;
-  const divStart = html.indexOf('<div class="collection-intro"');
+  const divStart = html.indexOf('<div class="collection-intro');
   if (divStart < 0) return html.replace(marker, '');
   const end = findBalancedDivEnd(html, divStart, 'el body propio de la collection');
   if (end === undefined) return html;
@@ -58,7 +58,7 @@ export function moveCollectionIntro(html: string): string {
     return withoutIntro;
   }
   if (inner === '') return withoutIntro.replace(marker, '');
-  const bloque = `<div class="max-w-none text-left prose prose-lg font-medium sm:prose-xl lg:prose-2xl contenido-tamano contenido-compacto text-stone-900 dark:text-stone-100 [&_p]:my-0 dark:prose-invert [--tw-prose-links:var(--color-accent-600)] [--tw-prose-invert-links:var(--color-accent-500)]">${inner}</div>`;
+  const bloque = `<div class="intro-coleccion prose contenido-tamano contenido-compacto">${inner}</div>`;
   return withoutIntro.replace(marker, () => bloque);
 }
 
@@ -120,11 +120,11 @@ export function extractReferencesBlock(html: string, cardTemplate: string, refsL
 }
 
 function responsiveSizes(tag: string): string {
-  if (tag.includes('width:100px') || tag.includes('rounded-full')) return '100px';
-  if (tag.includes('object-contain') && tag.includes('border-accent-500/70')) {
+  if (tag.includes('retrato__img') || tag.includes('retrato-pagina__imagen') || tag.includes('width:100px')) return '100px';
+  if (tag.includes('portada') || tag.includes('contenido-retrato')) {
     return '(min-width:1536px) 25vw, (min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:768px) 40vw, (min-width:640px) 45vw, 100vw';
   }
-  if (tag.includes('h-full w-full object-cover')) {
+  if (tag.includes('tarjeta-imagen__img') || tag.includes('hero__imagen')) {
     return '(min-width:1536px) 33vw, (min-width:1280px) 33vw, (min-width:1024px) 50vw, (min-width:768px) 100vw, (min-width:640px) 50vw, 100vw';
   }
   return '(min-width:1536px) 50vw, (min-width:1280px) 50vw, (min-width:1024px) 66vw, (min-width:768px) 66vw, 100vw';
@@ -149,7 +149,16 @@ export function addResponsiveImages(html: string, variants: Map<string, ImageVar
     const width = /\swidth="/.test(tag) ? '' : ` width="${mayor.width}"`;
     const height = /\sheight="/.test(tag) ? '' : ` height="${mayor.height}"`;
     let salida = tag.replace(/\s*\/?>$/, (fin) => `${srcset}${width}${height}${fin}`);
-    if (!salida.includes('loading=') && !tag.includes('object-cover') && !tag.includes('object-contain') && !tag.includes('width:100px')) {
+    if (
+      !salida.includes('loading=') &&
+      !tag.includes('tarjeta-imagen__img') &&
+      !tag.includes('hero__imagen') &&
+      !tag.includes('portada') &&
+      !tag.includes('contenido-retrato') &&
+      !tag.includes('retrato__img') &&
+      !tag.includes('retrato-pagina__imagen') &&
+      !tag.includes('width:100px')
+    ) {
       salida = salida.replace('<img', '<img loading="lazy" decoding="async"');
     }
     return salida;

@@ -1,13 +1,14 @@
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
+import { ACCENT_PALETTE_VALUES } from '../lib/accent-palette-values.js';
 import { ACCENT_COLORS, ACCENT_SHADES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { DEFAULT_HTML_STYLE, type HtmlStyle, htmlStyle, htmlStyleColor, STYLE_FONTS } from '../lib/html-styles.js';
 import { logWarning } from '../lib/logger.js';
+import { minifyCss } from '../lib/minify.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import { spawnMagick } from './image-processor.js';
@@ -20,8 +21,6 @@ import {
   ASSETS_LOGO_SVG,
   ASSETS_LOGO_WEBP,
 } from './output-layout.js';
-import { hashGlobbedFiles } from './state-hash.js';
-import type { FileCacheMap } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
@@ -44,20 +43,6 @@ const ICON_FILES = [
   { name: 'menu', size: 48 },
 ] as const;
 
-export async function resolveTailwindBin(): Promise<string> {
-  try {
-    const pkgUrl = import.meta.resolve('@tailwindcss/cli/package.json');
-    const pkgPath = fileURLToPath(pkgUrl);
-    const pkg = JSON.parse(await Bun.file(pkgPath).text()) as { bin?: Record<string, string> | string };
-    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.tailwindcss;
-    if (bin) {
-      const resolved = join(dirname(pkgPath), bin);
-      if (await Bun.file(resolved).exists()) return resolved;
-    }
-  } catch {}
-  throw new BuildError(`no se encontró el binario de Tailwind CSS (@tailwindcss/cli). Verifica que el paquete esté instalado (bun install).`);
-}
-
 async function fontFaceCss(style: HtmlStyle): Promise<string> {
   return STYLE_FONTS[style]
     .map(
@@ -66,76 +51,51 @@ async function fontFaceCss(style: HtmlStyle): Promise<string> {
     )
     .join('\n');
 }
-export async function compileTailwindCss(
-  outputDir: string,
-  accent: string,
-  projectRoot: string,
-  style: HtmlStyle = DEFAULT_HTML_STYLE,
-): Promise<void> {
-  const inputDir = join(projectRoot, '.iteraciones', 'css');
-  const inputPath = join(inputDir, 'input.css');
-  const outPath = join(outputDir, ASSETS_CSS_FILE);
-  if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new BuildError(`acento desconocido: "${accent}"`);
-  const accentTheme = ACCENT_SHADES.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
-  const styleImport = [`@import "${join(STYLES_DIR, `${style}.css`)}";`];
-  const fontFaces = await fontFaceCss(style);
-  const input = [`@import "${STYLES_SRC}";`, ...styleImport, fontFaces, `@source "${outputDir}/**/*.html";`, '@theme {', accentTheme, '}'].join('\n');
 
-  await mkdir(inputDir, { recursive: true });
-  await writeFile(inputPath, input, 'utf8');
-  await mkdir(dirname(outPath), { recursive: true });
-  try {
-    const tailwindBin = await resolveTailwindBin();
-    const argv = [process.execPath, tailwindBin, '-i', inputPath, '-o', outPath, '--minify'];
-    const proc = Bun.spawn(argv, {
-      cwd: inputDir,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-    if (exitCode !== 0) {
-      throw new BuildError(`Tailwind CSS falló al compilar el CSS:\n${stderr || stdout}`);
-    }
-
-    recordSupportCommand('css', outputDir, argv, inputDir);
-  } catch (err) {
-    if (err instanceof BuildError) throw err;
-    throw new BuildError(`no se pudo ejecutar Tailwind CSS. Verifica que el paquete esté instalado (bun install).`);
-  }
+function accentTokens(accent: AccentColor): string {
+  const values = ACCENT_PALETTE_VALUES[accent];
+  const tokens = ACCENT_SHADES.map((shade) => `--color-accent-${shade}:${values[shade]}`).join(';');
+  return `:root{${tokens}}`;
 }
 
-export async function computeCssHash(
+export async function compileCss(
   outputDir: string,
-  siteConfig: SiteConfig,
-  prevCache?: FileCacheMap,
-): Promise<{ hash: string; cache: FileCacheMap }> {
+  accent: string,
+  style: HtmlStyle = DEFAULT_HTML_STYLE,
+  theme: 'light' | 'dark' = 'light',
+): Promise<void> {
+  if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new BuildError(`acento desconocido: "${accent}"`);
+  const outPath = join(outputDir, ASSETS_CSS_FILE);
+  const base = await readFile(STYLES_SRC, 'utf8');
+  const styleCss = await readFile(join(STYLES_DIR, `${style}.css`), 'utf8');
+  const darkCss = theme === 'dark' ? await readFile(join(STYLES_DIR, 'dark.css'), 'utf8') : '';
+  const darkStyleCss = theme === 'dark' ? await readFile(join(STYLES_DIR, `dark-${style}.css`), 'utf8') : '';
+  const css = [await fontFaceCss(style), accentTokens(accent as AccentColor), base, styleCss, darkCss, darkStyleCss].join('\n');
+  await mkdir(dirname(outPath), { recursive: true });
+  await writeFile(outPath, await minifyCss(css), 'utf8');
+}
+
+export async function computeCssHash(siteConfig: SiteConfig): Promise<string> {
   const hasher = new Bun.CryptoHasher('sha256');
-  const cache: FileCacheMap = {};
-  if (await isDir(outputDir)) {
-    for (const part of await hashGlobbedFiles(outputDir, '**/*.html', prevCache, cache)) hasher.update(part);
-  }
-  const stylesSrc = await Bun.file(STYLES_SRC).text();
-  hasher.update(stylesSrc);
+  hasher.update(await Bun.file(STYLES_SRC).text());
   const site = siteConfig.format?.html?.site;
   const style = htmlStyle(site?.style);
-  hasher.update(htmlStyleColor(site?.style, site?.color));
+  const theme = site?.theme ?? 'light';
+  const accent = htmlStyleColor(site?.style, site?.color) as AccentColor;
   hasher.update(style);
+  hasher.update(theme);
+  hasher.update(accent);
   hasher.update(await Bun.file(join(STYLES_DIR, `${style}.css`)).arrayBuffer());
+  if (theme === 'dark') {
+    hasher.update(await Bun.file(join(STYLES_DIR, 'dark.css')).arrayBuffer());
+    hasher.update(await Bun.file(join(STYLES_DIR, `dark-${style}.css`)).arrayBuffer());
+  }
+  hasher.update(JSON.stringify(ACCENT_PALETTE_VALUES[accent]));
+  hasher.update(JSON.stringify(STYLE_FONTS[style]));
   for (const font of STYLE_FONTS[style]) {
     hasher.update(await Bun.file(join(FONTS_SRC, font.source)).arrayBuffer());
   }
-  const tailwindBin = await resolveTailwindBin().catch(() => '');
-  if (tailwindBin) {
-    const binStat = await Bun.file(tailwindBin)
-      .stat()
-      .catch(() => null);
-    if (binStat) {
-      hasher.update('tailwind-bin');
-      hasher.update(String(Math.round(binStat.mtimeMs)));
-      hasher.update(String(binStat.size));
-    }
-  }
-  return { hash: hasher.digest('hex'), cache };
+  return hasher.digest('hex');
 }
 
 export async function buildAssets(
@@ -143,22 +103,21 @@ export async function buildAssets(
   cwd: string,
   siteConfig: SiteConfig,
   prevCssHash?: string,
-  prevCssFileCache?: FileCacheMap,
   licenseIcons?: Set<string>,
-): Promise<{ cssHash: string; cssFileCache: FileCacheMap }> {
+): Promise<{ cssHash: string }> {
   await copyStaticAssets(outputDir, cwd, siteConfig, licenseIcons);
   const site = siteConfig.format?.html?.site;
   const style = htmlStyle(site?.style);
   const assetsArgv = ['iteraciones', 'assets', '-o', outputDir];
   if (licenseIcons !== undefined) assetsArgv.push('--licenses', [...licenseIcons].sort().join(','));
   recordSupportCommand('resources', outputDir, assetsArgv);
-  const { hash: cssHash, cache: cssFileCache } = await computeCssHash(outputDir, siteConfig, prevCssFileCache);
+  const cssHash = await computeCssHash(siteConfig);
   const cssExists = await Bun.file(join(outputDir, ASSETS_CSS_FILE)).exists();
   if (prevCssHash !== cssHash || !cssExists) {
     const accent = htmlStyleColor(site?.style, site?.color);
-    await compileTailwindCss(outputDir, accent, cwd, style);
+    await compileCss(outputDir, accent, style, site?.theme ?? 'light');
   }
-  return { cssHash, cssFileCache };
+  return { cssHash };
 }
 
 const DEFAULT_LOGO = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
@@ -170,14 +129,10 @@ function logoPx(size: string | undefined): number {
   return Math.round(Number(match?.[1] ?? Number.parseFloat(DEFAULT_HTML_FORMAT.site.logoSize)) * 2);
 }
 
-async function accent500(color: string | undefined): Promise<string | undefined> {
-  try {
-    const css = await Bun.file(fileURLToPath(import.meta.resolve('tailwindcss/theme.css'))).text();
-    const raw = new RegExp(`--color-${color ?? 'lime'}-500:\\s*([^;]+);`).exec(css)?.[1]?.trim();
-    return raw === undefined ? undefined : (Bun.color(raw, 'hex') ?? undefined);
-  } catch {
-    return undefined;
-  }
+function accent500(color: string | undefined): string | undefined {
+  const name = ACCENT_COLORS.includes(color as AccentColor) ? (color as AccentColor) : 'lime';
+  const value = ACCENT_PALETTE_VALUES[name][500];
+  return value === undefined ? undefined : (Bun.color(value, 'hex') ?? undefined);
 }
 
 async function colorCount(src: string): Promise<number> {
@@ -294,7 +249,7 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
   const logo = siteConfig.format?.html?.site?.logo?.trim();
   const html = siteConfig.format?.html;
   const size = logoPx(html?.site?.logoSize);
-  const accent = await accent500(htmlStyleColor(html?.site?.style, html?.site?.color));
+  const accent = accent500(htmlStyleColor(html?.site?.style, html?.site?.color));
 
   if (!logo) {
     if (await rasterSvgLogo(DEFAULT_LOGO, outputDir, size, accent)) {
@@ -333,7 +288,7 @@ async function iconAWebp(src: string, dest: string, size: number, tint?: string)
 
 async function writeIconAssets(outputDir: string, siteConfig: SiteConfig): Promise<void> {
   const site = siteConfig.format?.html?.site;
-  const accent = await accent500(htmlStyleColor(site?.style, site?.color));
+  const accent = accent500(htmlStyleColor(site?.style, site?.color));
   for (const icon of ICON_FILES) {
     const src = join(ICONS_DIR, `${icon.name}.svg`);
     const dest = join(outputDir, ASSETS_IMAGES_DIR, `${icon.name}.webp`);
