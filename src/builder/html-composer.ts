@@ -76,7 +76,10 @@ function headerHtml(identity: string, menuHeader: string, redes: string): string
 }
 
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
-  return identityCard([`<div class="sitio-acciones">${menuFooterPlain}${redes}</div>`, `<div class="sitio-pie__identidad">${footerIdentity}</div>`]);
+  return identityCard([
+    `<div class="sitio-acciones sitio-acciones--pie">${menuFooterPlain}${redes}</div>`,
+    `<div class="sitio-pie__identidad">${footerIdentity}</div>`,
+  ]);
 }
 
 function fillSlot(html: string, name: string, content: string): string {

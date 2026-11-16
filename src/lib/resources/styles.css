@@ -732,6 +732,10 @@ a:hover {
   gap: 0.5rem;
 }
 
+.sitio-acciones.sitio-acciones--pie {
+  justify-content: flex-start;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
