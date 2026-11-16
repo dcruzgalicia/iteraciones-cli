@@ -72,14 +72,7 @@ function identityCard(children: string[]): string {
 }
 
 function headerHtml(identity: string, menuHeader: string, redes: string): string {
-  return [
-    '<div class="tarjeta tarjeta--identidad">',
-    '<div class="sitio-header__contenido">',
-    identity,
-    `<div class="sitio-acciones">${menuHeader}${redes}</div>`,
-    '</div>',
-    '</div>',
-  ].join('\n');
+  return identityCard([`<div>${identity}</div>`, `<div class="sitio-acciones">${menuHeader}${redes}</div>`]);
 }
 
 function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: string): string {
