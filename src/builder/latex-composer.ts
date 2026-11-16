@@ -11,7 +11,7 @@ import { isInside, posix } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { COVER_IMAGE_FIELDS, type ProcessedImages, parseLetterheadHeight, uniqueName } from './image-processor.js';
+import { COVER_IMAGE_FIELDS, type ProcessedImages, parseLetterheadHeight, relativeAssetHref, uniqueName } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { ASSETS_PDF_IMAGES_DIR } from './output-layout.js';
 import { metadataArgs } from './pandoc-metadata.js';
@@ -349,11 +349,12 @@ export async function markdownToLatex(
   return { tex, processedImages: images?.processedFiles ?? [] };
 }
 
-export function buildTexDistribution(processedImages: string[], names?: Map<string, string>): Map<string, string> {
+export function buildTexDistribution(processedImages: string[], names?: Map<string, string>, fromDir = '.'): Map<string, string> {
   const map = new Map<string, string>();
   const taken = new Set<string>();
   for (const abs of processedImages) {
-    map.set(abs, `${ASSETS_PDF_IMAGES_DIR}/${uniqueName(names?.get(abs) ?? basename(abs), taken)}`);
+    const name = uniqueName(names?.get(abs) ?? basename(abs), taken);
+    map.set(abs, relativeAssetHref(fromDir, `${ASSETS_PDF_IMAGES_DIR}/${name}`).replace(/^\.\//, ''));
   }
   return map;
 }
@@ -384,7 +385,8 @@ async function distAssetTarget(
   if (!(await Bun.file(abs).exists())) return null;
   const ext = extname(abs).toLowerCase();
   if (IMAGE_EXTS.has(ext)) {
-    const rel = `${ASSETS_PDF_IMAGES_DIR}/${basename(abs)}`;
+    const fromDir = posix(relative(distRoot, texDir));
+    const rel = relativeAssetHref(fromDir, `${ASSETS_PDF_IMAGES_DIR}/${basename(abs)}`).replace(/^\.\//, '');
     return { rel, copy: resolve(texDir, rel) !== resolve(abs) };
   }
   if (ext !== '.bib' || !bundle || !isInside(projectRoot, abs)) return null;

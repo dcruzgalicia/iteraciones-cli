@@ -110,7 +110,7 @@ Característica: el tipo `intervention`
       Dado que la raíz del proyecto está vacía
       Y una intervention con membrete de 3 imágenes y 4 páginas
       Cuando compilo el proyecto con PDF
-      Entonces el .tex de la intervention llama al membrete con "regla-i1", "regla-i2" y "regla-i3"
+      Entonces el .tex de la intervention llama al membrete con "i1", "i2" y "i3"
 
     Escenario: Tres imágenes llenan cuatro páginas y se repite la primera
       Dado que la raíz del proyecto está vacía
@@ -134,7 +134,7 @@ Característica: el tipo `intervention`
       Dado que la raíz del proyecto está vacía
       Y una colección con una intervention con membrete
       Cuando compilo el proyecto con PDF
-      Entonces el .tex de la colección enciende el membrete con "antologia-i1" y "antologia-i2"
+      Entonces el .tex de la colección enciende el membrete con "i1" y "i2"
       Y el membrete se enciende después del salto de página de la intervention
       Y el .tex de la colección apaga el membrete después de la intervention
 

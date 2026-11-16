@@ -7,9 +7,9 @@ Característica: Todo lo estático de dist vive dentro de un directorio assets
     Dado un proyecto con un manuscrito y un anexo anidado, cada uno con sus imágenes
     Y el frontmatter del manuscrito trae las tres formas de imagen
     Cuando compilo el proyecto por el CLI
-    Entonces la copia de cada imagen vive en el directorio de imágenes de su nivel
-    Y el formato exportado la referencia desde ese directorio
-    Y el anexo no sube con dos puntos para llegar a su directorio
+    Entonces la copia de cada imagen vive en el assets raíz
+    Y el formato exportado la referencia desde el assets raíz
+    Y el anexo sube un nivel para llegar a assets
     Y el markdown exportado apunta a assets en todas las formas
     Y el mapa de rutas por documento y formato existe
     Y ningún archivo estático queda fuera de un directorio assets

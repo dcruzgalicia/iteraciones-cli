@@ -53,6 +53,13 @@ export function uniqueName(base: string, taken: Set<string>): string {
   return name;
 }
 
+export function relativeAssetHref(fromDir: string, asset: string): string {
+  const clean = fromDir.replace(/^\.\//, '').replace(/\/$/, '');
+  const depth = clean === '' || clean === '.' ? 0 : clean.split('/').filter(Boolean).length;
+  const prefix = depth === 0 ? './' : '../'.repeat(depth);
+  return `${prefix}${asset.replace(/^\.\//, '')}`;
+}
+
 interface ImageProcessSpec {
   outPath: string;
   resize?: string;
@@ -264,11 +271,11 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
   return result;
 }
 
-export function imagePathsMap(imageMap: Map<string, string>, docDir: string, relativize: boolean): Record<string, string> {
+export function imagePathsMap(imageMap: Map<string, string>, docDir: string, relativize: boolean, fromDir = '.'): Record<string, string> {
   const paths: Record<string, string> = {};
   for (const [absoluteOriginal, processed] of imageMap) {
     if (processed === absoluteOriginal) continue;
-    const value = relativize ? `./${ASSETS_IMAGES_DIR}/${basename(processed)}` : processed;
+    const value = relativize ? relativeAssetHref(fromDir, `${ASSETS_IMAGES_DIR}/${basename(processed)}`) : processed;
     const rel = relative(docDir, absoluteOriginal);
     for (const key of [absoluteOriginal, rel, `./${rel}`]) {
       if (key !== '') paths[key] = value;
@@ -790,8 +797,15 @@ export async function processWebImages(
   );
 }
 
-export function relImageMapFor(imageMap: Map<string, string>, base = ASSETS_IMAGES_DIR, names?: Map<string, string>): Map<string, string> {
+export function relImageMapFor(
+  imageMap: Map<string, string>,
+  base = ASSETS_IMAGES_DIR,
+  names?: Map<string, string>,
+  fromDir = '.',
+): Map<string, string> {
   return new Map(
-    [...imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${base}/${names?.get(dst) ?? basename(dst)}`]),
+    [...imageMap]
+      .filter(([src, dst]) => dst !== src)
+      .map(([src, dst]): [string, string] => [src, relativeAssetHref(fromDir, `${base}/${names?.get(dst) ?? basename(dst)}`)]),
   );
 }
