@@ -13,7 +13,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Y otra creadora llamada "Otra Autora"
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/creadora.html" dice "assets/images/lista-ana"
+      Y el archivo "dist/files/creadora.html" dice "-ana.webp"
       Y el archivo "dist/files/creadora.html" dice "width:100px;height:100px"
       Y el archivo "dist/files/creadora.html" dice "retrato__img"
       Y el archivo "dist/files/creadora.html" dice "aria-label=\"Ver la biografía de Ana García\" class=\"retrato__enlace"
@@ -36,10 +36,10 @@ Característica: el retrato de la creadora en sus tarjetas
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/ana-garcia.html" dice "Retrato de Ana García"
-      Y el archivo "dist/files/ana-garcia.html" dice "assets/images/ana-garcia-ana"
+      Y el archivo "dist/files/ana-garcia.html" dice "-ana.webp"
       Y el archivo "dist/files/ana-garcia.html" dice "contenido-retrato"
-      Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "assets/images/ana-garcia-ana"
-      Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-document\"" antes que "assets/images/ana-garcia-ana"
+      Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "-ana.webp"
+      Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-document\"" antes que "-ana.webp"
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "Bio de Ana García."
 
     Escenario: El retrato queda antes de los textos de la creadora

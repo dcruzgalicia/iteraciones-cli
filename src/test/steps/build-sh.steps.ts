@@ -281,8 +281,11 @@ const CHEQUEOS: Record<string, Chequeo> = {
     const cpFuera = script
       .split('\n')
       .map((linea) => linea.trim())
-      .filter((linea) => /^cp\b/.test(linea) && !/^cp \.iteraciones\/seo\//.test(linea));
-    if (cpFuera.length > 0) falla(`usa cp fuera de .iteraciones/seo: ${JSON.stringify(cpFuera)}`);
+      .filter(
+        (linea) =>
+          /^cp\b/.test(linea) && !/^cp \.iteraciones\/seo\//.test(linea) && !/^cp \S*\.iteraciones\/processed-images\/\S+ \S+dist\//.test(linea),
+      );
+    if (cpFuera.length > 0) falla(`usa cp fuera de .iteraciones/seo o processed-images: ${JSON.stringify(cpFuera)}`);
     const prohibidas = systemCommands(script).filter((c) => c !== 'cd' && c !== 'cp');
     if (prohibidas.length > 0) falla(`usa primitivas prohibidas: ${JSON.stringify(prohibidas)}`);
   },
@@ -317,11 +320,13 @@ const CHEQUEOS: Record<string, Chequeo> = {
   invocación: ({ script, falla }) => {
     if (!script.includes('magick ')) falla('no invoca ImageMagick');
   },
-  'copia única': async ({ distPath, slug, falla }) => {
-    if (!(await Bun.file(join(distPath, 'assets', 'images', `${slug}-foto.webp`)).exists())) {
-      falla(`la imagen web no está en assets/images como ${slug}-foto.webp`);
+  'copia única': async ({ distPath, falla }) => {
+    const encontradas = await Array.fromAsync(new Bun.Glob('*-foto.webp').scan({ cwd: join(distPath, 'assets', 'images'), onlyFiles: true }));
+    if (encontradas.length !== 1) {
+      falla(`la imagen web no está en assets/images: ${encontradas.join(', ') || 'no hay ninguna'}`);
     }
-    if (await Bun.file(join(distPath, `${slug}-foto.webp`)).exists()) {
+    const enRaiz = await Array.fromAsync(new Bun.Glob('*-foto.webp').scan({ cwd: distPath, onlyFiles: true }));
+    if (enRaiz.length > 0) {
       falla('la imagen procesada no debe quedarse en la raíz de dist (#2450)');
     }
   },
@@ -443,6 +448,14 @@ Then('las entradas de las colecciones se reconstruyen idénticas', async () => {
 Then('dist tiene el archivo {string}', async (relativa: string) => {
   const path = join(world.distPath, relativa);
   if (!(await Bun.file(path).exists())) throw new Error(`dist no tiene ${relativa} (sí hay: ${(await snapshot(world.distPath)).size} archivos)`);
+});
+
+Then('dist tiene una imagen web para {string}', async (nombre: string) => {
+  const dir = join(world.distPath, 'assets', 'images');
+  const encontradas = await Array.fromAsync(new Bun.Glob(`*-${nombre}.*`).scan({ cwd: dir, onlyFiles: true }));
+  if (encontradas.length !== 1) {
+    throw new Error(`esperaba una imagen web para "${nombre}" y hay ${encontradas.length}: ${encontradas.join(', ')}`);
+  }
 });
 
 const distTiene = async (relativa: string, esperado: boolean): Promise<void> => {

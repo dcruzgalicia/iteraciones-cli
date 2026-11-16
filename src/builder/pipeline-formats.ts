@@ -21,11 +21,10 @@ import { parseAuthors } from './discover-frontmatter.js';
 import { assembleExportDocument, convertToEpub, convertToMarkdown, type ExportDocument } from './export.js';
 import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { creatorPortraitHtml, type HtmlPageVars, logoBlockHtml } from './html-composer.js';
-import { addResponsiveImages } from './html-postprocess.js';
+import { addImageAttributes } from './html-postprocess.js';
 import {
   type DocumentImages,
-  type ImageVariant,
-  imageNamerFor,
+  type ImageDimensions,
   imagePathsMap,
   LETTERHEAD_HEIGHT_MM,
   type ProcessedImages,
@@ -198,7 +197,7 @@ async function emitLatexAndQueuePdf(
 
   if (latexOn) {
     const texDir = dirname(texDistPath);
-    const distribution = buildTexDistribution(processedImages);
+    const distribution = buildTexDistribution(processedImages, images.names);
 
     const manifest: LatexPostManifest = {
       authorsBlock,
@@ -929,7 +928,7 @@ export interface EmitHtmlPageArgs {
   docChipHrefOverride?: string;
   contentChipOverride?: string;
   synthetic?: boolean;
-  imageVariants?: Map<string, ImageVariant[]>;
+  imageSizes?: Map<string, ImageDimensions>;
 }
 
 export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
@@ -958,7 +957,7 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
     docChipHrefOverride,
     contentChipOverride,
     synthetic = false,
-    imageVariants,
+    imageSizes,
   } = args;
   const { ctx, plan } = renderCtx;
   const { outBase, outSlug, content } = outputs;
@@ -1016,13 +1015,10 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
       luaFilters: exportCtx.filters,
       scriptOutputPath: htmlPath,
     });
-    if (imageVariants !== undefined && imageVariants.size > 0) {
-      const datos = Object.fromEntries(
-        [...imageVariants].map(([nombre, propias]) => [nombre, propias.map(({ src, width, height }) => ({ src: basename(src), width, height }))]),
-      );
-      await writeOutput(join(cwd, '.iteraciones', 'variants', `${relative(cwd, htmlPath)}.json`), JSON.stringify(datos));
+    if (imageSizes !== undefined && imageSizes.size > 0) {
+      await writeOutput(join(cwd, '.iteraciones', 'image-sizes', `${relative(cwd, htmlPath)}.json`), JSON.stringify(Object.fromEntries(imageSizes)));
     }
-    await writeOutput(htmlPath, addResponsiveImages(html, imageVariants));
+    await writeOutput(htmlPath, addImageAttributes(html, imageSizes));
   }
 }
 
@@ -2005,9 +2001,9 @@ export async function preparaImagenesDeAnuncios(args: {
   const anuncios = await readAnuncios(args.discoveryIndex, args.cwd);
   if (anuncios.length === 0) return new Map();
   const procesadas = await processWebImages(
+    args.cwd,
     imagenesDeLasTarjetas(anuncios, args.cwd),
     join(args.outputDir, ASSETS_IMAGES_DIR),
-    imageNamerFor('anuncio', 'webp'),
     args.pdfxActive,
   );
   return procesadas.imageMap;
@@ -2223,7 +2219,7 @@ interface EmitListPageArgs {
   available: Set<string>;
   imageKey: string;
   imageMap: Map<string, string>;
-  imageVariants?: Map<string, ImageVariant[]>;
+  imageSizes?: Map<string, ImageDimensions>;
   docChip: string;
   docChipHref?: string;
   warning: (dueno: string) => string;
@@ -2248,7 +2244,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     available,
     imageKey,
     imageMap,
-    imageVariants,
+    imageSizes,
     docChip,
     docChipHref,
     warning,
@@ -2309,7 +2305,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     exportCtx,
     discoveryIndex,
     imagePaths,
-    imageVariants,
+    imageSizes,
     paginas,
     creatorHrefs: hrefsCreadores,
     menuHeader: menu.header,
@@ -2357,12 +2353,12 @@ export async function emitKeywordLists(args: {
     entradas.push({ ...lista, entradas: propias });
   }
   const procesadas = await processWebImages(
+    cwd,
     imagenesDeLasTarjetas(
       entradas.flatMap((l) => l.entradas),
       cwd,
     ),
     join(outputDir, ASSETS_IMAGES_DIR),
-    imageNamerFor('keywords', 'webp'),
     renderCtx.pdfxActive,
   );
 
@@ -2385,7 +2381,7 @@ export async function emitKeywordLists(args: {
       available,
       imageKey: `${KEYWORDS_DIR}-${slug}`,
       imageMap: procesadas.imageMap,
-      imageVariants: procesadas.variants,
+      imageSizes: procesadas.sizes,
       docChip: 'Palabra clave',
       docChipHref: keywordIndexAvailable(discoveryIndex) ? relativeHref(KEYWORDS_DIR, `${KEYWORD_INDEX_SLUG}.html`) : '',
       warning: () => `no se escribió la lista de "${label}" porque "${KEYWORDS_DIR}/${slug}.html" es el archivo de ese documento`,
@@ -3014,6 +3010,8 @@ async function preprocessDocImages(
     .filter((e) => e.type === 'intervention')
     .reduce((max, e) => Math.max(max, parseLetterheadHeight(e.letterheadHeight)), LETTERHEAD_HEIGHT_MM);
   return preprocessDocumentImages({
+    cwd: ctx.cwd,
+    namePrefix: outputs.outSlug,
     content: [
       collectionScanContent(collectionEntries, content),
 
@@ -3024,7 +3022,6 @@ async function preprocessDocImages(
     pageDimensions: renderCtx.pageDimensions ?? detectPageSize([]),
     cropActive: renderCtx.cropActive,
     pdfxActive: renderCtx.pdfxActive,
-    outSlug: outputs.outSlug,
     dirs: {
       pdf: outputs.outBase(ASSETS_PDF_IMAGES_DIR),
       web: outputs.outBase(ASSETS_IMAGES_DIR),
@@ -3123,7 +3120,7 @@ async function emitCollectionHtml(
   mergedFm: Record<string, unknown>,
   docDir: string,
   webMap: Map<string, string>,
-  imageVariants: Map<string, ImageVariant[]> | undefined,
+  imageSizes: Map<string, ImageDimensions> | undefined,
   creatorLinks: { name: string; url: string }[],
 ): Promise<void> {
   const { ctx, plan, formatCfg } = renderCtx;
@@ -3227,7 +3224,7 @@ async function emitCollectionHtml(
     exportCtx: exportCtx,
     discoveryIndex: discoveryIndex,
     imagePaths: imagePaths,
-    imageVariants,
+    imageSizes,
     paginas: contenidos,
     creatorHrefs: hrefsCreadores,
     extras: extras,
@@ -3268,7 +3265,7 @@ async function emitCollectionFormats(
   const mergedFm = mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd);
   const entradasCreadora = doc.frontmatter.type === 'creator' ? await entradasDeLaCreadora(doc, outputs, discoveryIndex, ctx.cwd) : [];
   const images = await preprocessDocImages(doc, outputs, collectionEntries, creatorDocs, content, renderCtx, entradasCreadora);
-  const pdfImages = images.pdf ?? { imageMap: new Map<string, string>(), processedFiles: [], variants: new Map() };
+  const pdfImages = images.pdf ?? { imageMap: new Map<string, string>(), processedFiles: [], sizes: new Map(), names: new Map() };
   const webMap = images.web?.imageMap ?? new Map<string, string>();
   const epubMap = images.epub?.imageMap ?? new Map<string, string>();
   const relImageMap = relImageMapFor(webMap);
@@ -3314,7 +3311,7 @@ async function emitCollectionFormats(
     mergedFm,
     docDir,
     webMap,
-    images.web?.variants,
+    images.web?.sizes,
     creatorLinks,
   );
 
@@ -3490,12 +3487,12 @@ export async function emitDefaultLists(args: {
   }
 
   const procesadas = await processWebImages(
+    cwd,
     imagenesDeLasTarjetas(
       listas.flatMap((l) => l.entradas),
       cwd,
     ),
     join(outputDir, ASSETS_IMAGES_DIR),
-    imageNamerFor('lista', 'webp'),
     renderCtx.pdfxActive,
   );
 
@@ -3520,7 +3517,7 @@ export async function emitDefaultLists(args: {
       available,
       imageKey: slug,
       imageMap: procesadas.imageMap,
-      imageVariants: procesadas.variants,
+      imageSizes: procesadas.sizes,
       docChip: 'Lista',
       warning: (dueno) =>
         `no se escribió la lista de ${type} porque "${slug}.html" es el archivo de "${dueno}": renombra ese documento (con "slug:" en su frontmatter) para que la lista exista`,

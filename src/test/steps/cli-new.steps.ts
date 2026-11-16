@@ -63,6 +63,14 @@ Then('el archivo {string} no existe', async (nombre: string) => {
   }
 });
 
+Then('existe una imagen web para {string}', async (nombre: string) => {
+  const dir = join(world.root, 'dist', 'files', 'assets', 'images');
+  const encontradas = await Array.fromAsync(new Bun.Glob(`*-${nombre}.*`).scan({ cwd: dir, onlyFiles: true }));
+  if (encontradas.length !== 1) {
+    throw new Error(`esperaba una imagen web para "${nombre}" y hay ${encontradas.length}: ${encontradas.join(', ')}`);
+  }
+});
+
 Then('el frontmatter de {string} declara el campo {string} con el valor {string}', async (nombre: string, campo: string, valor: string) => {
   const datos = await frontmatterParseado(nombre);
   if (JSON.stringify(datos[campo]) !== JSON.stringify(valor)) {
@@ -120,16 +128,13 @@ function contenidoDeSlot(html: string, id: string): string {
   return '';
 }
 
-Then(
-  'el archivo {string} contiene {int} veces en las publicaciones {string}',
-  async (nombre: string, veces: number, texto: string) => {
-    const contenido = contenidoDeSlot(await archivo(nombre), 'slot-publications');
-    const cuenta = contenido.split(texto).length - 1;
-    if (cuenta !== veces) {
-      throw new Error(`${nombre} contiene ${texto} ${cuenta} veces en las publicaciones y debería contenerlo ${veces}`);
-    }
-  },
-);
+Then('el archivo {string} contiene {int} veces en las publicaciones {string}', async (nombre: string, veces: number, texto: string) => {
+  const contenido = contenidoDeSlot(await archivo(nombre), 'slot-publications');
+  const cuenta = contenido.split(texto).length - 1;
+  if (cuenta !== veces) {
+    throw new Error(`${nombre} contiene ${texto} ${cuenta} veces en las publicaciones y debería contenerlo ${veces}`);
+  }
+});
 
 Then('el archivo {string} contiene {string}', async (nombre: string, texto: string) => {
   if (!(await archivo(nombre)).includes(texto)) {

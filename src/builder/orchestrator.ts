@@ -1,4 +1,4 @@
-import { exists, realpath, rm } from 'node:fs/promises';
+import { exists, readdir, realpath, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, isAbsolute, join, normalize, relative } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -20,6 +20,7 @@ import { resolveCollectionFiles } from './collection-files.js';
 import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { projectFilterNames, validateDisabledFilters } from './filter-resolver.js';
+import { resetImageCache } from './image-processor.js';
 import { selectListMembers } from './list-filter.js';
 import { DIST_FILES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
@@ -574,6 +575,15 @@ async function finishBuild(
   return summary;
 }
 
+async function clearBuildState(cwd: string): Promise<void> {
+  const dir = join(cwd, '.iteraciones');
+  const entries = await readdir(dir).catch(() => []);
+  for (const entry of entries) {
+    if (entry === 'processed-images') continue;
+    await rm(join(dir, entry), { recursive: true, force: true });
+  }
+}
+
 async function prepareEnvironment(
   cwd: string,
   options: BuildOptions,
@@ -597,7 +607,7 @@ async function prepareEnvironment(
 
   if (options.full) {
     await rm(ctx.outputDir, { recursive: true, force: true });
-    await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
+    await clearBuildState(cwd);
   }
 
   progress.setFormats([
@@ -715,6 +725,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   const log = (msg: string) => progress.log(msg);
 
   const partial = selectionOf(options) !== undefined;
+  resetImageCache();
 
   const { siteConfig, effectiveDisabledPreamble } = await resolveEffectiveConfig(cwd);
 

@@ -349,11 +349,11 @@ export async function markdownToLatex(
   return { tex, processedImages: images?.processedFiles ?? [] };
 }
 
-export function buildTexDistribution(processedImages: string[]): Map<string, string> {
+export function buildTexDistribution(processedImages: string[], names?: Map<string, string>): Map<string, string> {
   const map = new Map<string, string>();
   const taken = new Set<string>();
   for (const abs of processedImages) {
-    map.set(abs, `${ASSETS_PDF_IMAGES_DIR}/${uniqueName(basename(abs), taken)}`);
+    map.set(abs, `${ASSETS_PDF_IMAGES_DIR}/${uniqueName(names?.get(abs) ?? basename(abs), taken)}`);
   }
   return map;
 }

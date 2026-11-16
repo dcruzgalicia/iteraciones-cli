@@ -74,6 +74,15 @@ async function existe(ruta: string): Promise<boolean> {
   return Bun.file(ruta).exists();
 }
 
+async function imagenWeb(nombre: string, dir = join(world.dist, 'assets', 'images')): Promise<string> {
+  const encontradas = await Array.fromAsync(new Bun.Glob(`*-${nombre}.*`).scan({ cwd: dir, onlyFiles: true }));
+  const unica = encontradas[0];
+  if (encontradas.length !== 1 || unica === undefined) {
+    throw new Error(`esperaba una imagen para "${nombre}" y hay ${encontradas.length}: ${encontradas.join(', ')}`);
+  }
+  return unica;
+}
+
 Given('un proyecto con un manuscrito y un anexo anidado, cada uno con sus imágenes', async () => {
   await Bun.write(join(world.dir, 'iteraciones.config.yaml'), `${CONFIG}\n`);
   for (const [nombre, color] of IMAGENES) await magick(nombre, color);
@@ -92,11 +101,13 @@ When('compilo el proyecto por el CLI', async () => {
 });
 
 Then('la copia de cada imagen vive en el directorio de imágenes de su nivel', async () => {
+  const foto = await imagenWeb('foto');
+  const grafico = await imagenWeb('grafico', join(world.dist, 'sub', 'assets', 'images'));
   const esperadas = [
-    [join('assets', 'images', 'ejemplo-foto.webp'), true],
+    [join('assets', 'images', foto), true],
     [join('assets', 'img', 'foto.jpg'), false],
     ['foto.jpg', false],
-    [join('sub', 'assets', 'images', 'anexo-grafico.webp'), true],
+    [join('sub', 'assets', 'images', grafico), true],
   ] as const;
   for (const [ruta, debeExistir] of esperadas) {
     const hay = await existe(join(world.dist, ruta));
@@ -107,21 +118,23 @@ Then('la copia de cada imagen vive en el directorio de imágenes de su nivel', a
 });
 
 Then('el formato exportado la referencia desde ese directorio', async () => {
+  const foto = await imagenWeb('foto');
   for (const nombre of ['ejemplo.html', 'ejemplo.md']) {
     const content = await readFile(join(world.dist, nombre), 'utf8');
-    if (!content.includes('assets/images/ejemplo-foto.webp')) {
+    if (!content.includes(`assets/images/${foto}`)) {
       throw new Error(`${nombre} no referencia la imagen desde assets/images`);
     }
   }
 });
 
 Then('el anexo no sube con dos puntos para llegar a su directorio', async () => {
+  const grafico = await imagenWeb('grafico', join(world.dist, 'sub', 'assets', 'images'));
   for (const nombre of ['anexo.html', 'anexo.md']) {
     const content = await readFile(join(world.dist, 'sub', nombre), 'utf8');
-    if (!content.includes('./assets/images/anexo-grafico.webp')) {
+    if (!content.includes(`./assets/images/${grafico}`)) {
       throw new Error(`sub/${nombre} no referencia su imagen desde ./assets/images`);
     }
-    if (content.includes('../assets/images/anexo-grafico.webp')) {
+    if (content.includes(`../assets/images/${grafico}`)) {
       throw new Error(`sub/${nombre} sube con ".." para llegar a su assets: la referencia debe ser relativa a su nivel`);
     }
   }
@@ -129,14 +142,11 @@ Then('el anexo no sube con dos puntos para llegar a su directorio', async () => 
 
 Then('el markdown exportado apunta a assets en todas las formas', async () => {
   const md = await readFile(join(world.dist, 'ejemplo.md'), 'utf8');
-  for (const esperado of [
-    'titleImage: ./assets/images/ejemplo-portada.webp',
-    '- ./assets/images/ejemplo-editorial.webp',
-    './assets/images/ejemplo-frontis.webp',
-    './assets/images/ejemplo-referencia.webp',
-    'src="./assets/images/ejemplo-crudo.webp"',
-  ]) {
-    if (!md.includes(esperado)) throw new Error(`el markdown exportado no trae ${esperado}`);
+  for (const nombre of ['portada', 'editorial', 'frontis', 'referencia', 'crudo']) {
+    const archivo = await imagenWeb(nombre);
+    if (!md.includes(`./assets/images/${archivo}`)) {
+      throw new Error(`el markdown exportado no trae ./assets/images/${archivo}`);
+    }
   }
 
   for (const prohibido of ['portada.png', 'editorial.png', 'frontis.png', 'referencia.png', 'crudo.png']) {
@@ -147,7 +157,7 @@ Then('el markdown exportado apunta a assets en todas las formas', async () => {
 Then('el mapa de rutas por documento y formato existe', async () => {
   const mapaPath = join(world.dir, '.iteraciones', 'paths', 'manuscrito.md.html.json');
   const mapa = JSON.parse(await readFile(mapaPath, 'utf8')) as Record<string, string>;
-  const destino = './assets/images/ejemplo-foto.webp';
+  const destino = `./assets/images/${await imagenWeb('foto')}`;
   if (mapa['foto.png'] !== destino) throw new Error(`la clave relativa del mapa no apunta a ${destino}: ${String(mapa['foto.png'])}`);
 
   const canonico = await realpath(world.dir);

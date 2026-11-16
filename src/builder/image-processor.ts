@@ -1,9 +1,10 @@
-import { mkdir, stat } from 'node:fs/promises';
+import { copyFile, mkdir, rename, rm, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { fmStringList } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { cpuConcurrency, exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
+import { isScriptCapture, recordSupportCommand } from '../lib/script-recorder.js';
 import { resetToolVersionCache, toolVersionMagick } from '../lib/tool-version.js';
 import { toMm } from './latex-preamble.js';
 import { ASSETS_IMAGES_DIR } from './output-layout.js';
@@ -21,6 +22,7 @@ let warnedMissingMagick = false;
 export function resetMagickCache(): void {
   resetToolVersionCache();
   warnedMissingMagick = false;
+  resetImageCache();
 }
 
 export interface PageDimensions {
@@ -31,12 +33,6 @@ export interface PageDimensions {
 
 function mmToPx(mm: number): number {
   return Math.round(mm * MM_TO_PX_300DPI);
-}
-
-function processedName(filePath: string): string {
-  const name = basename(filePath);
-  const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(0, dot) : name;
 }
 
 export function uniqueName(base: string, taken: Set<string>): string {
@@ -57,21 +53,6 @@ export function uniqueName(base: string, taken: Set<string>): string {
   return name;
 }
 
-export function imageNamerFor(outSlug: string, ext = 'jpg'): (absPath: string) => string {
-  const prefix = outSlug === '' ? '' : `${outSlug}-`;
-  const taken = new Set<string>();
-  const cache = new Map<string, string>();
-  return (absPath: string): string => {
-    const cached = cache.get(absPath);
-    if (cached !== undefined) return cached;
-    const base = processedName(absPath);
-    const stem = prefix !== '' && base.startsWith(prefix) ? base.slice(prefix.length) : base;
-    const name = uniqueName(`${prefix}${stem}.${ext}`, taken);
-    cache.set(absPath, name);
-    return name;
-  };
-}
-
 interface ImageProcessSpec {
   outPath: string;
   resize?: string;
@@ -79,8 +60,8 @@ interface ImageProcessSpec {
   density300: boolean;
   grayscale: boolean;
   quality: number;
-  maxBytes?: number;
-  minQuality?: number;
+  alphaQuality?: number;
+  targetDefine?: string;
   flatten: boolean;
 }
 
@@ -92,6 +73,8 @@ function imageArgs(inputPath: string, spec: ImageProcessSpec, quality: number, i
   if (spec.extent !== undefined) args.push('-gravity', 'center', '-extent', spec.extent);
   if (spec.density300) args.push('-density', '300', '-units', 'PixelsPerInch');
   if (spec.grayscale) args.push('-colorspace', 'Gray');
+  if (spec.targetDefine !== undefined) args.push('-define', spec.targetDefine);
+  if (spec.alphaQuality !== undefined) args.push('-define', `webp:alpha-quality=${spec.alphaQuality}`);
   args.push('-quality', String(quality));
   if (spec.flatten) args.push('-background', 'white', '-flatten');
   args.push(spec.outPath);
@@ -129,24 +112,10 @@ async function runMagick(inputPath: string, args: string[]): Promise<boolean> {
   return false;
 }
 
-async function processImage(inputPath: string, spec: ImageProcessSpec): Promise<string> {
+async function processImage(inputPath: string, spec: ImageProcessSpec): Promise<boolean> {
   await mkdir(dirname(spec.outPath), { recursive: true });
-
   const isSvg = inputPath.toLowerCase().endsWith('.svg');
-  const floor = spec.minQuality ?? spec.quality;
-  let quality = spec.quality;
-
-  for (let intento = 0; intento < 10; intento++) {
-    if (!(await runMagick(inputPath, imageArgs(inputPath, spec, quality, isSvg)))) return inputPath;
-    if (spec.maxBytes === undefined) break;
-    const size = await stat(spec.outPath)
-      .then((s) => s.size)
-      .catch(() => 0);
-    if (size <= spec.maxBytes || quality <= floor) break;
-    quality = Math.max(floor, quality - 10);
-  }
-
-  return spec.outPath;
+  return runMagick(inputPath, imageArgs(inputPath, spec, spec.quality, isSvg));
 }
 
 const MD_IMAGE_RE = /!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?/g;
@@ -344,8 +313,7 @@ export interface ImageSource {
   heightMm?: number;
 }
 
-export interface ImageVariant {
-  src: string;
+export interface ImageDimensions {
   width: number;
   height: number;
 }
@@ -353,7 +321,8 @@ export interface ImageVariant {
 export interface ProcessedImages {
   imageMap: Map<string, string>;
   processedFiles: string[];
-  variants: Map<string, ImageVariant[]>;
+  sizes: Map<string, ImageDimensions>;
+  names: Map<string, string>;
 }
 
 export interface DocumentImages {
@@ -419,12 +388,17 @@ export async function collectImageSources(
 
 interface ImageProfile {
   outputDir: string;
-  naming: (absPath: string) => string;
+  ext: 'jpg' | 'webp';
   kind: 'pdf' | 'web';
+  publish: boolean;
+  namePrefix?: string;
   maxWidthPx?: number;
+  fallbackMaxWidthPx?: number;
   quality: number;
+  fallbackQuality?: number;
+  fallbackAlphaQuality?: number;
   maxBytes?: number;
-  minQuality?: number;
+  targetDefine?: string;
   flatten: boolean;
   density300: boolean;
   grayscale: boolean;
@@ -455,83 +429,242 @@ function grayscaleFor(source: ImageSource, profile: ImageProfile): boolean {
   return true;
 }
 
-async function imageDimensions(path: string): Promise<{ width: number; height: number } | undefined> {
+interface CachedImage {
+  path: string;
+  width?: number;
+  height?: number;
+  bytes: number;
+}
+
+const cacheResults = new Map<string, CachedImage>();
+const cacheInFlight = new Map<string, Promise<CachedImage | undefined>>();
+const sourceHashes = new Map<string, string>();
+const publishedThisBuild = new Set<string>();
+
+export function resetImageCache(): void {
+  cacheResults.clear();
+  cacheInFlight.clear();
+  sourceHashes.clear();
+  publishedThisBuild.clear();
+}
+
+function stemOf(path: string): string {
+  const base = basename(path);
+  const dot = base.lastIndexOf('.');
+  return dot > 0 ? base.slice(0, dot) : base;
+}
+
+function safeStem(path: string): string {
+  const safe = stemOf(path)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return (safe === '' ? 'imagen' : safe).slice(0, 64);
+}
+
+async function sourceHash(path: string): Promise<string> {
+  const info = await stat(path);
+  const key = `${path}:${info.mtimeMs}:${info.size}`;
+  const cached = sourceHashes.get(key);
+  if (cached !== undefined) return cached;
+  const hash = Bun.CryptoHasher.hash('sha256', await Bun.file(path).arrayBuffer(), 'hex');
+  sourceHashes.set(key, hash);
+  return hash;
+}
+
+async function fileSize(path: string): Promise<number> {
+  return stat(path)
+    .then((info) => info.size)
+    .catch(() => 0);
+}
+
+async function imageDimensions(path: string): Promise<ImageDimensions | undefined> {
   try {
-    const result = await exec('magick', ['identify', '-format', '%w %h', path]);
-    const [width, height] = result.stdout.trim().split(/\s+/).map(Number);
+    const proc = Bun.spawn(['magick', 'identify', '-format', '%w %h', path], { stdout: 'pipe', stderr: 'ignore' });
+    if (proc.stdout === undefined || typeof proc.stdout === 'number') {
+      await proc.exited;
+      return undefined;
+    }
+    const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+    if (code !== 0) return undefined;
+    const [width, height] = out.trim().split(/\s+/).map(Number);
     return width !== undefined && height !== undefined && width > 0 && height > 0 ? { width, height } : undefined;
   } catch {
     return undefined;
   }
 }
 
-function variantName(base: string, width: number): string {
-  const match = /\.([^.]+)$/.exec(base);
-  const ext = match?.[1] !== undefined ? `.${match[1]}` : '';
-  const stem = ext === '' ? base : base.slice(0, -ext.length);
-  return `${stem}-${width}${ext}`;
+async function readCached(path: string, sidecar: string): Promise<CachedImage | undefined> {
+  if (!(await Bun.file(path).exists())) return undefined;
+  try {
+    const raw = (await Bun.file(sidecar).json()) as { width?: unknown; height?: unknown; bytes?: unknown };
+    if (typeof raw.width === 'number' && typeof raw.height === 'number' && typeof raw.bytes === 'number') {
+      return { path, width: raw.width, height: raw.height, bytes: raw.bytes };
+    }
+  } catch {}
+  const dimensions = await imageDimensions(path);
+  const bytes = await fileSize(path);
+  if (bytes === 0) return undefined;
+  const result: CachedImage = { path, width: dimensions?.width, height: dimensions?.height, bytes };
+  await Bun.write(sidecar, JSON.stringify(result)).catch(() => {});
+  return result;
 }
 
-async function processSources(sources: ImageSource[], profile: ImageProfile, targets: ProcessTargets): Promise<ProcessedImages> {
-  const imageMap = new Map<string, string>();
-  const processedFiles: string[] = [];
-  const variants = new Map<string, ImageVariant[]>();
-  const processed = await mapWithConcurrency(sources, cpuConcurrency(4), (source) => {
-    const geometry = geometryFor(source, profile, targets);
-    return processImage(source.absPath, {
-      outPath: join(profile.outputDir, profile.naming(source.absPath)),
+async function cacheKey(source: ImageSource, profile: ImageProfile, geometry: Geometry): Promise<string> {
+  const spec = {
+    resize: geometry.resize ?? null,
+    extent: geometry.extent ?? null,
+    density300: profile.density300,
+    grayscale: grayscaleFor(source, profile),
+    quality: profile.quality,
+    fallbackQuality: profile.fallbackQuality ?? null,
+    fallbackAlphaQuality: profile.fallbackAlphaQuality ?? null,
+    targetDefine: profile.targetDefine ?? null,
+    flatten: profile.flatten,
+    ext: profile.ext,
+    isSvg: source.absPath.toLowerCase().endsWith('.svg'),
+    maxBytes: profile.maxBytes ?? null,
+    fallbackMaxWidthPx: profile.fallbackMaxWidthPx ?? null,
+  };
+  return Bun.CryptoHasher.hash('sha256', `${source.absPath}:${await sourceHash(source.absPath)}:${JSON.stringify(spec)}`, 'hex');
+}
+
+async function processCached(source: ImageSource, profile: ImageProfile, geometry: Geometry, cacheDir: string): Promise<CachedImage | undefined> {
+  if (!(await Bun.file(source.absPath).exists())) return undefined;
+  const key = await cacheKey(source, profile, geometry);
+  const existing = cacheResults.get(key);
+  if (existing !== undefined) return existing;
+  const inflight = cacheInFlight.get(key);
+  if (inflight !== undefined) return inflight;
+
+  const promise = (async (): Promise<CachedImage | undefined> => {
+    const path = join(cacheDir, `${key.slice(0, 12)}-${safeStem(source.absPath)}.${profile.ext}`);
+    const sidecar = `${path}.json`;
+    if (!isScriptCapture()) {
+      const cached = await readCached(path, sidecar);
+      if (cached !== undefined) {
+        cacheResults.set(key, cached);
+        return cached;
+      }
+    }
+
+    const spec: ImageProcessSpec = {
+      outPath: path,
       resize: geometry.resize,
       extent: geometry.extent,
       density300: profile.density300,
       grayscale: grayscaleFor(source, profile),
       quality: profile.quality,
-      maxBytes: profile.maxBytes,
-      minQuality: profile.minQuality,
+      targetDefine: profile.targetDefine,
       flatten: profile.flatten,
-    });
-  });
-  for (const [index, result] of processed.entries()) {
-    const source = sources[index];
-    if (source === undefined || result === undefined) continue;
-    imageMap.set(source.absPath, result);
-    if (result !== source.absPath) processedFiles.push(result);
-    if (profile.kind !== 'web' || result === source.absPath) continue;
-    const baseName = basename(result);
-    const propias: ImageVariant[] = [];
-    const baseDim = await imageDimensions(result);
-    if (baseDim !== undefined) propias.push({ src: result, ...baseDim });
-    for (const width of [200, 320, 640, 960]) {
-      if (baseDim === undefined || width >= baseDim.width) continue;
-      const variantPath = join(profile.outputDir, variantName(baseName, width));
-      const variantResult = await processImage(source.absPath, {
-        outPath: variantPath,
-        resize: `${width}x>`,
-        density300: profile.density300,
-        grayscale: grayscaleFor(source, profile),
-        quality: profile.quality,
-        maxBytes: profile.maxBytes,
-        minQuality: profile.minQuality,
-        flatten: profile.flatten,
-      });
-      if (variantResult === source.absPath) continue;
-      const dim = await imageDimensions(variantResult);
-      if (dim !== undefined) propias.push({ src: variantResult, ...dim });
-      processedFiles.push(variantResult);
+    };
+    if (!(await processImage(source.absPath, spec))) return undefined;
+    let bytes = await fileSize(path);
+    if (bytes === 0) return undefined;
+
+    if (profile.maxBytes !== undefined && bytes > profile.maxBytes && profile.fallbackMaxWidthPx !== undefined) {
+      const fallbackPath = `${path}.fallback.${profile.ext}`;
+      const fallbackSpec: ImageProcessSpec = {
+        ...spec,
+        outPath: fallbackPath,
+        resize: `${profile.fallbackMaxWidthPx}x>`,
+        quality: profile.fallbackQuality ?? spec.quality,
+        alphaQuality: profile.fallbackAlphaQuality,
+      };
+      if (await processImage(source.absPath, fallbackSpec)) {
+        const fallbackBytes = await fileSize(fallbackPath);
+        if (fallbackBytes > 0 && fallbackBytes < bytes) {
+          await rm(path, { force: true });
+          await rename(fallbackPath, path);
+          if (isScriptCapture()) recordSupportCommand('images', path, ['mv', fallbackPath, path]);
+          bytes = fallbackBytes;
+        } else {
+          await rm(fallbackPath, { force: true });
+          if (isScriptCapture()) recordSupportCommand('images', fallbackPath, ['rm', '-f', fallbackPath]);
+        }
+      }
     }
-    propias.sort((a, b) => a.width - b.width);
-    variants.set(baseName, propias);
+
+    if (profile.maxBytes !== undefined && bytes > profile.maxBytes) {
+      logWarning(
+        `la imagen "${basename(path)}" pesa ${Math.round(bytes / 1024)} KB y supera el límite de ${Math.round((profile.maxBytes ?? 0) / 1024)} KB`,
+        'images',
+      );
+    }
+
+    const dimensions = await imageDimensions(path);
+    const result: CachedImage = { path, width: dimensions?.width, height: dimensions?.height, bytes };
+    await Bun.write(sidecar, JSON.stringify(result)).catch(() => {});
+    cacheResults.set(key, result);
+    return result;
+  })();
+
+  cacheInFlight.set(key, promise);
+  try {
+    return await promise;
+  } finally {
+    cacheInFlight.delete(key);
   }
-  return { imageMap, processedFiles, variants };
+}
+
+async function publishWeb(cachePath: string, profile: ImageProfile, published: Set<string>): Promise<string> {
+  if (!profile.publish) return cachePath;
+  const target = join(profile.outputDir, basename(cachePath));
+  if (published.has(target)) return target;
+  published.add(target);
+  await mkdir(profile.outputDir, { recursive: true });
+  if (!(await Bun.file(target).exists())) await copyFile(cachePath, target);
+  if (isScriptCapture() && !publishedThisBuild.has(target)) {
+    recordSupportCommand('images', target, ['cp', cachePath, target]);
+    publishedThisBuild.add(target);
+  }
+  return target;
+}
+
+async function processSources(sources: ImageSource[], profile: ImageProfile, targets: ProcessTargets, cacheDir: string): Promise<ProcessedImages> {
+  const imageMap = new Map<string, string>();
+  const processedFiles: string[] = [];
+  const sizes = new Map<string, ImageDimensions>();
+  const names = new Map<string, string>();
+  const published = new Set<string>();
+  const seenFiles = new Set<string>();
+
+  const processed = await mapWithConcurrency(sources, cpuConcurrency(4), async (source) => {
+    const geometry = geometryFor(source, profile, targets);
+    return { source, cached: await processCached(source, profile, geometry, cacheDir) };
+  });
+
+  for (const { source, cached } of processed) {
+    if (cached === undefined) {
+      imageMap.set(source.absPath, source.absPath);
+      continue;
+    }
+    const target = await publishWeb(cached.path, profile, published);
+    imageMap.set(source.absPath, target);
+    if (!seenFiles.has(cached.path)) {
+      seenFiles.add(cached.path);
+      processedFiles.push(cached.path);
+    }
+    const sourceName = `${stemOf(source.absPath)}.${profile.ext}`;
+    names.set(cached.path, profile.namePrefix === undefined || profile.namePrefix === '' ? sourceName : `${profile.namePrefix}-${sourceName}`);
+    if (profile.publish && cached.width !== undefined && cached.height !== undefined) {
+      sizes.set(basename(target), { width: cached.width, height: cached.height });
+    }
+  }
+
+  return { imageMap, processedFiles, sizes, names };
 }
 
 interface PreprocessArgs {
+  cwd: string;
+  namePrefix?: string;
   content: string;
   fm: Record<string, unknown>;
   docDir: string;
   pageDimensions: PageDimensions;
   cropActive: boolean;
   pdfxActive: boolean;
-  outSlug: string;
   dirs: { pdf: string; web: string; epub: string };
   wants: { pdf: boolean; web: boolean; epub: boolean };
 
@@ -548,6 +681,7 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
   const sources = await collectImageSources(args.content, args.fm, args.docDir, args.pageDimensions.w, args.extraImages);
   const targets = computeProcessTargets(args.pageDimensions, args.cropActive);
   const coverColor = args.fm.coverColor === true;
+  const cacheDir = join(args.cwd, '.iteraciones', 'processed-images');
   const result: DocumentImages = {};
 
   if (args.wants.pdf) {
@@ -555,8 +689,10 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
       sources,
       {
         outputDir: args.dirs.pdf,
-        naming: imageNamerFor(args.outSlug, 'jpg'),
+        ext: 'jpg',
         kind: 'pdf',
+        publish: false,
+        namePrefix: args.namePrefix,
         quality: 100,
         flatten: true,
         density300: true,
@@ -564,6 +700,7 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
         coverColor,
       },
       targets,
+      cacheDir,
     );
   }
 
@@ -572,18 +709,22 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
       sources,
       {
         outputDir: args.dirs.web,
-        naming: imageNamerFor(args.outSlug, 'webp'),
+        ext: 'webp',
         kind: 'web',
+        publish: true,
         maxWidthPx: 1280,
-        quality: 75,
-        maxBytes: 100 * 1024,
-        minQuality: 40,
+        fallbackMaxWidthPx: 420,
+        quality: 50,
+        fallbackQuality: 20,
+        fallbackAlphaQuality: 60,
+        maxBytes: 25 * 1024,
         flatten: false,
         density300: false,
         grayscale: false,
         coverColor: false,
       },
       targets,
+      cacheDir,
     );
   }
 
@@ -592,18 +733,22 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
       sources,
       {
         outputDir: args.dirs.epub,
-        naming: imageNamerFor(args.outSlug, 'jpg'),
+        ext: 'jpg',
         kind: 'web',
+        publish: false,
         maxWidthPx: 1024,
-        quality: 75,
-        maxBytes: 100 * 1024,
-        minQuality: 40,
+        fallbackMaxWidthPx: 420,
+        quality: 55,
+        fallbackQuality: 20,
+        maxBytes: 25 * 1024,
+        targetDefine: 'jpeg:extent=25KB',
         flatten: true,
         density300: false,
         grayscale: false,
         coverColor: false,
       },
       targets,
+      cacheDir,
     );
   }
 
@@ -611,36 +756,42 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
 }
 
 export async function processWebImages(
+  cwd: string,
   inlineImages: string[],
   outputDir: string,
-  naming: (absPath: string) => string,
   pdfxActive = false,
   detector: () => Promise<boolean> = detectMagick,
 ): Promise<ProcessedImages> {
   if (!(await detector())) {
     warnMissingMagick(pdfxActive);
-    return { imageMap: new Map(), processedFiles: [], variants: new Map() };
+    return { imageMap: new Map(), processedFiles: [], sizes: new Map(), names: new Map() };
   }
   const sources = [...new Set(inlineImages)].map((absPath): ImageSource => ({ absPath, kind: 'inline', cover: false }));
   return processSources(
     sources,
     {
       outputDir,
-      naming,
+      ext: 'webp',
       kind: 'web',
+      publish: true,
       maxWidthPx: 1280,
-      quality: 75,
-      maxBytes: 100 * 1024,
-      minQuality: 40,
+      fallbackMaxWidthPx: 420,
+      quality: 50,
+      fallbackQuality: 20,
+      fallbackAlphaQuality: 60,
+      maxBytes: 25 * 1024,
       flatten: false,
       density300: false,
       grayscale: false,
       coverColor: false,
     },
     { targetW: 0, targetH: 0, startpaperW: 0, startpaperH: 0 },
+    join(cwd, '.iteraciones', 'processed-images'),
   );
 }
 
-export function relImageMapFor(imageMap: Map<string, string>, base = ASSETS_IMAGES_DIR): Map<string, string> {
-  return new Map([...imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${base}/${basename(dst)}`]));
+export function relImageMapFor(imageMap: Map<string, string>, base = ASSETS_IMAGES_DIR, names?: Map<string, string>): Map<string, string> {
+  return new Map(
+    [...imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${base}/${names?.get(dst) ?? basename(dst)}`]),
+  );
 }

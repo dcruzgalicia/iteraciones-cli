@@ -202,7 +202,7 @@ Then('la portada del HTML va en la tarjeta de encabezado', () => {
   const inicio = html.indexOf('id="slot-page-header"');
   const fin = html.indexOf('id="slot-main"', inicio);
   const encabezado = html.slice(inicio, fin);
-  const portada = /<img[^>]*un-libro-frontCover\.webp[^>]*>/.exec(encabezado)?.[0];
+  const portada = /<img[^>]*-frontCover\.webp[^>]*>/.exec(encabezado)?.[0];
   if (portada === undefined) throw new Error('la portada no está en la tarjeta de encabezado');
   if (!portada.includes('class="portada"')) throw new Error('la portada del encabezado no usa la clase portada');
   if (portada.includes('object-cover')) throw new Error('la portada del encabezado recorta la imagen');
@@ -218,13 +218,13 @@ Then('la contraportada del HTML es la primera tarjeta de related', () => {
   const related = html.slice(inicio, fin < 0 ? undefined : fin);
   const [primera] = [...related.matchAll(/<figure class="[^"]*\btarjeta\b[^"]*">[\s\S]*?<\/figure>/g)].map((m) => m[0]);
   if (primera === undefined) throw new Error('related no tiene la tarjeta de la contraportada');
-  if (!primera.includes('un-libro-backCover.webp')) throw new Error('la primera tarjeta de related no es la contraportada');
-  if (related.includes('un-libro-frontCover.webp')) throw new Error('la portada no debe ir en related');
+  if (!primera.includes('-backCover.webp')) throw new Error('la primera tarjeta de related no es la contraportada');
+  if (related.includes('-frontCover.webp')) throw new Error('la portada no debe ir en related');
   if (/\btarjeta\b/.test(related.slice(0, related.indexOf(primera)))) {
     throw new Error('hay tarjetas antes de la contraportada en related');
   }
   const main = html.slice(html.indexOf('id="slot-main"'), inicio);
-  if (main.includes('un-libro-frontCover.webp') || main.includes('un-libro-backCover.webp')) {
+  if (main.includes('-frontCover.webp') || main.includes('-backCover.webp')) {
     throw new Error('las portadas siguen en la columna principal');
   }
 });

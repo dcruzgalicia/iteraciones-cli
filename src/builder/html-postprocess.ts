@@ -1,6 +1,6 @@
 import { logWarning } from '../lib/logger.js';
 import { type HtmlDocType, loadCard } from './html-composer.js';
-import type { ImageVariant } from './image-processor.js';
+import type { ImageDimensions } from './image-processor.js';
 
 const REFS = '<div id="block-referencias"></div>';
 const INTRO = '<div id="block-intro"></div>';
@@ -119,36 +119,18 @@ export function extractReferencesBlock(html: string, cardTemplate: string, refsL
   };
 }
 
-function responsiveSizes(tag: string): string {
-  if (tag.includes('retrato__img') || tag.includes('retrato-pagina__imagen') || tag.includes('width:100px')) return '100px';
-  if (tag.includes('portada') || tag.includes('contenido-retrato')) {
-    return '(min-width:1536px) 25vw, (min-width:1280px) 25vw, (min-width:1024px) 33vw, (min-width:768px) 40vw, (min-width:640px) 45vw, 100vw';
-  }
-  if (tag.includes('tarjeta-imagen__img') || tag.includes('hero__imagen')) {
-    return '(min-width:1536px) 33vw, (min-width:1280px) 33vw, (min-width:1024px) 50vw, (min-width:768px) 100vw, (min-width:640px) 50vw, 100vw';
-  }
-  return '(min-width:1536px) 50vw, (min-width:1280px) 50vw, (min-width:1024px) 66vw, (min-width:768px) 66vw, 100vw';
-}
-
-export function addResponsiveImages(html: string, variants: Map<string, ImageVariant[]> | undefined): string {
-  if (variants === undefined || variants.size === 0) return html;
+export function addImageAttributes(html: string, sizes: Map<string, ImageDimensions> | undefined): string {
+  if (sizes === undefined || sizes.size === 0) return html;
   return html.replace(/<img\b[^>]*>/g, (tag) => {
     const src = /src="([^"]+)"/.exec(tag)?.[1];
     if (src === undefined) return tag;
     const base = src.split('/').pop();
     if (base === undefined) return tag;
-    const propias = variants.get(base);
-    if (propias === undefined || propias.length === 0) return tag;
-    const mayor = propias[propias.length - 1];
-    if (mayor === undefined) return tag;
-    const srcDir = src.slice(0, src.lastIndexOf('/') + 1);
-    const srcset =
-      propias.length < 2 || tag.includes('srcset=')
-        ? ''
-        : ` srcset="${propias.map((v) => `${srcDir}${v.src.split('/').pop()} ${v.width}w`).join(', ')}" sizes="${responsiveSizes(tag)}"`;
-    const width = /\swidth="/.test(tag) ? '' : ` width="${mayor.width}"`;
-    const height = /\sheight="/.test(tag) ? '' : ` height="${mayor.height}"`;
-    let salida = tag.replace(/\s*\/?>$/, (fin) => `${srcset}${width}${height}${fin}`);
+    const dimensions = sizes.get(base);
+    if (dimensions === undefined) return tag;
+    const width = /\swidth="/.test(tag) ? '' : ` width="${dimensions.width}"`;
+    const height = /\sheight="/.test(tag) ? '' : ` height="${dimensions.height}"`;
+    let salida = tag.replace(/\s*\/?>$/, (fin) => `${width}${height}${fin}`);
     if (
       !salida.includes('loading=') &&
       !tag.includes('tarjeta-imagen__img') &&
