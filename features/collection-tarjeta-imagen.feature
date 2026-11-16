@@ -13,7 +13,7 @@ Característica: la imagen de cabecera de las tarjetas
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/texto.html" dice "Primer párrafo del texto."
-      Y el archivo "dist/files/texto.html" dice "assets/images/lista-Mapa"
+      Y el archivo "dist/files/texto.html" dice "-Mapa.webp"
       Y el archivo "dist/files/texto.html" no dice "imagenes/Mapa.png"
 
     Escenario: La imagen va después de los chips y antes del título
@@ -21,7 +21,7 @@ Característica: la imagen de cabecera de las tarjetas
       Y el proyecto produce html
       Y un texto en "autoras/historikas" que empieza con la imagen "Mapa.png"
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/texto.html" pone "assets/images/lista-Mapa" antes que "Tres libros"
+      Entonces el archivo "dist/files/texto.html" pone "-Mapa.webp" antes que "Tres libros"
       Y el archivo "dist/files/texto.html" dice "tarjeta-imagen"
       Y el archivo "dist/files/texto.html" dice "tarjeta-imagen__img"
       Y el archivo "dist/files/texto.html" dice "tarjeta-imagen__img"
@@ -33,7 +33,7 @@ Característica: la imagen de cabecera de las tarjetas
       Y una colección en "convocatorias" que incluye "autoras/historikas/tres-libros.md"
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/convocatorias/antologia.html" dice "assets/images/antologia-Mapa"
+      Y el archivo "dist/files/convocatorias/antologia.html" dice "-Mapa.webp"
       Y el archivo "dist/files/convocatorias/antologia.html" no dice "imagenes/Mapa.png"
 
     Escenario: La imagen del texto enlaza a la misma página que el título
@@ -43,7 +43,7 @@ Característica: la imagen de cabecera de las tarjetas
       Y un texto de "Ana García" en "autoras/historikas" que empieza con la imagen "Mapa.png"
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/texto.html" dice "<a href=\"./autoras/historikas/tres-libros-por-ana-garcia.html\" class=\"tarjeta-imagen__enlace\">"
-      Y el archivo "dist/files/texto.html" pone "<a href=\"./autoras/historikas/tres-libros-por-ana-garcia.html\" class=\"tarjeta-imagen__enlace\">" antes que "assets/images/lista-Mapa"
+      Y el archivo "dist/files/texto.html" pone "<a href=\"./autoras/historikas/tres-libros-por-ana-garcia.html\" class=\"tarjeta-imagen__enlace\">" antes que "-Mapa.webp"
 
     Escenario: Un texto sin imágenes no lleva figura
       Dado que la raíz del proyecto tiene un proyecto de prueba

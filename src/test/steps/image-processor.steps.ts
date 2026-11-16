@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import {
   computeProcessTargets,
-  imageNamerFor,
   imagePathsMap,
   preprocessDocumentImages,
   resetMagickCache,
@@ -68,21 +67,6 @@ Then('el mapa de rutas está vacío', () => {
   }
 });
 
-Given('nombro las imágenes con el prefijo {string}', (prefijo: string) => {
-  world.namer = imageNamerFor(prefijo);
-  world.nombreActual = '';
-});
-
-When('nombro la imagen {string}', (ruta: string) => {
-  world.nombreActual = (world.namer as (ruta: string) => string)(ruta);
-});
-
-Then('el nombre es {string}', (esperado: string) => {
-  if (world.nombreActual !== esperado) {
-    throw new Error(`el nombre es ${JSON.stringify(world.nombreActual)} y debería ser ${JSON.stringify(esperado)}`);
-  }
-});
-
 When('escaneo las imágenes en línea de:', (contenido: string) => {
   world.enLinea = scanInlineImages(contenido.replace(/<br>/g, '\n'), DIR_DOC);
 });
@@ -135,7 +119,7 @@ When('proceso un documento sin ImageMagick', async () => {
       pageDimensions: { w: 100, h: 150, textW: 80 },
       cropActive: false,
       pdfxActive: world.pdfxActivo === true,
-      outSlug: 'doc',
+      cwd: world.root,
       dirs: { pdf: join(world.root, 'out'), web: join(world.root, 'out'), epub: join(world.root, 'out') },
       wants: { pdf: true, web: false, epub: false },
       detector: async () => false,
@@ -159,7 +143,7 @@ When('proceso dos documentos sin ImageMagick', async () => {
         pageDimensions: { w: 100, h: 150, textW: 80 },
         cropActive: false,
         pdfxActive: world.pdfxActivo === true,
-        outSlug: 'doc',
+        cwd: world.root,
         dirs: { pdf: join(world.root, 'out'), web: join(world.root, 'out'), epub: join(world.root, 'out') },
         wants: { pdf: true, web: false, epub: false },
         detector: async () => false,

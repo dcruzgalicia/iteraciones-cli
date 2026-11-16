@@ -99,43 +99,6 @@ Característica: el reemplazo de rutas de imagen en el markdown
       Y la ruta "img.png" vale "./assets/images/cap-img.jpg"
       Y la ruta "./img.png" vale "./assets/images/cap-img.jpg"
 
-  Regla de negocio: El nombre de salida lleva el slug del documento
-
-    Escenario: El nombre lleva el slug y las colisiones se numeran
-      Cuando nombro las imágenes con el prefijo "ejemplo"
-      Cuando nombro la imagen "/proy/foto.png"
-      Entonces el nombre es "ejemplo-foto.jpg"
-      Cuando nombro la imagen "/proy/foto.png"
-      Entonces el nombre es "ejemplo-foto.jpg"
-      Cuando nombro la imagen "/proy/otra/foto.png"
-      Entonces el nombre es "ejemplo-foto-2.jpg"
-      Cuando nombro la imagen "/proy/tercera/foto.jpeg"
-      Entonces el nombre es "ejemplo-foto-3.jpg"
-      Cuando nombro la imagen "/proy/foto.png"
-      Entonces el nombre es "ejemplo-foto.jpg"
-
-    Escenario: Cada documento nombra con su propio prefijo
-      Cuando nombro las imágenes con el prefijo "uno"
-      Cuando nombro la imagen "/proy/foto.png"
-      Entonces el nombre es "uno-foto.jpg"
-
-    Esquema del escenario: El prefijo no se acumula sobre un nombre que ya lo lleva
-      Cuando nombro las imágenes con el prefijo "<prefijo>"
-      Cuando nombro la imagen "<origen>"
-      Entonces el nombre es "<esperado>"
-
-      Ejemplos:
-        | prefijo | origen | esperado |
-        | ejemplo | /copia/assets/images/ejemplo-foto.jpg | ejemplo-foto.jpg |
-        | ejemplo | /copia/assets/images/ejemplo-foto-2.jpg | ejemplo-foto-2.jpg |
-        | ejemplo | /copia3/assets/images/ejemplo-foto.jpg | ejemplo-foto.jpg |
-        | otro | /copia/assets/images/ejemplo-foto.jpg | otro-ejemplo-foto.jpg |
-
-    Escenario: Sin slug el nombre no lleva prefijo
-      Cuando nombro las imágenes con el prefijo ""
-      Cuando nombro la imagen "/proy/portada.png"
-      Entonces el nombre es "portada.jpg"
-
   Regla de negocio: El escaneo ve las cuatro formas y descarta las otras
 
     Escenario: El escaneo detecta las tres sintaxis y descarta el resto

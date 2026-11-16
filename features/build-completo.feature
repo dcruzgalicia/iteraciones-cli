@@ -61,7 +61,7 @@ Característica: la tubería entera produce una salida por formato
       Cuando compilo el proyecto desde cero
       Entonces dist tiene el archivo "assets/pdf/images/manuscrito-por-ana-ruiz-foto.jpg"
       Y el archivo "manuscrito-por-ana-ruiz.tex" de dist contiene "assets/pdf/images/manuscrito-por-ana-ruiz-foto.jpg"
-      Y dist tiene el archivo "assets/images/manuscrito-por-ana-ruiz-foto.webp"
+      Y dist tiene una imagen web para "foto"
 
   Regla de negocio: Cada opción del PDF cambia sólo lo que le corresponde
 

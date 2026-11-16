@@ -126,8 +126,6 @@ function nuevoMundo() {
     arbolDist: [] as string[],
     mapaImagenes: new Map<string, string>() as ReadonlyMap<string, string>,
     rutas: {} as unknown,
-    namer: null as ((ruta: string) => string) | null,
-    nombreActual: '',
     enLinea: [] as string[],
     miembros: [] as { file: string; title: string; creator: string[]; body: string }[],
     entradas: [] as { file: string; posicion: number }[],

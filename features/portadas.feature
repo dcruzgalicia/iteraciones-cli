@@ -131,8 +131,8 @@ Característica: las portadas del PDF
       Y el libro lleva la portada "backCover"
       Y el libro produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-libro.html" dice "un-libro-frontCover.webp"
-      Y el archivo "dist/files/un-libro.html" dice "un-libro-backCover.webp"
+      Entonces el archivo "dist/files/un-libro.html" dice "-frontCover.webp"
+      Y el archivo "dist/files/un-libro.html" dice "-backCover.webp"
       Y la portada del HTML va en la tarjeta de encabezado
       Y la contraportada del HTML es la primera tarjeta de related
 

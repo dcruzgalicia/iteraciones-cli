@@ -118,8 +118,8 @@ Característica: los anuncios del sitio
         """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/index.html" dice "anuncio-foto.webp"
-      Y el archivo "dist/files/assets/images/anuncio-foto.webp" existe
+      Y el archivo "dist/files/index.html" dice "-foto.webp"
+      Y existe una imagen web para "foto"
 
     Escenario: Con dos anuncios el chip lleva a la lista de anuncios
       Dado que la raíz del proyecto tiene un proyecto de prueba

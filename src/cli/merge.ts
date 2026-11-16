@@ -105,13 +105,14 @@ export async function buildImagesContext(opts: {
   const isPdf = format === 'latex';
   const isEpub = format === 'epub';
   const images = await preprocessDocumentImages({
+    cwd,
+    namePrefix: outSlug,
     content,
     fm: mergeConfigImages(fm, siteConfig.format?.pdf, siteConfig, cwd),
     docDir,
     pageDimensions: flags.pageDimensions,
     cropActive: flags.cropActive,
     pdfxActive: flags.pdfxActive,
-    outSlug,
     dirs: {
       pdf: join(dirname(assetsDir), 'pdf', 'images'),
       web: assetsDir,
@@ -120,7 +121,7 @@ export async function buildImagesContext(opts: {
     wants: { pdf: isPdf, web: !isPdf && !isEpub, epub: isEpub },
   });
   const relImageMap = isPdf
-    ? relImageMapFor(images.pdf?.imageMap ?? new Map(), ASSETS_PDF_IMAGES_DIR)
+    ? relImageMapFor(images.pdf?.imageMap ?? new Map(), ASSETS_PDF_IMAGES_DIR, images.pdf?.names)
     : isEpub
       ? (images.epub?.imageMap ?? new Map())
       : relImageMapFor(images.web?.imageMap ?? new Map());
