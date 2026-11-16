@@ -234,6 +234,7 @@ async function emitLatexAndQueuePdf(
       texPath,
       pdfDest: outBase(`${outSlug}${primaryOutputExtension('pdf')}`),
       cover: resolveBooleanField(fm, formatCfg?.pdf, ctx.siteConfig, 'coverImage') === true,
+      optimizeForWeb: !renderCtx.pdfxActive,
 
       noBibtex: exportCtx.bibFiles.length === 0,
     });
@@ -3026,6 +3027,7 @@ async function preprocessDocImages(
     pageDimensions: renderCtx.pageDimensions ?? detectPageSize([]),
     cropActive: renderCtx.cropActive,
     pdfxActive: renderCtx.pdfxActive,
+    pdfSmall: active.pdf && !renderCtx.pdfxActive,
     dirs: {
       pdf: join(ctx.outputDir, ASSETS_PDF_IMAGES_DIR),
       web: join(ctx.outputDir, ASSETS_IMAGES_DIR),

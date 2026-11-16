@@ -1,4 +1,5 @@
 import type { SiteConfig } from '../config/config-schema.js';
+import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { detectMagick } from './image-processor.js';
 import { resolveBibOptions } from './state-bib.js';
@@ -25,6 +26,10 @@ export async function assertBuildTools(cwd: string, siteConfig: SiteConfig, opci
 
     if (opciones.necesitaPoppler === true && Bun.which('pdftoppm') === null) {
       faltan.push('poppler (pdftoppm) — necesario para las portadas del PDF');
+    }
+
+    if (resolveDisabledPreambleConfig(siteConfig).includes('99-pdfx') && Bun.which('gs') === null) {
+      faltan.push('Ghostscript (gs) — necesario para el PDF ligero sin PDF/X');
     }
   }
 

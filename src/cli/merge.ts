@@ -113,6 +113,7 @@ export async function buildImagesContext(opts: {
     pageDimensions: flags.pageDimensions,
     cropActive: flags.cropActive,
     pdfxActive: flags.pdfxActive,
+    pdfSmall: isPdf && !flags.pdfxActive,
     dirs: {
       pdf: join(dirname(assetsDir), 'pdf', 'images'),
       web: assetsDir,

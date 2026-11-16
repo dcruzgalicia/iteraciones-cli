@@ -142,6 +142,18 @@ function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | 
   return toMm(value, unit);
 }
 
+function parseHeightMm(attrs: string | undefined): number | undefined {
+  if (!attrs) return undefined;
+  const match = attrs.match(/height\s*=\s*([\d.]+)\s*(pt|mm|cm|px|in)/);
+  if (!match) return undefined;
+  const valueStr = match[1];
+  const unit = match[2];
+  if (!valueStr || !unit) return undefined;
+  const value = Number.parseFloat(valueStr);
+  if (unit === 'px') return value * PX_TO_MM_96DPI;
+  return toMm(value, unit);
+}
+
 export const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper', 'frontCover', 'backCover'] as const;
 
 export const LETTERHEAD_FIELD = 'letterhead';
@@ -172,21 +184,35 @@ const MULTILINE_IMAGE_FIELDS = [
 
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|svg|webp|avif)$/i;
 
-export function scanInlineImages(content: string, docDir: string): string[] {
-  const paths: string[] = [];
-  const push = (raw: string | undefined): void => {
+export interface InlineImageSource {
+  absPath: string;
+  widthMm?: number;
+  heightMm?: number;
+}
+
+export function scanInlineImageSources(content: string, docDir: string, pageWidthmm = 215.9): InlineImageSource[] {
+  const sources: InlineImageSource[] = [];
+  const seen = new Set<string>();
+  const push = (raw: string | undefined, attrs?: string): void => {
     const imgPath = raw?.replace(/^<|>$/g, '');
     if (!imgPath || imgPath.startsWith('http') || imgPath.startsWith('data:')) return;
-    paths.push(isAbsolute(imgPath) ? imgPath : resolve(docDir, imgPath));
+    const absPath = isAbsolute(imgPath) ? imgPath : resolve(docDir, imgPath);
+    if (seen.has(absPath)) return;
+    seen.add(absPath);
+    sources.push({ absPath, widthMm: parseWidthMm(attrs, pageWidthmm), heightMm: parseHeightMm(attrs) });
   };
-  for (const match of content.matchAll(MD_IMAGE_RE)) push(match[2]);
+  for (const match of content.matchAll(MD_IMAGE_RE)) push(match[2], match[3]);
 
   for (const match of content.matchAll(/^\[[^\]]+\]:[ \t]+(\S+)/gm)) {
     if (IMAGE_EXT_RE.test(match[1] ?? '')) push(match[1]);
   }
 
   for (const match of content.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["']/gi)) push(match[1]);
-  return paths;
+  return sources;
+}
+
+export function scanInlineImages(content: string, docDir: string): string[] {
+  return scanInlineImageSources(content, docDir).map((source) => source.absPath);
 }
 
 function fieldText(raw: unknown): string | undefined {
@@ -386,7 +412,9 @@ export async function collectImageSources(
     push({ absPath: img.absPath, kind: 'title', cover: false, widthMm: img.widthMm });
   }
 
-  for (const absPath of scanInlineImages(content, docDir)) push({ absPath, kind: 'inline', cover: false });
+  for (const img of scanInlineImageSources(content, docDir, pageWidthmm)) {
+    push({ absPath: img.absPath, kind: 'inline', cover: false, widthMm: img.widthMm, heightMm: img.heightMm });
+  }
   for (const absPath of extraImages) {
     if (await Bun.file(absPath).exists()) push({ absPath, kind: 'inline', cover: false });
   }
@@ -424,8 +452,8 @@ function geometryFor(source: ImageSource, profile: ImageProfile, targets: Proces
     const h = mmToPx(targets.startpaperH);
     return { resize: `${w}x${h}^`, extent: `${w}x${h}` };
   }
+  if (source.widthMm !== undefined) return { resize: `${mmToPx(source.widthMm)}>` };
   if (source.heightMm !== undefined) return { resize: `x${mmToPx(source.heightMm)}>` };
-  if (source.kind === 'title' && source.widthMm !== undefined) return { resize: `${mmToPx(source.widthMm)}>` };
   return { resize: `${mmToPx(targets.targetW)}x${mmToPx(targets.targetH)}>` };
 }
 
@@ -672,6 +700,7 @@ interface PreprocessArgs {
   pageDimensions: PageDimensions;
   cropActive: boolean;
   pdfxActive: boolean;
+  pdfSmall?: boolean;
   dirs: { pdf: string; web: string; epub: string };
   wants: { pdf: boolean; web: boolean; epub: boolean };
 
@@ -694,18 +723,35 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
   if (args.wants.pdf) {
     result.pdf = await processSources(
       sources,
-      {
-        outputDir: args.dirs.pdf,
-        ext: 'jpg',
-        kind: 'pdf',
-        publish: false,
-        namePrefix: args.namePrefix,
-        quality: 100,
-        flatten: true,
-        density300: true,
-        grayscale: true,
-        coverColor,
-      },
+      args.pdfSmall === true
+        ? {
+            outputDir: args.dirs.pdf,
+            ext: 'jpg',
+            kind: 'web',
+            publish: false,
+            maxWidthPx: 1280,
+            fallbackMaxWidthPx: 420,
+            quality: 50,
+            fallbackQuality: 20,
+            maxBytes: 25 * 1024,
+            targetDefine: 'jpeg:extent=25KB',
+            flatten: true,
+            density300: false,
+            grayscale: true,
+            coverColor,
+          }
+        : {
+            outputDir: args.dirs.pdf,
+            ext: 'jpg',
+            kind: 'pdf',
+            publish: false,
+            namePrefix: args.namePrefix,
+            quality: 100,
+            flatten: true,
+            density300: true,
+            grayscale: true,
+            coverColor,
+          },
       targets,
       cacheDir,
     );

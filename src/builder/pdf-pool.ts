@@ -19,6 +19,7 @@ export interface PdfJob {
   cover: boolean;
 
   noBibtex: boolean;
+  optimizeForWeb: boolean;
 }
 
 export interface PdfJobSink {
@@ -53,9 +54,19 @@ async function executePdfJob(
 ): Promise<boolean> {
   const pdfDir = join(pdfWorkBase, job.dir, `slot-${slotIndex}`);
   try {
-    await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest, job.noBibtex, (pid) => {
-      inFlightPids[slotIndex] = pid;
-    });
+    await convertToPdf(
+      job.texPath,
+      job.relativePath,
+      pdfDir,
+      job.slug,
+      join(biberBase, `cache-${slotIndex}`),
+      job.pdfDest,
+      job.noBibtex,
+      (pid) => {
+        inFlightPids[slotIndex] = pid;
+      },
+      job.optimizeForWeb,
+    );
   } catch (err) {
     onError(err);
     return false;
