@@ -540,6 +540,7 @@ function brewfile(format: Awaited<ReturnType<typeof loadSiteConfig>>['format']):
 
   const formulas = ['pandoc', 'imagemagick', 'librsvg'];
   if (active.has('pdf') || active.has('latex')) formulas.push('texlive', 'biber', 'poppler');
+  if (active.has('pdf')) formulas.push('ghostscript');
   return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
 }
 

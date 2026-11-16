@@ -1,4 +1,4 @@
-import { mkdir, readdir, rename, rm } from 'node:fs/promises';
+import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { stringify } from 'yaml';
 import { formatHumanDate } from '../lib/date.js';
@@ -52,6 +52,7 @@ export function assembleExportDocument(doc: BuildDocument, language: string, glo
 export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
 
 const LATEXMK_TIMEOUT_MS = 600_000;
+const GHOSTSCRIPT_TIMEOUT_MS = 120_000;
 
 export async function convertToEpub(
   content: string,
@@ -164,6 +165,7 @@ export async function convertToPdf(
   pdfDest?: string,
   noBibtex = false,
   onSpawn?: (pid: number) => void,
+  optimizeForWeb = false,
 ): Promise<void> {
   if (!(await Bun.file(fullTexPath).exists())) {
     throw new ExportError('no se encontró el archivo .tex generado', sourcePath, '');
@@ -213,8 +215,55 @@ export async function convertToPdf(
   if (pdfDest) {
     await collectPdf(pdfDir, pdfDest);
     recordSupportCommand('pdf', slug, ['iteraciones', 'pdf', 'collect', pdfDir, '-o', pdfDest]);
+    if (optimizeForWeb) await optimizePdfForWeb(pdfDest, slug);
   } else {
     await cleanPdfSlot(pdfDir, slug);
+  }
+}
+
+async function optimizePdfForWeb(pdfPath: string, slug: string): Promise<void> {
+  const gs = Bun.which('gs');
+  if (gs === null) {
+    logWarning('Ghostscript (gs) no está en PATH; el PDF web queda sin optimizar. Instálalo con `brew install ghostscript`', 'pdf');
+    return;
+  }
+  const tmp = `${pdfPath}.web.pdf`;
+  const args = [
+    '-q',
+    '-dNOPAUSE',
+    '-dBATCH',
+    '-dSAFER',
+    '-sDEVICE=pdfwrite',
+    '-dPDFSETTINGS=/ebook',
+    '-dCompatibilityLevel=1.7',
+    '-dDetectDuplicateImages=true',
+    '-dCompressFonts=true',
+    '-dSubsetFonts=true',
+    '-dPreserveAnnots=true',
+    `-sOutputFile=${tmp}`,
+    pdfPath,
+  ];
+  try {
+    const result = await exec(gs, args, { timeoutMs: GHOSTSCRIPT_TIMEOUT_MS });
+    const before = await stat(pdfPath)
+      .then((info) => info.size)
+      .catch(() => 0);
+    const after = await stat(tmp)
+      .then((info) => info.size)
+      .catch(() => 0);
+    if (result.exitCode === 0 && after > 0 && after < before) {
+      recordSupportCommand('pdf', slug, ['gs', ...args]);
+      recordSupportCommand('pdf', slug, ['mv', tmp, pdfPath]);
+      await rename(tmp, pdfPath);
+      return;
+    }
+    await rm(tmp, { force: true });
+    if (result.exitCode !== 0) {
+      logWarning(`Ghostscript no pudo optimizar "${basename(pdfPath)}": ${result.stderr.trim()}`, 'pdf');
+    }
+  } catch (err) {
+    await rm(tmp, { force: true }).catch(() => {});
+    logWarning(`Ghostscript no pudo optimizar "${basename(pdfPath)}": ${String(err)}`, 'pdf');
   }
 }
 
