@@ -1,5 +1,5 @@
 {
-  "name": "html-span-text-nowrap-lleva-la-clase-que-tailwind-reconoce",
+  "name": "html-span-text-nowrap-lleva-la-clase-del-sitio",
   "markdown": "texto [Ana Ruiz]{.text-nowrap} aqui\n",
   "contains": ["<span class=\"text-nowrap\">Ana Ruiz</span>"],
   "notContains": [],

@@ -211,7 +211,7 @@ Then('el HTML pone {string} antes que {string}', (primero: string, segundo: stri
 });
 
 Then('el HTML tiene {int} contenedores de tarjeta', (cuantos: number) => {
-  const leidos = (world.html.match(/class="min-w-0"/g) ?? []).length;
+  const leidos = (world.html.match(/class="tarjeta-envoltura"/g) ?? []).length;
   if (leidos !== cuantos) throw new Error(`hay ${leidos} contenedores y son ${cuantos}`);
 });
 
@@ -225,24 +225,23 @@ Then('los badges de las tarjetas son {string}', (esperados: string) => {
 Then('el chip y el badge van en la misma fila', () => {
   const inicio = world.html.indexOf('tarjeta-cabecera');
   if (inicio < 0) throw new Error('el chip y el badge no van en una fila con el chip a la izquierda y el badge a la derecha');
-  const badge = world.html.indexOf('min-w-6', inicio);
+  const badge = world.html.indexOf('tarjeta-badge', inicio);
   if (badge < 0) throw new Error('la fila no tiene el badge');
   if (!world.html.slice(inicio, badge).includes('<h2')) throw new Error('la fila no tiene el chip');
 });
 
 Then('el chip largo no empuja el badge fuera de la tarjeta', () => {
-  const fila = /<div class="tarjeta-cabecera[^"]*">[\s\S]*?<span class="[^"]*shrink-0[^"]*">\d+<\/span><\/div>/.exec(world.html)?.[0];
+  const fila = /<div class="tarjeta-cabecera">[\s\S]*?<span class="[^"]*tarjeta-badge[^"]*">\d+<\/span><\/div>/.exec(world.html)?.[0];
   if (fila === undefined) throw new Error('la cabecera no tiene el chip y el badge en la misma fila');
-  if (!/class="tarjeta-cabecera[^"]*\bmin-w-0\b/.test(fila)) throw new Error('la fila de la cabecera no puede encogerse: falta min-w-0');
-  const columna = /<div class="(flex [^"]*)">/.exec(fila)?.[1] ?? '';
-  if (!columna.includes('min-w-0') || !columna.includes('flex-1')) throw new Error(`la columna de chips no encoge: ${columna}`);
+  const columna = /<div class="(tarjeta-chips)">/.exec(fila)?.[1] ?? '';
+  if (columna !== 'tarjeta-chips') throw new Error(`la columna de chips no tiene su clase: ${columna}`);
   const chip = /<h2 class="([^"]*)">[\s\S]*?<a\b[^>]*class="([^"]*)"/.exec(fila);
   if (chip === null) throw new Error('la tarjeta no tiene el chip largo como enlace');
   const [, clasesChip = '', clasesEnlace = ''] = chip;
-  for (const clase of ['min-w-0', 'max-w-full', 'truncate']) {
-    if (!clasesChip.split(/\s+/).includes(clase)) throw new Error(`el chip no trunca: falta ${clase} en ${clasesChip}`);
+  for (const clase of ['chip', 'chip--tipo', 'chip--enlace']) {
+    if (!clasesChip.split(/\s+/).includes(clase)) throw new Error(`el chip no tiene ${clase}: ${clasesChip}`);
   }
-  if (!clasesEnlace.split(/\s+/).includes('truncate')) throw new Error(`el enlace del chip no trunca: ${clasesEnlace}`);
+  if (!clasesEnlace.split(/\s+/).includes('chip__texto')) throw new Error(`el enlace del chip no trunca: ${clasesEnlace}`);
   if (world.tituloContenedor !== undefined && !fila.includes(world.tituloContenedor))
     throw new Error('la tarjeta no muestra el título largo de la colección');
 });
@@ -279,7 +278,7 @@ Then('hay {int} páginas', (cuantas: number) => {
 
 Then('la página {int} tiene {int} tarjetas', (pagina: number, cuantas: number) => {
   const html = (world.paginas as string[])[pagina - 1] ?? '';
-  const leidas = (html.match(/tarjeta-fragmento/g) ?? []).length;
+  const leidas = (html.match(/tarjeta--fragmento/g) ?? []).length;
   if (leidas !== cuantas) {
     throw new Error(`la página ${pagina} tiene ${leidas} tarjetas y son ${cuantas}`);
   }
@@ -409,7 +408,7 @@ Then('el nav de la página {int} no está dentro del texto', (_pagina: number) =
 
 Then('el nombre de la creadora de la tarjeta usa el color del accent', () => {
   const html = world.html as string;
-  const linea = html.match(/<h2 class="[^"]*not-prose text-left text-sm font-semibold text-accent-700[^"]*">[\s\S]*?<\/h2>/);
+  const linea = html.match(/<h2 class="[^"]*tarjeta-autor[^"]*">[\s\S]*?<\/h2>/);
   if (linea === null) throw new Error('la tarjeta no tiene la línea de la creadora con accent');
 });
 

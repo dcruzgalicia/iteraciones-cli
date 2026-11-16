@@ -1,12 +1,14 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
-import { compileTailwindCss, computeCssHash, resolveTailwindBin } from '../../builder/build-assets.js';
+import { compileCss, computeCssHash } from '../../builder/build-assets.js';
 import { type HtmlDocType, loadCard } from '../../builder/html-composer.js';
 import type { SiteConfig } from '../../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT, DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
+import { ACCENT_PALETTE_VALUES } from '../../lib/accent-palette-values.js';
 import { ACCENT_COLORS, type AccentColor } from '../../lib/accent-palettes.js';
+import { htmlStyle } from '../../lib/html-styles.js';
 
 const RESOURCES = join(import.meta.dir, '../../lib/resources');
 const TYPES = ['file', 'collection', 'creator'] as const;
@@ -29,7 +31,8 @@ async function readCard(type: string, card: string): Promise<string> {
   return loadCard(type as HtmlDocType, card);
 }
 
-function siteConfig(): SiteConfig {
+function siteConfig(overrides: { style?: string; color?: string; theme?: 'light' | 'dark' } = {}): SiteConfig {
+  const style = htmlStyle(overrides.style);
   return {
     ...DEFAULT_SITE_CONFIG,
     format: {
@@ -40,9 +43,9 @@ function siteConfig(): SiteConfig {
           description: 'd',
           logo: '',
           logoSize: '100px',
-          theme: 'dark',
-          style: DEFAULT_HTML_FORMAT.site.style,
-          color: 'lime',
+          theme: overrides.theme ?? 'light',
+          style,
+          color: (overrides.color ?? 'lime') as never,
           showDates: false,
           rss: false,
         },
@@ -57,22 +60,24 @@ interface CssWorld {
   dir: string;
   htmlPath: string;
   css: string;
-  tailwindBin: string;
   hash: string;
-  hashCache: unknown;
   newHash: string;
   accentError: string;
+  style: string;
+  theme: 'light' | 'dark';
+  accent: string;
 }
 
 const world: CssWorld = {
   dir: '',
   htmlPath: '',
   css: '',
-  tailwindBin: '',
   hash: '',
-  hashCache: undefined,
   newHash: '',
   accentError: '',
+  style: 'clasico',
+  theme: 'light',
+  accent: 'lime',
 };
 
 Before(async () => {
@@ -85,143 +90,104 @@ After(async () => {
 });
 
 function resetProject(): void {
-  world.htmlPath = join(world.dir, 'a.html');
+  world.css = '';
+  world.hash = '';
+  world.newHash = '';
+  world.accentError = '';
+  world.style = 'clasico';
+  world.theme = 'light';
+  world.accent = 'lime';
 }
 
-When('resuelvo el binario de Tailwind', async () => {
-  world.tailwindBin = await resolveTailwindBin();
-});
-
-Then('apunta a un archivo del paquete @tailwindcss que existe', async () => {
-  if (!world.tailwindBin.includes('@tailwindcss')) throw new Error(`el binario no es del paquete: ${world.tailwindBin}`);
-  if (!(await Bun.file(world.tailwindBin).exists())) throw new Error(`el binario no existe: ${world.tailwindBin}`);
-});
-
-Given('un proyecto con un HTML de clases {string}', async (clases: string) => {
-  resetProject();
-  await mkdir(join(world.dir, 'assets', 'css'), { recursive: true });
-  const body = clases.includes(' ') ? `<body class="${clases}">Hola</body>` : `<p class="${clases}">Hola</p>`;
-  await writeFile(join(world.dir, 'index.html'), `<!DOCTYPE html><html>${body}</html>`, 'utf8');
-});
-
-Given('un CSS previo con una clase que ya no usa el HTML', async () => {
-  await writeFile(join(world.dir, 'assets', 'css', 'styles.css'), '.clase-fantasma{color:red}', 'utf8');
-});
-
-Given('un proyecto vacío', async () => {
+Given('un proyecto vacío', () => {
   resetProject();
 });
 
-When('compilo el CSS con acento {string}', async (accent: string) => {
-  if (accent === 'color-inventado') {
-    world.accentError = '';
+When('compilo el CSS con acento {string}, estilo {string} y tema {string}', async (accent: string, style: string, theme: string) => {
+  world.accent = accent;
+  world.style = htmlStyle(style);
+  world.theme = theme === 'dark' ? 'dark' : 'light';
+  if (!ACCENT_COLORS.includes(accent as AccentColor)) {
     try {
-      await compileTailwindCss(world.dir, accent, world.dir);
+      await compileCss(world.dir, accent, world.style as never, world.theme);
     } catch (error) {
       world.accentError = String(error);
     }
     return;
   }
-  await compileTailwindCss(world.dir, accent, world.dir);
+  await compileCss(world.dir, accent, world.style as never, world.theme);
   world.css = await readFile(join(world.dir, 'assets', 'css', 'styles.css'), 'utf8');
 });
 
-Then('el CSS incluye las clases del HTML y el acento configurado', () => {
-  for (const clase of ['bg-stone-200', 'grid-cols-2', '.prose']) {
-    if (!world.css.includes(clase)) throw new Error(`el CSS no incluye ${clase}`);
-  }
-});
-
-Then('el CSS mezcla el acento en el fondo de las tarjetas', () => {
-  if (!/color-mix\(in oklab, var\(--color-accent-500\) 2%/.test(world.css)) {
-    throw new Error('el fondo de .tarjeta no mezcla el acento');
-  }
+When('compilo el CSS con acento {string}', async (accent: string) => {
+  await compileCss(world.dir, accent).then(
+    async () => {
+      world.css = await readFile(join(world.dir, 'assets', 'css', 'styles.css'), 'utf8');
+    },
+    (error) => {
+      world.accentError = String(error);
+    },
+  );
 });
 
 Then('el CSS lleva el acento {string}', (accent: string) => {
   if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new Error(`la paleta ${accent} no existe`);
-  const referencia = `--color-accent-500:var(--color-${accent}-500)`;
-  if (!world.css.includes(referencia)) {
-    throw new Error(`el CSS no lleva el tono 500 de ${accent} (${referencia})`);
-  }
-  if (!world.css.includes(`--color-${accent}-500:`)) {
-    throw new Error(`el CSS no lleva la paleta base de ${accent} que el acento referencia`);
-  }
+  const value = ACCENT_PALETTE_VALUES[accent as AccentColor][500];
+  if (value === undefined) throw new Error(`la paleta ${accent} no tiene el tono 500`);
+  if (!world.css.includes('--color-accent-500:')) throw new Error('el CSS no define el tono 500 del acento');
+  if (!world.css.includes(value)) throw new Error(`el CSS no lleva el valor del tono 500 de ${accent}`);
 });
 
-Then('el CSS purga lo que el HTML ya no usa y no inventa lo que no menciona', () => {
-  if (world.css.includes('clase-fantasma')) throw new Error('el CSS se auto-referenció con la clase fantasma');
-
-  for (const fantasma of ['.spacer', '.subparagraph', '.tarjeta-fragmento']) {
-    if (world.css.includes(fantasma)) throw new Error(`el CSS inventó ${fantasma}`);
-  }
+Then('el CSS lleva el estilo {string}', (style: string) => {
+  if (!world.css.includes(`data-style=${style}`)) throw new Error(`el CSS no lleva el estilo ${style}`);
 });
 
-When('leo el styles.css del proyecto', async () => {
-  world.css = await readFile(join(RESOURCES, 'styles.css'), 'utf8');
+Then('el CSS no lleva el estilo {string}', (style: string) => {
+  if (world.css.includes(`data-style=${style}`)) throw new Error(`el CSS lleva el estilo ${style} y no debería`);
 });
 
-Then('no tiene selectores de clase sueltos', () => {
-  const sinComentarios = world.css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const selectores = sinComentarios.split('\n').filter((linea) => /^\s*\.[a-zA-Z][\w-]*(\s*,\s*\.[a-zA-Z][\w-]*)*\s*\{/.test(linea));
-  if (selectores.length > 0) {
-    throw new Error(`styles.css tiene selectores de clase sueltos:\n${selectores.join('\n')}`);
-  }
+Then('el CSS lleva el tema oscuro', () => {
+  if (!world.css.includes('color-scheme:dark')) throw new Error('el CSS no lleva el tema oscuro');
 });
 
-Then('sus únicas utilidades son las que tienen caso atrás', () => {
-  const sinComentarios = world.css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const utilities = [...sinComentarios.matchAll(/@utility\s+([\w-]+)/g)].map((m) => m[1] ?? '').sort();
-  const expected = [
-    'bg-paper',
-    'bg-paper-grid',
-    'contenido-compacto',
-    'contenido-preview',
-    'contenido-tamano',
-    'content-grid',
-    'creator-publications-grid',
-    'dictum',
-    'logo-fill',
-    'nombres-enlazados',
-    'preview-grid',
-    'prose',
-    'scroll-reveal',
-    'smallcaps',
-    'tarjeta',
-    'tarjeta-extras',
-    'verse',
-  ];
-  if (JSON.stringify(utilities) !== JSON.stringify(expected)) {
-    throw new Error(`esperaba ${JSON.stringify(expected)} y hay ${JSON.stringify(utilities)}`);
-  }
+Then('el CSS no lleva reglas de tema oscuro', () => {
+  if (world.css.includes('color-scheme:dark')) throw new Error('el CSS lleva reglas de tema oscuro y no debería');
 });
 
-Given('un proyecto cuyo HTML trae {string}', async (cuerpo: string) => {
-  resetProject();
-  await mkdir(join(world.dir, 'assets', 'css'), { recursive: true });
-  await writeFile(join(world.dir, 'index.html'), `<!DOCTYPE html><html><body>${cuerpo}</body></html>`, 'utf8');
+Then('el CSS no tiene comentarios ni saltos de línea', () => {
+  if (world.css.includes('/*') || world.css.includes('\n')) throw new Error('el CSS no está minificado');
 });
 
-Then('el CSS da a {string} la propiedad {string}', (selector: string, propiedad: string) => {
-  const bloque = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\{([^}]*)\\}`).exec(world.css);
-  if (bloque === null) throw new Error(`el CSS no tiene ninguna regla para ${selector}`);
-  if (!(bloque[1] ?? '').includes(propiedad)) {
-    throw new Error(`la regla ${selector} no declara ${propiedad}. Dice:\n${bloque[1]}`);
-  }
+Then('el CSS pesa menos de {int} bytes', (bytes: number) => {
+  const peso = Buffer.byteLength(world.css, 'utf8');
+  if (peso >= bytes) throw new Error(`el CSS pesa ${peso} bytes y debe pesar menos de ${bytes}`);
 });
 
-Then('el CSS incluye la clase del HTML', () => {
-  if (!world.css.includes('text-stone-500')) throw new Error('el CSS no incluye la clase que el HTML usa');
+Then('el CSS mezcla el acento en el fondo de las tarjetas', () => {
+  if (!world.css.includes('--card-bg:color-mix')) throw new Error('el fondo de las tarjetas no mezcla el acento');
+  if (!world.css.includes('var(--color-accent-500)')) throw new Error('el fondo de las tarjetas no usa el acento');
 });
 
-Then('el CSS no incluye ninguna clase que no esté en el HTML', () => {
-  if (world.css.includes('clase-inexistente-en-html')) throw new Error('el CSS metió una clase que el HTML no usa');
+Then('el CSS mezcla el acento en el fondo del sitio', () => {
+  if (!world.css.includes('--paper-bg:color-mix')) throw new Error('el fondo del sitio no mezcla el acento');
 });
 
 Then('la compilación falla diciendo que el acento es desconocido', () => {
   if (!world.accentError.includes('acento desconocido')) {
     throw new Error(`esperaba un error de acento desconocido y obtuve: ${world.accentError || '(no hubo error)'}`);
   }
+});
+
+Then('el CSS da a {string} la propiedad {string}', (selector: string, propiedad: string) => {
+  const bloque = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(world.css);
+  if (bloque === null) throw new Error(`el CSS no tiene ninguna regla para ${selector}`);
+  if (!(bloque[1] ?? '').includes(propiedad)) {
+    throw new Error(`la regla ${selector} no declara ${propiedad}. Dice:\n${bloque[1]}`);
+  }
+});
+
+Then('el CSS no tiene {string}', (texto: string) => {
+  if (world.css.includes(texto)) throw new Error(`el CSS tiene ${texto} y no debería`);
 });
 
 async function tarjetasResueltas(type: string): Promise<string[]> {
@@ -253,7 +219,7 @@ Then('las tres tienen exactamente las mismas tarjetas', async () => {
 
 Then('el esqueleto compartido trae el fondo de papel milimetrado', async () => {
   const skeleton = await readFile(join(RESOURCES, 'html', 'skeleton.html'), 'utf8');
-  if (!skeleton.includes('bg-paper-grid')) throw new Error('el esqueleto no trae el fondo de papel milimetrado');
+  if (!skeleton.includes('class="sitio"')) throw new Error('el esqueleto no trae la clase del sitio');
 });
 
 Then('el marcador de referencias no lleva marco propio', async () => {
@@ -268,109 +234,38 @@ Then('todas las tarjetas comparten la misma superficie', async () => {
     for (const card of CARDS) {
       if (sinMarco(type, card)) continue;
       const html = await readCard(type, card);
-      if (!html.includes('tarjeta')) {
-        throw new Error(`${type}/${card} no usa la utilidad "tarjeta"`);
-      }
+      if (!html.includes('tarjeta')) throw new Error(`${type}/${card} no usa la clase tarjeta`);
     }
   }
 });
 
-When('reviso la punta de las tarjetas de {string}, {string} y {string}', (_a: string, _b: string, _c: string) => {});
-
-function exigePuntaRecta(html: string, etiqueta: string, llevaMarco: boolean): void {
-  if (!llevaMarco) {
-    if (html.includes('rounded-tr-') || html.includes('rounded-bl-')) throw new Error(`${etiqueta} no debía llevar marco`);
-    return;
-  }
-  if (!html.includes('rounded-lg')) throw new Error(`${etiqueta} no redondea las esquinas`);
-  if (/rounded-(tr|bl)-/.test(html)) throw new Error(`${etiqueta} conserva esquinas asimétricas`);
-}
-
-Then('cada tarjeta usa el mismo redondeo', async () => {
-  for (const type of TYPES) {
-    for (const card of CARDS) {
-      exigePuntaRecta(await readCard(type, card), `${type}/${card}`, !sinMarco(type, card));
-    }
-  }
-});
-
-When('leo el esqueleto y el styles.css del proyecto', async () => {
+When('leo el styles.css del proyecto', async () => {
   world.css = await readFile(join(RESOURCES, 'styles.css'), 'utf8');
 });
 
-Then('el esqueleto usa el fondo de papel milimetrado y sin degradados', async () => {
-  const skeleton = await readFile(join(RESOURCES, 'html', 'skeleton.html'), 'utf8');
-
-  if (skeleton.includes('radial-gradient')) throw new Error('el fondo usa radial-gradient');
-});
-
-Then('el esqueleto usa el fondo del sitio teñido del acento', async () => {
-  const skeleton = await readFile(join(RESOURCES, 'html', 'skeleton.html'), 'utf8');
-  if (!skeleton.includes('bg-paper')) throw new Error('el esqueleto no trae la utilidad bg-paper');
-  if (skeleton.includes('bg-stone-200') || skeleton.includes('bg-stone-900')) {
-    throw new Error('el esqueleto sigue usando el fondo gris de stone');
-  }
-});
-
-Then('el CSS mezcla el acento en el fondo del sitio', () => {
-  if (!world.css.includes('@utility bg-paper')) throw new Error('falta la utilidad bg-paper');
-  if (!world.css.includes('color-mix(in oklab, var(--color-accent-500) 8%, var(--color-stone-50))')) {
-    throw new Error('el fondo del sitio no mezcla el acento');
-  }
-});
-
-Then('el styles.css define ese fondo con las dos retículas y sin utilidad muerta', () => {
-  if (!world.css.includes('@utility bg-paper-grid')) throw new Error('falta la utilidad bg-paper-grid');
-
-  if (!world.css.includes('--grid-fine')) throw new Error('falta la variable --grid-fine');
-  if (!world.css.includes('64px 64px')) throw new Error('falta la retícula gruesa');
-  if (!world.css.includes('16px 16px')) throw new Error('falta la retícula fina');
-
-  if (world.css.includes('bg-grid-accent')) throw new Error('bg-grid-accent estaba definida y sin uso');
-});
-
-Given('un proyecto con un HTML de clase {string}', async (clase: string) => {
-  resetProject();
-  await writeFile(world.htmlPath, `<p class="${clase}">A</p>`, 'utf8');
-});
-
 Given('calculo el hash de su CSS', async () => {
-  const first = await computeCssHash(world.dir, siteConfig());
-  world.hash = first.hash;
-  world.hashCache = first.cache;
+  world.hash = await computeCssHash(siteConfig());
 });
 
-When('lo vuelvo a calcular con la caché intacta', async () => {
-  const second = await computeCssHash(world.dir, siteConfig(), world.hashCache as never);
-  world.newHash = second.hash;
+When('lo vuelvo a calcular con la misma config', async () => {
+  world.newHash = await computeCssHash(siteConfig());
 });
 
-When('toco el archivo sin cambiar su contenido', async () => {
-  await Bun.sleep(1100);
-  await Bun.write(world.htmlPath, '<p class="x">A</p>');
-  const touched = await computeCssHash(world.dir, siteConfig(), world.hashCache as never);
-  world.newHash = touched.hash;
+When('cambio el HTML sin tocar la config', async () => {
+  await writeFile(world.htmlPath, '<p class="otra">Otro HTML</p>', 'utf8');
+  world.newHash = await computeCssHash(siteConfig());
 });
 
-When('cambio el contenido y mantengo el mismo tamaño', async () => {
-  await Bun.sleep(1100);
-  await writeFile(world.htmlPath, '<p class="y">A</p>', 'utf8');
-  const changed = await computeCssHash(world.dir, siteConfig(), world.hashCache as never);
-  world.newHash = changed.hash;
+When('cambio el acento a {string}', async (accent: string) => {
+  world.newHash = await computeCssHash(siteConfig({ color: accent }));
 });
 
-When('agrando el contenido', async () => {
-  await Bun.sleep(1100);
-  await writeFile(world.htmlPath, '<p class="x">Contenido más largo</p>', 'utf8');
-  const changed = await computeCssHash(world.dir, siteConfig(), world.hashCache as never);
-  world.newHash = changed.hash;
+When('cambio el estilo a {string}', async (style: string) => {
+  world.newHash = await computeCssHash(siteConfig({ style }));
 });
 
-When('borro el archivo', async () => {
-  await Bun.sleep(1100);
-  await Bun.file(world.htmlPath).delete();
-  const removed = await computeCssHash(world.dir, siteConfig(), world.hashCache as never);
-  world.newHash = removed.hash;
+When('cambio el tema a {string}', async (theme: string) => {
+  world.newHash = await computeCssHash(siteConfig({ theme: theme === 'dark' ? 'dark' : 'light' }));
 });
 
 Then('el hash no cambia', () => {

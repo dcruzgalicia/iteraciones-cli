@@ -37,7 +37,7 @@ Característica: las palabras clave del proyecto
       Cuando hago un build del proyecto
       Entonces el HTML de "ensayo.html" contiene "Palabras clave"
       Y el HTML de "ensayo.html" contiene "./keywords/mujeres.html"
-      Y el HTML de "ensayo.html" contiene ">cuidados<span"
+      Y el HTML de "ensayo.html" contiene ">cuidados</span><span"
       Y el HTML de "ensayo.html" contiene "<meta name=\"keywords\" content=\"cuidados,mujeres\">"
 
     Escenario: Una página sin keywords propios muestra las del sitio

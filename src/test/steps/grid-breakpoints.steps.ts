@@ -12,9 +12,9 @@ const BREAKPOINTS: Record<string, number> = {
 };
 
 function bloque(utilidad: string): string {
-  const inicio = css.indexOf(`@utility ${utilidad} {`);
-  if (inicio === -1) throw new Error(`no se encontró @utility ${utilidad}`);
-  const siguiente = css.indexOf('\n@utility', inicio + 1);
+  const inicio = css.indexOf(`.${utilidad} {`);
+  if (inicio === -1) throw new Error(`no se encontró .${utilidad}`);
+  const siguiente = css.indexOf('\n.', inicio + 1);
   return css.slice(inicio, siguiente === -1 ? undefined : siguiente);
 }
 

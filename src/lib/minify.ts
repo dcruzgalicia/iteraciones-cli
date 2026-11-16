@@ -24,15 +24,39 @@ export async function checkMinify(): Promise<{ label: string; ok: boolean; detai
     ok,
     warn: true,
     detail: ok
-      ? 'minifica el HTML de la salida'
+      ? 'minifica el HTML y el CSS de la salida'
       : 'no encontrado en PATH. Instálalo desde https://github.com/tdewolff/minify (por ejemplo: brew install minify)',
   };
 }
 
 function warnMissing(): void {
   if (warnedMissing) return;
-  logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
+  logWarning('minify no está en PATH; el HTML y el CSS salen sin minificar. Instálalo con `brew install minify`', 'html');
   warnedMissing = true;
+}
+
+export async function minifyCss(css: string): Promise<string> {
+  if (!(await minifyAvailable())) {
+    warnMissing();
+    return css;
+  }
+
+  const proc = Bun.spawn([BIN, '--type', 'css'], {
+    stdin: new Blob([css]),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+
+  const [salida, error] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+  const code = await proc.exited;
+  if (code !== 0) {
+    if (!warnedFailure) {
+      logWarning(`minify falló con el CSS; sale sin minificar. stderr: ${error.trim()}`, 'css');
+      warnedFailure = true;
+    }
+    return css;
+  }
+  return salida;
 }
 
 export async function minifyHtml(html: string): Promise<string> {

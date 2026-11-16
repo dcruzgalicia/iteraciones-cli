@@ -100,17 +100,13 @@ Given('que escribo markdown de relleno con clases inventadas', () => {
   }
 });
 
-Given('que el documento tiene una clase que hay que compilar', () => {
-  escribirEnProyecto('test.md', `${FRONTMATTER}<div class="bg-teal-300">x</div>\n\nNuevo contenido.\n`);
-});
-
 Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
   const html = salida('test-document.html');
   const inicio = html.indexOf('>Formatos</h2>');
   if (inicio < 0) throw new Error('la página no tiene tarjeta de descargas');
   const tarjeta = html.slice(inicio, html.indexOf('</section>', inicio));
   if (!tarjeta.includes('<ul')) throw new Error('la tarjeta de descargas no es una lista');
-  if (!/<ul class="[^"]*list-disc/.test(tarjeta)) throw new Error('la lista de descargas no tiene viñetas');
+  if (!/<ul class="[^"]*lista-enlaces--disco/.test(tarjeta)) throw new Error('la lista de descargas no tiene viñetas');
   if (tarjeta.includes('<svg')) throw new Error('la tarjeta de descargas todavía tiene iconos');
   if (tarjeta.includes('Documento final')) throw new Error('la tarjeta de descargas todavía tiene descripciones');
 });
@@ -217,10 +213,10 @@ Then('el HTML de dist lleva el data-theme {string}', (tema: string) => {
   exige(salida(archivo), archivo, [`data-theme="${tema}"`]);
 });
 
-Then('el CSS se compila sobre los HTML finales', () => {
+Then('el CSS lleva el acento del sitio y no clases inventadas', () => {
   const css = salida(join('assets', 'css', 'styles.css'));
 
-  exige(css, 'styles.css', ['prose', 'oklch(76.8% .233 130.85)', 'bg-teal-300']);
+  exige(css, 'styles.css', ['prose', '--color-accent-500']);
 
   prohibe(css, 'styles.css', ['bg-fuchsia-700', 'bg-indigo-700']);
 });
@@ -228,7 +224,7 @@ Then('el CSS se compila sobre los HTML finales', () => {
 Then('la página trae el botón de volver al principio', () => {
   const archivo = 'test-document.html';
   const html = salida(archivo);
-  exige(html, archivo, ['<body id="top"', 'aria-label="Volver al principio"', 'fixed bottom-6 right-6', 'scroll-reveal']);
+  exige(html, archivo, ['<body id="top"', 'aria-label="Volver al principio"', 'volver-arriba']);
   prohibe(html, archivo, ['block:volver']);
   exige(salida(join('assets', 'css', 'styles.css')), 'styles.css', ['@keyframes scroll-reveal', 'animation-timeline:scroll()']);
 });

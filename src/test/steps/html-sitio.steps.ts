@@ -47,13 +47,13 @@ Given('un proyecto con una creadora con redes', () => {
 
 Then('el HTML de {string} tiene la tarjeta de redes de {string}', (archivo: string, dueno: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const tarjeta = new RegExp(`<h2[^>]*>Redes</h2><span class="[^"]*bg-transparent[^"]*">${RegExp.escape(dueno)}</span>`);
+  const tarjeta = new RegExp(`<h2[^>]*>Redes</h2><span class="chip chip--red">${RegExp.escape(dueno)}</span>`);
   if (!tarjeta.test(html)) throw new Error(`${archivo} no tiene la tarjeta de redes de ${dueno}`);
 });
 
 Then('los enlaces de la tarjeta de redes de {string} abren en otra pestaña', (archivo: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const tarjeta = /<h2[^>]*>Redes<\/h2><span class="[^"]*bg-transparent[^"]*">[^<]*<\/span>[\s\S]*?<\/ul>/.exec(html)?.[0] ?? '';
+  const tarjeta = /<h2[^>]*>Redes<\/h2><span class="chip chip--red">[^<]*<\/span>[\s\S]*?<\/ul>/.exec(html)?.[0] ?? '';
   if (tarjeta === '') throw new Error(`${archivo} no tiene la tarjeta de redes`);
   const enlaces = [...tarjeta.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
   if (enlaces.length === 0) throw new Error(`la tarjeta de redes de ${archivo} no tiene enlaces`);
@@ -120,7 +120,7 @@ Given('un proyecto con un texto en una lista', () => {
 
 function patronChip(etiqueta: string): RegExp {
   return new RegExp(
-    `<(h2|a|span)\\b[^>]*class="[^"]*rounded-(?:full|md)[^"]*"[^>]*>(?:<a\\b[^>]*>)?(?:<span\\b[^>]*>)?${RegExp.escape(etiqueta)}(?:</span>)?(?:</a>)?</\\1>`,
+    `<(h2|a|span)\\b[^>]*class="[^"]*\\bchip\\b[^"]*"[^>]*>(?:<a\\b[^>]*>)?(?:<span[^>]*class="chip__texto"[^>]*>)?${RegExp.escape(etiqueta)}(?:</span>)?(?:</a>)?</\\1>`,
   );
 }
 
@@ -128,7 +128,7 @@ function chipDelHtml(archivo: string, etiqueta: string): string {
   const html = leer(`dist/files/${archivo}`);
   const chip = patronChip(etiqueta).exec(html);
   if (chip !== null) return chip[0];
-  const enlace = new RegExp(`<a\\b[^>]*class="[^"]*text-accent-700[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).exec(html);
+  const enlace = new RegExp(`<a\\b[^>]*class="[^"]*enlace-acento[^"]*"[^>]*>${RegExp.escape(etiqueta)}</a>`).exec(html);
   if (enlace !== null) return enlace[0];
   const texto = new RegExp(`<span[^>]*>${RegExp.escape(etiqueta)}</span>`).exec(html);
   if (texto !== null) return texto[0];
@@ -176,8 +176,7 @@ Then('el EPUB {string} contiene {string}', async (archivo: string, texto: string
 
 Then('el chip {string} del HTML de {string} sólo se subraya al pasar el ratón', (etiqueta: string, archivo: string) => {
   const chip = chipDelHtml(archivo, etiqueta);
-  if (!/class="[^"]*no-underline/.test(chip)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no lleva no-underline`);
-  if (!/class="[^"]*hover:underline/.test(chip)) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no se subraya en hover`);
+  if (!chip.includes('chip--enlace')) throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no es un enlace con hover`);
   const clases = /class="([^"]*)"/.exec(chip)?.[1] ?? '';
   if (clases.split(/\s+/).includes('underline')) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} está subrayado siempre`);
@@ -187,7 +186,7 @@ Then('el chip {string} del HTML de {string} sólo se subraya al pasar el ratón'
 Then('el chip {string} del HTML de {string} tiene efecto de elevación', (etiqueta: string, archivo: string) => {
   const chip = chipDelHtml(archivo, etiqueta);
   const clases = /class="([^"]*)"/.exec(chip)?.[1] ?? '';
-  if (!clases.includes('hover:-translate-x-0.5') || !clases.includes('hover:shadow-[3px_3px_0_0]')) {
+  if (!clases.includes('chip--enlace')) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} no se eleva al pasar el ratón`);
   }
 });
@@ -226,7 +225,7 @@ Then('los enlaces de Formatos abren en otra pestaña', () => {
 
 Then('la identidad no es un enlace', () => {
   const html = leer('dist/files/test-document.html');
-  if (!html.includes('id="card-identity" class="min-w-0"><div class="flex flex-col items-start')) {
+  if (!/<div id="card-identity" class="sitio-marca">\s*<div class="sitio-marca__fila">/.test(html)) {
     throw new Error('la identidad sigue siendo un enlace');
   }
 });

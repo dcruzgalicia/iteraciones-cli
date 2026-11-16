@@ -1,0 +1,8 @@
+[data-style="expresivo"] {
+  --paper-bg: #1d1915;
+  --grid-fine: color-mix(in oklab, var(--color-accent-300) 5%, transparent);
+  --grid-bold: color-mix(in oklab, var(--color-accent-300) 12%, transparent);
+  --card-bg: color-mix(in oklab, var(--color-accent-500) 4%, #211c17);
+  --card-shadow: 4px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 26%, transparent);
+  --card-shadow-hover: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 36%, transparent);
+}

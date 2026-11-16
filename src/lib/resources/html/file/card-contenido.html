@@ -1,27 +1,14 @@
 $if(body)$
-    <div id="card-document" class="min-w-0">
-
-      <article
-        class="relative prose prose-lg sm:prose-lg md:prose-xl contenido-tamano [--tw-prose-links:var(--color-accent-700)] [--tw-prose-invert-links:var(--color-accent-300)] dark:prose-invert max-w-none overflow-hidden rounded-lg tarjeta  transition-all duration-200  [overflow-wrap:anywhere]
-        [&_blockquote]:border-accent-500/40
-        [&_.citation_a]:text-stone-900 dark:[&_.citation_a]:text-stone-100
-        [&_.citation_a]:no-underline [&_.citation_a:hover]:underline [&_.citation_a]:underline-offset-4 [&_.citation_a]:decoration-accent-500/60 [&_.citation_a]:transition-colors [&_.citation_a]:duration-200 [&_.citation_a:hover]:decoration-accent-500
-        [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-accent-500/10 [&_pre]:bg-stone-100 dark:[&_pre]:bg-stone-950/70
-        [&_h1:not([class])]:text-2xl [&_h1.unnumbered]:text-2xl [&_h2:not([class])]:text-xl
-        [&_h3:not([class])]:text-xl [&_h3:not([class])]:text-accent-700 dark:[&_h3:not([class])]:text-accent-300
-        [&_h4:not([class])]:text-xl [&_h4:not([class])]:uppercase [&_h4:not([class])]:tracking-wide
-        [&_h5:not([class])]:text-xl [&_h5:not([class])]:italic
-        [&_h6:not([class])]:text-xl [&_h6:not([class])]:italic [&_h6:not([class])]:font-normal
-        [&_table]:border-accent-500/10 [&_th]:border-accent-500/10 [&_td]:border-accent-500/10"
-      >
-        <div class="min-w-0 p-4 sm:p-6 lg:p-8">
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6 lg:gap-8">
+    <div id="card-document">
+      <article class="tarjeta contenido-articulo prose contenido-tamano">
+        <div class="contenido-cuerpo">
+          <div class="contenido-flex">
             $if(creator-image)$
-            <img src="$creator-image$" alt="$creator-image-alt$" class="w-full shrink-0 rounded-lg border-2 border-accent-500/70 object-contain shadow-[3px_3px_0_0] shadow-accent-500/30 sm:w-[45%] md:w-2/5 lg:w-1/3 xl:w-1/4 2xl:w-1/4">
+            <img src="$creator-image$" alt="$creator-image-alt$" class="contenido-retrato">
             $endif$
-            <div class="min-w-0 flex-1">
+            <div class="contenido-texto">
               $if(content-chip)$
-              <div class="not-prose"><h2 class="inline-flex h-6 sm:h-7 lg:h-8 shrink-0 items-center whitespace-nowrap rounded-md border-2 border-accent-500/30 bg-accent-500/12 px-2 sm:px-2.5 lg:px-3 text-xs font-normal uppercase tracking-wide leading-none mt-0 mb-6 text-accent-800 sm:px-3 sm:text-xs lg:px-3.5 lg:text-sm dark:text-accent-300">$content-chip$</h2></div>
+              <div class="not-prose"><h2 class="not-prose chip chip--titulo">$content-chip$</h2></div>
               $endif$
               $body$
             </div>

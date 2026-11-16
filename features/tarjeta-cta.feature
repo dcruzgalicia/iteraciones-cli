@@ -83,9 +83,7 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
         Cuerpo del texto.
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/50 bg-accent-500/20"
-      Y el archivo "dist/files/index.html" dice "focus-visible:outline"
-      Y el archivo "dist/files/index.html" dice "dark:hover:text-accent-100"
+      Entonces el archivo "dist/files/index.html" dice "boton boton--cta"
 
     Escenario: El botón del menú usa el mismo chip que las tarjetas
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -111,7 +109,7 @@ Característica: el CTA de las tarjetas y la etiqueta Colaboradora
         ---
         """
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/index.html" dice "href=\"./menu.html\" class=\"inline-flex h-6 sm:h-7 lg:h-8 items-center gap-2 rounded-md border-2 border-accent-500/30 bg-accent-500/12"
+      Entonces el archivo "dist/files/index.html" dice "href=\"./menu.html\" class=\"chip chip--menu\""
 
   Regla de negocio: En lo visible se dice Colaboradora, pero el type sigue siendo creator
 

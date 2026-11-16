@@ -85,4 +85,5 @@ Característica: estilos visuales del sitio
     Entonces el comando termina con el código de salida 0
     Y el archivo "dist/files/index.html" contiene "data-theme=\"dark\""
     Y el archivo "dist/files/index.html" contiene "data-style=\"expresivo\""
-    Y el archivo "dist/files/assets/css/styles.css" contiene "[data-style=expresivo][data-theme=dark]"
+    Y el archivo "dist/files/assets/css/styles.css" contiene "color-scheme:dark"
+    Y el archivo "dist/files/assets/css/styles.css" contiene "data-style=expresivo"

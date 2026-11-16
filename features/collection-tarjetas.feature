@@ -22,7 +22,7 @@ Característica: la tarjeta de cada miembro de una colección
       Y el HTML no dice "---"
       Y el HTML dice ":::: {class=\"collection-intro\"}"
       Y el HTML dice "Intro de la antología."
-      Y el HTML pone "collection-intro" antes que "tarjeta-fragmento"
+      Y el HTML pone "collection-intro" antes que "tarjeta--fragmento"
       Y el HTML tiene 1 contenedores de tarjeta
 
     Escenario: Sin cuerpo propio no hay nada que subir a la banda
@@ -35,7 +35,7 @@ Característica: la tarjeta de cada miembro de una colección
       """
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML no dice "collection-intro"
-      Y el HTML dice "tarjeta-fragmento"
+      Y el HTML dice "tarjeta--fragmento"
 
   Regla de negocio: Una tarjeta por miembro, con su autor y su fragmento
 
@@ -46,8 +46,8 @@ Característica: la tarjeta de cada miembro de una colección
       cuerpo propio
       """
       Cuando compogo las tarjetas de la página HTML
-      Entonces el HTML dice "tarjeta-fragmento"
-      Y el HTML dice "<h2 class=\"card-creator not-prose text-left text-sm font-semibold text-accent-700 sm:text-base dark:text-accent-300\"><span class=\"whitespace-nowrap\">Autora A</span></h2>"
+      Entonces el HTML dice "tarjeta--fragmento"
+      Y el HTML dice "<h2 class=\"not-prose tarjeta-autor\"><span class=\"nombre\">Autora A</span></h2>"
       Y el título de la tarjeta del miembro es un enlace
       Y el HTML dice "Contenido de doc."
       Y el HTML dice "Leer texto completo →"
@@ -59,8 +59,8 @@ Característica: la tarjeta de cada miembro de una colección
       """
       Cuando compogo las tarjetas de la página HTML
       Entonces el HTML dice "<a href=\"./documento-por-autora-a.html\""
-      Y el HTML dice "tarjeta-fragmento relative"
-      Y el HTML dice "<p class=\"not-prose mt-auto pt-4 text-left\">"
+      Y el HTML dice "tarjeta--fragmento"
+      Y el HTML dice "<p class=\"tarjeta-pie not-prose\">"
       Y el HTML no dice "after:absolute after:inset-0"
 
     Escenario: Cada tarjeta va en su propio contenedor
@@ -164,7 +164,7 @@ Característica: la tarjeta de cada miembro de una colección
       """
       Cuando compongo el HTML base para el EPUB
       Entonces el HTML dice "Segundo párrafo que sí debe aparecer."
-      Y el HTML no dice "tarjeta-fragmento"
+      Y el HTML no dice "tarjeta--fragmento"
 
   Regla de negocio: El escaneo de imágenes necesita el cuerpo propio
 

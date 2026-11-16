@@ -101,13 +101,13 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | html-div-text-center-lo-emite-pandoc-solo |
         | html-la-forma-vieja-center-sale-clase-dead |
         | html-la-forma-vieja-flushright-sale-clase-dead |
-        | html-span-text-nowrap-lleva-la-clase-que-tailwind-reconoce |
+        | html-span-text-nowrap-lleva-la-clase-del-sitio |
         | html-span-text-nowrap-con-hyphens-none |
         | html-la-forma-vieja-mbox-sale-clase-dead |
         | html-line-height-sale-como-dato-y-no-hace-nada |
         | html-la-forma-vieja-spacing-tampoco-hacia-nada |
         | html-div-text-lg-lo-emite-pandoc-solo |
-        | html-span-text-sm-lleva-la-clase-que-tailwind-reconoce |
+        | html-span-text-sm-lleva-la-clase-del-sitio |
         | html-la-forma-vieja-small-sale-clase-dead |
         | no-altera-parrafos-normales |
 

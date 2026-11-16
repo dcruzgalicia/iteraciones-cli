@@ -59,7 +59,7 @@ local function names_inlines(value)
       local inl = as_inlines(item)
       if inl ~= nil and #inl > 0 then
         separator(out)
-        out:insert(pandoc.Span(inl, pandoc.Attr('', { 'whitespace-nowrap' })))
+        out:insert(pandoc.Span(inl, pandoc.Attr('', { 'nombre' })))
       end
     end
   else
@@ -67,7 +67,7 @@ local function names_inlines(value)
     if inl == nil or #inl == 0 then
       return nil
     end
-    out:insert(pandoc.Span(inl, pandoc.Attr('', { 'whitespace-nowrap' })))
+    out:insert(pandoc.Span(inl, pandoc.Attr('', { 'nombre' })))
   end
   return #out > 0 and out or nil
 end

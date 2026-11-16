@@ -104,7 +104,7 @@ Then('la biografía del texto está en su propia tarjeta', () => {
   const html = readFileSync(join(world.root, 'dist', 'files', 'un-texto-por-ana-garcia.html'), 'utf8');
   const bio = html.indexOf('Bio de Ana García.');
   const antes = html.slice(0, bio);
-  const wrapper = antes.lastIndexOf('class="min-w-0"');
+  const wrapper = antes.lastIndexOf('class="tarjeta-envoltura"');
   if (wrapper < 0) {
     throw new Error('la biografía no está dentro de una tarjeta propia');
   }
@@ -132,8 +132,8 @@ Then('la tarjeta de las colecciones lleva el chip {string}', (chip: string) => {
     throw new Error(`la tarjeta de las colecciones no lleva el chip ${JSON.stringify(chip)}`);
   }
 
-  if (!match[1]?.includes('mt-0') || !/\bmb-\d/.test(match[1] ?? '')) {
-    throw new Error(`el chip ${JSON.stringify(chip)} conserva los márgenes del h2: ${match[1]}`);
+  if (!match[1]?.includes('chip--titulo')) {
+    throw new Error(`el chip ${JSON.stringify(chip)} no es un chip de título: ${match[1]}`);
   }
 });
 
@@ -164,7 +164,7 @@ Then('las tarjetas de {string} son hermanas de la bio', (archivo: string) => {
   if (inicio < 0) throw new Error(`${archivo} no tiene tarjeta de bio`);
   const cierre = html.indexOf('</article></div>', inicio);
   if (cierre < 0) throw new Error(`${archivo} no cierra la tarjeta de bio`);
-  const primeraTarjeta = html.indexOf('tarjeta-fragmento', inicio);
+  const primeraTarjeta = html.indexOf('tarjeta--fragmento', inicio);
   if (primeraTarjeta < 0) throw new Error(`${archivo} no tiene tarjetas de textos o colecciones`);
   if (primeraTarjeta < cierre) throw new Error(`${archivo} mete las tarjetas dentro de la bio`);
 });

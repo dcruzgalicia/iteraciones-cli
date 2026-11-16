@@ -5,4 +5,4 @@ Característica: área de toque de los enlaces de tarjeta
 
   Escenario: El título enlazado de una tarjeta tiene área de toque
     Cuando genero una tarjeta de colección con título enlazado
-    Entonces el enlace del título tiene la clase "py-1"
+    Entonces el enlace del título tiene la clase "enlace-miembro"
