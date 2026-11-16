@@ -724,19 +724,11 @@ a:hover {
   text-align: right;
 }
 
-.sitio-header__contenido {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem 2rem;
-  min-height: 50px;
-}
-
 .sitio-acciones {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
 
@@ -1995,7 +1987,7 @@ a:hover {
   }
 
   .sitio-acciones {
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 
   .chip {
