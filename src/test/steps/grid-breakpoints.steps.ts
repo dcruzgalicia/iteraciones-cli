@@ -65,8 +65,3 @@ Then('{word} usa {int} columnas en {word}', (utilidad: string, cantidad: number,
     throw new Error(`${utilidad} usa ${leidas ?? 'sin columnas'} en ${breakpoint} y debía usar ${cantidad}`);
   }
 });
-
-Then('{word} no define 3 columnas en {word}', (utilidad: string, breakpoint: string) => {
-  const leidas = columnas(media(utilidad, breakpoint));
-  if (leidas === 3) throw new Error(`${utilidad} usa 3 columnas en ${breakpoint} y no debería`);
-});
