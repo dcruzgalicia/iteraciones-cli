@@ -226,7 +226,7 @@ async function collectFieldImages(
   text: string,
   docDir: string,
   pageWidthmm: number,
-  results: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[],
+  results: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number; field: string }[],
 ): Promise<void> {
   for (const match of text.matchAll(MD_IMAGE_RE)) {
     const imgPath = match[2];
@@ -244,7 +244,7 @@ async function collectFieldImages(
       throw new BuildError(`imagen SVG en "${field}" requiere {width=...}: "${imgPath}"`);
     }
 
-    results.push({ absPath: abs, isSvg, attrs, widthMm: parseWidthMm(attrs, pageWidthmm) });
+    results.push({ absPath: abs, isSvg, attrs, widthMm: parseWidthMm(attrs, pageWidthmm), field });
   }
 }
 
@@ -252,8 +252,8 @@ export async function scanTitlePageFieldImages(
   fm: Record<string, unknown>,
   docDir: string,
   pageWidthmm = 215.9,
-): Promise<{ absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[]> {
-  const results: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[] = [];
+): Promise<{ absPath: string; isSvg: boolean; attrs?: string; widthMm?: number; field: string }[]> {
+  const results: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number; field: string }[] = [];
   for (const field of MULTILINE_IMAGE_FIELDS) {
     const text = fieldText(fm[field]);
     if (text === undefined) continue;
@@ -399,17 +399,26 @@ export async function collectImageSources(
   extraImages: readonly string[] = [],
 ): Promise<ImageSource[]> {
   const sources: ImageSource[] = [];
-  const seen = new Set<string>();
+  const byPath = new Map<string, ImageSource>();
   const push = (source: ImageSource): void => {
-    if (seen.has(source.absPath)) return;
-    seen.add(source.absPath);
+    const previous = byPath.get(source.absPath);
+    if (previous !== undefined) {
+      if (previous.cover !== true && (source.field === 'extratitle' || source.field === 'frontispiece')) {
+        previous.field = source.field;
+        previous.kind = source.kind;
+        previous.widthMm = source.widthMm ?? previous.widthMm;
+        previous.heightMm = source.heightMm ?? previous.heightMm;
+      }
+      return;
+    }
+    byPath.set(source.absPath, source);
     sources.push(source);
   };
 
   await collectFieldSources(fm, docDir, push);
 
   for (const img of await scanTitlePageFieldImages(fm, docDir, pageWidthmm)) {
-    push({ absPath: img.absPath, kind: 'title', cover: false, widthMm: img.widthMm });
+    push({ absPath: img.absPath, kind: 'title', cover: false, field: img.field, widthMm: img.widthMm });
   }
 
   for (const img of scanInlineImageSources(content, docDir, pageWidthmm)) {
@@ -730,52 +739,80 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
   const result: DocumentImages = {};
 
   if (args.wants.pdf) {
-    if (args.pdfSmall === true && sources.some((source) => source.cover)) {
-      const coverWidth = Math.max(1, Math.ceil((args.pageDimensions.w / 25.4) * 150));
-      const covers = await processSources(
-        sources.filter((source) => source.cover),
-        {
-          outputDir: args.dirs.pdf,
-          ext: 'jpg',
-          kind: 'web',
-          publish: false,
-          maxWidthPx: coverWidth,
-          quality: 70,
-          flatten: true,
-          density300: false,
-          grayscale: true,
-          coverColor,
-        },
-        targets,
-        cacheDir,
-      );
-      const rest = await processSources(
-        sources.filter((source) => !source.cover),
-        {
-          outputDir: args.dirs.pdf,
-          ext: 'jpg',
-          kind: 'web',
-          publish: false,
-          maxWidthPx: 1280,
-          fallbackMaxWidthPx: 420,
-          quality: 50,
-          fallbackQuality: 20,
-          maxBytes: 25 * 1024,
-          targetDefine: 'jpeg:extent=25KB',
-          flatten: true,
-          density300: false,
-          grayscale: true,
-          coverColor,
-        },
-        targets,
-        cacheDir,
-      );
-      result.pdf = mergeProcessedImages(covers, rest);
-    } else {
+    if (args.pdfSmall !== true) {
       result.pdf = await processSources(
         sources,
-        args.pdfSmall === true
-          ? {
+        {
+          outputDir: args.dirs.pdf,
+          ext: 'jpg',
+          kind: 'pdf',
+          publish: false,
+          namePrefix: args.namePrefix,
+          quality: 100,
+          flatten: true,
+          density300: true,
+          grayscale: true,
+          coverColor,
+        },
+        targets,
+        cacheDir,
+      );
+    } else {
+      const covers = sources.filter((source) => source.cover);
+      const titlePages = sources.filter((source) => !source.cover && (source.field === 'extratitle' || source.field === 'frontispiece'));
+      const titleSet = new Set(titlePages);
+      const rest = sources.filter((source) => !source.cover && !titleSet.has(source));
+      const coverWidth = Math.max(1, Math.ceil((args.pageDimensions.w / 25.4) * 150));
+      const parts: ProcessedImages[] = [];
+
+      if (covers.length > 0) {
+        parts.push(
+          await processSources(
+            covers,
+            {
+              outputDir: args.dirs.pdf,
+              ext: 'jpg',
+              kind: 'web',
+              publish: false,
+              maxWidthPx: coverWidth,
+              quality: 70,
+              flatten: true,
+              density300: false,
+              grayscale: true,
+              coverColor,
+            },
+            targets,
+            cacheDir,
+          ),
+        );
+      }
+
+      if (titlePages.length > 0) {
+        parts.push(
+          await processSources(
+            titlePages,
+            {
+              outputDir: args.dirs.pdf,
+              ext: 'jpg',
+              kind: 'pdf',
+              publish: false,
+              quality: 70,
+              flatten: true,
+              density300: true,
+              grayscale: true,
+              coverColor,
+            },
+            targets,
+            cacheDir,
+          ),
+        );
+      }
+
+      if (rest.length > 0) {
+        parts.push(
+          await processSources(
+            rest,
+            {
               outputDir: args.dirs.pdf,
               ext: 'jpg',
               kind: 'web',
@@ -790,22 +827,16 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
               density300: false,
               grayscale: true,
               coverColor,
-            }
-          : {
-              outputDir: args.dirs.pdf,
-              ext: 'jpg',
-              kind: 'pdf',
-              publish: false,
-              namePrefix: args.namePrefix,
-              quality: 100,
-              flatten: true,
-              density300: true,
-              grayscale: true,
-              coverColor,
             },
-        targets,
-        cacheDir,
-      );
+            targets,
+            cacheDir,
+          ),
+        );
+      }
+
+      let merged: ProcessedImages = { imageMap: new Map(), processedFiles: [], sizes: new Map(), names: new Map() };
+      for (const part of parts) merged = mergeProcessedImages(merged, part);
+      result.pdf = merged;
     }
   }
 
