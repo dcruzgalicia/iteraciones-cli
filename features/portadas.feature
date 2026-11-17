@@ -56,6 +56,7 @@ Característica: las portadas del PDF
       Y el proyecto compila el PDF
       Entonces la página 1 del PDF conserva el color
       Y la página 2 del PDF conserva el color
+      Y las portadas del PDF conservan al menos 150 dpi
 
     Escenario: Sin coverColor la portada conserva su color
       Dado que la raíz del proyecto está vacía
