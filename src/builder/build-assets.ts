@@ -162,6 +162,14 @@ async function writeSvgLogo(src: string, outputDir: string, accent: string | und
   return { kind: 'inline', svg, favicon: ASSETS_FAVICON_SVG };
 }
 
+async function writeRasterLogoOutputs(webpArgs: string[], faviconArgs: string[], outputDir: string): Promise<boolean> {
+  if (!(await spawnMagick(webpArgs))) return false;
+  await spawnMagick(faviconArgs);
+  await rm(join(outputDir, ASSETS_LOGO_SVG), { force: true });
+  await rm(join(outputDir, ASSETS_FAVICON_SVG), { force: true });
+  return true;
+}
+
 async function rasterSvgLogo(src: string, outputDir: string, size: number, accent: string | undefined): Promise<boolean> {
   const rsvg = Bun.which('rsvg-convert');
   if (rsvg === null) return false;
@@ -183,11 +191,11 @@ async function rasterSvgLogo(src: string, outputDir: string, size: number, accen
       stderr: 'ignore',
     });
     if ((await render.exited) !== 0) return false;
-    if (!(await spawnMagick(['-background', 'none', pngPath, '-strip', '-define', 'webp:lossless=true', webp]))) return false;
-    await spawnMagick(['-background', 'none', pngPath, '-resize', '32x32>', '-strip', favicon]);
-    await rm(join(outputDir, ASSETS_LOGO_SVG), { force: true });
-    await rm(join(outputDir, ASSETS_FAVICON_SVG), { force: true });
-    return true;
+    return await writeRasterLogoOutputs(
+      ['-background', 'none', pngPath, '-strip', '-define', 'webp:lossless=true', webp],
+      ['-background', 'none', pngPath, '-resize', '32x32>', '-strip', favicon],
+      outputDir,
+    );
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -198,7 +206,6 @@ async function rasterLogo(src: string, outputDir: string, size: number, accent: 
   await mkdir(dirname(webp), { recursive: true });
   await rm(join(outputDir, ASSETS_LOGO_SVG), { force: true });
   await rm(join(outputDir, ASSETS_FAVICON_SVG), { force: true });
-
   const isSvg = src.toLowerCase().endsWith('.svg');
   const svg = isSvg ? await readFile(src, 'utf8') : '';
   const soloCurrentColor = isSvg && svg.includes('currentColor') && !/#[0-9a-f]{3,8}\b/i.test(svg) && !/rgb\(/i.test(svg);
@@ -217,38 +224,12 @@ async function rasterLogo(src: string, outputDir: string, size: number, accent: 
       : [];
 
   try {
-    const args = [
-      '-background',
-      'none',
-      '-density',
-      '300',
-      '-units',
-      'PixelsPerInch',
-      input,
-      '-resize',
-      `${size}x>`,
-      '-strip',
-      '-define',
-      'webp:lossless=true',
-      ...colorize,
-    ];
-    args.push(webp);
-    if (!(await spawnMagick(args))) return false;
-    await spawnMagick([
-      '-background',
-      'none',
-      '-density',
-      '300',
-      '-units',
-      'PixelsPerInch',
-      input,
-      '-resize',
-      '32x32>',
-      '-strip',
-      ...colorize,
-      join(outputDir, ASSETS_FAVICON_PNG),
-    ]);
-    return true;
+    const base = ['-background', 'none', '-density', '300', '-units', 'PixelsPerInch', input];
+    return await writeRasterLogoOutputs(
+      [...base, '-resize', `${size}x>`, '-strip', '-define', 'webp:lossless=true', ...colorize, webp],
+      [...base, '-resize', '32x32>', '-strip', ...colorize, join(outputDir, ASSETS_FAVICON_PNG)],
+      outputDir,
+    );
   } finally {
     if (tempDir !== undefined) await rm(tempDir, { recursive: true, force: true });
   }
