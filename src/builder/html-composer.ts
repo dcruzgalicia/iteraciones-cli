@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
+import { logWarning } from '../lib/logger.js';
 
 export const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
@@ -82,14 +83,48 @@ function footerHtml(footerIdentity: string, menuFooterPlain: string, redes: stri
   ]);
 }
 
-function fillSlot(html: string, name: string, content: string): string {
+interface SlotBounds {
+  start: number;
+  openEnd: number;
+  end: number;
+}
+
+export function findBalancedDivEnd(html: string, divStart: number, que = 'las referencias'): number | undefined {
+  let depth = 0;
+  let i = divStart;
+  while (i < html.length) {
+    const open = html.indexOf('<div', i);
+    const close = html.indexOf('</div>', i);
+    if (close < 0) break;
+    if (open >= 0 && open < close) {
+      depth++;
+      i = open + 4;
+    } else {
+      depth--;
+      i = close + 6;
+      if (depth === 0) break;
+    }
+  }
+  if (depth !== 0) {
+    logWarning(`HTML mal balanceado: ${que} no se extrajeron del documento; revisa los filtros Lua propios (div sin cerrar)`, 'html');
+    return undefined;
+  }
+  return i;
+}
+
+export function slotBounds(html: string, name: string): SlotBounds | undefined {
   const start = html.indexOf(`<div id="slot-${name}"`);
-  if (start === -1) return html;
+  if (start < 0) return undefined;
   const openEnd = html.indexOf('>', start);
-  if (openEnd === -1) return html;
-  const close = html.indexOf('</div>', openEnd);
-  if (close === -1) return html;
-  return html.slice(0, openEnd + 1) + content + html.slice(close);
+  if (openEnd < 0) return undefined;
+  const end = findBalancedDivEnd(html, start, `la columna ${name}`);
+  return end === undefined ? undefined : { start, openEnd, end };
+}
+
+function fillSlot(html: string, name: string, content: string): string {
+  const bounds = slotBounds(html, name);
+  if (bounds === undefined) return html;
+  return html.slice(0, bounds.openEnd + 1) + content + html.slice(bounds.end - '</div>'.length);
 }
 
 export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocType = 'file'): Promise<string> {

@@ -1,5 +1,5 @@
 import { logWarning } from '../lib/logger.js';
-import { type HtmlDocType, loadCard } from './html-composer.js';
+import { findBalancedDivEnd, type HtmlDocType, loadCard, slotBounds } from './html-composer.js';
 import type { ImageDimensions } from './image-processor.js';
 
 const REFS = '<div id="block-referencias"></div>';
@@ -14,15 +14,11 @@ export function loadReferencesCardTemplate(type: HtmlDocType): Promise<string> {
 }
 
 function removeEmptySlot(html: string, name: string): string {
-  const start = html.indexOf(`<div id="slot-${name}"`);
-  if (start < 0) return html;
-  const openEnd = html.indexOf('>', start);
-  if (openEnd < 0) return html;
-  const end = findBalancedDivEnd(html, start, `la columna ${name}`);
-  if (end === undefined) return html;
-  const inner = html.slice(openEnd + 1, end - '</div>'.length);
+  const bounds = slotBounds(html, name);
+  if (bounds === undefined) return html;
+  const inner = html.slice(bounds.openEnd + 1, bounds.end - '</div>'.length);
   if (inner.trim() !== '') return html;
-  return html.slice(0, start) + html.slice(end);
+  return html.slice(0, bounds.start) + html.slice(bounds.end);
 }
 
 function removeEmptyGridSlots(html: string): string {
@@ -72,29 +68,6 @@ function stripSyntheticReferencesMarker(html: string, refsIdPos: number, start: 
     }
   }
   return cleaned.replace(REFS, '');
-}
-
-function findBalancedDivEnd(html: string, divStart: number, que = 'las referencias'): number | undefined {
-  let depth = 0;
-  let i = divStart;
-  while (i < html.length) {
-    const open = html.indexOf('<div', i);
-    const close = html.indexOf('</div>', i);
-    if (close < 0) break;
-    if (open >= 0 && open < close) {
-      depth++;
-      i = open + 4;
-    } else {
-      depth--;
-      i = close + 6;
-      if (depth === 0) break;
-    }
-  }
-  if (depth !== 0) {
-    logWarning(`HTML mal balanceado: ${que} no se extrajeron del documento; revisa los filtros Lua propios (div sin cerrar)`, 'html');
-    return undefined;
-  }
-  return i;
 }
 
 export function extractReferencesBlock(html: string, cardTemplate: string, refsLabel = 'Referencias'): { html: string; block?: string } {
