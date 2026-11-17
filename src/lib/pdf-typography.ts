@@ -235,13 +235,10 @@ function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: s
 
 function sinAcentos(texto: string): string {
   return texto
-    .replace(/[áàäâã]/gi, 'a')
-    .replace(/[éèëê]/gi, 'e')
-    .replace(/[íìïî]/gi, 'i')
-    .replace(/[óòöôõ]/gi, 'o')
-    .replace(/[úùüû]/gi, 'u')
-    .replace(/ç/gi, 'c')
-    .toLowerCase();
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/n\u0303/g, 'ñ')
+    .replace(/\p{Diacritic}/gu, '');
 }
 
 function letraInicial(linea: string): string | undefined {
