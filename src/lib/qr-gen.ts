@@ -13,7 +13,6 @@ async function main(): Promise<void> {
 
   const hash = Bun.CryptoHasher.hash('md5', url, 'hex');
   const svgPath = `${outDir}/qr-${hash}.svg`;
-  const pngPath = `${outDir}/qr-${hash}.png`;
   const jpgPath = `${outDir}/qr-${hash}.jpg`;
 
   if (existsSync(jpgPath)) {
@@ -34,13 +33,9 @@ async function main(): Promise<void> {
 
   await Bun.write(svgPath, result.svg);
 
-  const png = Bun.spawn(['magick', svgPath, '-density', '300', '-units', 'PixelsPerInch', pngPath]);
-  if ((await png.exited) !== 0) process.exit(1);
-
-  const jpg = Bun.spawn(['magick', pngPath, '-density', '300', '-units', 'PixelsPerInch', '-quality', '100', jpgPath]);
+  const jpg = Bun.spawn(['magick', '-density', '300', '-units', 'PixelsPerInch', svgPath, '-quality', '100', jpgPath]);
   if ((await jpg.exited) !== 0) process.exit(1);
 
-  rmSync(pngPath, { force: true });
   rmSync(svgPath, { force: true });
 
   process.stdout.write(jpgPath);
