@@ -5,7 +5,7 @@ import { MD_READER } from '../lib/pandoc-runner.js';
 import { toolVersionLatexmk, toolVersionMagick, toolVersionMinify, toolVersionPdfToPpm } from '../lib/tool-version.js';
 import { LUA_FILTERS_ROOT } from './filter-resolver.js';
 import { HTML_RESOURCES_DIR, htmlResourceFiles } from './html-composer.js';
-import { PKG_PREAMBLE_DIR, projectPreambleDirs } from './preamble-loader.js';
+import { PKG_PREAMBLE_DIR, PKG_PREAMBLE_SHARED_DIR, projectPreambleDirs } from './preamble-loader.js';
 import { type FileCacheEntry, type FileCacheMap, hashString } from './state-serialize.js';
 
 export async function hashFileCached(
@@ -83,6 +83,7 @@ async function hashSpecFiles(specs: Array<[string, string]>, prevCache: FileCach
 const PACKAGE_SPECS: Array<[string, string]> = [
   [LUA_FILTERS_ROOT, '**/*.lua'],
   [PKG_PREAMBLE_DIR, '*.tex'],
+  [PKG_PREAMBLE_SHARED_DIR, '*.tex'],
 ];
 
 export function projectFilterSpecs(cwd: string): Array<[string, string]> {

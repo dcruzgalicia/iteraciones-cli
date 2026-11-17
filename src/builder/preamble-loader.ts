@@ -8,6 +8,7 @@ import { DESCRIPCIONES_PREAMBLE } from './filter-descriptions.js';
 export type PreambleDocType = 'file' | 'collection' | 'creator' | 'intervention';
 
 export const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
+export const PKG_PREAMBLE_SHARED_DIR = join(PKG_PREAMBLE_DIR, 'shared');
 const PROJECT_PREAMBLE_DIR = 'preamble';
 
 const PREAMBLE_DIRS: Record<PreambleDocType, { pkg?: string; project: string }> = {
@@ -49,6 +50,13 @@ async function primeraQueExista(candidatas: string[]): Promise<string | undefine
   return undefined;
 }
 
+async function contentWithShared(name: string, elegida: string): Promise<string> {
+  const content = await Bun.file(elegida).text();
+  if (!elegida.startsWith(PKG_PREAMBLE_DIR)) return content;
+  const compartido = Bun.file(join(PKG_PREAMBLE_SHARED_DIR, `${name}.tex`));
+  return (await compartido.exists()) ? `${await compartido.text()}${content}` : content;
+}
+
 export async function loadPreambleFilters(disabledList?: string[], cwd?: string, docType: PreambleDocType = 'file'): Promise<PreambleFilter[]> {
   const excluded = new Set(disabledList ?? []);
   const result: PreambleFilter[] = [];
@@ -66,7 +74,7 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string,
       ]),
     ];
     const elegida = (await primeraQueExista(candidatas)) ?? delPaqueteBase;
-    const content = await Bun.file(elegida).text();
+    const content = await contentWithShared(name, elegida);
     result.push({ name, content });
   }
 
