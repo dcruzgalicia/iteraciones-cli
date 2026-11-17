@@ -78,6 +78,29 @@ Given('el libro lleva el colofón {string}', (texto: string) => {
   escribirEnProyecto('libro.md', frontmatter);
 });
 
+Given('el libro comparte una imagen entre titleImage y extratitle', () => {
+  const creada = Bun.spawnSync(['magick', '-size', '2400x1200', 'gradient:red-blue', join(world.root, 'extra.png')]);
+  if (creada.exitCode !== 0) throw new Error('magick no pudo crear la imagen de extratitle');
+  const frontmatter = readFileSync(join(world.root, 'libro.md'), 'utf8').replace(
+    '---\ntitle: Un libro\n',
+    '---\ntitle: Un libro\ntitleImage: ./extra.png\nextratitle: |\n  ![](./extra.png)\n',
+  );
+  escribirEnProyecto('libro.md', frontmatter);
+});
+
+Then('la imagen PDF de {string} tiene al menos {int} px de ancho', (nombre: string, ancho: number) => {
+  const dir = join(world.root, 'dist', 'files', 'assets', 'pdf', 'images');
+  const archivos = readdirSync(dir).filter((archivo) => archivo.endsWith(`-${nombre}.jpg`));
+  if (archivos.length === 0) throw new Error(`no hay imagen PDF para "${nombre}" en ${dir}`);
+  for (const archivo of archivos) {
+    const resultado = corre('magick', ['identify', '-format', '%w', join(dir, archivo)]);
+    const leido = Number.parseInt(resultado.salida, 10);
+    if (!Number.isFinite(leido) || leido < ancho) {
+      throw new Error(`la imagen PDF ${archivo} mide ${leido}px y debía tener al menos ${ancho}px`);
+    }
+  }
+});
+
 Given('el proyecto compila el PDF', async () => {
   await capture(() => build(world.root, {}));
   world.pdf = join(world.root, 'dist', 'files', 'un-libro.pdf');

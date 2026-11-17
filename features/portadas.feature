@@ -185,3 +185,20 @@ Característica: las portadas del PDF
       Y el libro lleva la portada "backCover"
       Y el proyecto compila el PDF
       Entonces la última página del PDF es impar y es "backCover"
+
+  Regla de negocio: La imagen compartida de extratitle conserva su tamaño
+
+    Escenario: Con PDFX la imagen de extratitle no se reduce
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el proyecto activa PDFX
+      Y el libro comparte una imagen entre titleImage y extratitle
+      Y el proyecto compila el PDF
+      Entonces la imagen PDF de "extra" tiene al menos 1500 px de ancho
+
+    Escenario: Sin PDFX la imagen de extratitle no se reduce
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro comparte una imagen entre titleImage y extratitle
+      Y el proyecto compila el PDF
+      Entonces la imagen PDF de "extra" tiene al menos 1500 px de ancho
