@@ -38,72 +38,82 @@ const RIVER_OVERLAP = 1.2;
 const RIVER_DY_MIN = 8;
 const RIVER_DY_MAX = 19;
 
-function decodeXml(text: string): string {
-  return text.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (todo, codigo: string) => {
-    if (codigo.startsWith('#')) {
-      const hex = codigo[1]?.toLowerCase() === 'x';
-      const valor = Number.parseInt(codigo.slice(hex ? 2 : 1), hex ? 16 : 10);
-      return Number.isFinite(valor) ? String.fromCodePoint(valor) : todo;
-    }
-    const entidades: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
-    return entidades[codigo.toLowerCase()] ?? todo;
-  });
+type XmlNode = Record<string, unknown>;
+
+function asArray(value: unknown): XmlNode[] {
+  if (Array.isArray(value)) return value.filter((item): item is XmlNode => typeof item === 'object' && item !== null && !Array.isArray(item));
+  return typeof value === 'object' && value !== null ? [value as XmlNode] : [];
 }
 
-function atributos(texto: string): Record<string, string> {
-  const salida: Record<string, string> = {};
-  for (const m of texto.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g)) {
-    if (m[1] !== undefined && m[2] !== undefined) salida[m[1]] = decodeXml(m[2]);
-  }
-  return salida;
-}
-
-function numero(valor: string | undefined): number {
-  const n = Number(valor);
+function numero(valor: unknown): number {
+  const n = typeof valor === 'number' ? valor : typeof valor === 'string' ? Number(valor) : Number.NaN;
   return Number.isFinite(n) ? n : 0;
 }
 
+function textOf(node: XmlNode): string {
+  const raw = node['#text'];
+  return typeof raw === 'string' ? raw.trim() : '';
+}
+
+function pageLines(page: XmlNode): XmlNode[] {
+  const lines: XmlNode[] = [];
+  const visit = (node: XmlNode): void => {
+    if (node.line !== undefined) lines.push(...asArray(node.line));
+    for (const key of ['flow', 'block']) {
+      for (const child of asArray(node[key])) visit(child);
+    }
+  };
+  visit(page);
+  return lines;
+}
+
+function pagesOf(parsed: unknown): XmlNode[] {
+  if (typeof parsed !== 'object' || parsed === null) return [];
+  const root = parsed as XmlNode;
+  const html = root.html as XmlNode | undefined;
+  const body = html?.body as XmlNode | undefined;
+  const doc = body?.doc as XmlNode | undefined;
+  const rootDoc = root.doc as XmlNode | undefined;
+  return asArray(doc?.page ?? rootDoc?.page ?? root.page);
+}
+
 export function parseBboxLayout(xml: string): PageBox[] {
-  const pages: PageBox[] = [];
-  for (const pageMatch of xml.matchAll(/<page\b([^>]*)>([\s\S]*?)<\/page>/g)) {
-    const pageAttrs = atributos(pageMatch[1] ?? '');
+  const parsed = Bun.XML.parse(xml.replaceAll('&nbsp;', '&#160;'));
+  return pagesOf(parsed).map((page, index) => {
     const lines: LineBox[] = [];
-    for (const lineMatch of (pageMatch[2] ?? '').matchAll(/<line\b([^>]*)>([\s\S]*?)<\/line>/g)) {
-      const lineAttrs = atributos(lineMatch[1] ?? '');
+    for (const line of pageLines(page)) {
       const words: WordBox[] = [];
-      for (const wordMatch of (lineMatch[2] ?? '').matchAll(/<word\b([^>]*)>([\s\S]*?)<\/word>/g)) {
-        const wordAttrs = atributos(wordMatch[1] ?? '');
-        const text = decodeXml(wordMatch[2] ?? '').trim();
+      for (const word of asArray(line.word)) {
+        const text = textOf(word);
         if (text === '') continue;
         words.push({
           text,
-          xMin: numero(wordAttrs.xMin),
-          xMax: numero(wordAttrs.xMax),
-          yMin: numero(wordAttrs.yMin),
-          yMax: numero(wordAttrs.yMax),
+          xMin: numero(word['@xMin']),
+          xMax: numero(word['@xMax']),
+          yMin: numero(word['@yMin']),
+          yMax: numero(word['@yMax']),
         });
       }
       if (words.length === 0) continue;
-      const index = lines.length + 1;
+      const lineIndex = lines.length + 1;
       lines.push({
-        page: pages.length + 1,
-        line: index,
+        page: index + 1,
+        line: lineIndex,
         text: words.map((word) => word.text).join(' '),
-        xMin: numero(lineAttrs.xMin),
-        xMax: numero(lineAttrs.xMax),
-        yMin: numero(lineAttrs.yMin),
-        yMax: numero(lineAttrs.yMax),
+        xMin: numero(line['@xMin']),
+        xMax: numero(line['@xMax']),
+        yMin: numero(line['@yMin']),
+        yMax: numero(line['@yMax']),
         words,
       });
     }
-    pages.push({
-      page: pages.length + 1,
-      width: numero(pageAttrs.width),
-      height: numero(pageAttrs.height),
+    return {
+      page: index + 1,
+      width: numero(page['@width']),
+      height: numero(page['@height']),
       lines,
-    });
-  }
-  return pages;
+    };
+  });
 }
 
 function mediana(valores: number[]): number {
