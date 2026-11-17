@@ -691,6 +691,15 @@ async function processSources(sources: ImageSource[], profile: ImageProfile, tar
   return { imageMap, processedFiles, sizes, names };
 }
 
+function mergeProcessedImages(a: ProcessedImages, b: ProcessedImages): ProcessedImages {
+  return {
+    imageMap: new Map([...a.imageMap, ...b.imageMap]),
+    processedFiles: [...new Set([...a.processedFiles, ...b.processedFiles])],
+    sizes: new Map([...a.sizes, ...b.sizes]),
+    names: new Map([...a.names, ...b.names]),
+  };
+}
+
 interface PreprocessArgs {
   cwd: string;
   namePrefix?: string;
@@ -721,40 +730,83 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
   const result: DocumentImages = {};
 
   if (args.wants.pdf) {
-    result.pdf = await processSources(
-      sources,
-      args.pdfSmall === true
-        ? {
-            outputDir: args.dirs.pdf,
-            ext: 'jpg',
-            kind: 'web',
-            publish: false,
-            maxWidthPx: 1280,
-            fallbackMaxWidthPx: 420,
-            quality: 50,
-            fallbackQuality: 20,
-            maxBytes: 25 * 1024,
-            targetDefine: 'jpeg:extent=25KB',
-            flatten: true,
-            density300: false,
-            grayscale: true,
-            coverColor,
-          }
-        : {
-            outputDir: args.dirs.pdf,
-            ext: 'jpg',
-            kind: 'pdf',
-            publish: false,
-            namePrefix: args.namePrefix,
-            quality: 100,
-            flatten: true,
-            density300: true,
-            grayscale: true,
-            coverColor,
-          },
-      targets,
-      cacheDir,
-    );
+    if (args.pdfSmall === true && sources.some((source) => source.cover)) {
+      const coverWidth = Math.max(1, Math.ceil((args.pageDimensions.w / 25.4) * 150));
+      const covers = await processSources(
+        sources.filter((source) => source.cover),
+        {
+          outputDir: args.dirs.pdf,
+          ext: 'jpg',
+          kind: 'web',
+          publish: false,
+          maxWidthPx: coverWidth,
+          quality: 70,
+          flatten: true,
+          density300: false,
+          grayscale: true,
+          coverColor,
+        },
+        targets,
+        cacheDir,
+      );
+      const rest = await processSources(
+        sources.filter((source) => !source.cover),
+        {
+          outputDir: args.dirs.pdf,
+          ext: 'jpg',
+          kind: 'web',
+          publish: false,
+          maxWidthPx: 1280,
+          fallbackMaxWidthPx: 420,
+          quality: 50,
+          fallbackQuality: 20,
+          maxBytes: 25 * 1024,
+          targetDefine: 'jpeg:extent=25KB',
+          flatten: true,
+          density300: false,
+          grayscale: true,
+          coverColor,
+        },
+        targets,
+        cacheDir,
+      );
+      result.pdf = mergeProcessedImages(covers, rest);
+    } else {
+      result.pdf = await processSources(
+        sources,
+        args.pdfSmall === true
+          ? {
+              outputDir: args.dirs.pdf,
+              ext: 'jpg',
+              kind: 'web',
+              publish: false,
+              maxWidthPx: 1280,
+              fallbackMaxWidthPx: 420,
+              quality: 50,
+              fallbackQuality: 20,
+              maxBytes: 25 * 1024,
+              targetDefine: 'jpeg:extent=25KB',
+              flatten: true,
+              density300: false,
+              grayscale: true,
+              coverColor,
+            }
+          : {
+              outputDir: args.dirs.pdf,
+              ext: 'jpg',
+              kind: 'pdf',
+              publish: false,
+              namePrefix: args.namePrefix,
+              quality: 100,
+              flatten: true,
+              density300: true,
+              grayscale: true,
+              coverColor,
+            },
+        targets,
+        cacheDir,
+      );
+    }
   }
 
   if (args.wants.web) {

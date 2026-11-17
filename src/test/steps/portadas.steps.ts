@@ -40,7 +40,7 @@ Given('el libro lleva la portada {string}', (campo: string) => {
     `---\ntitle: Un libro\n${portada.campo}: ./${portada.campo}.png\n`,
   );
   escribirEnProyecto('libro.md', frontmatter);
-  const proc = Bun.spawnSync(['magick', '-size', '40x60', `xc:${portada.color}`, join(world.root, `${portada.campo}.png`)]);
+  const proc = Bun.spawnSync(['magick', '-size', '1600x2400', `xc:${portada.color}`, join(world.root, `${portada.campo}.png`)]);
   if (proc.exitCode !== 0) throw new Error('magick no pudo crear la portada de prueba');
 });
 
@@ -165,6 +165,24 @@ Then('la página {int} del PDF está en blanco', (pagina: number) => {
   const g = pix[1] ?? 0;
   const b = pix[2] ?? 0;
   if (r < 250 || g < 250 || b < 250) throw new Error(`la página ${pagina} no es blanca: ${r},${g},${b}`);
+});
+
+Then('las portadas del PDF conservan al menos {int} dpi', (dpi: number) => {
+  const resultado = corre('pdfimages', ['-list', String(world.pdf)]);
+  if (resultado.codigo !== 0) throw new Error(`pdfimages falló: ${resultado.error}`);
+  const paginas = new Map<number, number>();
+  for (const linea of resultado.salida.split('\n')) {
+    if (!/\simage\s/.test(linea)) continue;
+    const campos = linea.trim().split(/\s+/);
+    const pagina = Number(campos[0]);
+    const xppi = Number(campos[12]);
+    if (pagina <= 2 && !paginas.has(pagina)) paginas.set(pagina, xppi);
+  }
+  for (const [pagina, xppi] of paginas) {
+    if (!Number.isFinite(xppi) || xppi < dpi) {
+      throw new Error(`la portada de la página ${pagina} está a ${xppi} dpi y debía tener al menos ${dpi}`);
+    }
+  }
 });
 
 Then('la última página del PDF es impar y es {string}', (portada: string) => {
