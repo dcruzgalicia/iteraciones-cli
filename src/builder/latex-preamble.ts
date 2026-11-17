@@ -171,7 +171,12 @@ export function pageNumberCommandFor(pageNumber: string): string | undefined {
   return PAGE_NUMBER_COMMANDS[pageNumber];
 }
 
-export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters: PreambleFilter[]; bibFiles: string[] }): Promise<string> {
+export async function composeLatexTemplate(opts: {
+  toc: boolean;
+  preambleFilters: PreambleFilter[];
+  bibFiles: string[];
+  pdfxActive?: boolean;
+}): Promise<string> {
   const lines: string[] = [];
   for (const filter of opts.preambleFilters) {
     lines.push(filter.content.trimEnd());
@@ -180,6 +185,7 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
     lines.push(`\\addbibresource{${escapeLatexPath(bib)}}`);
   }
   lines.push('\\begin{document}');
+  if (opts.pdfxActive === true) lines.push('\\pdfxactivetrue');
   lines.push('$if(letterhead)$');
   lines.push('$if(letterhead-height)$\\setlength{\\letterheadheight}{$letterhead-height$}$endif$');
   lines.push('\\letterheadsetup{$for(letterhead)$$letterhead$$sep$,$endfor$}');
@@ -215,14 +221,22 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   lines.push('\\setcover{$frontCover$}');
   lines.push('\\coverblankpage');
   lines.push('$endif$');
-  lines.push('$if(backCover)$');
-  lines.push('\\setcover{$backCover$}');
-  lines.push('\\coverblankpage');
-  lines.push('$endif$');
+  if (opts.pdfxActive === true) {
+    lines.push('$if(backCover)$');
+    lines.push('\\setbackcover{$backCover$}');
+    lines.push('$endif$');
+  } else {
+    lines.push('$if(backCover)$');
+    lines.push('\\setcover{$backCover$}');
+    lines.push('\\coverblankpage');
+    lines.push('$endif$');
+  }
   lines.push('\\coververso');
-  lines.push('$if(startpaper)$');
-  lines.push('\\setstartpaper{$startpaper$}');
-  lines.push('$endif$');
+  if (opts.pdfxActive === true) {
+    lines.push('$if(startpaper)$');
+    lines.push('\\setstartpaper{$startpaper$}');
+    lines.push('$endif$');
+  }
   lines.push('$if(courtesy-page)$');
   lines.push('\\courtepagetrue');
   lines.push('$endif$');
@@ -266,6 +280,7 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   lines.push('\\colophonpage');
   lines.push('$endif$');
   lines.push('');
+  lines.push('\\ifbackcoverpending\\printbackcover\\fi');
   lines.push('\\end{document}');
   return lines.join('\n');
 }
