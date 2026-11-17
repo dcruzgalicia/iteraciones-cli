@@ -3009,6 +3009,7 @@ async function preprocessDocImages(
       ? licenciaLowertitlebackPorDefecto(outputs.fm, formatCfg?.pdf, ctx.siteConfig, dirname(doc.filePath), doc.frontmatter.type)
       : undefined;
   const fmConLicencia = lowertitlebackLicencia === undefined ? fmBase : { ...fmBase, lowertitleback: lowertitlebackLicencia };
+  const fmImagenes = renderCtx.pdfxActive ? fmConLicencia : { ...fmConLicencia, startpaper: undefined };
 
   const membreteColeccion = collectionLetterheadFiles(collectionEntries);
   const alturaMembrete = collectionEntries
@@ -3022,7 +3023,7 @@ async function preprocessDocImages(
 
       ...creatorDocs.flatMap((c) => (c.image === undefined ? [c.body] : [`![](${c.image})`, c.body])),
     ].join('\n\n'),
-    fm: membreteColeccion.length > 0 ? { ...fmConLicencia, letterhead: membreteColeccion, letterheadHeight: `${alturaMembrete}mm` } : fmConLicencia,
+    fm: membreteColeccion.length > 0 ? { ...fmImagenes, letterhead: membreteColeccion, letterheadHeight: `${alturaMembrete}mm` } : fmImagenes,
     docDir: dirname(doc.filePath),
     pageDimensions: renderCtx.pageDimensions ?? detectPageSize([]),
     cropActive: renderCtx.cropActive,

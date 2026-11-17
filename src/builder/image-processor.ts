@@ -716,7 +716,7 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
   }
   const sources = await collectImageSources(args.content, args.fm, args.docDir, args.pageDimensions.w, args.extraImages);
   const targets = computeProcessTargets(args.pageDimensions, args.cropActive);
-  const coverColor = args.fm.coverColor === true;
+  const coverColor = args.pdfSmall === true ? args.fm.coverColor !== false : false;
   const cacheDir = join(args.cwd, '.iteraciones', 'processed-images');
   const result: DocumentImages = {};
 

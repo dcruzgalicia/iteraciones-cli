@@ -89,6 +89,7 @@ export async function composeTemplate(kind: TemplateKind, input: TemplateInput):
     toc: input.siteConfig.toc,
     bibFiles: input.bibFiles,
     preambleFilters: applyPrintQueueDynamics(filters, dims),
+    pdfxActive: filters.some((filter) => filter.name === '99-pdfx'),
   });
 }
 

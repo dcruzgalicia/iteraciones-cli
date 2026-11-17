@@ -62,6 +62,22 @@ When('compilo el proyecto del libro para leer su LaTeX', async () => {
   world.tex = readFileSync(join(world.root, 'dist', 'files', 'un-libro.tex'), 'utf8');
 });
 
+Given('el proyecto activa PDFX', () => {
+  const config = readFileSync(join(world.root, 'iteraciones.config.yaml'), 'utf8');
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    config.replace('  pdf:\n    generate: true', '  pdf:\n    generate: true\n    disabledPreambleFilters:\n      - 97-eso-pic\n      - 98-crop'),
+  );
+});
+
+Given('el libro lleva el colofón {string}', (texto: string) => {
+  const frontmatter = readFileSync(join(world.root, 'libro.md'), 'utf8').replace(
+    '---\ntitle: Un libro\n',
+    `---\ntitle: Un libro\ncolophon: "${texto}"\n`,
+  );
+  escribirEnProyecto('libro.md', frontmatter);
+});
+
 Given('el proyecto compila el PDF', async () => {
   await capture(() => build(world.root, {}));
   world.pdf = join(world.root, 'dist', 'files', 'un-libro.pdf');
@@ -138,6 +154,43 @@ Then('la página {int} del PDF no dice {string}', (pagina: number, texto: string
   if (salida.salida.includes(texto)) {
     throw new Error(`la página ${pagina} sí dice ${JSON.stringify(texto)} y no debería`);
   }
+});
+
+Then('la página {int} del PDF está en blanco', (pagina: number) => {
+  const salida = corre('pdftotext', ['-f', String(pagina), '-l', String(pagina), String(world.pdf), '-']);
+  if (salida.codigo !== 0) throw new Error(`pdftotext no pudo leer la página ${pagina}: ${salida.error}`);
+  if (salida.salida.trim() !== '') throw new Error(`la página ${pagina} no está en blanco: ${JSON.stringify(salida.salida.slice(0, 80))}`);
+  const pix = pixelDeLaPagina(pagina);
+  const r = pix[0] ?? 0;
+  const g = pix[1] ?? 0;
+  const b = pix[2] ?? 0;
+  if (r < 250 || g < 250 || b < 250) throw new Error(`la página ${pagina} no es blanca: ${r},${g},${b}`);
+});
+
+Then('la última página del PDF es impar y es {string}', (portada: string) => {
+  const info = corre('pdfinfo', [String(world.pdf)]);
+  const match = info.salida.match(/^Pages:\s+(\d+)/m);
+  if (match === null) throw new Error(`pdfinfo no dijo cuántas páginas tiene ${String(world.pdf)}: ${info.error}`);
+  const paginas = Number.parseInt(match[1] ?? '0', 10);
+  if (paginas % 2 === 0) throw new Error(`la última página es ${paginas} y debería ser impar`);
+  const esperada = PORTADAS.find((p) => p.campo === portada);
+  if (esperada === undefined) throw new Error(`no conozco la portada ${portada}`);
+  const r = pixelDeLaPagina(paginas)[0] ?? 0;
+  const referencia = TONOS[esperada.color] ?? 0;
+  if (Math.abs(r - referencia) > 6) {
+    throw new Error(`la última página (${paginas}) es de gris ${r} y la portada ${portada} es ${referencia}`);
+  }
+});
+
+Then('la última página del PDF está en escala de grises', () => {
+  const info = corre('pdfinfo', [String(world.pdf)]);
+  const match = info.salida.match(/^Pages:\s+(\d+)/m);
+  const paginas = Number.parseInt(match?.[1] ?? '0', 10);
+  const pix = pixelDeLaPagina(paginas);
+  const r = pix[0] ?? 0;
+  const g = pix[1] ?? 0;
+  const b = pix[2] ?? 0;
+  if (r !== g || g !== b) throw new Error(`la última página tiene color (${r},${g},${b}) y debería estar en grises`);
 });
 
 Then('la página {int} del PDF dice {string}', (pagina: number, texto: string) => {

@@ -104,11 +104,13 @@ export async function buildImagesContext(opts: {
   const docDir = dirname(filePath);
   const isPdf = format === 'latex';
   const isEpub = format === 'epub';
+  const fmBase = mergeConfigImages(fm, siteConfig.format?.pdf, siteConfig, cwd);
+  const fmImages = isPdf && !flags.pdfxActive ? { ...fmBase, startpaper: undefined } : fmBase;
   const images = await preprocessDocumentImages({
     cwd,
     namePrefix: outSlug,
     content,
-    fm: mergeConfigImages(fm, siteConfig.format?.pdf, siteConfig, cwd),
+    fm: fmImages,
     docDir,
     pageDimensions: flags.pageDimensions,
     cropActive: flags.cropActive,

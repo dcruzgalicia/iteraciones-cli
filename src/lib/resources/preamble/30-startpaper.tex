@@ -173,3 +173,22 @@
   \endgroup
 }
 \makeatother
+
+\newif\ifpdfxactive
+\newif\ifbackcoverpending
+\newcommand*{\backcoverimage}{}%
+\newcommand{\setbackcover}[1]{%
+  \gdef\backcoverimage{#1}%
+  \backcoverpendingtrue
+}
+\newcommand{\printbackcover}{%
+  \clearpage
+  \ifodd\value{page}\else
+    \thispagestyle{empty}%
+    \null\clearpage
+  \fi
+  \setcover{\backcoverimage}%
+  \coverassign
+  \thispagestyle{empty}%
+  \null\clearpage
+}
