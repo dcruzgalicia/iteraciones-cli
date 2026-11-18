@@ -736,6 +736,7 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
   const targets = computeProcessTargets(args.pageDimensions, args.cropActive);
   const coverColor = args.pdfSmall === true ? args.fm.coverColor !== false : false;
   const cacheDir = join(args.cwd, '.iteraciones', 'processed-images');
+  const coverWidth = Math.max(1, Math.ceil((args.pageDimensions.w / 25.4) * 150));
   const result: DocumentImages = {};
 
   if (args.wants.pdf) {
@@ -762,7 +763,6 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
       const titlePages = sources.filter((source) => !source.cover && (source.field === 'extratitle' || source.field === 'frontispiece'));
       const titleSet = new Set(titlePages);
       const rest = sources.filter((source) => !source.cover && !titleSet.has(source));
-      const coverWidth = Math.max(1, Math.ceil((args.pageDimensions.w / 25.4) * 150));
       const parts: ProcessedImages[] = [];
 
       if (covers.length > 0) {
@@ -840,52 +840,122 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
     }
   }
 
+  const webEpubSources = sources.filter((source) => source.field !== 'startpaper');
+
   if (args.wants.web) {
-    result.web = await processSources(
-      sources,
-      {
-        outputDir: args.dirs.web,
-        ext: 'webp',
-        kind: 'web',
-        publish: true,
-        maxWidthPx: 1280,
-        fallbackMaxWidthPx: 420,
-        quality: 50,
-        fallbackQuality: 20,
-        fallbackAlphaQuality: 60,
-        maxBytes: 25 * 1024,
-        flatten: false,
-        density300: false,
-        grayscale: false,
-        coverColor: false,
-      },
-      targets,
-      cacheDir,
-    );
+    const covers = webEpubSources.filter((source) => source.field === 'frontCover' || source.field === 'backCover');
+    const rest = webEpubSources.filter((source) => source.field !== 'frontCover' && source.field !== 'backCover');
+    const parts: ProcessedImages[] = [];
+
+    if (covers.length > 0) {
+      parts.push(
+        await processSources(
+          covers,
+          {
+            outputDir: args.dirs.web,
+            ext: 'webp',
+            kind: 'web',
+            publish: true,
+            maxWidthPx: coverWidth,
+            quality: 70,
+            flatten: false,
+            density300: false,
+            grayscale: false,
+            coverColor: false,
+          },
+          targets,
+          cacheDir,
+        ),
+      );
+    }
+
+    if (rest.length > 0) {
+      parts.push(
+        await processSources(
+          rest,
+          {
+            outputDir: args.dirs.web,
+            ext: 'webp',
+            kind: 'web',
+            publish: true,
+            maxWidthPx: 1280,
+            fallbackMaxWidthPx: 420,
+            quality: 50,
+            fallbackQuality: 20,
+            fallbackAlphaQuality: 60,
+            maxBytes: 25 * 1024,
+            flatten: false,
+            density300: false,
+            grayscale: false,
+            coverColor: false,
+          },
+          targets,
+          cacheDir,
+        ),
+      );
+    }
+
+    let merged: ProcessedImages = { imageMap: new Map(), processedFiles: [], sizes: new Map(), names: new Map() };
+    for (const part of parts) merged = mergeProcessedImages(merged, part);
+    result.web = merged;
   }
 
   if (args.wants.epub) {
-    result.epub = await processSources(
-      sources,
-      {
-        outputDir: args.dirs.epub,
-        ext: 'jpg',
-        kind: 'web',
-        publish: false,
-        maxWidthPx: 1024,
-        fallbackMaxWidthPx: 420,
-        quality: 55,
-        fallbackQuality: 20,
-        maxBytes: 25 * 1024,
-        targetDefine: 'jpeg:extent=25KB',
-        flatten: true,
-        density300: false,
-        grayscale: false,
-        coverColor: false,
-      },
-      targets,
-      cacheDir,
-    );
+    const covers = webEpubSources.filter((source) => source.field === 'frontCover' || source.field === 'backCover');
+    const rest = webEpubSources.filter((source) => source.field !== 'frontCover' && source.field !== 'backCover');
+    const parts: ProcessedImages[] = [];
+
+    if (covers.length > 0) {
+      parts.push(
+        await processSources(
+          covers,
+          {
+            outputDir: args.dirs.epub,
+            ext: 'jpg',
+            kind: 'web',
+            publish: false,
+            maxWidthPx: coverWidth,
+            quality: 70,
+            flatten: true,
+            density300: false,
+            grayscale: false,
+            coverColor: false,
+          },
+          targets,
+          cacheDir,
+        ),
+      );
+    }
+
+    if (rest.length > 0) {
+      parts.push(
+        await processSources(
+          rest,
+          {
+            outputDir: args.dirs.epub,
+            ext: 'jpg',
+            kind: 'web',
+            publish: false,
+            maxWidthPx: 1024,
+            fallbackMaxWidthPx: 420,
+            quality: 55,
+            fallbackQuality: 20,
+            maxBytes: 25 * 1024,
+            targetDefine: 'jpeg:extent=25KB',
+            flatten: true,
+            density300: false,
+            grayscale: false,
+            coverColor: false,
+          },
+          targets,
+          cacheDir,
+        ),
+      );
+    }
+
+    let merged: ProcessedImages = { imageMap: new Map(), processedFiles: [], sizes: new Map(), names: new Map() };
+    for (const part of parts) merged = mergeProcessedImages(merged, part);
+    result.epub = merged;
   }
 
   return result;

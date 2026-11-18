@@ -41,7 +41,7 @@ PATH="/tmp/iteraciones-bin:$PATH" bun tools/gherkin.ts --name "..."
 ## Assets e imágenes
 
 - Una sola salida por fuente y perfil; no generes variantes responsivas.
-- Web/EPUB: máximo 1280 px y 25 KB por imagen.
+- Web/EPUB: máximo 1280 px y 25 KB por imagen, salvo `frontCover`/`backCover` (150 dpi y calidad 70).
 - PDF/X: 300 dpi y medidas reales en cm.
 - PDF ligero: portadas a 150 dpi; `extratitle`/`frontispiece` conservan geometría de página de título; el resto ≤25 KB.
 - CSS propio, sin Tailwind.
