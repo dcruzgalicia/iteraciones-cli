@@ -2299,3 +2299,28 @@ a:hover {
 .lista-enlaces--disco > li + li {
   margin-top: 0.75rem;
 }
+
+@media (max-width: 639px) {
+  .sitio-marca__fila,
+  .sitio-marca--derecha .sitio-marca__fila {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .sitio-marca__texto,
+  .sitio-marca--derecha .sitio-marca__texto {
+    align-items: center;
+    text-align: center;
+  }
+
+  .sitio-pie__identidad,
+  .sitio-marca--derecha {
+    justify-content: center;
+  }
+
+  .sitio-acciones,
+  .sitio-acciones.sitio-acciones--pie {
+    justify-content: center;
+  }
+}
