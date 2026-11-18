@@ -1,7 +1,18 @@
     <div class="tarjeta tarjeta--cabecera">
       <div class="cabecera-cuerpo">
         $if(front-cover)$
-        <img src="$front-cover$" alt="$front-cover-alt$" class="portada">
+        $if(back-cover)$
+        <div class="cabecera-portadas">
+          <img src="$front-cover$" alt="$front-cover-alt$" class="portada portada--front">
+          <img src="$back-cover$" alt="Contraportada" class="portada portada--back">
+        </div>
+        $else$
+        <img src="$front-cover$" alt="$front-cover-alt$" class="portada portada--front">
+        $endif$
+        $else$
+        $if(back-cover)$
+        <img src="$back-cover$" alt="Contraportada" class="portada portada--back">
+        $endif$
         $endif$
         <div class="cabecera-contenido">
         <div class="chips">
