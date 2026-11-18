@@ -2,14 +2,14 @@ $if(body)$
     <div id="card-document">
       <article class="tarjeta contenido-articulo prose contenido-tamano">
         <div class="contenido-cuerpo">
+          $if(content-chip)$
+          <div class="not-prose contenido-chips"><h2 class="not-prose chip chip--titulo">$content-chip$</h2></div>
+          $endif$
           <div class="contenido-flex">
             $if(creator-image)$
             <img src="$creator-image$" alt="$creator-image-alt$" class="contenido-retrato">
             $endif$
             <div class="contenido-texto">
-              $if(content-chip)$
-              <div class="not-prose"><h2 class="not-prose chip chip--titulo">$content-chip$</h2></div>
-              $endif$
               $body$
             </div>
           </div>

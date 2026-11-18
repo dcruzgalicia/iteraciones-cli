@@ -303,6 +303,10 @@ Then('la portada del HTML va en la tarjeta de encabezado', () => {
   }
   if (portada.includes('object-cover')) throw new Error('la portada del encabezado recorta la imagen');
   if (portada.includes('hover:')) throw new Error('la portada del encabezado no debe cambiar al hover');
+  const chip = /class="[^"]*\bchip--tipo\b[^"]*"[^>]*>/.exec(encabezado)?.[0];
+  if (chip !== undefined && encabezado.indexOf(chip) > encabezado.indexOf(portada)) {
+    throw new Error('el chip del encabezado debe ir antes que la portada');
+  }
   const primerDato = Math.min(...['<h1', 'not-prose'].map((marca) => encabezado.indexOf(marca)).filter((i) => i >= 0));
   if (encabezado.indexOf(portada) > primerDato) throw new Error('la portada no va a la izquierda de los datos');
 });

@@ -824,6 +824,14 @@ a:hover {
   gap: 0.5rem;
 }
 
+.cabecera-chips:has(.chip) {
+  margin-bottom: 1rem;
+}
+
+.contenido-chips {
+  margin-bottom: 1rem;
+}
+
 .tarjeta--extra .chips {
   margin-bottom: 1.5rem;
 }
@@ -1285,10 +1293,6 @@ a:hover {
   width: 100%;
   min-width: 0;
   flex: 1;
-}
-
-.contenido-texto > .not-prose {
-  padding-bottom: 1.5rem;
 }
 
 .contenido-articulo blockquote {
@@ -2081,20 +2085,6 @@ a:hover {
     padding: 1.5rem;
   }
 
-  .contenido-flex {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 1.5rem;
-  }
-
-  .contenido-retrato {
-    align-self: flex-start;
-  }
-
-  .contenido-texto {
-    width: auto;
-  }
-
   .titulo-pagina {
     font-size: 2.25rem;
   }
@@ -2161,6 +2151,20 @@ a:hover {
 }
 
 @media (min-width: 960px) {
+  .contenido-flex {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .contenido-retrato {
+    align-self: flex-start;
+  }
+
+  .contenido-texto {
+    width: auto;
+  }
+
   .contenido-tamano {
     font-size: 18px;
   }

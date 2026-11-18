@@ -189,6 +189,13 @@ Then('el retrato de la bio se limita a {int}px y se centra', (maximo: number) =>
   }
 });
 
+Then('el retrato de la bio va arriba en {word}', (breakpoint: string) => {
+  const regla = reglaDe(mediaGlobal(breakpointPx(breakpoint), '.contenido-flex {'), '.contenido-flex');
+  if (regla.includes('flex-direction: row')) {
+    throw new Error(`el retrato de la bio no va arriba en ${breakpoint}: ${regla}`);
+  }
+});
+
 Then('el retrato y el contenido de la bio van lado a lado en {word}', (breakpoint: string) => {
   const regla = reglaDe(mediaGlobal(breakpointPx(breakpoint), '.contenido-flex {'), '.contenido-flex');
   if (!regla.includes('flex-direction: row')) {
@@ -198,7 +205,7 @@ Then('el retrato y el contenido de la bio van lado a lado en {word}', (breakpoin
 
 Then('el retrato de la bio no tiene ancho fijo en {word}', (breakpoint: string) => {
   const regla = reglaDe(mediaGlobal(breakpointPx(breakpoint), '.contenido-retrato {'), '.contenido-retrato');
-  if (regla !== '') {
+  if (/(?:^|\n)\s*(?:width|flex-basis):/.test(regla)) {
     throw new Error(`el retrato de la bio tiene un ancho fijo en ${breakpoint}: ${regla}`);
   }
 });
