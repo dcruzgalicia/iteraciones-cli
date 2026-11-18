@@ -37,6 +37,14 @@ function media(utilidad: string, breakpoint: string): string {
   }
 }
 
+function mediaFragment(utilidad: string, breakpoint: string): string {
+  const texto = bloque(utilidad);
+  const inicio = texto.indexOf(`@media (min-width: ${BREAKPOINTS[breakpoint]}px)`);
+  if (inicio === -1) return '';
+  const siguiente = texto.indexOf('@media', inicio + 1);
+  return texto.slice(inicio, siguiente === -1 ? undefined : siguiente);
+}
+
 function columnas(fragmento: string): number | undefined {
   return /grid-template-columns:\s*repeat\((\d+),/.exec(fragmento)?.[1] !== undefined
     ? Number(/grid-template-columns:\s*repeat\((\d+),/.exec(fragmento)?.[1])
@@ -63,5 +71,39 @@ Then('{word} usa {int} columnas en {word}', (utilidad: string, cantidad: number,
   const leidas = columnas(media(utilidad, breakpoint));
   if (leidas !== cantidad) {
     throw new Error(`${utilidad} usa ${leidas ?? 'sin columnas'} en ${breakpoint} y debía usar ${cantidad}`);
+  }
+});
+
+Then('la portada de la cabecera mide hasta {int}px y está centrada', (maximo: number) => {
+  const fragmento = base('portada');
+  if (!fragmento.includes(`max-width: ${maximo}px`)) {
+    throw new Error(`la portada no se limita a ${maximo}px: ${fragmento}`);
+  }
+  if (!fragmento.includes('justify-self: center')) {
+    throw new Error(`la portada no está centrada: ${fragmento}`);
+  }
+});
+
+Then('la cabecera con portada tiene {int} columnas en {word}', (cantidad: number, breakpoint: string) => {
+  const leidas = columnas(media('cabecera-cuerpo', breakpoint));
+  if (leidas !== cantidad) {
+    throw new Error(`la cabecera usa ${leidas ?? 'sin columnas'} en ${breakpoint} y debía usar ${cantidad}`);
+  }
+});
+
+Then('la portada de la cabecera ocupa el 100% en {word}', (breakpoint: string) => {
+  const fragmento = `${base('portada')}\n${mediaFragment('portada', breakpoint)}`;
+  if (!fragmento.includes('width: 100%')) {
+    throw new Error(`la portada no ocupa el 100% en ${breakpoint}: ${fragmento}`);
+  }
+  if (!fragmento.includes('max-width: none')) {
+    throw new Error(`la portada conserva su límite en ${breakpoint}: ${fragmento}`);
+  }
+});
+
+Then('el contenido de la cabecera ocupa {int} columnas en {word}', (cantidad: number, breakpoint: string) => {
+  const fragmento = media('cabecera-cuerpo', breakpoint);
+  if (!fragmento.includes('.cabecera-contenido') || !fragmento.includes(`grid-column: span ${cantidad}`)) {
+    throw new Error(`el contenido de la cabecera no ocupa ${cantidad} columnas en ${breakpoint}: ${fragmento}`);
   }
 });
