@@ -304,25 +304,26 @@ a:hover {
     gap: 1.25rem;
 
     & .page-aside {
+      width: 100%;
+      max-width: 350px;
+      justify-self: end;
       gap: 1.5rem;
     }
 
     &.page-file,
     &.page-collection {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 50%);
       grid-template-areas:
-        "header"
-        "main"
-        "aside";
+        "header header"
+        "main aside";
     }
 
     &.page-creator {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 50%);
       grid-template-areas:
-        "header"
-        "main"
-        "publications"
-        "aside";
+        "header header"
+        "main aside"
+        "publications aside";
     }
   }
 
