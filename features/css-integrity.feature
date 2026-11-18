@@ -82,6 +82,10 @@ Característica: El CSS se genera sólo para la combinación activa
       Entonces el CSS da a ".text-nowrap" la propiedad "text-wrap:nowrap"
       Y el CSS da a ".hyphens-none" la propiedad "hyphens:none"
 
+    Escenario: El marco limita el ancho a 1920px
+      Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+      Entonces el CSS da a ".marco" la propiedad "max-width:1920px"
+
     Escenario: Los tamaños de letra escalan (#2655)
       Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
       Entonces el CSS da a ".text-sm" la propiedad "font-size:.875rem"
