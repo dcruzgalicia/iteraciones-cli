@@ -149,7 +149,7 @@ a:hover {
 }
 
 .marco {
-  max-width: 1920px;
+  max-width: 1600px;
   margin-inline: auto;
   padding: 1rem 1rem 6rem;
 }
@@ -396,7 +396,8 @@ a:hover {
   }
 
   @media (min-width: 1600px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2rem;
 
     &.page-file {
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -421,22 +422,6 @@ a:hover {
       grid-template-areas:
         "header header header header"
         "content content content aside";
-    }
-  }
-
-  @media (min-width: 1920px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 2rem;
-
-    &.page-file {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header header"
-        "main main aside aside";
-
-      & .page-aside {
-        grid-template-columns: subgrid;
-      }
     }
   }
 
@@ -507,10 +492,6 @@ a:hover {
   @media (min-width: 1600px) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
-  @media (min-width: 1920px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 .creator-publications-grid {
@@ -524,11 +505,6 @@ a:hover {
   }
 
   @media (min-width: 1600px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2rem;
-  }
-
-  @media (min-width: 1920px) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 2rem;
   }
@@ -1074,16 +1050,6 @@ a:hover {
   }
 
   @media (min-width: 1600px) {
-    &:has(.portada) {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    &:has(.portada) > .cabecera-contenido {
-      grid-column: span 3;
-    }
-  }
-
-  @media (min-width: 1920px) {
     &:has(.portada) {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
@@ -2324,15 +2290,9 @@ a:hover {
   .contenido-tamano {
     font-size: 20px;
   }
-}
 
-@media (min-width: 1920px) {
   .contenido-preview {
     font-size: 18px;
-  }
-
-  .contenido-retrato {
-    width: 25%;
   }
 }
 

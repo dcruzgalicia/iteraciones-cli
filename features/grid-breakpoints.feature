@@ -9,8 +9,7 @@ Característica: columnas del grid por breakpoint
     Y content-grid usa 2 columnas en sm
     Y content-grid usa 2 columnas en md
     Y content-grid usa 3 columnas en lg
-    Y content-grid usa 3 columnas en xl
-    Y content-grid usa 4 columnas en 2xl
+    Y content-grid usa 4 columnas en xl
 
   Escenario: Los previews cambian de 1 a 3 columnas
     Cuando leo las utilidades de grid
@@ -19,14 +18,12 @@ Característica: columnas del grid por breakpoint
     Y preview-grid usa 1 columna en md
     Y preview-grid usa 2 columnas en lg
     Y preview-grid usa 3 columnas en xl
-    Y preview-grid usa 3 columnas en 2xl
 
   Escenario: Las publicaciones de creadora llegan a tres columnas
     Cuando leo las utilidades de grid
     Entonces creator-publications-grid usa 1 columna base
     Y creator-publications-grid usa 2 columnas en lg
     Y creator-publications-grid usa 3 columnas en xl
-    Y creator-publications-grid usa 3 columnas en 2xl
 
   Regla de negocio: La portada de la cabecera reparte el ancho
 
@@ -48,8 +45,3 @@ Característica: columnas del grid por breakpoint
       Cuando leo las utilidades de grid
       Entonces la cabecera con portada tiene 4 columnas en xl
       Y el contenido de la cabecera ocupa 3 columnas en xl
-
-    Escenario: En 2xl se mantienen cuatro columnas
-      Cuando leo las utilidades de grid
-      Entonces la cabecera con portada tiene 4 columnas en 2xl
-      Y el contenido de la cabecera ocupa 3 columnas en 2xl
