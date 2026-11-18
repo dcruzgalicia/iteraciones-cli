@@ -1266,11 +1266,14 @@ a:hover {
 .contenido-flex {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 1rem;
 }
 
 .contenido-retrato {
   width: 100%;
+  max-width: 320px;
+  align-self: center;
   flex-shrink: 0;
   border: 2px solid var(--acento-borde);
   border-radius: var(--radio);
@@ -1279,6 +1282,7 @@ a:hover {
 }
 
 .contenido-texto {
+  width: 100%;
   min-width: 0;
   flex: 1;
 }
@@ -2084,7 +2088,11 @@ a:hover {
   }
 
   .contenido-retrato {
-    width: 45%;
+    align-self: flex-start;
+  }
+
+  .contenido-texto {
+    width: auto;
   }
 
   .titulo-pagina {
@@ -2153,10 +2161,6 @@ a:hover {
 }
 
 @media (min-width: 960px) {
-  .contenido-retrato {
-    width: 40%;
-  }
-
   .contenido-tamano {
     font-size: 18px;
   }
@@ -2279,10 +2283,6 @@ a:hover {
     font-size: 17px;
   }
 
-  .contenido-retrato {
-    width: 33.3333%;
-  }
-
   .hero__imagen {
     width: 33.3333%;
   }
@@ -2303,10 +2303,6 @@ a:hover {
 @media (min-width: 1600px) {
   .titulo-pagina {
     font-size: 3.75rem;
-  }
-
-  .contenido-retrato {
-    width: 25%;
   }
 
   .meta-label {

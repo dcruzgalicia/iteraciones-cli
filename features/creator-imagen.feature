@@ -90,3 +90,19 @@ Característica: el retrato de la creadora en sus tarjetas
       Entonces el comando termina con el código de salida 0
       Y la salida dice "no existe"
       Y el archivo "dist/files/creadora.html" no dice "Retrato de"
+
+  Regla de negocio: El retrato de la bio se limita y deja el resto al contenido
+
+    Escenario: En móvil el retrato se limita y se centra
+      Cuando leo las utilidades de grid
+      Entonces el retrato de la bio se limita a 320px y se centra
+
+    Escenario: Desde sm el retrato va al lado del contenido
+      Cuando leo las utilidades de grid
+      Entonces el retrato y el contenido de la bio van lado a lado en sm
+
+    Escenario: En md, lg y xl el retrato conserva su límite
+      Cuando leo las utilidades de grid
+      Entonces el retrato de la bio no tiene ancho fijo en md
+      Y el retrato de la bio no tiene ancho fijo en lg
+      Y el retrato de la bio no tiene ancho fijo en xl
