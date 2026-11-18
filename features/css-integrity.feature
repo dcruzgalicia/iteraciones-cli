@@ -23,7 +23,7 @@ Característica: El CSS se genera sólo para la combinación activa
     Dado un proyecto vacío
     Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
     Entonces el CSS no tiene comentarios ni saltos de línea
-    Y el CSS pesa menos de 37000 bytes
+    Y el CSS pesa menos de 36000 bytes
 
   Escenario: Las tarjetas y el fondo usan el acento
     Dado un proyecto vacío
@@ -82,9 +82,9 @@ Característica: El CSS se genera sólo para la combinación activa
       Entonces el CSS da a ".text-nowrap" la propiedad "text-wrap:nowrap"
       Y el CSS da a ".hyphens-none" la propiedad "hyphens:none"
 
-    Escenario: El marco limita el ancho a 1920px
+    Escenario: El marco limita el ancho a 1600px
       Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
-      Entonces el CSS da a ".marco" la propiedad "max-width:1920px"
+      Entonces el CSS da a ".marco" la propiedad "max-width:1600px"
 
     Escenario: Los tamaños de letra escalan (#2655)
       Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"

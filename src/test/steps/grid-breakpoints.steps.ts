@@ -8,7 +8,6 @@ const BREAKPOINTS: Record<string, number> = {
   md: 960,
   lg: 1280,
   xl: 1600,
-  '2xl': 1920,
 };
 
 function bloque(utilidad: string): string {
