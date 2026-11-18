@@ -14,9 +14,9 @@ Característica: columnas del grid por breakpoint
   Escenario: Los previews cambian de 1 a 3 columnas
     Cuando leo las utilidades de grid
     Entonces preview-grid usa 1 columna base
-    Y preview-grid usa 2 columnas en sm
-    Y preview-grid usa 1 columna en md
-    Y preview-grid usa 2 columnas en lg
+    Y preview-grid usa 1 columna en sm
+    Y preview-grid usa 2 columnas en md
+    Y preview-grid usa 3 columnas en lg
     Y preview-grid usa 3 columnas en xl
 
   Escenario: Las publicaciones de creadora llegan a tres columnas
@@ -76,3 +76,4 @@ Característica: columnas del grid por breakpoint
       Entonces el sidebar tiene un máximo de 350px
       Y el sidebar se alinea a la derecha
       Y las páginas con sidebar usan dos columnas en sm
+      Y la página de creadora tiene el sidebar a la derecha en sm
