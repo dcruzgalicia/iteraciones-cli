@@ -102,9 +102,13 @@ Característica: el retrato de la creadora en sus tarjetas
       Cuando leo las utilidades de grid
       Entonces el retrato de la bio va arriba en sm
 
-    Escenario: En md el retrato va al lado del contenido
+    Escenario: En md el retrato sigue arriba del contenido
       Cuando leo las utilidades de grid
-      Entonces el retrato y el contenido de la bio van lado a lado en md
+      Entonces el retrato de la bio va arriba en md
+
+    Escenario: En lg el retrato va al lado del contenido
+      Cuando leo las utilidades de grid
+      Entonces el retrato y el contenido de la bio van lado a lado en lg
 
     Escenario: En md, lg y xl el retrato conserva su límite
       Cuando leo las utilidades de grid

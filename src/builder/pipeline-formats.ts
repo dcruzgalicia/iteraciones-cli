@@ -2406,7 +2406,9 @@ function creadoresDeArchivosDeColeccion(e: CollectionEntry, discoveryIndex: Map<
 }
 
 function renderNombres(lista: string[], tono: 'accent' | 'gris' | 'plano', creatorHrefs: Map<string, string>): string {
-  return lista.map((n) => `<span class="nombre">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`).join(', ');
+  return lista
+    .map((n) => `<span class="nombre">${nombreEnlazadoHtml(n, creatorHrefs, tono)}</span>`)
+    .join('<span class="separador-nombres">, </span>');
 }
 
 function partesDeColeccion(titleHtml: string, href: string | undefined): string[] {
@@ -2415,7 +2417,7 @@ function partesDeColeccion(titleHtml: string, href: string | undefined): string[
     href === undefined
       ? `<h2 class="not-prose tarjeta-autor">${texto}</h2>`
       : `<h2 class="not-prose tarjeta-autor"><a href="${href}" class="${MEMBER_LINK_CLASSES}">${texto}</a></h2>`;
-  return [etiqueta, '', titleHtml];
+  return [titleHtml, '', etiqueta];
 }
 
 function creadoresDeTarjeta(e: CollectionEntry, discoveryIndex?: Map<string, DiscoveryEntry>): { tono: 'accent' | 'gris'; nombres?: string[] } {
@@ -2542,8 +2544,8 @@ function cabeceraDeTarjeta(
   }
   const { tono, nombres } = creadoresDeTarjeta(e, discoveryIndex);
   const creator = nombres === undefined ? '' : nombres.length > 0 ? renderNombres(nombres, tono, creatorHrefs) : AUTORA_POR_DEFECTO;
-  if (creator !== '') cuerpo.push(`<h2 class="not-prose tarjeta-autor">${creator}</h2>`, '');
   cuerpo.push(titleHtml);
+  if (creator !== '') cuerpo.push('', `<h2 class="not-prose tarjeta-autor">${creator}</h2>`);
   if (e.subtitle) cuerpo.push('', `<h4 class="not-prose tarjeta-subtitulo">${e.subtitle}</h4>`);
   if (page?.showDates === true && e.date !== undefined) {
     const fecha = e.date;
@@ -2561,6 +2563,8 @@ function parrafosPlanos(fragment: string): string[] {
     .map((parrafo) =>
       parrafo
         .replace(/^:::[^\n]*$/gm, '')
+        .replace(/^\[\^[^\]]*\]:.*$/gm, '')
+        .replace(/\[\^[^\]]*\]/g, '')
         .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
         .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
         .replace(/<[^>]+>/g, ' ')
@@ -2578,7 +2582,7 @@ function parrafosPlanos(fragment: string): string[] {
         .replace(/^[-+*]\s+/gm, '')
         .replace(/^\d+\.\s+/gm, '')
         .replace(/[ \t]+/g, ' ')
-        .replace(/\s*\n\s*/g, '\n')
+        .replace(/\s*\n\s*/g, ' ')
         .trim(),
     )
     .filter((parrafo) => parrafo !== '');
@@ -2620,7 +2624,7 @@ function collectionCard(
       ' style="mask-image:linear-gradient(to bottom,black 70%,transparent);-webkit-mask-image:linear-gradient(to bottom,black 70%,transparent)"';
     const previewHtml = [
       `<div class="tarjeta-preview-wrap"${estiloPreview}>`,
-      `<p class="tarjeta-preview">${parrafos.map((parrafo) => Bun.escapeHTML(parrafo).replace(/\n/g, '<br>')).join('<br><br>')}</p>`,
+      ...parrafos.map((parrafo) => `<p class="tarjeta-preview">${Bun.escapeHTML(parrafo)}</p>`),
       '</div>',
     ].join('\n');
     contenido.push('', previewHtml);

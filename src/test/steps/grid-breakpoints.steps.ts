@@ -5,7 +5,9 @@ let css = '';
 
 const BREAKPOINTS: Record<string, number> = {
   sm: 640,
+  '800': 800,
   md: 960,
+  '1120': 1120,
   lg: 1280,
   xl: 1600,
 };
@@ -63,6 +65,18 @@ function bloqueDesde(inicio: number): { contenido: string; fin: number } {
   return { contenido: css.slice(abre + 1, i - 1), fin: i };
 }
 
+function mediaRango(min: number, max: number, selector: string): string {
+  const needle = `@media (min-width: ${min}px) and (max-width: ${max}px)`;
+  let desde = 0;
+  while (true) {
+    const inicio = css.indexOf(needle, desde);
+    if (inicio === -1) return '';
+    const bloqueMedia = bloqueDesde(inicio);
+    if (bloqueMedia.contenido.includes(selector)) return bloqueMedia.contenido;
+    desde = bloqueMedia.fin;
+  }
+}
+
 function mediaGlobal(px: number, selector: string): string {
   let desde = 0;
   while (true) {
@@ -99,6 +113,20 @@ function columnas(fragmento: string): number | undefined {
 
 When('leo las utilidades de grid', async () => {
   css = await Bun.file(join(import.meta.dir, '../../lib/resources/styles.css')).text();
+});
+
+Then('content-grid usa una columna base', () => {
+  const regla = base('content-grid');
+  if (!regla.includes('grid-template-columns: minmax(0, 1fr)')) {
+    throw new Error(`content-grid no usa una columna base: ${regla}`);
+  }
+});
+
+Then('content-grid reserva el ancho del sidebar desde sm', () => {
+  const bloque = mediaFragment('content-grid', 'sm');
+  if (!bloque.includes('minmax(0, 1fr) minmax(0, min(50% - 0.625rem, 350px))')) {
+    throw new Error(`content-grid no reserva el ancho del sidebar desde sm: ${bloque}`);
+  }
 });
 
 Then('{word} usa {int} columna base', (utilidad: string, cantidad: number) => {
@@ -157,25 +185,41 @@ Then('el contenido de la cabecera ocupa {int} columnas en {word}', (cantidad: nu
   }
 });
 
-Then('la pareja de portadas usa una columna base', () => {
+Then('la pareja de portadas usa dos columnas de 320px', () => {
   const regla = base('cabecera-portadas');
-  if (!regla.includes('grid-template-columns: minmax(0, 1fr)')) {
-    throw new Error(`la pareja de portadas no se apila en una columna: ${regla}`);
+  if (!regla.includes('grid-template-columns: repeat(2, minmax(0, 320px))')) {
+    throw new Error(`la pareja de portadas no usa dos columnas de 320px: ${regla}`);
   }
 });
 
-Then('la pareja de portadas tiene {int} columnas en {word}', (cantidad: number, breakpoint: string) => {
-  const regla = reglaDe(mediaHasta(breakpointPx(breakpoint), '.cabecera-portadas {'), '.cabecera-portadas');
-  const leidas = columnas(regla);
-  if (leidas !== cantidad) {
-    throw new Error(`la pareja de portadas usa ${leidas ?? 'sin columnas'} en ${breakpoint} y debía usar ${cantidad}`);
-  }
-});
-
-Then('la contraportada va antes que la portada en {word}', (breakpoint: string) => {
-  const regla = reglaDe(mediaHasta(breakpointPx(breakpoint), '.cabecera-portadas .portada--back {'), '.cabecera-portadas .portada--back');
+Then('la contraportada va antes que la portada', () => {
+  const regla = base('cabecera-portadas .portada--back');
   if (!regla.includes('order: -1')) {
-    throw new Error(`la contraportada no va a la izquierda en ${breakpoint}: ${regla}`);
+    throw new Error(`la contraportada no va a la izquierda: ${regla}`);
+  }
+});
+
+Then('creator-publications-grid nunca usa 3 columnas', () => {
+  const texto = bloque('creator-publications-grid');
+  if (/repeat\(3,/.test(texto)) {
+    throw new Error('creator-publications-grid usa 3 columnas');
+  }
+});
+
+Then('las páginas con sidebar usan una columna en sm', () => {
+  const texto = mediaRango(640, 959, '.content-grid.page-file');
+  const tiene = ['.content-grid.page-file', '.content-grid.page-collection', '.content-grid.page-creator'].every((selector) =>
+    texto.includes(selector),
+  );
+  if (!tiene || !texto.includes('grid-template-columns: minmax(0, 1fr)')) {
+    throw new Error(`las páginas con sidebar no usan una columna en sm: ${texto}`);
+  }
+});
+
+Then('el aside usa dos columnas internas en sm', () => {
+  const texto = mediaRango(640, 959, '.content-grid.page-file .page-aside');
+  if (!texto.includes('grid-template-columns: repeat(2, minmax(0, 1fr))')) {
+    throw new Error(`el aside no usa dos columnas internas en sm: ${texto}`);
   }
 });
 
@@ -217,34 +261,6 @@ Then('la cabecera con dos portadas deja el resto al contenido en {word}', (break
   );
   if (!regla.includes('grid-template-columns: max-content minmax(0, 1fr)')) {
     throw new Error(`la cabecera con dos portadas no deja el resto al contenido en ${breakpoint}: ${regla}`);
-  }
-});
-
-Then('el sidebar tiene un máximo de {int}px', (maximo: number) => {
-  const bloque = mediaFragment('content-grid', 'sm');
-  if (!bloque.includes(`max-width: ${maximo}px`)) {
-    throw new Error(`el sidebar no se limita a ${maximo}px en sm: ${bloque}`);
-  }
-});
-
-Then('el sidebar se alinea a la derecha', () => {
-  const bloque = mediaFragment('content-grid', 'sm');
-  if (!bloque.includes('justify-self: end')) {
-    throw new Error(`el sidebar no se alinea a la derecha en sm: ${bloque}`);
-  }
-});
-
-Then('la página de creadora tiene el sidebar a la derecha en sm', () => {
-  const bloque = mediaFragment('content-grid', 'sm');
-  if (!bloque.includes('&.page-creator') || !bloque.includes('"main aside"') || !bloque.includes('"publications aside"')) {
-    throw new Error(`la página de creadora no pone el sidebar al lado de la bio en sm: ${bloque}`);
-  }
-});
-
-Then('las páginas con sidebar usan dos columnas en sm', () => {
-  const bloque = mediaFragment('content-grid', 'sm');
-  if (!bloque.includes('minmax(0, 50%)')) {
-    throw new Error(`las páginas con sidebar no usan dos columnas en sm: ${bloque}`);
   }
 });
 
