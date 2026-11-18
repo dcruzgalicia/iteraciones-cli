@@ -17,6 +17,16 @@ Given('otro texto con la misma imagen grande', () => {
   escribirEnProyecto('otro.md', '---\ntitle: Otro texto\nslug: otro\n---\n\n![Otra imagen grande](./grande.jpg)\n\nMás contenido.\n');
 });
 
+Given('una portada con textura', () => {
+  const proc = Bun.spawnSync(['magick', '-size', '900x1200', '-seed', '42', 'plasma:fractal', join(world.root, 'portada.png')]);
+  if (proc.exitCode !== 0) throw new Error('magick no pudo crear la portada con textura');
+  const texto = readFileSync(join(world.root, 'texto.md'), 'utf8').replace(
+    '---\ntitle: Texto con imagen\nslug: texto\n---',
+    '---\ntitle: Texto con imagen\nslug: texto\nfrontCover: ./portada.png\n---',
+  );
+  escribirEnProyecto('texto.md', texto);
+});
+
 function leerHtml(archivo: string): string {
   return readFileSync(join(world.root, 'dist', 'files', archivo), 'utf8');
 }
@@ -46,6 +56,20 @@ Then('la imagen de {string} pesa menos de {int} KB', (archivo: string, kb: numbe
   const src = srcImagenGrande(leerHtml(archivo)).replace(/^\.\//, '');
   const bytes = readFileSync(join(world.root, 'dist', 'files', src)).byteLength;
   if (bytes > kb * 1024) throw new Error(`la imagen de ${archivo} pesa ${bytes} bytes y debía pesar menos de ${kb} KB`);
+});
+
+function srcPortada(html: string): string {
+  const tag = (html.match(/<img\b[^>]*class="portada"[^>]*>/) ?? [])[0];
+  if (tag === undefined) throw new Error('no se encontró la portada en el HTML');
+  const src = /src="([^"]+)"/.exec(tag)?.[1];
+  if (src === undefined) throw new Error('la portada no tiene src');
+  return src;
+}
+
+Then('la portada de {string} pesa más de {int} KB', (archivo: string, kb: number) => {
+  const src = srcPortada(leerHtml(archivo)).replace(/^\.\//, '');
+  const bytes = readFileSync(join(world.root, 'dist', 'files', src)).byteLength;
+  if (bytes <= kb * 1024) throw new Error(`la portada de ${archivo} pesa ${bytes} bytes y debía pesar más de ${kb} KB`);
 });
 
 Then('el HTML de {string} no tiene srcset', (archivo: string) => {
