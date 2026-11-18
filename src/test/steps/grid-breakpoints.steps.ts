@@ -234,6 +234,13 @@ Then('el sidebar se alinea a la derecha', () => {
   }
 });
 
+Then('la página de creadora tiene el sidebar a la derecha en sm', () => {
+  const bloque = mediaFragment('content-grid', 'sm');
+  if (!bloque.includes('&.page-creator') || !bloque.includes('"main aside"') || !bloque.includes('"publications aside"')) {
+    throw new Error(`la página de creadora no pone el sidebar al lado de la bio en sm: ${bloque}`);
+  }
+});
+
 Then('las páginas con sidebar usan dos columnas en sm', () => {
   const bloque = mediaFragment('content-grid', 'sm');
   if (!bloque.includes('minmax(0, 50%)')) {
