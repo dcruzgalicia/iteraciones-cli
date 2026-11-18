@@ -179,6 +179,30 @@ Then('la contraportada va antes que la portada en {word}', (breakpoint: string) 
   }
 });
 
+Then('el retrato de la bio se limita a {int}px y se centra', (maximo: number) => {
+  const regla = base('contenido-retrato');
+  if (!regla.includes(`max-width: ${maximo}px`)) {
+    throw new Error(`el retrato de la bio no se limita a ${maximo}px: ${regla}`);
+  }
+  if (!regla.includes('align-self: center')) {
+    throw new Error(`el retrato de la bio no está centrado: ${regla}`);
+  }
+});
+
+Then('el retrato y el contenido de la bio van lado a lado en {word}', (breakpoint: string) => {
+  const regla = reglaDe(mediaGlobal(breakpointPx(breakpoint), '.contenido-flex {'), '.contenido-flex');
+  if (!regla.includes('flex-direction: row')) {
+    throw new Error(`el retrato y el contenido no van lado a lado en ${breakpoint}: ${regla}`);
+  }
+});
+
+Then('el retrato de la bio no tiene ancho fijo en {word}', (breakpoint: string) => {
+  const regla = reglaDe(mediaGlobal(breakpointPx(breakpoint), '.contenido-retrato {'), '.contenido-retrato');
+  if (regla !== '') {
+    throw new Error(`el retrato de la bio tiene un ancho fijo en ${breakpoint}: ${regla}`);
+  }
+});
+
 Then('la cabecera con dos portadas deja el resto al contenido en {word}', (breakpoint: string) => {
   const regla = reglaDe(
     mediaHasta(breakpointPx(breakpoint), '.cabecera-cuerpo:has(.cabecera-portadas) {'),
