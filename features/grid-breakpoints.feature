@@ -68,3 +68,11 @@ Característica: columnas del grid por breakpoint
       Cuando leo las utilidades de grid
       Entonces la cabecera con dos portadas deja el resto al contenido en xl
       Y el contenido de la cabecera con dos portadas ocupa la segunda columna en xl
+
+  Regla de negocio: El sidebar se va a la derecha desde sm
+
+    Escenario: En sm el sidebar ocupa la mitad y se alinea a la derecha
+      Cuando leo las utilidades de grid
+      Entonces el sidebar tiene un máximo de 350px
+      Y el sidebar se alinea a la derecha
+      Y las páginas con sidebar usan dos columnas en sm

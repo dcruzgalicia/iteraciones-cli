@@ -220,6 +220,27 @@ Then('la cabecera con dos portadas deja el resto al contenido en {word}', (break
   }
 });
 
+Then('el sidebar tiene un máximo de {int}px', (maximo: number) => {
+  const bloque = mediaFragment('content-grid', 'sm');
+  if (!bloque.includes(`max-width: ${maximo}px`)) {
+    throw new Error(`el sidebar no se limita a ${maximo}px en sm: ${bloque}`);
+  }
+});
+
+Then('el sidebar se alinea a la derecha', () => {
+  const bloque = mediaFragment('content-grid', 'sm');
+  if (!bloque.includes('justify-self: end')) {
+    throw new Error(`el sidebar no se alinea a la derecha en sm: ${bloque}`);
+  }
+});
+
+Then('las páginas con sidebar usan dos columnas en sm', () => {
+  const bloque = mediaFragment('content-grid', 'sm');
+  if (!bloque.includes('minmax(0, 50%)')) {
+    throw new Error(`las páginas con sidebar no usan dos columnas en sm: ${bloque}`);
+  }
+});
+
 Then('el contenido de la cabecera con dos portadas ocupa la segunda columna en {word}', (breakpoint: string) => {
   const regla = reglaDe(
     mediaHasta(breakpointPx(breakpoint), '.cabecera-cuerpo:has(.cabecera-portadas) > .cabecera-contenido {'),
