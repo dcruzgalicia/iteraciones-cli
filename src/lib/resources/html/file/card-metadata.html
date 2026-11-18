@@ -49,6 +49,12 @@
         </div>
         $endif$
         $endif$
+        $if(contributors)$
+        <div class="antologadora">
+          <span class="meta-label">Colaboradoras</span>
+          <span class="nombres-enlazados meta-valor">$contributors$</span>
+        </div>
+        $endif$
         <div class="meta-grid">
           $if(show-dates)$
           $if(date-iso)$
@@ -58,7 +64,6 @@
           </div>
           $endif$
           $endif$
-          $if(publication-meta)$$publication-meta$$endif$
           $if(subject)$
           <div class="meta-item">
             <span class="meta-label">Materia</span>
@@ -66,6 +71,11 @@
           </div>
           $endif$
         </div>
+        $if(datos-meta)$
+        <div class="meta-grid cabecera-datos">
+          $datos-meta$
+        </div>
+        $endif$
         $if(abstract)$
         <div class="resumen">
           <span class="meta-label">Resumen</span>

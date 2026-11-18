@@ -12,7 +12,7 @@ Característica: la plantilla HTML que se entrega a pandoc
       Y la plantilla dice "$if(home-href)$"
       Y la plantilla dice "$doc-chip$"
       Y la plantilla dice "$if(toc)$"
-      Y la plantilla dice "$if(formats)$"
+      Y la plantilla dice "$if(contributors)$"
       Y la plantilla dice "$if(has-references)$"
 
     Escenario: La tarjeta de referencias es condicional
@@ -20,12 +20,13 @@ Característica: la plantilla HTML que se entrega a pandoc
       Entonces la plantilla dice "$if(has-references)$"
       Y la plantilla dice "<div id=\"block-referencias\"></div>"
 
-    Escenario: La tarjeta de formatos es un flag y un hueco por formato
+    Escenario: Los formatos son un dato del encabezado
       Dado que la plantilla HTML se compone para "file"
-      Entonces la plantilla dice "$if(formats)$"
-      Y la plantilla dice "$fmt-pdf$"
-      Y la plantilla dice "$fmt-epub$"
-      Y la plantilla no dice "$formats$"
+      Entonces la plantilla dice "$if(datos-meta)$"
+      Y la plantilla dice "$datos-meta$"
+      Y la plantilla dice "$contributors$"
+      Y la plantilla no dice "$if(format-names)$"
+      Y la plantilla no dice "$fmt-pdf$"
 
   Regla de negocio: El contenido y la sidebar reparten las tarjetas
 

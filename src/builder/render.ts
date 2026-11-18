@@ -4,7 +4,7 @@ import { minifyHtml } from '../lib/minify.js';
 import { type BibOptions, execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, loadFilterGroups, luaFilterArgs, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
-import { buildFormatsArgs, type HtmlDocType, type HtmlPageVars } from './html-composer.js';
+import type { HtmlDocType, HtmlPageVars } from './html-composer.js';
 import { postProcessHtml } from './html-postprocess.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
 import { espaciosNormales } from './pipeline-io.js';
@@ -37,6 +37,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     { key: 'collection-creator-prefix', value: vars.collectionCreatorPrefix },
     { key: 'author-names', value: vars.authors },
     { key: 'collection-creator-names', value: vars.collectionCreator },
+    { key: 'contributors', value: vars.contributors },
   ]);
   if (!vars.subject) args.push('--metadata=subject:');
   const bandas: Array<[string, string | undefined]> = [
@@ -70,7 +71,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     ['pagination', vars.pagination],
     ['social-meta', vars.socialMeta],
     ['json-ld', vars.jsonLd],
-    ['publication-meta', vars.publicationMeta],
+    ['datos-meta', vars.datosMeta],
     ['citation-block', vars.citationBlock],
   ];
   for (const [clave, valor] of bandas) {
@@ -120,10 +121,6 @@ function buildHtmlMetadataArgs(
   if (vars.logoBlock !== undefined) args.push(`--variable=logo-block:${vars.logoBlock}`);
   if (vars.favicon !== undefined) args.push(`--variable=favicon:${vars.favicon}`);
   args.push(...metadataBandArgs(vars));
-  const formats = vars.formats ?? [];
-
-  if (formats.length > 0) args.push('--variable=formats:1');
-  args.push(...buildFormatsArgs(formats));
   return args;
 }
 

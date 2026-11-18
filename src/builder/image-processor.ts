@@ -211,10 +211,6 @@ export function scanInlineImageSources(content: string, docDir: string, pageWidt
   return sources;
 }
 
-export function scanInlineImages(content: string, docDir: string): string[] {
-  return scanInlineImageSources(content, docDir).map((source) => source.absPath);
-}
-
 function fieldText(raw: unknown): string | undefined {
   if (typeof raw === 'string') return raw;
   if (Array.isArray(raw)) return raw.join('\n');

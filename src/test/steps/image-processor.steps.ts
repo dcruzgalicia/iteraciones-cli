@@ -7,7 +7,7 @@ import {
   preprocessDocumentImages,
   resetMagickCache,
   rewriteImagePaths,
-  scanInlineImages,
+  scanInlineImageSources,
   scanTitlePageFieldImages,
 } from '../../builder/image-processor.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
@@ -68,7 +68,7 @@ Then('el mapa de rutas está vacío', () => {
 });
 
 When('escaneo las imágenes en línea de:', (contenido: string) => {
-  world.enLinea = scanInlineImages(contenido.replace(/<br>/g, '\n'), DIR_DOC);
+  world.enLinea = scanInlineImageSources(contenido.replace(/<br>/g, '\n'), DIR_DOC).map((source) => source.absPath);
 });
 
 Then('las imágenes en línea son {string}', (esperadas: string) => {

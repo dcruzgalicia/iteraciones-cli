@@ -1,22 +1,9 @@
 import { Given } from '@cucumber/cucumber';
+import { writeHtmlConfig } from '../helpers.js';
 import { escribirEnProyecto, raiz } from './cli-world.steps.js';
 
 function proyecto(rss: boolean): void {
-  raiz();
-  escribirEnProyecto(
-    'iteraciones.config.yaml',
-    [
-      'language: es-MX',
-      'format:',
-      '  html:',
-      '    site:',
-      '      title: Sitio',
-      '      description: Descripción del sitio',
-      '      url: https://ejemplo.org/revista',
-      `      rss: ${rss}`,
-      '    generate: true',
-    ].join('\n'),
-  );
+  writeHtmlConfig(raiz(), { description: 'Descripción del sitio', url: 'https://ejemplo.org/revista', rss });
   escribirEnProyecto('test.md', '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido.\n');
 }
 

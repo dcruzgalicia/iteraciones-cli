@@ -12,6 +12,28 @@ export function initTestProject(dir: string): void {
   writeFileSync(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido de prueba.\n', 'utf8');
 }
 
+export interface HtmlConfigOptions {
+  title?: string;
+  description?: string;
+  url?: string;
+  showCitation?: boolean;
+  rss?: boolean;
+  markdown?: boolean;
+  pageSize?: number;
+}
+
+export function writeHtmlConfig(root: string, opts: HtmlConfigOptions = {}): void {
+  const site = [`      title: ${opts.title ?? 'Sitio'}`];
+  if (opts.description !== undefined) site.push(`      description: ${opts.description}`);
+  if (opts.url !== undefined) site.push(`      url: ${opts.url}`);
+  if (opts.showCitation !== undefined) site.push(`      showCitation: ${opts.showCitation}`);
+  if (opts.rss !== undefined) site.push(`      rss: ${opts.rss}`);
+  const lines = ['language: es-MX', 'format:', '  html:', '    site:', ...site, '    generate: true'];
+  if (opts.pageSize !== undefined) lines.push(`    pageSize: ${opts.pageSize}`);
+  if (opts.markdown) lines.push('  markdown:', '    generate: true');
+  writeFileSync(join(root, 'iteraciones.config.yaml'), `${lines.join('\n')}\n`, 'utf8');
+}
+
 export function distPath(root: string, ...parts: string[]): string {
   return join(root, 'dist', 'files', ...parts);
 }

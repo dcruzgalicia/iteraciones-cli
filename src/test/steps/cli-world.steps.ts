@@ -154,8 +154,6 @@ function nuevoMundo() {
     htmlEntrada: '',
     htmlSalida: '',
     bloqueRefs: undefined as string | undefined,
-    formatos: [] as { href: string; key: 'pdf' | 'epub' | 'latex' | 'markdown'; name: string; description: string }[],
-    argsFormatos: [] as string[],
     avisosHtml: [] as string[],
     erroresFm: [] as { severity: string; message: string }[],
     configPdfx: undefined as unknown,

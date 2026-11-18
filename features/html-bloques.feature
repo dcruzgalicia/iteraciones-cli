@@ -13,11 +13,11 @@ Característica: las tarjetas del layout salen en el orden que el autor espera
       Entonces el comando termina con el código de salida 0
       Y las tarjetas del documento salen en el orden por defecto
 
-    Escenario: La tarjeta de descargas es una lista sencilla
+    Escenario: Los formatos del encabezado son una lista
       Dado que la raíz del proyecto tiene un proyecto con índice y una cita
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y la tarjeta de descargas es una lista sin iconos ni descripciones
+      Y los formatos del encabezado son una lista
 
     Escenario: Sin índice, sin citas y sin formatos, los bloques ausentes no aparecen
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -25,8 +25,8 @@ Característica: las tarjetas del layout salen en el orden que el autor espera
       Entonces el comando termina con el código de salida 0
       Y los bloques que no aplican no dejan huecos
 
-    Escenario: Las tarjetas de formatos y referencias quedan fuera de la de contenido
+    Escenario: Los formatos quedan en el encabezado y las referencias fuera del artículo
       Dado que la raíz del proyecto tiene un proyecto con índice y una cita
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y las tarjetas de formatos y referencias quedan fuera de la de contenido
+      Y los formatos quedan en el encabezado y las referencias fuera del artículo

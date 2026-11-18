@@ -35,7 +35,7 @@ import {
   relImageMapFor,
   rewriteFmImagePaths,
   rewriteImagePaths,
-  scanInlineImages,
+  scanInlineImageSources,
 } from './image-processor.js';
 import { keywordHref, keywordListsOf, keywordMembers, keywordSlug, keywordsFromFm, keywordsOf } from './keyword-lists.js';
 import {
@@ -577,6 +577,7 @@ function publicationMetaHtml(args: {
   formatCfg: Record<string, unknown> | undefined;
   siteConfig: SiteConfig;
   creatorHrefs: Map<string, string>;
+  grupo?: 'visible' | 'tecnico';
 }): string | undefined {
   const campo = (name: string): string | undefined => htmlMetadataField(args.fm, args.formatCfg, args.siteConfig, name);
   const texto = (name: string): string | undefined => {
@@ -599,18 +600,14 @@ function publicationMetaHtml(args: {
       : /^https?:\/\//i.test(identifier)
         ? `<a href="${Bun.escapeHTML(identifier)}" class="enlace-acento">${Bun.escapeHTML(identifier)}</a>`
         : Bun.escapeHTML(identifier);
-  const contributor = renderNombres(
-    parseAuthors(resolveMetadataField(args.fm, args.formatCfg, args.siteConfig, 'contributor')),
-    'accent',
-    args.creatorHrefs,
-  );
-  const filas: Array<[string, string | undefined]> = [
-    ['DOI', doiHtml],
-    ['ISBN', texto('isbn')],
-    ['Editorial', texto('publisher')],
-    ['Colaboradoras', contributor || undefined],
-    ['Identificador', identifierHtml],
-  ];
+  const filas: Array<[string, string | undefined]> =
+    args.grupo === 'tecnico'
+      ? [
+          ['DOI', doiHtml],
+          ['ISBN', texto('isbn')],
+          ['Identificador', identifierHtml],
+        ]
+      : [['Editorial', texto('publisher')]];
   const visibles = filas.filter(([, valor]) => valor !== undefined && valor.trim() !== '');
   if (visibles.length === 0) return undefined;
   const html = visibles
@@ -803,6 +800,24 @@ function htmlVars(args: {
     doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection'
       ? publicationMetaHtml({ fm, formatCfg: htmlConfig, siteConfig: ctx.siteConfig, creatorHrefs })
       : undefined;
+  const technicalMeta =
+    doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection'
+      ? publicationMetaHtml({ fm, formatCfg: htmlConfig, siteConfig: ctx.siteConfig, creatorHrefs, grupo: 'tecnico' })
+      : undefined;
+  const formatosHtml =
+    formats === undefined || formats.length === 0
+      ? undefined
+      : formats
+          .map(
+            (f, i) =>
+              `${i === 0 ? '' : '<span class="separador-nombres">, </span>'}<span class="nombre"><a href="${Bun.escapeHTML(f.href)}" download target="_blank">${Bun.escapeHTML(f.name)}</a></span>`,
+          )
+          .join('');
+  const formatosMeta =
+    formatosHtml === undefined
+      ? undefined
+      : `<div class="meta-item cabecera-formatos"><span class="meta-label">Formatos</span><span class="meta-valor">${formatosHtml}</span></div>`;
+  const datosMeta = [publicationMeta, technicalMeta, formatosMeta].filter(Boolean).join('');
   const showCitation = htmlConfig?.site?.showCitation === true;
   const citationBlock =
     showCitation && (doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection')
@@ -850,7 +865,7 @@ function htmlVars(args: {
     canonical,
     socialMeta,
     jsonLd,
-    publicationMeta,
+    datosMeta,
     citationBlock,
     lang,
     theme: htmlConfig?.site?.theme,
@@ -871,6 +886,7 @@ function htmlVars(args: {
     subject: subjectVisible(subject, keywords),
     collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
+    contributors: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'contributor')), creatorHrefs),
     authors: nombresEnlazados(doc.frontmatter.creator, creatorHrefs),
     docChip: fmString(docChip, docChipLabel(doc.frontmatter.type)),
     contentChip: contentChipOverride ?? contentChipPara(doc.frontmatter.type),
@@ -3465,7 +3481,7 @@ function imagenesDeLasTarjetas(entradas: CollectionEntry[], cwd: string): string
   for (const entrada of entradas) {
     const dir = entrada.dirAbs ?? dirname(join(cwd, entrada.file));
     const fragmento = extractFragment(entrada.body, CARD_PREVIEW_MAX_WORDS);
-    if (fragmento !== '') imagenes.push(...scanInlineImages(fragmento, dir));
+    if (fragmento !== '') imagenes.push(...scanInlineImageSources(fragmento, dir).map((source) => source.absPath));
 
     const src = primeraImagenDelCuerpo(entrada.body);
     if (src !== undefined) imagenes.push(isAbsolute(src) ? src : resolve(dir, src));
