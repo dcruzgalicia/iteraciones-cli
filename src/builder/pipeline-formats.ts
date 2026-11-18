@@ -816,7 +816,7 @@ function htmlVars(args: {
   const formatosMeta =
     formatosHtml === undefined
       ? undefined
-      : `<div class="meta-item cabecera-formatos"><span class="meta-label">Formatos</span><span class="meta-valor">${formatosHtml}</span></div>`;
+      : `<div class="meta-item cabecera-formatos"><span class="meta-label">Formatos</span><span class="nombres-enlazados meta-valor">${formatosHtml}</span></div>`;
   const datosMeta = [publicationMeta, technicalMeta, formatosMeta].filter(Boolean).join('');
   const showCitation = htmlConfig?.site?.showCitation === true;
   const citationBlock =
