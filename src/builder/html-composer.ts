@@ -137,7 +137,6 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const relatedCards = [
     '$if(sidebar-extras)$$sidebar-extras$$endif$',
     await loadCard(type, 'card-indice.html'),
-    await loadCard(type, 'card-formatos.html'),
     await loadCard('file', 'card-cita.html'),
     await loadCard('file', 'card-indice-coleccion.html'),
   ];
@@ -207,6 +206,7 @@ export interface HtmlPageVars {
   titlehead?: string;
   subject?: string;
   collectionCreatorPrefix?: string;
+  contributors?: string[];
 
   docChip?: string;
   docChipHref?: string;
@@ -225,7 +225,7 @@ export interface HtmlPageVars {
   announcementsTop?: string;
   announcementsBottom?: string;
   indiceColeccion?: string;
-  publicationMeta?: string;
+  datosMeta?: string;
   citationBlock?: string;
 
   extras?: string;

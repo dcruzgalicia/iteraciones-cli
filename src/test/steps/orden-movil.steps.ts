@@ -1,6 +1,6 @@
 import { Then, When } from '@cucumber/cucumber';
-import { SiteConfigSchema } from '../../config/config-schema.js';
 import { composeHtmlTemplate } from '../../builder/html-composer.js';
+import { SiteConfigSchema } from '../../config/config-schema.js';
 
 let plantilla = '';
 
@@ -22,10 +22,6 @@ Then('el contenido va antes que la autora', () => {
   if (posicion('$body$') > posicion('sidebar-extras')) throw new Error('la autora quedó antes del contenido');
 });
 
-Then('la autora va antes que los formatos', () => {
-  if (posicion('sidebar-extras') > posicion('Formatos')) throw new Error('los formatos quedaron antes de la autora');
-});
-
-Then('los formatos van antes que la licencia', () => {
-  if (posicion('Formatos') > posicion('$license$')) throw new Error('la licencia quedó antes de los formatos');
+Then('la autora va antes que la licencia', () => {
+  if (posicion('sidebar-extras') > posicion('$license$')) throw new Error('la licencia quedó antes de la autora');
 });

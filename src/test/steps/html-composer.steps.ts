@@ -1,6 +1,5 @@
 import { spyOn } from 'bun:test';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { buildFormatsArgs, type FormatsLink } from '../../builder/html-composer.js';
 import { extractReferencesBlock, moveCollectionIntro, removeTocReferencesLink } from '../../builder/html-postprocess.js';
 import * as logger from '../../lib/logger.js';
 import { world } from './cli-world.steps.ts';
@@ -30,14 +29,6 @@ When('extraigo el bloque de referencias', () => {
 
 When('quito el enlace a referencias del índice', () => {
   world.htmlSalida = removeTocReferencesLink(world.htmlEntrada);
-});
-
-Given('que los formatos son {string}', (lista: string) => {
-  world.formatos = JSON.parse(lista) as FormatsLink[];
-});
-
-When('compongo los argumentos de formatos', () => {
-  world.argsFormatos = buildFormatsArgs(world.formatos);
 });
 
 When('subo el body propio a la banda', () => {
@@ -89,20 +80,5 @@ Then('el post-proceso avisa que {string}', (motivo: string) => {
   const avisos = (world.avisosHtml ?? []).join(' ');
   if (!avisos.includes(motivo)) {
     throw new Error(`el post-proceso no avisó ${JSON.stringify(motivo)}. Avisó: ${JSON.stringify(avisos)}`);
-  }
-});
-
-Then('los argumentos de formatos son {string}', (esperados: string) => {
-  const leidos = (world.argsFormatos as string[]).join(', ');
-  if (leidos !== esperados) {
-    throw new Error(`son ${JSON.stringify(leidos)} y deberían ser ${JSON.stringify(esperados)}`);
-  }
-});
-
-Then('ningún argumento de formatos lleva HTML ni saltos', () => {
-  for (const arg of (world.argsFormatos as string[]) ?? []) {
-    if (arg.includes('<') || arg.includes('\n')) {
-      throw new Error(`el argumento ${JSON.stringify(arg)} lleva HTML o un salto`);
-    }
   }
 });

@@ -92,15 +92,6 @@ Característica: el post-proceso del HTML y los formatos del argv
       Cuando quito el enlace a referencias del índice
       Entonces el post-proceso no tocó el HTML
 
-  Regla de negocio: El argv lleva un valor corto por formato, nunca HTML
-
-    Escenario: Cada formato aporta exactamente un href corto
-      Dado que la raíz del proyecto está vacía
-      Y que los formatos son '[{"href":"./doc.pdf","key":"pdf","name":"PDF","description":"Documento final"},{"href":"./doc.epub","key":"epub","name":"EPUB","description":"Edición adaptable"}]'
-      Cuando compongo los argumentos de formatos
-      Entonces los argumentos de formatos son "--variable=fmt-pdf:./doc.pdf, --variable=fmt-epub:./doc.epub"
-      Y ningún argumento de formatos lleva HTML ni saltos
-
   Regla de negocio: El body propio de la colección sube a la banda
 
     Escenario: El intro sube entero y antes del main

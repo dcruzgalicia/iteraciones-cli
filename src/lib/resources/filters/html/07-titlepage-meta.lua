@@ -6,7 +6,7 @@ local FIELDS = {
   'collection-creator-prefix',
 }
 
-local NAME_FIELDS = { 'author-names', 'collection-creator-names' }
+local NAME_FIELDS = { 'author-names', 'collection-creator-names', 'contributors' }
 
 local function blocks_to_inlines(blocks)
   local out = pandoc.Inlines({})

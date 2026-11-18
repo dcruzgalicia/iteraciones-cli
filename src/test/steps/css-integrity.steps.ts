@@ -16,7 +16,6 @@ const TYPES = ['file', 'collection', 'creator'] as const;
 const CARDS = [
   'card-contenido.html',
   'card-metadata.html',
-  'card-formatos.html',
   'card-identity.html',
   'card-indice.html',
   'card-referencias-block.html',
@@ -181,11 +180,11 @@ Then('la compilación falla diciendo que el acento es desconocido', () => {
 
 Then('el CSS da a {string} la propiedad {string}', (selector: string, propiedad: string) => {
   const escapado = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const bloque = new RegExp(`(?:^|[},])\\s*${escapado}\\s*\\{([^}]*)\\}`).exec(world.css);
-  if (bloque === null) throw new Error(`el CSS no tiene ninguna regla para ${selector}`);
-  if (!(bloque[1] ?? '').includes(propiedad)) {
-    throw new Error(`la regla ${selector} no declara ${propiedad}. Dice:\n${bloque[1]}`);
+  const regla = new RegExp(`(?:^|[},])\\s*${escapado}\\s*(?:,[^{}]+)?\\{([^}]*)\\}`, 'g');
+  for (const bloque of world.css.matchAll(regla)) {
+    if ((bloque[1] ?? '').includes(propiedad)) return;
   }
+  throw new Error(`la regla ${selector} no declara ${propiedad}`);
 });
 
 Then('el CSS no tiene {string}', (texto: string) => {

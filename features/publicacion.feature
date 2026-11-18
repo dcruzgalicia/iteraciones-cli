@@ -15,9 +15,13 @@ Característica: metadatos de publicación en el encabezado
     Y el archivo "dist/files/test-document.html" contiene "DOI"
     Y el archivo "dist/files/test-document.html" contiene "10.1234/ejemplo"
     Y el archivo "dist/files/test-document.html" contiene "Colaboradoras"
-    Y el archivo "dist/files/test-document.html" contiene "<span class=\"nombre\">Ana</span><span class=\"separador-nombres\">, </span><span class=\"nombre\">Otra</span>"
+    Y el archivo "dist/files/test-document.html" contiene "<span class=\"nombre\">Ana</span>, <span class=\"nombre\">Otra</span>"
     Y el archivo "dist/files/test-document.html" contiene "Identificador"
     Y el archivo "dist/files/test-document.html" contiene "https://example.com/id"
+    Y el archivo "dist/files/test-document.html" pone "Colaboradoras" antes que "Editorial"
+    Y el archivo "dist/files/test-document.html" pone "Colaboradoras" antes que "Formatos"
+    Y el archivo "dist/files/test-document.html" pone "DOI" antes que "Formatos"
+    Y el archivo "dist/files/test-document.html" pone "Formatos" antes que "Resumen"
     Y el archivo "dist/files/test-document.html" no contiene ">Publicación</h2>"
 
   Escenario: El encabezado no muestra campos vacíos

@@ -217,7 +217,7 @@ Then('ningún enlace del HTML lleva {string} por defecto', (clase: string) => {
 Then('los enlaces de Formatos abren en otra pestaña', () => {
   const html = leer('dist/files/test-document.html');
   const enlaces = [...html.matchAll(/<a\b[^>]*>(PDF|EPUB|LaTeX|Markdown)<\/a>/g)];
-  if (enlaces.length === 0) throw new Error('la tarjeta de Formatos no tiene enlaces');
+  if (enlaces.length === 0) throw new Error('el encabezado no tiene enlaces de formato');
   for (const [etiqueta, enlace] of enlaces.map((m) => [m[1], m[0]] as const)) {
     if (!(enlace ?? '').includes('target="_blank"')) throw new Error(`el enlace ${String(etiqueta)} no abre en otra pestaña`);
   }

@@ -100,20 +100,22 @@ Given('que escribo markdown de relleno con clases inventadas', () => {
   }
 });
 
-Then('la tarjeta de descargas es una lista sin iconos ni descripciones', () => {
+Then('los formatos del encabezado son una lista', () => {
   const html = salida('test-document.html');
-  const inicio = html.indexOf('>Formatos</h2>');
-  if (inicio < 0) throw new Error('la página no tiene tarjeta de descargas');
-  const tarjeta = html.slice(inicio, html.indexOf('</section>', inicio));
-  if (!tarjeta.includes('<ul')) throw new Error('la tarjeta de descargas no es una lista');
-  if (!/<ul class="[^"]*lista-enlaces--disco/.test(tarjeta)) throw new Error('la lista de descargas no tiene viñetas');
-  if (tarjeta.includes('<svg')) throw new Error('la tarjeta de descargas todavía tiene iconos');
-  if (tarjeta.includes('Documento final')) throw new Error('la tarjeta de descargas todavía tiene descripciones');
+  const inicio = html.indexOf('cabecera-formatos');
+  if (inicio < 0) throw new Error('el encabezado no tiene formatos');
+  const bloque = html.slice(inicio, html.indexOf('</div>', inicio));
+  if (!bloque.includes('>Formatos</span>')) throw new Error('el encabezado no titula los formatos');
+  if (!bloque.includes('class="nombre"')) throw new Error('los formatos del encabezado no están separados por nombres');
+  const enlaces = bloque.match(/<a /g)?.length ?? 0;
+  if (enlaces === 0) throw new Error('los formatos del encabezado no son enlaces');
+  if (enlaces > 1 && !bloque.includes('separador-nombres')) throw new Error('los formatos del encabezado no están separados por comas');
+  if (bloque.includes('chip--tipo')) throw new Error('los formatos del encabezado no deben ser chips');
 });
 
 Then('las tarjetas del documento salen en el orden por defecto', () => {
   const archivo = 'test-document.html';
-  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="TOC", >Formatos</h2>, id="refs-heading", id="card-identity-footer"');
+  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="TOC", id="refs-heading", id="card-identity-footer"');
 });
 
 Then('los bloques que no aplican no dejan huecos', () => {
@@ -121,21 +123,21 @@ Then('los bloques que no aplican no dejan huecos', () => {
   const html = salida(archivo);
 
   enOrden(html, archivo, 'id="card-identity", <article, id="card-identity-footer"');
-  prohibe(html, archivo, ['>Formatos</h2>', 'id="TOC"', 'refs-heading']);
+  prohibe(html, archivo, ['cabecera-formatos', 'id="TOC"', 'refs-heading']);
 });
 
-Then('las tarjetas de formatos y referencias quedan fuera de la de contenido', () => {
+Then('los formatos quedan en el encabezado y las referencias fuera del artículo', () => {
   const archivo = 'test-document.html';
   const html = salida(archivo);
-  const html1 = html.indexOf('>Formatos</h2>');
+  const formatos = html.indexOf('cabecera-formatos');
   const article = html.indexOf('<article');
   const refs = html.indexOf('id="refs-heading"');
   const cierre = html.indexOf('</article>');
-  if (html1 < 0 || article < 0 || refs < 0 || cierre < 0) {
-    throw new Error(`faltan tarjetas en ${archivo}`);
+  if (formatos < 0 || article < 0 || refs < 0 || cierre < 0) {
+    throw new Error(`faltan bloques en ${archivo}`);
   }
 
-  if (html1 > article && html1 < cierre) throw new Error('la tarjeta de formatos quedó dentro del article');
+  if (formatos > article) throw new Error('los formatos no quedaron en el encabezado');
   if (!(refs > cierre)) throw new Error('la tarjeta de referencias quedó dentro del article');
 });
 

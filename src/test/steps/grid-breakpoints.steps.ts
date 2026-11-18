@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { Then, When } from '@cucumber/cucumber';
+import { bloqueDesde, reglaDe } from '../css.js';
 
 let css = '';
 
@@ -52,26 +53,13 @@ function mediaFragment(utilidad: string, breakpoint: string): string {
   return texto.slice(inicio, siguiente === -1 ? undefined : siguiente);
 }
 
-function bloqueDesde(inicio: number): { contenido: string; fin: number } {
-  const abre = css.indexOf('{', inicio);
-  if (abre === -1) return { contenido: '', fin: css.length };
-  let profundidad = 1;
-  let i = abre + 1;
-  while (i < css.length && profundidad > 0) {
-    if (css[i] === '{') profundidad += 1;
-    else if (css[i] === '}') profundidad -= 1;
-    i += 1;
-  }
-  return { contenido: css.slice(abre + 1, i - 1), fin: i };
-}
-
 function mediaRango(min: number, max: number, selector: string): string {
   const needle = `@media (min-width: ${min}px) and (max-width: ${max}px)`;
   let desde = 0;
   while (true) {
     const inicio = css.indexOf(needle, desde);
     if (inicio === -1) return '';
-    const bloqueMedia = bloqueDesde(inicio);
+    const bloqueMedia = bloqueDesde(css, inicio);
     if (bloqueMedia.contenido.includes(selector)) return bloqueMedia.contenido;
     desde = bloqueMedia.fin;
   }
@@ -82,7 +70,7 @@ function mediaGlobal(px: number, selector: string): string {
   while (true) {
     const inicio = css.indexOf(`@media (min-width: ${px}px)`, desde);
     if (inicio === -1) return '';
-    const bloqueMedia = bloqueDesde(inicio);
+    const bloqueMedia = bloqueDesde(css, inicio);
     if (bloqueMedia.contenido.includes(selector)) return bloqueMedia.contenido;
     desde = bloqueMedia.fin;
   }
@@ -95,14 +83,6 @@ function mediaHasta(px: number, selector: string): string {
     if (encontrado !== '') return encontrado;
   }
   return '';
-}
-
-function reglaDe(bloqueMedia: string, selector: string): string {
-  const inicio = bloqueMedia.indexOf(selector);
-  if (inicio === -1) return '';
-  const abre = bloqueMedia.indexOf('{', inicio);
-  const cierra = bloqueMedia.indexOf('}', abre);
-  return abre === -1 || cierra === -1 ? '' : bloqueMedia.slice(abre + 1, cierra);
 }
 
 function columnas(fragmento: string): number | undefined {

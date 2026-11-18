@@ -103,7 +103,7 @@ Característica: El CSS se genera sólo para la combinación activa
 
   Regla de negocio: Las tarjetas comparten diseño (#2487, #2488)
 
-    Escenario: Las tres copias tienen las mismas siete tarjetas y ninguna más
+    Escenario: Las tres copias tienen las mismas seis tarjetas y ninguna más
       Cuando reviso las copias de las tarjetas de "file", "collection" y "creator"
       Entonces las tres tienen exactamente las mismas tarjetas
       Y el esqueleto compartido trae el fondo de papel milimetrado
@@ -116,6 +116,11 @@ Característica: El CSS se genera sólo para la combinación activa
     Escenario: Todas las tarjetas redondean igual
       Cuando leo el styles.css del proyecto
       Entonces el CSS da a ".tarjeta" la propiedad "border-radius: var(--card-radius)"
+
+    Escenario: Las comas del encabezado no usan el color de enlace
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".tarjeta--cabecera .autores" la propiedad "color: var(--texto-suave)"
+      Y el CSS da a ".nombres-enlazados a" la propiedad "color: var(--acento-texto)"
 
     Escenario: El fondo es papel milimetrado: dos retículas y ni un punto
       Cuando leo el styles.css del proyecto

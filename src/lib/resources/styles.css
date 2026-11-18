@@ -1181,6 +1181,12 @@ a:hover {
   font-size: 0.9375rem;
 }
 
+@media (min-width: 640px) {
+  .meta-grid.cabecera-datos {
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  }
+}
+
 .meta-item {
   display: flex;
   flex-direction: column;
@@ -1223,6 +1229,10 @@ a:hover {
 
 .nombres-enlazados a:hover {
   text-decoration: underline;
+}
+
+.tarjeta--cabecera .autores {
+  color: var(--texto-suave);
 }
 
 .enlace-acento {
@@ -2426,10 +2436,6 @@ a:hover {
 
   .meta-label {
     font-size: 0.9375rem;
-  }
-
-  .contenido-tamano {
-    font-size: 24px;
   }
 }
 

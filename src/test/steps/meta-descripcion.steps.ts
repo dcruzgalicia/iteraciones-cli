@@ -1,20 +1,9 @@
 import { Given } from '@cucumber/cucumber';
+import { writeHtmlConfig } from '../helpers.js';
 import { escribirEnProyecto, raiz } from './cli-world.steps.js';
 
 function proyecto(descripcionPropia: boolean): void {
-  raiz();
-  escribirEnProyecto(
-    'iteraciones.config.yaml',
-    [
-      'language: es-MX',
-      'format:',
-      '  html:',
-      '    site:',
-      '      title: Sitio',
-      '      description: Sitio de prueba',
-      '    generate: true',
-    ].join('\n'),
-  );
+  writeHtmlConfig(raiz(), { description: 'Sitio de prueba' });
   const frontmatter = ['---', 'title: Test Document'];
   if (descripcionPropia) frontmatter.push('description: Descripción de prueba');
   frontmatter.push('---', '', 'Contenido de prueba.');
