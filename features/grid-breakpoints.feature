@@ -27,3 +27,29 @@ Característica: columnas del grid por breakpoint
     Y creator-publications-grid usa 2 columnas en lg
     Y creator-publications-grid usa 3 columnas en xl
     Y creator-publications-grid usa 3 columnas en 2xl
+
+  Regla de negocio: La portada de la cabecera reparte el ancho
+
+    Escenario: En móvil la portada se limita y se centra
+      Cuando leo las utilidades de grid
+      Entonces la portada de la cabecera mide hasta 320px y está centrada
+
+    Escenario: En sm la cabecera tiene dos columnas y la portada ocupa su columna
+      Cuando leo las utilidades de grid
+      Entonces la cabecera con portada tiene 2 columnas en sm
+      Y la portada de la cabecera ocupa el 100% en sm
+
+    Escenario: En md el contenido ocupa dos de tres columnas
+      Cuando leo las utilidades de grid
+      Entonces la cabecera con portada tiene 3 columnas en md
+      Y el contenido de la cabecera ocupa 2 columnas en md
+
+    Escenario: En xl el contenido ocupa tres de cuatro columnas
+      Cuando leo las utilidades de grid
+      Entonces la cabecera con portada tiene 4 columnas en xl
+      Y el contenido de la cabecera ocupa 3 columnas en xl
+
+    Escenario: En 2xl se mantienen cuatro columnas
+      Cuando leo las utilidades de grid
+      Entonces la cabecera con portada tiene 4 columnas en 2xl
+      Y el contenido de la cabecera ocupa 3 columnas en 2xl
