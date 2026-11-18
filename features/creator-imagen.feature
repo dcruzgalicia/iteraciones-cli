@@ -41,6 +41,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "-ana.webp"
       Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-document\"" antes que "-ana.webp"
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "Bio de Ana García."
+      Y el archivo "dist/files/ana-garcia.html" pone ">Bio</h2>" antes que "-ana.webp"
 
     Escenario: El retrato queda antes de los textos de la creadora
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -97,9 +98,13 @@ Característica: el retrato de la creadora en sus tarjetas
       Cuando leo las utilidades de grid
       Entonces el retrato de la bio se limita a 320px y se centra
 
-    Escenario: Desde sm el retrato va al lado del contenido
+    Escenario: En sm el retrato va arriba del contenido
       Cuando leo las utilidades de grid
-      Entonces el retrato y el contenido de la bio van lado a lado en sm
+      Entonces el retrato de la bio va arriba en sm
+
+    Escenario: En md el retrato va al lado del contenido
+      Cuando leo las utilidades de grid
+      Entonces el retrato y el contenido de la bio van lado a lado en md
 
     Escenario: En md, lg y xl el retrato conserva su límite
       Cuando leo las utilidades de grid
