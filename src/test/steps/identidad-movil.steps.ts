@@ -20,6 +20,47 @@ function declaraciones(selector: string): string {
   return bloque.slice(abre + 1, cierra);
 }
 
+const BREAKPOINTS: Record<string, number> = { sm: 640, md: 960, lg: 1280, xl: 1600 };
+
+function bloqueDesde(inicio: number): { contenido: string; fin: number } {
+  const abre = css.indexOf('{', inicio);
+  if (abre === -1) return { contenido: '', fin: css.length };
+  let profundidad = 1;
+  let i = abre + 1;
+  while (i < css.length && profundidad > 0) {
+    if (css[i] === '{') profundidad += 1;
+    else if (css[i] === '}') profundidad -= 1;
+    i += 1;
+  }
+  return { contenido: css.slice(abre + 1, i - 1), fin: i };
+}
+
+function mediaCon(px: number, selector: string): string {
+  let desde = 0;
+  while (true) {
+    const inicio = css.indexOf(`@media (min-width: ${px}px)`, desde);
+    if (inicio === -1) return '';
+    const bloque = bloqueDesde(inicio);
+    if (bloque.contenido.includes(`${selector} {`)) return bloque.contenido;
+    desde = bloque.fin;
+  }
+}
+
+function reglaDe(bloque: string, selector: string): string {
+  const inicio = bloque.indexOf(`${selector} {`);
+  if (inicio === -1) return '';
+  const abre = bloque.indexOf('{', inicio);
+  const cierra = bloque.indexOf('}', abre);
+  return abre === -1 || cierra === -1 ? '' : bloque.slice(abre + 1, cierra);
+}
+
+function reglaIdentidad(selector: string, breakpoint: string): string {
+  if (breakpoint === 'móvil') return reglaDe(css, selector);
+  const px = BREAKPOINTS[breakpoint];
+  if (px === undefined) throw new Error(`breakpoint desconocido: ${breakpoint}`);
+  return reglaDe(mediaCon(px, selector), selector);
+}
+
 When('leo el CSS de identidad', async () => {
   css = await Bun.file(join(import.meta.dir, '../../lib/resources/styles.css')).text();
 });
@@ -42,4 +83,18 @@ Then('el bloque móvil centra la marca de cabecera y pie', () => {
 Then('el bloque móvil centra las acciones de cabecera y pie', () => {
   const regla = declaraciones('.sitio-acciones');
   if (!regla.includes('justify-content: center')) throw new Error(`las acciones no quedan centradas: ${regla}`);
+});
+
+Then('el título de la identidad mide {word} en {word}', (medida: string, breakpoint: string) => {
+  const regla = reglaIdentidad('.sitio-titulo', breakpoint);
+  if (!regla.includes(`font-size: ${medida}`)) {
+    throw new Error(`el título de la identidad no mide ${medida} en ${breakpoint}: ${regla}`);
+  }
+});
+
+Then('el lema de la identidad mide {word} en {word}', (medida: string, breakpoint: string) => {
+  const regla = reglaIdentidad('.sitio-lema', breakpoint);
+  if (!regla.includes(`font-size: ${medida}`)) {
+    throw new Error(`el lema de la identidad no mide ${medida} en ${breakpoint}: ${regla}`);
+  }
 });
