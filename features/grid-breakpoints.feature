@@ -3,27 +3,31 @@ Característica: columnas del grid por breakpoint
   Para que las tarjetas y el contenido no se aprieten en ningún ancho
   Quiero columnas explícitas en cada breakpoint
 
-  Escenario: El grid de contenido cambia de 1 a 4 columnas
+  Escenario: El grid de contenido deja el ancho del sidebar
     Cuando leo las utilidades de grid
-    Entonces content-grid usa 1 columna base
-    Y content-grid usa 2 columnas en sm
-    Y content-grid usa 2 columnas en md
-    Y content-grid usa 3 columnas en lg
-    Y content-grid usa 4 columnas en xl
+    Entonces content-grid usa una columna base
+    Y content-grid reserva el ancho del sidebar desde sm
 
   Escenario: Los previews cambian de 1 a 3 columnas
     Cuando leo las utilidades de grid
     Entonces preview-grid usa 1 columna base
-    Y preview-grid usa 1 columna en sm
-    Y preview-grid usa 2 columnas en md
-    Y preview-grid usa 3 columnas en lg
+    Y preview-grid usa 2 columnas en 800
+    Y preview-grid usa 1 columna en md
+    Y preview-grid usa 2 columnas en 1120
     Y preview-grid usa 3 columnas en xl
 
-  Escenario: Las publicaciones de creadora llegan a tres columnas
+  Escenario: Las publicaciones de creadora nunca pasan de dos columnas
     Cuando leo las utilidades de grid
     Entonces creator-publications-grid usa 1 columna base
-    Y creator-publications-grid usa 2 columnas en lg
-    Y creator-publications-grid usa 3 columnas en xl
+    Y creator-publications-grid usa 2 columnas en 800
+    Y creator-publications-grid usa 1 columna en md
+    Y creator-publications-grid usa 2 columnas en 1120
+    Y creator-publications-grid nunca usa 3 columnas
+
+  Escenario: En sm el contenido ocupa una columna y el aside dos
+    Cuando leo las utilidades de grid
+    Entonces las páginas con sidebar usan una columna en sm
+    Y el aside usa dos columnas internas en sm
 
   Regla de negocio: La portada de la cabecera reparte el ancho
 
@@ -48,16 +52,10 @@ Característica: columnas del grid por breakpoint
 
   Regla de negocio: La portada y la contraportada forman una pareja centrada
 
-    Escenario: En móvil se apilan en una columna
+    Escenario: La pareja siempre usa dos columnas de hasta 320px
       Cuando leo las utilidades de grid
-      Entonces la pareja de portadas usa una columna base
-
-    Escenario: En sm y md la pareja usa dos columnas
-      Cuando leo las utilidades de grid
-      Entonces la pareja de portadas tiene 2 columnas en sm
-      Y la contraportada va antes que la portada en sm
-      Y la pareja de portadas tiene 2 columnas en md
-      Y la contraportada va antes que la portada en md
+      Entonces la pareja de portadas usa dos columnas de 320px
+      Y la contraportada va antes que la portada
 
     Escenario: En lg la pareja usa su ancho y el contenido el resto
       Cuando leo las utilidades de grid
@@ -68,12 +66,3 @@ Característica: columnas del grid por breakpoint
       Cuando leo las utilidades de grid
       Entonces la cabecera con dos portadas deja el resto al contenido en xl
       Y el contenido de la cabecera con dos portadas ocupa la segunda columna en xl
-
-  Regla de negocio: El sidebar se va a la derecha desde sm
-
-    Escenario: En sm el sidebar ocupa la mitad y se alinea a la derecha
-      Cuando leo las utilidades de grid
-      Entonces el sidebar tiene un máximo de 350px
-      Y el sidebar se alinea a la derecha
-      Y las páginas con sidebar usan dos columnas en sm
-      Y la página de creadora tiene el sidebar a la derecha en sm

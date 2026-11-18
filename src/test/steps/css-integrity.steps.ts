@@ -180,7 +180,8 @@ Then('la compilación falla diciendo que el acento es desconocido', () => {
 });
 
 Then('el CSS da a {string} la propiedad {string}', (selector: string, propiedad: string) => {
-  const bloque = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(world.css);
+  const escapado = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const bloque = new RegExp(`(?:^|[},])\\s*${escapado}\\s*\\{([^}]*)\\}`).exec(world.css);
   if (bloque === null) throw new Error(`el CSS no tiene ninguna regla para ${selector}`);
   if (!(bloque[1] ?? '').includes(propiedad)) {
     throw new Error(`la regla ${selector} no declara ${propiedad}. Dice:\n${bloque[1]}`);

@@ -1,3 +1,4 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: reglas responsive con especificidad deliberada */
 :root {
   color-scheme: light;
   --color-stone-50: oklch(98.5% 0.001 106.423);
@@ -246,7 +247,7 @@ a:hover {
 
 .content-grid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   align-items: start;
   grid-template-areas:
@@ -300,7 +301,7 @@ a:hover {
   }
 
   @media (min-width: 640px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) minmax(0, min(50% - 0.625rem, 350px));
     gap: 1.25rem;
 
     & .page-aside {
@@ -312,14 +313,12 @@ a:hover {
 
     &.page-file,
     &.page-collection {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 50%);
       grid-template-areas:
         "header header"
         "main aside";
     }
 
     &.page-creator {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 50%);
       grid-template-areas:
         "header header"
         "main aside"
@@ -328,22 +327,7 @@ a:hover {
   }
 
   @media (min-width: 960px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    &.page-file,
-    &.page-collection {
-      grid-template-areas:
-        "header header"
-        "main aside";
-    }
-
-    &.page-file,
-    &.page-collection {
-      grid-template-columns: 3fr 2fr;
-    }
-
     &.page-creator {
-      grid-template-columns: 3fr 2fr;
       grid-template-areas:
         "header header"
         "content aside";
@@ -351,88 +335,73 @@ a:hover {
       & .page-content {
         display: grid;
         grid-area: content;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "main"
+          "publications";
         align-content: start;
-        gap: 1.5rem;
-
-        & > .page-main,
-        & > .page-publications {
-          grid-area: auto;
-        }
+        gap: 1.25rem;
       }
     }
   }
 
   @media (min-width: 1280px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.75rem;
+
+    &.page-creator .page-content {
+      gap: 1.75rem;
+    }
 
     & .page-aside {
       gap: 2rem;
     }
+  }
 
-    &.page-file {
-      grid-template-columns: 2fr 1fr;
+  @media (min-width: 1440px) {
+    &.page-file:has(.page-related):has(.page-sidebar) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 350px) minmax(0, 350px);
       grid-template-areas:
-        "header header"
-        "main aside";
-    }
+        "header header header"
+        "main related sidebar";
 
-    &.page-collection {
-      grid-template-columns: 2fr 1fr;
-      grid-template-areas:
-        "header header"
-        "main aside";
-    }
+      & .page-aside {
+        display: contents;
+      }
 
-    &.page-creator {
-      grid-template-columns: 2fr 1fr;
-      grid-template-areas:
-        "header header"
-        "content aside";
+      & .page-related {
+        grid-area: related;
+      }
 
-      & .page-content {
-        gap: 2rem;
+      & .page-sidebar {
+        grid-area: sidebar;
       }
     }
   }
 
   @media (min-width: 1600px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2rem;
 
-    &.page-file {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header header"
-        "main main aside aside";
-
-      & .page-aside {
-        grid-template-columns: subgrid;
-      }
+    &.page-creator .page-content {
+      gap: 2rem;
     }
 
-    &.page-collection {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header header"
-        "main main main aside";
-    }
-
-    &.page-creator {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      grid-template-areas:
-        "header header header header"
-        "content content content aside";
-    }
-  }
-
-  &.page-file:not(:has(.page-related)),
-  &.page-file:not(:has(.page-sidebar)) {
-    @media (min-width: 1600px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    &.page-creator:has(.page-related):has(.page-sidebar) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 350px) minmax(0, 350px);
       grid-template-areas:
         "header header header"
-        "main main aside";
+        "content related sidebar";
+
+      & .page-aside {
+        display: contents;
+      }
+
+      & .page-related {
+        grid-area: related;
+      }
+
+      & .page-sidebar {
+        grid-area: sidebar;
+      }
     }
   }
 
@@ -465,6 +434,56 @@ a:hover {
   }
 }
 
+@media (min-width: 640px) and (max-width: 959px) {
+  .content-grid.page-file,
+  .content-grid.page-collection {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "main"
+      "aside";
+  }
+
+  .content-grid.page-creator {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "main"
+      "publications"
+      "aside";
+  }
+
+  .content-grid.page-file .page-aside,
+  .content-grid.page-collection .page-aside,
+  .content-grid.page-creator .page-aside {
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+    align-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+
+    & .page-related,
+    & .page-sidebar {
+      display: contents;
+    }
+
+    & .page-related > *,
+    & .page-sidebar > *,
+    & .page-related > .tarjeta,
+    & .page-sidebar > .tarjeta,
+    & .page-related > * > .tarjeta,
+    & .page-sidebar > * > .tarjeta {
+      height: 100%;
+    }
+
+    & .page-related > * + *,
+    & .page-sidebar > * + * {
+      margin-top: 0;
+    }
+  }
+}
+
 .page-main > * + *,
 .page-related > * + *,
 .page-sidebar > * + * {
@@ -477,17 +496,17 @@ a:hover {
   gap: 1rem;
   grid-template-columns: repeat(1, minmax(0, 1fr));
 
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+  @media (min-width: 800px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.5rem;
   }
 
   @media (min-width: 960px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 
-  @media (min-width: 1280px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  @media (min-width: 1120px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   @media (min-width: 1600px) {
@@ -500,14 +519,18 @@ a:hover {
   grid-template-columns: repeat(1, minmax(0, 1fr));
   gap: 1rem;
 
-  @media (min-width: 1280px) {
+  @media (min-width: 800px) and (max-width: 959px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.5rem;
   }
 
-  @media (min-width: 1600px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2rem;
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  @media (min-width: 1120px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
   }
 }
 
@@ -599,7 +622,7 @@ a:hover {
 
 .tarjeta--extra {
   overflow-wrap: anywhere;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   padding: 0.75rem;
 }
@@ -610,7 +633,7 @@ a:hover {
 
 .tarjeta--licencia {
   padding: 1rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .identidad-grid {
@@ -722,7 +745,7 @@ a:hover {
   background: var(--chip-bg, var(--acento-suave));
   color: var(--chip-text, var(--acento-texto));
   font-family: var(--font-body);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.025em;
@@ -879,16 +902,17 @@ a:hover {
   border-radius: var(--radio);
   background: var(--superficie-suave);
   color: var(--texto-tenue);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
 }
 
 .tarjeta-autor {
+  margin-bottom: 0.75rem;
   color: var(--autor-tarjeta);
   font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 600;
   text-align: left;
 }
@@ -908,11 +932,11 @@ a:hover {
 
 .tarjeta-titulo.tarjeta-titulo--sidebar {
   margin-top: 1rem;
-  font-size: 1rem;
+  font-size: 1.125rem;
 }
 
 .tarjeta-titulo.tarjeta-titulo--creadora {
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1.25;
 }
 
@@ -922,6 +946,10 @@ a:hover {
 
 .nombre {
   white-space: nowrap;
+}
+
+.separador-nombres {
+  color: var(--texto);
 }
 
 .tarjeta-subtitulo {
@@ -937,7 +965,7 @@ a:hover {
   margin-bottom: 1rem;
   color: var(--texto-tenue);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   text-align: left;
 }
 
@@ -950,6 +978,10 @@ a:hover {
 
 .tarjeta-preview {
   margin: 0;
+}
+
+.tarjeta-preview + .tarjeta-preview {
+  margin-top: 0.75em;
 }
 
 .tarjeta-pie {
@@ -1065,9 +1097,14 @@ a:hover {
 
 .cabecera-portadas {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 320px));
   justify-items: center;
+  justify-content: center;
   gap: 0.5rem;
+}
+
+.cabecera-portadas .portada--back {
+  order: -1;
 }
 
 .cabecera-cuerpo:has(.cabecera-portadas) {
@@ -1076,17 +1113,6 @@ a:hover {
 
 .cabecera-cuerpo:has(.cabecera-portadas) > .cabecera-contenido {
   grid-column: auto;
-}
-
-@media (min-width: 640px) {
-  .cabecera-portadas {
-    grid-template-columns: repeat(2, minmax(0, 320px));
-    justify-content: center;
-  }
-
-  .cabecera-portadas .portada--back {
-    order: -1;
-  }
 }
 
 @media (min-width: 1280px) {
@@ -1163,7 +1189,7 @@ a:hover {
 
 .meta-label {
   color: var(--texto-tenue);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.025em;
   line-height: 1.4;
@@ -1296,6 +1322,11 @@ a:hover {
   flex: 1;
 }
 
+.contenido-articulo.prose.contenido-tamano .contenido-texto > :first-child {
+  margin-top: 0;
+  margin-block-start: 0;
+}
+
 .contenido-articulo blockquote {
   border-color: var(--acento-borde);
 }
@@ -1357,7 +1388,11 @@ a:hover {
 }
 
 .contenido-tamano {
-  font-size: 16px;
+  font-size: 19px;
+}
+
+.page-aside .contenido-tamano {
+  font-size: 19px;
 }
 
 .contenido-tamano :where(p, li, blockquote, td, th) {
@@ -1365,7 +1400,19 @@ a:hover {
 }
 
 .contenido-preview {
-  font-size: 15px;
+  font-size: 18px;
+}
+
+@media (min-width: 480px) and (max-width: 639px) {
+  .contenido-preview {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 799px) {
+  .contenido-preview {
+    font-size: 22px;
+  }
 }
 
 .contenido-preview :where(p, li, blockquote, td, th) {
@@ -1520,7 +1567,7 @@ a:hover {
   border-radius: var(--radio);
   background: var(--acento-suave);
   color: var(--acento-texto);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   line-height: 1;
   text-decoration: none;
@@ -1573,7 +1620,7 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 0.5rem;
   grid-column: 1 / -1;
 }
@@ -1836,6 +1883,14 @@ a:hover {
   line-height: 1.7;
 }
 
+.prose.contenido-tamano :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {
+  max-width: 48ch;
+}
+
+.contenido-articulo.prose.contenido-tamano :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {
+  max-width: 800px;
+}
+
 .prose > :first-child {
   margin-top: 0;
 }
@@ -2007,11 +2062,11 @@ a:hover {
 
   .tarjeta--licencia {
     padding: 1.25rem;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
 
   .tarjeta--extra {
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
   .identidad-grid {
@@ -2055,11 +2110,11 @@ a:hover {
     height: 1.75rem;
     min-width: 1.75rem;
     padding: 0 0.625rem;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
 
   .tarjeta-autor {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   .tarjeta-titulo {
@@ -2071,11 +2126,11 @@ a:hover {
   }
 
   .tarjeta-titulo.tarjeta-titulo--creadora {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
   }
 
   .tarjeta-fecha {
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
   .tarjeta-imagen {
@@ -2104,20 +2159,16 @@ a:hover {
   }
 
   .meta-label {
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
   }
 
   .meta-valor,
   .resumen-texto {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   .contenido-tamano {
-    font-size: 17px;
-  }
-
-  .contenido-preview {
-    font-size: 16px;
+    font-size: 20px;
   }
 
   .hero__cuerpo {
@@ -2152,6 +2203,22 @@ a:hover {
 }
 
 @media (min-width: 960px) {
+  .contenido-tamano {
+    font-size: 21px;
+  }
+
+  .contenido-preview {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 960px) and (max-width: 1119px) {
+  .contenido-preview {
+    font-size: 22px;
+  }
+}
+
+@media (min-width: 1280px) {
   .contenido-flex {
     flex-direction: row;
     align-items: flex-start;
@@ -2166,12 +2233,6 @@ a:hover {
     width: auto;
   }
 
-  .contenido-tamano {
-    font-size: 18px;
-  }
-}
-
-@media (min-width: 1280px) {
   .tarjeta--identidad,
   .tarjeta--cabecera,
   .tarjeta--hero {
@@ -2185,12 +2246,12 @@ a:hover {
 
   .tarjeta--licencia {
     padding: 1.5rem;
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   .tarjeta--extra {
     padding: 1.25rem;
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   .identidad-grid {
@@ -2208,13 +2269,13 @@ a:hover {
   .chip {
     height: 2rem;
     padding: 0 0.875rem;
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
   .boton {
     height: 2rem;
     padding: 0 0.875rem;
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
   .boton--pagina {
@@ -2225,11 +2286,11 @@ a:hover {
     height: 2rem;
     min-width: 2rem;
     padding: 0 0.75rem;
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
   .tarjeta-autor {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   .tarjeta-titulo {
@@ -2237,7 +2298,7 @@ a:hover {
   }
 
   .tarjeta-fecha {
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
   .contenido-cuerpo {
@@ -2272,20 +2333,16 @@ a:hover {
   }
 
   .meta-label {
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
   }
 
   .meta-valor,
   .resumen-texto {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
   }
 
   .contenido-tamano {
-    font-size: 19px;
-  }
-
-  .contenido-preview {
-    font-size: 17px;
+    font-size: 24px;
   }
 
   .hero__imagen {
@@ -2311,15 +2368,11 @@ a:hover {
   }
 
   .meta-label {
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
   }
 
   .contenido-tamano {
-    font-size: 20px;
-  }
-
-  .contenido-preview {
-    font-size: 18px;
+    font-size: 24px;
   }
 }
 
