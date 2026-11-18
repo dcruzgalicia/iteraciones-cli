@@ -13,19 +13,35 @@ Característica: la identidad del sitio en móvil
       Cuando leo el CSS de identidad
       Entonces el bloque móvil centra las acciones de cabecera y pie
 
+  Regla de negocio: La marca y los menús se centran en sm
+
+    Escenario: En sm la marca y las acciones van en una columna centrada
+      Cuando leo el CSS de identidad
+      Entonces el bloque sm centra la marca y las acciones
+
   Regla de negocio: La tipografía de la marca crece con el breakpoint
 
     Escenario: En móvil el título y la descripción son legibles
       Cuando leo el CSS de identidad
-      Entonces el título de la identidad mide 1.25rem en móvil
-      Y el lema de la identidad mide 0.875rem en móvil
+      Entonces el título de la identidad mide 1.375rem en móvil
+      Y el lema de la identidad mide 0.9375rem en móvil
 
     Escenario: En sm el título y la descripción crecen un paso
       Cuando leo el CSS de identidad
-      Entonces el título de la identidad mide 1.375rem en sm
-      Y el lema de la identidad mide 0.9375rem en sm
+      Entonces el título de la identidad mide 1.5rem en sm
+      Y el lema de la identidad mide 1rem en sm
+
+    Escenario: En md el título y la descripción crecen otro paso
+      Cuando leo el CSS de identidad
+      Entonces el título de la identidad mide 1.5625rem en md
+      Y el lema de la identidad mide 1.0625rem en md
 
     Escenario: En lg el título y la descripción crecen otro paso
       Cuando leo el CSS de identidad
-      Entonces el título de la identidad mide 1.5rem en lg
-      Y el lema de la identidad mide 1rem en lg
+      Entonces el título de la identidad mide 1.625rem en lg
+      Y el lema de la identidad mide 1.125rem en lg
+
+    Escenario: En xl el título y la descripción crecen otro paso
+      Cuando leo el CSS de identidad
+      Entonces el título de la identidad mide 1.75rem en xl
+      Y el lema de la identidad mide 1.1875rem en xl

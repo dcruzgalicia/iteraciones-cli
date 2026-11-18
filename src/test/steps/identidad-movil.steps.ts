@@ -10,6 +10,19 @@ function bloqueMovil(): string {
   return css.slice(inicio, siguiente === -1 ? undefined : siguiente);
 }
 
+function bloqueSm(): string {
+  const marker = '@media (min-width: 640px) and (max-width: 959px)';
+  let desde = 0;
+  while (true) {
+    const inicio = css.indexOf(marker, desde);
+    if (inicio === -1) return '';
+    const bloque = bloqueDesde(inicio);
+    const texto = css.slice(inicio, bloque.fin);
+    if (texto.includes('.identidad-grid')) return texto;
+    desde = bloque.fin;
+  }
+}
+
 function declaraciones(selector: string): string {
   const bloque = bloqueMovil();
   const inicio = bloque.indexOf(selector);
@@ -83,6 +96,23 @@ Then('el bloque móvil centra la marca de cabecera y pie', () => {
 Then('el bloque móvil centra las acciones de cabecera y pie', () => {
   const regla = declaraciones('.sitio-acciones');
   if (!regla.includes('justify-content: center')) throw new Error(`las acciones no quedan centradas: ${regla}`);
+});
+
+Then('el bloque sm centra la marca y las acciones', () => {
+  const bloque = bloqueSm();
+  if (!bloque.includes('.identidad-grid') || !bloque.includes('grid-template-columns: minmax(0, 1fr)')) {
+    throw new Error(`el bloque sm no apila la identidad: ${bloque}`);
+  }
+  for (const selector of ['.sitio-marca__fila', '.sitio-acciones', '.sitio-pie__identidad', '.sitio-marca--derecha']) {
+    const regla = reglaDe(bloque, selector);
+    if (!regla.includes('justify-content: center')) {
+      throw new Error(`el bloque sm no centra ${selector}: ${regla}`);
+    }
+  }
+  const regla = reglaDe(bloque, '.sitio-acciones.sitio-acciones--pie');
+  if (!regla.includes('justify-content: center')) {
+    throw new Error(`el bloque sm no centra las acciones del pie: ${regla}`);
+  }
 });
 
 Then('el título de la identidad mide {word} en {word}', (medida: string, breakpoint: string) => {
