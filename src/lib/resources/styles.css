@@ -689,7 +689,7 @@ a:hover {
 .sitio-titulo {
   color: var(--acento-texto);
   font-family: var(--font-title);
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 600;
   line-height: 1;
 }
@@ -697,7 +697,7 @@ a:hover {
 .sitio-lema {
   margin-top: 0.25rem;
   color: var(--texto-tenue);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-style: italic;
   line-height: 1;
 }
@@ -2081,11 +2081,11 @@ a:hover {
   }
 
   .sitio-titulo {
-    font-size: 1.375rem;
+    font-size: 1.5rem;
   }
 
   .sitio-lema {
-    font-size: 0.9375rem;
+    font-size: 1rem;
   }
 
   .sitio-acciones {
@@ -2202,7 +2202,56 @@ a:hover {
   }
 }
 
+@media (min-width: 640px) and (max-width: 959px) {
+  .identidad-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sitio-marca__fila {
+    justify-content: center;
+  }
+
+  .sitio-marca__texto {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .sitio-acciones {
+    justify-content: center;
+  }
+
+  .sitio-pie__identidad {
+    justify-content: center;
+  }
+
+  .sitio-marca--derecha {
+    justify-content: center;
+  }
+
+  .sitio-marca--derecha .sitio-marca__fila {
+    justify-content: center;
+    text-align: left;
+  }
+
+  .sitio-marca--derecha .sitio-marca__texto {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .sitio-acciones.sitio-acciones--pie {
+    justify-content: center;
+  }
+}
+
 @media (min-width: 960px) {
+  .sitio-titulo {
+    font-size: 1.5625rem;
+  }
+
+  .sitio-lema {
+    font-size: 1.0625rem;
+  }
+
   .contenido-tamano {
     font-size: 21px;
   }
@@ -2259,11 +2308,11 @@ a:hover {
   }
 
   .sitio-titulo {
-    font-size: 1.5rem;
+    font-size: 1.625rem;
   }
 
   .sitio-lema {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
 
   .chip {
@@ -2363,6 +2412,14 @@ a:hover {
 }
 
 @media (min-width: 1600px) {
+  .sitio-titulo {
+    font-size: 1.75rem;
+  }
+
+  .sitio-lema {
+    font-size: 1.1875rem;
+  }
+
   .titulo-pagina {
     font-size: 3.75rem;
   }

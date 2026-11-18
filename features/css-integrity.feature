@@ -23,7 +23,7 @@ Característica: El CSS se genera sólo para la combinación activa
     Dado un proyecto vacío
     Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
     Entonces el CSS no tiene comentarios ni saltos de línea
-    Y el CSS pesa menos de 40000 bytes
+    Y el CSS pesa menos de 41000 bytes
 
   Escenario: Las tarjetas y el fondo usan el acento
     Dado un proyecto vacío
