@@ -10,6 +10,12 @@ const BREAKPOINTS: Record<string, number> = {
   xl: 1600,
 };
 
+function breakpointPx(breakpoint: string): number {
+  const px = BREAKPOINTS[breakpoint];
+  if (px === undefined) throw new Error(`breakpoint desconocido: ${breakpoint}`);
+  return px;
+}
+
 function bloque(utilidad: string): string {
   const inicio = css.indexOf(`.${utilidad} {`);
   if (inicio === -1) throw new Error(`no se encontró .${utilidad}`);
@@ -27,7 +33,7 @@ function media(utilidad: string, breakpoint: string): string {
   const texto = bloque(utilidad);
   let desde = 0;
   while (true) {
-    const inicio = texto.indexOf(`@media (min-width: ${BREAKPOINTS[breakpoint]}px)`, desde);
+    const inicio = texto.indexOf(`@media (min-width: ${breakpointPx(breakpoint)}px)`, desde);
     if (inicio === -1) return '';
     const siguiente = texto.indexOf('@media', inicio + 1);
     const bloqueMedia = texto.slice(inicio, siguiente === -1 ? undefined : siguiente);
@@ -38,10 +44,51 @@ function media(utilidad: string, breakpoint: string): string {
 
 function mediaFragment(utilidad: string, breakpoint: string): string {
   const texto = bloque(utilidad);
-  const inicio = texto.indexOf(`@media (min-width: ${BREAKPOINTS[breakpoint]}px)`);
+  const inicio = texto.indexOf(`@media (min-width: ${breakpointPx(breakpoint)}px)`);
   if (inicio === -1) return '';
   const siguiente = texto.indexOf('@media', inicio + 1);
   return texto.slice(inicio, siguiente === -1 ? undefined : siguiente);
+}
+
+function bloqueDesde(inicio: number): { contenido: string; fin: number } {
+  const abre = css.indexOf('{', inicio);
+  if (abre === -1) return { contenido: '', fin: css.length };
+  let profundidad = 1;
+  let i = abre + 1;
+  while (i < css.length && profundidad > 0) {
+    if (css[i] === '{') profundidad += 1;
+    else if (css[i] === '}') profundidad -= 1;
+    i += 1;
+  }
+  return { contenido: css.slice(abre + 1, i - 1), fin: i };
+}
+
+function mediaGlobal(px: number, selector: string): string {
+  let desde = 0;
+  while (true) {
+    const inicio = css.indexOf(`@media (min-width: ${px}px)`, desde);
+    if (inicio === -1) return '';
+    const bloqueMedia = bloqueDesde(inicio);
+    if (bloqueMedia.contenido.includes(selector)) return bloqueMedia.contenido;
+    desde = bloqueMedia.fin;
+  }
+}
+
+function mediaHasta(px: number, selector: string): string {
+  for (const candidato of [1600, 1280, 960, 640]) {
+    if (candidato > px) continue;
+    const encontrado = mediaGlobal(candidato, selector);
+    if (encontrado !== '') return encontrado;
+  }
+  return '';
+}
+
+function reglaDe(bloqueMedia: string, selector: string): string {
+  const inicio = bloqueMedia.indexOf(selector);
+  if (inicio === -1) return '';
+  const abre = bloqueMedia.indexOf('{', inicio);
+  const cierra = bloqueMedia.indexOf('}', abre);
+  return abre === -1 || cierra === -1 ? '' : bloqueMedia.slice(abre + 1, cierra);
 }
 
 function columnas(fragmento: string): number | undefined {
@@ -90,13 +137,16 @@ Then('la cabecera con portada tiene {int} columnas en {word}', (cantidad: number
   }
 });
 
-Then('la portada de la cabecera ocupa el 100% en {word}', (breakpoint: string) => {
+Then('la portada de la cabecera se limita a {int}px en {word}', (maximo: number, breakpoint: string) => {
   const fragmento = `${base('portada')}\n${mediaFragment('portada', breakpoint)}`;
   if (!fragmento.includes('width: 100%')) {
-    throw new Error(`la portada no ocupa el 100% en ${breakpoint}: ${fragmento}`);
+    throw new Error(`la portada no usa el ancho de su columna en ${breakpoint}: ${fragmento}`);
   }
-  if (!fragmento.includes('max-width: none')) {
-    throw new Error(`la portada conserva su límite en ${breakpoint}: ${fragmento}`);
+  if (!fragmento.includes(`max-width: ${maximo}px`)) {
+    throw new Error(`la portada no se limita a ${maximo}px en ${breakpoint}: ${fragmento}`);
+  }
+  if (fragmento.includes('max-width: none')) {
+    throw new Error(`la portada pierde el límite en ${breakpoint}: ${fragmento}`);
   }
 });
 
@@ -104,5 +154,47 @@ Then('el contenido de la cabecera ocupa {int} columnas en {word}', (cantidad: nu
   const fragmento = media('cabecera-cuerpo', breakpoint);
   if (!fragmento.includes('.cabecera-contenido') || !fragmento.includes(`grid-column: span ${cantidad}`)) {
     throw new Error(`el contenido de la cabecera no ocupa ${cantidad} columnas en ${breakpoint}: ${fragmento}`);
+  }
+});
+
+Then('la pareja de portadas usa una columna base', () => {
+  const regla = base('cabecera-portadas');
+  if (!regla.includes('grid-template-columns: minmax(0, 1fr)')) {
+    throw new Error(`la pareja de portadas no se apila en una columna: ${regla}`);
+  }
+});
+
+Then('la pareja de portadas tiene {int} columnas en {word}', (cantidad: number, breakpoint: string) => {
+  const regla = reglaDe(mediaHasta(breakpointPx(breakpoint), '.cabecera-portadas {'), '.cabecera-portadas');
+  const leidas = columnas(regla);
+  if (leidas !== cantidad) {
+    throw new Error(`la pareja de portadas usa ${leidas ?? 'sin columnas'} en ${breakpoint} y debía usar ${cantidad}`);
+  }
+});
+
+Then('la contraportada va antes que la portada en {word}', (breakpoint: string) => {
+  const regla = reglaDe(mediaHasta(breakpointPx(breakpoint), '.cabecera-portadas .portada--back {'), '.cabecera-portadas .portada--back');
+  if (!regla.includes('order: -1')) {
+    throw new Error(`la contraportada no va a la izquierda en ${breakpoint}: ${regla}`);
+  }
+});
+
+Then('la cabecera con dos portadas deja el resto al contenido en {word}', (breakpoint: string) => {
+  const regla = reglaDe(
+    mediaHasta(breakpointPx(breakpoint), '.cabecera-cuerpo:has(.cabecera-portadas) {'),
+    '.cabecera-cuerpo:has(.cabecera-portadas)',
+  );
+  if (!regla.includes('grid-template-columns: max-content minmax(0, 1fr)')) {
+    throw new Error(`la cabecera con dos portadas no deja el resto al contenido en ${breakpoint}: ${regla}`);
+  }
+});
+
+Then('el contenido de la cabecera con dos portadas ocupa la segunda columna en {word}', (breakpoint: string) => {
+  const regla = reglaDe(
+    mediaHasta(breakpointPx(breakpoint), '.cabecera-cuerpo:has(.cabecera-portadas) > .cabecera-contenido {'),
+    '.cabecera-cuerpo:has(.cabecera-portadas) > .cabecera-contenido',
+  );
+  if (!regla.includes('grid-column: 2;')) {
+    throw new Error(`el contenido con dos portadas no ocupa la segunda columna en ${breakpoint}: ${regla}`);
   }
 });

@@ -59,7 +59,7 @@ Then('la imagen de {string} pesa menos de {int} KB', (archivo: string, kb: numbe
 });
 
 function srcPortada(html: string): string {
-  const tag = (html.match(/<img\b[^>]*class="portada"[^>]*>/) ?? [])[0];
+  const tag = (html.match(/<img\b[^>]*class="portada[^"]*"[^>]*>/) ?? [])[0];
   if (tag === undefined) throw new Error('no se encontró la portada en el HTML');
   const src = /src="([^"]+)"/.exec(tag)?.[1];
   if (src === undefined) throw new Error('la portada no tiene src');
