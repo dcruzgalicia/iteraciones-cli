@@ -949,6 +949,7 @@ function htmlVars(args: {
             dir,
             cwd: renderCtx.ctx.cwd,
             creatorHrefs,
+            available,
             imagenes: relImageMapFor(renderCtx.recentImages ?? new Map(), ASSETS_IMAGES_DIR, undefined, dir, true),
             label: label('recientes', 'Reciente'),
           }),
@@ -1868,6 +1869,7 @@ function recentesCards(args: {
   dir: string;
   cwd: string;
   creatorHrefs: Map<string, string>;
+  available?: Set<string>;
   imagenes?: Map<string, string>;
   label: string;
 }): string {
@@ -1875,8 +1877,11 @@ function recentesCards(args: {
     .flatMap((ruta) => {
       const entry = args.discoveryIndex.get(ruta);
       if (entry === undefined) return [];
+      const tipo = tipoDe(entry);
+      const chipTipo = chipHtml(memberTypeLabel(tipo), tipo, args.dir, MEMBER_PILL_CLASSES, args.available);
+      const chipReciente = `<h2 class="not-prose chip chip--keyword">${Bun.escapeHTML(args.label)}</h2>`;
       const card = metaCard({
-        chip: `<h2 class="not-prose chip chip--titulo">${Bun.escapeHTML(args.label)}</h2>`,
+        chip: `${chipTipo}${chipReciente}`,
         entry,
         href: relativePageHref(args.dir, htmlPathFor(ruta, entry.slug)),
         dirAbs: dirname(join(args.cwd, ruta)),

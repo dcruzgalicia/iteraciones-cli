@@ -75,6 +75,9 @@ Característica: las tarjetas de entradas recientes del sidebar
       Y el archivo "dist/files/texto-6.html" no dice "Texto 1"
       Y el archivo "dist/files/texto-6.html" dice "Leer texto completo →"
       Y el archivo "dist/files/texto-6.html" dice "tarjeta--auto"
+      Y el archivo "dist/files/texto-6.html" dice "chip--tipo"
+      Y el archivo "dist/files/texto-6.html" dice "chip--keyword"
+      Y el archivo "dist/files/texto-6.html" dice ">Texto</a>"
 
     Escenario: La lista por defecto de index no lleva tarjetas de recientes
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -188,6 +191,8 @@ Característica: las tarjetas de entradas recientes del sidebar
       Y el archivo "dist/files/texto-1-por-autora-a.html" dice "Antologadora"
       Y el archivo "dist/files/texto-1-por-autora-a.html" dice "Editora"
       Y el archivo "dist/files/texto-1-por-autora-a.html" dice "Autora B"
+      Y el archivo "dist/files/texto-1-por-autora-a.html" dice "chip--tipo"
+      Y el archivo "dist/files/texto-1-por-autora-a.html" dice ">Colección</h2>"
 
     Escenario: Se muestran como máximo cinco tarjetas entre textos y colecciones
       Dado que la raíz del proyecto tiene un proyecto de prueba
