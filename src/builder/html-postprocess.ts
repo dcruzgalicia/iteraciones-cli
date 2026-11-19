@@ -30,7 +30,7 @@ function removeEmptyGridSlots(html: string): string {
 }
 
 function removeEmptySemblanza(html: string): string {
-  return html.replace(/<div class="resumen semblanza">\s*<span class="meta-label">Semblanza<\/span>\s*<\/div>/g, '');
+  return html.replace(/<div class="resumen semblanza">\s*<\/div>/g, '');
 }
 
 export function postProcessHtml(html: string, refsCardTemplate: string, refsLabel = 'Referencias'): string {
