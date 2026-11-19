@@ -6,7 +6,7 @@ import { logWarning } from '../lib/logger.js';
 import { relativeAssetHref, relativePageHref } from '../lib/paths.js';
 import { cpuConcurrency, exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { isScriptCapture, recordSupportCommand } from '../lib/script-recorder.js';
-import { resetToolVersionCache, toolVersionMagick } from '../lib/tool-version.js';
+import { resetToolVersionCache, toolVersion } from '../lib/tool-version.js';
 import { toMm } from './latex-preamble.js';
 import { ASSETS_IMAGES_DIR } from './output-layout.js';
 
@@ -15,7 +15,7 @@ const MM_TO_PX_300DPI = 300 / 25.4;
 const MAGICK_TIMEOUT_MS = 120_000;
 
 export async function detectMagick(): Promise<boolean> {
-  return (await toolVersionMagick()) !== '';
+  return (await toolVersion('magick')) !== '';
 }
 
 let warnedMissingMagick = false;
@@ -515,15 +515,8 @@ async function fileSize(path: string): Promise<number> {
 
 async function imageDimensions(path: string): Promise<ImageDimensions | undefined> {
   try {
-    const proc = Bun.spawn(['magick', 'identify', '-format', '%w %h', path], { stdout: 'pipe', stderr: 'ignore' });
-    if (proc.stdout === undefined || typeof proc.stdout === 'number') {
-      await proc.exited;
-      return undefined;
-    }
-    const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-    if (code !== 0) return undefined;
-    const [width, height] = out.trim().split(/\s+/).map(Number);
-    return width !== undefined && height !== undefined && width > 0 && height > 0 ? { width, height } : undefined;
+    const { width, height } = await new Bun.Image(path).metadata();
+    return width > 0 && height > 0 ? { width, height } : undefined;
   } catch {
     return undefined;
   }

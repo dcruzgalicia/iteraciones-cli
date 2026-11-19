@@ -19,13 +19,13 @@ export const ADDED_BLEND = '60';
 const GHOST_LIFT = '0.2';
 const GHOST_OFFSET = '52428';
 
-const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
-
-export function pngSize(bytes: Uint8Array): { width: number; height: number } | null {
-  if (bytes.length < 24) return null;
-  for (let i = 0; i < PNG_SIGNATURE.length; i++) if (bytes[i] !== PNG_SIGNATURE[i]) return null;
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  return { width: view.getUint32(16, false), height: view.getUint32(20, false) };
+export async function pngSize(bytes: Uint8Array): Promise<{ width: number; height: number } | null> {
+  try {
+    const { width, height } = await new Bun.Image(bytes).metadata();
+    return width > 0 && height > 0 ? { width, height } : null;
+  } catch {
+    return null;
+  }
 }
 
 function pageNumberOf(file: string): number {
@@ -187,7 +187,7 @@ async function forceUnlink(path: string): Promise<void> {
 export async function renderPdfPages(pdf: string, prefix: string): Promise<string[]> {
   const dir = dirname(prefix);
   await mkdir(dir, { recursive: true });
-  const result = await exec('pdftoppm', ['-r', String(DPI), '-png', pdf, prefix]);
+  const result = await exec('pdftoppm', ['-r', String(DPI), '-png', pdf, prefix], { timeoutMs: 300_000 });
   if (result.exitCode !== 0) {
     throw new BuildError(
       `"${pdf}" parece un PDF pero pdftoppm no pudo renderizarlo: ${result.stderr.trim().split('\n').pop() ?? 'error desconocido'}`,
@@ -207,7 +207,7 @@ interface PngPair {
 }
 
 async function magick(args: string[]): Promise<void> {
-  const result = await exec('magick', args);
+  const result = await exec('magick', args, { timeoutMs: 60_000 });
   if (result.exitCode !== 0) {
     throw new BuildError(`magick falló pintando el diff: ${result.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
   }
@@ -229,16 +229,16 @@ async function paintDiffImage(args: PngPair): Promise<void> {
 
 async function cropTo(source: string, dest: string, width: number, height: number): Promise<void> {
   await mkdir(dirname(dest), { recursive: true });
-  const result = await exec('magick', [source, '-crop', `${width}x${height}+0+0`, '+repage', dest]);
+  const result = await exec('magick', [source, '-crop', `${width}x${height}+0+0`, '+repage', dest], { timeoutMs: 60_000 });
   if (result.exitCode !== 0) {
     throw new BuildError(`magick no pudo recortar la captura: ${result.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
   }
 }
 
 async function comparePngPair(args: PngPair): Promise<{ diffPercent: number; note?: string }> {
-  const size = pngSize(await readFile(args.referencePng));
+  const size = await pngSize(await readFile(args.referencePng));
   if (size === null) throw new BuildError(`"${args.referencePng}" no es un PNG válido`);
-  const generatedSize = pngSize(await readFile(args.generatedPng));
+  const generatedSize = await pngSize(await readFile(args.generatedPng));
   if (generatedSize === null) throw new BuildError(`"${args.generatedPng}" no es un PNG válido`);
 
   let reference = args.referencePng;
@@ -253,7 +253,9 @@ async function comparePngPair(args: PngPair): Promise<{ diffPercent: number; not
     args.note = `cambió de tamaño: ${size.width}x${size.height} → ${generatedSize.width}x${generatedSize.height}`;
   }
 
-  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', `${FUZZ_PERCENT}%`, reference, generated, 'null:']);
+  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', `${FUZZ_PERCENT}%`, reference, generated, 'null:'], {
+    timeoutMs: 60_000,
+  });
   if (compare.exitCode > 1) {
     throw new BuildError(`magick compare falló: ${compare.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
   }

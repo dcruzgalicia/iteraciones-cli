@@ -21,10 +21,13 @@ export function resetToolVersionCache(): void {
   memo.clear();
 }
 
-export const toolVersionMagick = (): Promise<string> => probe('magick', ['-version']);
+const PROBES = {
+  magick: ['-version'],
+  pdftoppm: ['-v'],
+  latexmk: ['-v'],
+  minify: ['--version'],
+} as const;
 
-export const toolVersionPdfToPpm = (): Promise<string> => probe('pdftoppm', ['-v']);
-
-export const toolVersionLatexmk = (): Promise<string> => probe('latexmk', ['-v']);
-
-export const toolVersionMinify = (): Promise<string> => probe('minify', ['--version']);
+export function toolVersion(tool: keyof typeof PROBES): Promise<string> {
+  return probe(tool, [...PROBES[tool]]);
+}

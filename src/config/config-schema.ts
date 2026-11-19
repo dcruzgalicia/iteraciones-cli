@@ -31,7 +31,7 @@ z.setErrorMap(((issue: z.ZodIssue) => {
   return { message: issue.message };
 }) as unknown as z.ZodErrorMap);
 
-const PAGE_NUMBER_OPTIONS = ['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right'] as const;
+export const PAGE_NUMBER_OPTIONS = ['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right'] as const;
 
 const DublinCoreFieldsSchema = {
   title: z.string().optional(),

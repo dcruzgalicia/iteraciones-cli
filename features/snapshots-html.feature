@@ -30,6 +30,23 @@ Característica: los snapshots del HTML
 
   Regla de negocio: Comparar avisa de los cambios
 
+    Escenario: Comparar dos PDFs no revisa el HTML
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Y la salida tiene estas rutas HTML:
+      """
+      index.html
+      """
+      Y un PDF llamado "ref.pdf" en la raíz con el texto "index.pdf"
+      Cuando guardo los snapshots de ""
+      Y cambio la ruta HTML "index.html" por "<html><body>otra cosa</body></html>"
+      Y comparo "dist/files/index.pdf, ref.pdf"
+      Entonces el snapshots termina con código 0
+      Y el snapshots no dice por stdout "página HTML"
+
     Escenario: Una página que cambia deja su diff
       Dado que la raíz del proyecto está vacía
       Y la salida tiene estas rutas HTML:

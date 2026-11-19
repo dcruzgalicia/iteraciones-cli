@@ -1,5 +1,7 @@
+import { PAGE_NUMBER_OPTIONS } from '../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { ACCENT_COLORS } from '../lib/accent-palettes.js';
+import { HTML_STYLES } from '../lib/html-styles.js';
 
 const colores = ACCENT_COLORS.join(' | ');
 
@@ -15,7 +17,7 @@ Si no existe, se usan estos valores por defecto:
   script: ${d.script}                       escribe build.sh, portable y numerado
   bundle: ${d.bundle}                       replica config, preamble* y filters en la salida
   showDate                                 muestra la fecha en la portada
-  pageNumber                               posición del folio en el PDF: header-left | header-center | header-right | footer-left | footer-center | footer-right
+  pageNumber                               posición del folio en el PDF: ${PAGE_NUMBER_OPTIONS.join(' | ')}
   coverImage                               la portada del PDF sale en PNG
   courtesyPage                             página de cortesía con el título
   coverColor                               las guardas (frontCover y backCover) salen en color, no en grises
@@ -30,7 +32,7 @@ Si no existe, se usan estos valores por defecto:
     format.html.site.title: ${html.site?.title}
     format.html.site.description: ${html.site?.description}
     format.html.site.theme: ${html.site?.theme}                     light | dark
-    format.html.site.style: ${html.site?.style}                 radar | notebook | press | modern
+    format.html.site.style: ${html.site?.style}                 ${HTML_STYLES.join(' | ')}
     format.html.site.color: ${html.site?.color ?? '(según style)'}                     ${colores}
     format.html.site.logo: ${html.site?.logo || "''"}
     format.html.site.logoSize: ${html.site?.logoSize}           tamaño del logo (px, rem, em…)

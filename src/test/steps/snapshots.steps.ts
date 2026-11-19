@@ -30,13 +30,10 @@ import {
 import { pdfDeUnaPagina } from '../helpers/pdf.ts';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-function pngDe(ancho: number, alto: number, bytes = 24): Uint8Array {
-  const buffer = new Uint8Array(bytes);
-  buffer.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const view = new DataView(buffer.buffer);
-  view.setUint32(16, ancho, false);
-  view.setUint32(20, alto, false);
-  return buffer;
+function pngDe(ancho: number, alto: number): Uint8Array {
+  const proc = Bun.spawnSync(['magick', '-size', `${ancho}x${alto}`, 'xc:white', 'png:-']);
+  if (proc.exitCode !== 0) throw new Error('magick no pudo crear el PNG de prueba');
+  return new Uint8Array(proc.stdout);
 }
 
 function expande(ruta: string): string {
@@ -56,17 +53,16 @@ Given('que tengo algo que no es un PNG de {int} bytes', (bytes: number) => {
   world.png = new Uint8Array(bytes);
 });
 
-Then('el PNG mide {int} por {int}', (ancho: number, alto: number) => {
-  const leido = pngSize(world.png as Uint8Array);
+Then('el PNG mide {int} por {int}', async (ancho: number, alto: number) => {
+  const leido = await pngSize(world.png as Uint8Array);
   if (leido?.width !== ancho || leido?.height !== alto) {
     throw new Error(`mide ${JSON.stringify(leido)} y debería medir ${ancho}x${alto}`);
   }
 });
 
-Then('el PNG no tiene tamaño legible', () => {
-  if (pngSize(world.png as Uint8Array) !== null) {
-    throw new Error(`mide ${JSON.stringify(pngSize(world.png as Uint8Array))} y no debería medir nada`);
-  }
+Then('el PNG no tiene tamaño legible', async () => {
+  const leido = await pngSize(world.png as Uint8Array);
+  if (leido !== null) throw new Error(`mide ${JSON.stringify(leido)} y no debería medir nada`);
 });
 
 When('ordeno las páginas {string}', (archivos: string) => {
