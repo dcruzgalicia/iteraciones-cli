@@ -1,4 +1,4 @@
-[data-style="expresivo"] {
+[data-style="notebook"] {
   --font-title: "Caveat", "Bradley Hand", cursive;
   --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
   --paper-bg: #fbf5e7;
@@ -11,7 +11,7 @@
   --card-shadow-hover: 5px 7px 0 0 color-mix(in oklab, var(--color-accent-500) 42%, transparent);
 }
 
-[data-style="expresivo"] h1 {
+[data-style="notebook"] h1 {
   font-weight: 700;
   letter-spacing: 0.01em;
 }

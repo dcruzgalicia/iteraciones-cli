@@ -215,3 +215,47 @@ Then('el contenido de la cabecera con dos portadas ocupa la segunda columna en {
     throw new Error(`el contenido con dos portadas no ocupa la segunda columna en ${breakpoint}: ${regla}`);
   }
 });
+
+function reglaEnMedia(px: number, selector: string): string {
+  const bloque = mediaGlobal(px, selector);
+  return bloque === '' ? '' : reglaDe(bloque, selector);
+}
+
+Then('la cabecera con una portada alinea el contenido en {word}', (breakpoint: string) => {
+  const selector = '.cabecera-cuerpo:not(.cabecera-cuerpo--creador):has(> .portada) > .cabecera-contenido > :first-child';
+  const regla = reglaEnMedia(breakpointPx(breakpoint), selector);
+  if (!regla.includes('margin-top: 0')) throw new Error(`la cabecera con una portada no alinea el contenido en ${breakpoint}: ${regla}`);
+});
+
+Then('la cabecera con dos portadas alinea el contenido en {word}', (breakpoint: string) => {
+  const selector = '.cabecera-cuerpo:has(> .cabecera-portadas) > .cabecera-contenido > :first-child';
+  const regla = reglaEnMedia(breakpointPx(breakpoint), selector);
+  if (!regla.includes('margin-top: 0')) throw new Error(`la cabecera con dos portadas no alinea el contenido en ${breakpoint}: ${regla}`);
+});
+
+Then('la cabecera de creadora alinea el contenido en {word}', (breakpoint: string) => {
+  const selector = '.cabecera-cuerpo--creador:has(> .portada) > .cabecera-contenido > :first-child';
+  const regla = reglaEnMedia(breakpointPx(breakpoint), selector);
+  if (!regla.includes('margin-top: 0')) throw new Error(`la cabecera de creadora no alinea el contenido en ${breakpoint}: ${regla}`);
+});
+
+Then('el título de la página conserva su margen superior', () => {
+  const regla = base('titulo-pagina');
+  if (!regla.includes('margin-top: 0.75rem')) throw new Error(`el título no conserva su margen superior: ${regla}`);
+});
+
+Then('la cabecera de creadora apila la foto y el contenido', () => {
+  const selector = 'cabecera-cuerpo.cabecera-cuerpo--creador:has(.portada)';
+  const regla = base(selector);
+  if (!regla.includes('grid-template-columns: minmax(0, 1fr)')) {
+    throw new Error(`la cabecera de creadora no apila la foto y el contenido: ${regla}`);
+  }
+});
+
+Then('la cabecera de creadora usa la foto y el resto en lg', () => {
+  const selector = '.cabecera-cuerpo.cabecera-cuerpo--creador:has(.portada)';
+  const regla = reglaEnMedia(1280, selector);
+  if (!regla.includes('grid-template-columns: minmax(0, 320px) minmax(0, 1fr)')) {
+    throw new Error(`la cabecera de creadora no usa foto y resto en lg: ${regla}`);
+  }
+});

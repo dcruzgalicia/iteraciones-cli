@@ -60,9 +60,10 @@ function accentTokens(accent: AccentColor): string {
 export async function compileCss(
   outputDir: string,
   accent: string,
-  style: HtmlStyle = DEFAULT_HTML_STYLE,
+  style: string = DEFAULT_HTML_STYLE,
   theme: 'light' | 'dark' = 'light',
 ): Promise<void> {
+  const estilo = htmlStyle(style);
   if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new BuildError(`acento desconocido: "${accent}"`);
   const outPath = join(outputDir, ASSETS_CSS_FILE);
   const base = await readFile(STYLES_SRC, 'utf8');
@@ -78,7 +79,7 @@ export async function compileCss(
     const output = result.outputs[0];
     if (output === undefined) throw new BuildError('no se pudo compilar el CSS: salida vacía');
     await mkdir(dirname(outPath), { recursive: true });
-    await writeFile(outPath, (await fontFaceCss(style)) + (await output.text()).trim(), 'utf8');
+    await writeFile(outPath, (await fontFaceCss(estilo)) + (await output.text()).trim(), 'utf8');
   } finally {
     await rm(inputDir, { recursive: true, force: true });
   }

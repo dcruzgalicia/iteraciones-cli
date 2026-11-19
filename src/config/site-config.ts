@@ -8,7 +8,7 @@ export const DEFAULT_HTML_FORMAT = {
     backgroundImage: undefined as string | undefined,
     logoSize: '50px',
     theme: 'dark' as const,
-    style: 'clasico' as const,
+    style: 'radar' as const,
     color: 'lime' as const,
     showDates: false,
     showCitation: false,

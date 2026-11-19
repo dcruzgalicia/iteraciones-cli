@@ -13,7 +13,7 @@ format:
     site:
       title: Mi repositorio
       description: Documentos, metadatos y licencias
-      style: institucional
+      style: modern
 `;
 
 export const REPOSITORIO: ProjectTemplate = {

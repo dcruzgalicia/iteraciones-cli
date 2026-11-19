@@ -42,7 +42,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   if (!vars.subject) args.push('--metadata=subject:');
   const bandas: Array<[string, string | undefined]> = [
     ['hero', vars.hero],
-    ['style', vars.style ?? 'clasico'],
+    ['style', vars.style ?? 'radar'],
     ['font-preloads', vars.fontPreloads],
     ['label-formatos', vars.labelFormatos],
     ['label-indice', vars.labelIndice],

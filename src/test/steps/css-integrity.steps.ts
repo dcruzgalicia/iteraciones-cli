@@ -78,7 +78,7 @@ const world: CssWorld = {
   hash: '',
   newHash: '',
   accentError: '',
-  style: 'clasico',
+  style: 'radar',
   theme: 'light',
   accent: 'lime',
 };
@@ -97,7 +97,7 @@ function resetProject(): void {
   world.hash = '';
   world.newHash = '';
   world.accentError = '';
-  world.style = 'clasico';
+  world.style = 'radar';
   world.theme = 'light';
   world.accent = 'lime';
 }
