@@ -1866,7 +1866,13 @@ a:hover {
 }
 
 .semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {
-  max-width: 800px;
+  max-width: none;
+}
+
+@media (min-width: 1280px) {
+  .semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {
+    max-width: 800px;
+  }
 }
 
 .contenido-articulo.prose.contenido-tamano :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {

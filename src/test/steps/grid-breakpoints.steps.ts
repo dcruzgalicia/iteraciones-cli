@@ -269,3 +269,15 @@ Then('la foto de creadora va a la izquierda en lg', () => {
   const regla = reglaEnMedia(1280, '.cabecera-cuerpo--creador .portada--creador');
   if (!regla.includes('justify-self: start')) throw new Error(`la foto de creadora no va a la izquierda en lg: ${regla}`);
 });
+
+const SELECTOR_SEMBLANZA = '.semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *)';
+
+Then('la semblanza ocupa todo el ancho en móvil', () => {
+  const regla = base('semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *)');
+  if (!regla.includes('max-width: none')) throw new Error(`la semblanza no ocupa todo el ancho: ${regla}`);
+});
+
+Then('la semblanza usa 800px en lg', () => {
+  const regla = reglaEnMedia(1280, SELECTOR_SEMBLANZA);
+  if (!regla.includes('max-width: 800px')) throw new Error(`la semblanza no usa 800px en lg: ${regla}`);
+});

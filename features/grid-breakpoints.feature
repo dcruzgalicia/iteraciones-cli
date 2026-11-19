@@ -83,3 +83,10 @@ Característica: columnas del grid por breakpoint
     Escenario: En móvil el título conserva su margen superior
       Cuando leo las utilidades de grid
       Entonces el título de la página conserva su margen superior
+
+  Regla de negocio: La semblanza usa el ancho de la tarjeta hasta lg
+
+    Escenario: La semblanza ocupa todo el ancho en móvil y 800px en lg
+      Cuando leo las utilidades de grid
+      Entonces la semblanza ocupa todo el ancho en móvil
+      Y la semblanza usa 800px en lg

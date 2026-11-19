@@ -143,9 +143,9 @@ Característica: El CSS se genera sólo para la combinación activa
       Entonces el CSS da a ".meta-label em" la propiedad "font-style: normal"
       Y el CSS da a ".tarjeta-chips .chip--titulo" la propiedad "font-family: var(--font-body)"
 
-    Escenario: La semblanza de creadora usa el ancho de 800px
+    Escenario: La semblanza no se limita en móvil
       Cuando leo el styles.css del proyecto
-      Entonces el CSS da a ".semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *)" la propiedad "max-width: 800px"
+      Entonces el CSS da a ".semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *)" la propiedad "max-width: none"
 
   Regla de negocio: La caché de CSS sólo depende del CSS y la configuración
 
