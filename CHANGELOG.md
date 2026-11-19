@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.29.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.28.0...v0.29.0) (2026-11-19)
+
+
+### Features
+
+* **html:** ajusta la tipografía y las rejillas responsive ([775e10a](https://github.com/dcruzgalicia/iteraciones-cli/commit/775e10ae5871ccb135b390ed40bd68d106a8e8ac))
+* **html:** ajusta las previews al ancho del sidebar ([5d22cb2](https://github.com/dcruzgalicia/iteraciones-cli/commit/5d22cb2a9a195e4870698c637810e38b8e89ad32))
+* **html:** ajusta los breakpoints a 640/960/1280/1600/1920 ([192ce7a](https://github.com/dcruzgalicia/iteraciones-cli/commit/192ce7ae325ca168f9fe6d81965e3615b7a5ddcd))
+* **html:** centra la identidad y las acciones en móvil ([53f7ffe](https://github.com/dcruzgalicia/iteraciones-cli/commit/53f7ffee16a949903d16f0db6ffcf555eb180efe))
+* **html:** centra la identidad y los menús en sm ([c32aa1f](https://github.com/dcruzgalicia/iteraciones-cli/commit/c32aa1f6a156a678bc6c478a98ea7bca831ed429))
+* **html:** implementa tarjetas, fondos y encabezado de creadora ([2593997](https://github.com/dcruzgalicia/iteraciones-cli/commit/25939973ff95e66ec20a26816a54b98ff5d47fde))
+* **html:** limita el retrato de la bio a 320px ([e17cd83](https://github.com/dcruzgalicia/iteraciones-cli/commit/e17cd838367a9784fc3023f086396265cfc3a265))
+* **html:** muestra el sidebar a la derecha desde sm ([f8606ad](https://github.com/dcruzgalicia/iteraciones-cli/commit/f8606adc684d50f4c8677544e3cdf9336dae9af4))
+* **html:** muestra tipo y reciente en las tarjetas de recientes ([6f46ea3](https://github.com/dcruzgalicia/iteraciones-cli/commit/6f46ea3f0cb72bbf4b3f7e1c4a2edcdd6892267b))
+* **html:** mueve la contraportada al encabezado ([a519da8](https://github.com/dcruzgalicia/iteraciones-cli/commit/a519da84bbcca5b981af6433ebf04846ea634971))
+* **html:** ordena creadoras, resalta anuncios y recorta duplicación ([d8d4192](https://github.com/dcruzgalicia/iteraciones-cli/commit/d8d4192ffa35f9144663e45fa8f25ee2309f406e))
+* **html:** reordena la semblanza y las redes de creadora ([d010992](https://github.com/dcruzgalicia/iteraciones-cli/commit/d0109927e9924b6de1e7b1a7cc546e1d6a5e1ce5))
+* **html:** reparte la portada de la cabecera por breakpoint ([af12466](https://github.com/dcruzgalicia/iteraciones-cli/commit/af12466b6240d46dd4aee8d7c3fad548a6100bab))
+* **html:** sube el tamaño del título y la descripción ([73987f8](https://github.com/dcruzgalicia/iteraciones-cli/commit/73987f8bc5c0325e45678acab2c649b077e006a8))
+* **html:** sube los chips y apila el retrato en sm ([4b7654b](https://github.com/dcruzgalicia/iteraciones-cli/commit/4b7654b21a3973130f2017ffe83b6fd8f9b58d42))
+* **images:** limita a 25 KB salvo frontCover y backCover ([6056edf](https://github.com/dcruzgalicia/iteraciones-cli/commit/6056edfd9dee8186a2b69f327a9244811eca9278))
+* **pdf:** PDF/X-1a a 300 dpi y PDF ligero con Ghostscript ([11653b5](https://github.com/dcruzgalicia/iteraciones-cli/commit/11653b50b68a4eb6ce1783c2235c1d421440ebfd))
+* **pdf:** portadas en impares y startpaper solo con PDF/X-1a ([d42bfab](https://github.com/dcruzgalicia/iteraciones-cli/commit/d42bfabb8f99719fe023e6309b714d8cc118f4fe))
+
+
+### Bug Fixes
+
+* **html:** ajusta la altura de las tarjetas de recientes y colección ([867f895](https://github.com/dcruzgalicia/iteraciones-cli/commit/867f895cdd1e9f7c482c64b15a90d47818c7dd5d))
+* **html:** ajusta la cabecera de creadora y renombra estilos ([955046d](https://github.com/dcruzgalicia/iteraciones-cli/commit/955046d430e06817863b247c005b4704e960d4cb))
+* **html:** ajusta la tipografía de chips y títulos en notebook ([dd3400d](https://github.com/dcruzgalicia/iteraciones-cli/commit/dd3400de6d600765f5d16cec42a68af6e6dd2b48))
+* **html:** ajusta los chips de recientes y el tono del sidebar ([e45667c](https://github.com/dcruzgalicia/iteraciones-cli/commit/e45667cdccf595e7bafb1b73f700135316b91d54))
+* **html:** ajusta los márgenes de la semblanza de creadora ([3adcc5f](https://github.com/dcruzgalicia/iteraciones-cli/commit/3adcc5f0024f35292171bd73d5493964a47b5931))
+* **html:** alinear a la derecha los chips del header ([9eaf39d](https://github.com/dcruzgalicia/iteraciones-cli/commit/9eaf39dd789df7d74770b5cc9c4dd85360654171))
+* **html:** alinear a la izquierda los chips del footer ([a36d334](https://github.com/dcruzgalicia/iteraciones-cli/commit/a36d33406ce01685d0ef8bf5c7f8bf7c1bec1cce))
+* **html:** alinear acciones y ajustar la tarjeta de creadora ([afdc24a](https://github.com/dcruzgalicia/iteraciones-cli/commit/afdc24a2eacf27f01bbf80cb2a7e65d9e2d87825))
+* **html:** alinear el texto del footer junto al logo ([a4d5ae1](https://github.com/dcruzgalicia/iteraciones-cli/commit/a4d5ae1b88e67aba3df88f482b8c7a9428133ee9))
+* **html:** centra la foto de creadora cuando va arriba ([293a776](https://github.com/dcruzgalicia/iteraciones-cli/commit/293a776aa63608b4b1746bc60dddfcc9a605808e))
+* **html:** deja el nombre de creadora en Caveat dentro de sus previews ([d6c9813](https://github.com/dcruzgalicia/iteraciones-cli/commit/d6c981322c61fbd9fc22991f8eaf177ba8439e86))
+* **html:** deja la semblanza a todo el ancho hasta lg ([0f9f4fc](https://github.com/dcruzgalicia/iteraciones-cli/commit/0f9f4fced9b8cccda2dceee14c390ddca1bd18e8))
+* **html:** pinta los formatos con el color de acento ([14b5bce](https://github.com/dcruzgalicia/iteraciones-cli/commit/14b5bce7c7aa093318bdc4dbf6e2dfa5baec952c))
+* **html:** restaurar la paridad visual del CSS vainilla ([6ee2128](https://github.com/dcruzgalicia/iteraciones-cli/commit/6ee2128f396a5ce030baed1b624afd592e2aacc9))
+* **pdf:** conservar resolución de portadas en el PDF ligero ([13cc9ca](https://github.com/dcruzgalicia/iteraciones-cli/commit/13cc9ca08837246a423aabd9f986f56d7707ca38))
+* **pdf:** mantener tamaño de la imagen compartida de extratitle ([7d48f3f](https://github.com/dcruzgalicia/iteraciones-cli/commit/7d48f3fbd143d65a1bbfa5705b8a6c646832f837))
+
+
+### Performance Improvements
+
+* **epub:** asegurar imágenes de 25 KB y fuentes del dispositivo ([2677045](https://github.com/dcruzgalicia/iteraciones-cli/commit/26770456fa6d2c1e01eb700f6446732199d509aa))
+* **images:** una sola salida por imagen y máximo 25 KB ([74d5c2d](https://github.com/dcruzgalicia/iteraciones-cli/commit/74d5c2d535f7f54471f2ed1879fa40a156afc2df))
+
 ## [0.28.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.27.0...v0.28.0) (2026-11-15)
 
 
