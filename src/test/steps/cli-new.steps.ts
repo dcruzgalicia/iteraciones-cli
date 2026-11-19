@@ -101,6 +101,18 @@ Then('el archivo {string} tiene la clave {string}', async (nombre: string, clave
   }
 });
 
+function contenidoRelacionado(html: string): string {
+  const inicio = html.indexOf('id="slot-related"');
+  if (inicio < 0) return '';
+  const fin = html.indexOf('id="slot-sidebar"', inicio);
+  return html.slice(inicio, fin < 0 ? undefined : fin);
+}
+
+Then('el archivo {string} contiene {int} veces en related {string}', async (nombre: string, veces: number, texto: string) => {
+  const cuenta = contenidoRelacionado(await archivo(nombre)).split(texto).length - 1;
+  if (cuenta !== veces) throw new Error(`${nombre} contiene ${texto} ${cuenta} veces en related y debería contenerlo ${veces}`);
+});
+
 Then('el archivo {string} contiene {int} veces {string}', async (nombre: string, veces: number, texto: string) => {
   const contenido = await archivo(nombre);
   const cuenta = contenido.split(texto).length - 1;
