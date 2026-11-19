@@ -41,6 +41,13 @@ Given('una creadora llamada {string} cuyo retrato {string} no existe', (nombre: 
   escribirEnProyecto('ana-garcia.md', `---\ntype: creator\nname: ${nombre}\nimage: ${archivo}\n---\n\nBio de ${nombre}.\n`);
 });
 
+Given('una creadora llamada {string} con redes', (nombre: string) => {
+  escribirEnProyecto(
+    'ana-garcia.md',
+    `---\ntype: creator\nname: ${nombre}\nlinks:\n  - name: Instagram\n    url: https://instagram.com/ana\n---\n\nBio de ${nombre}.\n`,
+  );
+});
+
 Then('el archivo {string} pone {string} antes que {string}', (relativa: string, primero: string, segundo: string) => {
   const html = readFileSync(join(world.root, relativa), 'utf8');
   const a = html.indexOf(primero);

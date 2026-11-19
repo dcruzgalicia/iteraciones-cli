@@ -38,11 +38,22 @@ Característica: el retrato de la creadora en sus tarjetas
       Y el archivo "dist/files/ana-garcia.html" dice "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" dice "-ana.webp"
       Y el archivo "dist/files/ana-garcia.html" dice "portada portada--front"
-      Y el archivo "dist/files/ana-garcia.html" dice "Semblanza"
+      Y el archivo "dist/files/ana-garcia.html" no dice "Semblanza"
       Y el archivo "dist/files/ana-garcia.html" no dice "contenido-retrato"
       Y el archivo "dist/files/ana-garcia.html" no dice "card-document"
       Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "-ana.webp"
+      Y el archivo "dist/files/ana-garcia.html" pone "<h1 class=\"titulo-pagina\">Ana García</h1>" antes que "Bio de Ana García."
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "Bio de Ana García."
+
+    Escenario: La semblanza va antes que las redes
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el proyecto produce html
+      Y una creadora llamada "Ana García" con redes
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/ana-garcia.html" no dice "Semblanza"
+      Y el archivo "dist/files/ana-garcia.html" dice ">Redes</span>"
+      Y el archivo "dist/files/ana-garcia.html" pone "Bio de Ana García." antes que "cabecera-redes"
 
     Escenario: El retrato queda antes de los textos de la creadora
       Dado que la raíz del proyecto tiene un proyecto de prueba

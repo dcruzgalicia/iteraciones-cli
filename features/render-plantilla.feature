@@ -42,9 +42,10 @@ Característica: la plantilla HTML que se entrega a pandoc
       Y la plantilla dice "$body$"
       Y la plantilla no dice "$if(collection)$"
 
-    Escenario: Una creadora lleva su semblanza en el encabezado
+    Escenario: Una creadora lleva su semblanza debajo del nombre
       Dado que la plantilla HTML se compone para "creator"
-      Entonces la plantilla dice "Semblanza"
+      Entonces la plantilla ordena "$subtitle$, block-intro, cabecera-datos"
+      Y la plantilla no dice "Semblanza"
       Y la plantilla dice "block-intro"
       Y la plantilla dice "$body$"
       Y la plantilla no dice "<article"
