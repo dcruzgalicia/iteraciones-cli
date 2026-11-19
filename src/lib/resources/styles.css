@@ -1024,13 +1024,17 @@ a:hover {
 }
 
 .cabecera-cuerpo--creador .portada--creador {
-  justify-self: start;
+  justify-self: center;
 }
 
 @media (min-width: 1280px) {
   .cabecera-cuerpo.cabecera-cuerpo--creador:has(.portada) {
     grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
     gap: 2rem;
+  }
+
+  .cabecera-cuerpo--creador .portada--creador {
+    justify-self: start;
   }
 }
 
