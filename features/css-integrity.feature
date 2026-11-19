@@ -23,7 +23,7 @@ Característica: El CSS se genera sólo para la combinación activa
     Dado un proyecto vacío
     Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
     Entonces el CSS no tiene comentarios ni saltos de línea
-    Y el CSS pesa menos de 41000 bytes
+    Y el CSS pesa menos de 42000 bytes
 
   Escenario: Las tarjetas y el fondo usan el acento
     Dado un proyecto vacío
@@ -142,10 +142,17 @@ Característica: El CSS se genera sólo para la combinación activa
       Cuando leo el styles.css del proyecto
       Entonces el CSS da a ".page-sidebar .tarjeta" la propiedad "background-color: color-mix(in oklab, var(--color-accent-500) 3%, var(--card-bg))"
 
-    Escenario: Los rótulos del encabezado y las tarjetas no usan cursivas
+    Escenario: Los rótulos y los chips no usan cursivas ni la fuente de los títulos
       Cuando leo el styles.css del proyecto
       Entonces el CSS da a ".meta-label em" la propiedad "font-style: normal"
-      Y el CSS da a ".tarjeta-chips .chip--titulo" la propiedad "font-family: var(--font-body)"
+      Y el CSS da a "[data-style] .chip" la propiedad "font-family: var(--font-body)"
+      Y el CSS da a "[data-style] .chip" la propiedad "font-style: normal"
+      Y el CSS da a "[data-style=\"notebook\"] .tarjeta-titulo--centrado" la propiedad "font-family: var(--font-body)"
+      Y el CSS no tiene "[data-style] .chip--titulo"
+
+    Escenario: Los títulos con Caveat crecen 2px en notebook
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".sitio-titulo" la propiedad "font-size: calc(1.375rem + var(--title-size-boost))"
 
     Escenario: La semblanza no se limita en móvil
       Cuando leo el styles.css del proyecto

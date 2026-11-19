@@ -113,3 +113,4 @@ Característica: estilos visuales del sitio
     Y el archivo "dist/files/index.html" contiene "data-style=\"notebook\""
     Y el archivo "dist/files/assets/css/styles.css" contiene "color-scheme:dark"
     Y el archivo "dist/files/assets/css/styles.css" contiene "data-style=notebook"
+    Y el archivo "dist/files/assets/css/styles.css" contiene "--title-size-boost:2px"
