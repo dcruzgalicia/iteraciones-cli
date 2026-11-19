@@ -1015,6 +1015,41 @@ a:hover {
   }
 }
 
+.cabecera-cuerpo.cabecera-cuerpo--creador:has(.portada) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cabecera-cuerpo.cabecera-cuerpo--creador > .cabecera-contenido {
+  grid-column: auto;
+}
+
+.cabecera-cuerpo--creador .portada--creador {
+  justify-self: start;
+}
+
+@media (min-width: 1280px) {
+  .cabecera-cuerpo.cabecera-cuerpo--creador:has(.portada) {
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .cabecera-cuerpo:not(.cabecera-cuerpo--creador):has(> .portada) > .cabecera-contenido > :first-child {
+    margin-top: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .cabecera-cuerpo:has(> .cabecera-portadas) > .cabecera-contenido > :first-child {
+    margin-top: 0;
+  }
+
+  .cabecera-cuerpo--creador:has(> .portada) > .cabecera-contenido > :first-child {
+    margin-top: 0;
+  }
+}
+
 .cabecera-portadas {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 320px));
@@ -1120,6 +1155,15 @@ a:hover {
   letter-spacing: 0.025em;
   line-height: 1.4;
   text-transform: uppercase;
+}
+
+.meta-label em {
+  font-style: normal;
+}
+
+.tarjeta-chips .chip--titulo {
+  font-family: var(--font-body);
+  font-style: normal;
 }
 
 .meta-valor {
@@ -1815,6 +1859,10 @@ a:hover {
 
 .prose.contenido-tamano :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {
   max-width: 48ch;
+}
+
+.semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {
+  max-width: 800px;
 }
 
 .contenido-articulo.prose.contenido-tamano :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {

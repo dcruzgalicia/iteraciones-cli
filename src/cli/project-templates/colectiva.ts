@@ -12,7 +12,7 @@ format:
     site:
       title: Mi colectiva
       description: Publicaciones de la colectiva
-      style: expresivo
+      style: notebook
 `;
 
 export const COLECTIVA: ProjectTemplate = {

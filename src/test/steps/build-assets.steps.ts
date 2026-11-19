@@ -12,7 +12,7 @@ import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 const salida = (): string => distPath(world.root);
 
-let estiloAssets: HtmlStyle = 'clasico';
+let estiloAssets: HtmlStyle = 'radar';
 
 function ctx(): BuildContext {
   return {

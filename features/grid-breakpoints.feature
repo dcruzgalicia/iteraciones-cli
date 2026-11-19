@@ -58,3 +58,26 @@ Característica: columnas del grid por breakpoint
       Cuando leo las utilidades de grid
       Entonces la cabecera con dos portadas deja el resto al contenido en xl
       Y el contenido de la cabecera con dos portadas ocupa la segunda columna en xl
+
+  Regla de negocio: La cabecera alinea el contenido con la portada
+
+    Escenario: En sm la cabecera con una portada alinea el contenido
+      Cuando leo las utilidades de grid
+      Entonces la cabecera con una portada alinea el contenido en sm
+
+    Escenario: En lg la cabecera con dos portadas alinea el contenido
+      Cuando leo las utilidades de grid
+      Entonces la cabecera con dos portadas alinea el contenido en lg
+
+    Escenario: En lg la cabecera de creadora alinea el contenido
+      Cuando leo las utilidades de grid
+      Entonces la cabecera de creadora alinea el contenido en lg
+
+    Escenario: La cabecera de creadora apila la foto hasta lg
+      Cuando leo las utilidades de grid
+      Entonces la cabecera de creadora apila la foto y el contenido
+      Y la cabecera de creadora usa la foto y el resto en lg
+
+    Escenario: En móvil el título conserva su margen superior
+      Cuando leo las utilidades de grid
+      Entonces el título de la página conserva su margen superior

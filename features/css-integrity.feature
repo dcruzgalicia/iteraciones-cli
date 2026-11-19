@@ -6,28 +6,28 @@ Característica: El CSS se genera sólo para la combinación activa
 
   Escenario: La hoja lleva sólo el acento y el estilo elegidos
     Dado un proyecto vacío
-    Cuando compilo el CSS con acento "rose", estilo "editorial" y tema "light"
+    Cuando compilo el CSS con acento "rose", estilo "press" y tema "light"
     Entonces el CSS lleva el acento "rose"
-    Y el CSS lleva el estilo "editorial"
-    Y el CSS no lleva el estilo "clasico"
+    Y el CSS lleva el estilo "press"
+    Y el CSS no lleva el estilo "radar"
     Y el CSS no lleva reglas de tema oscuro
 
   Escenario: El tema oscuro añade sólo sus reglas
     Dado un proyecto vacío
-    Cuando compilo el CSS con acento "lime", estilo "expresivo" y tema "dark"
-    Entonces el CSS lleva el estilo "expresivo"
+    Cuando compilo el CSS con acento "lime", estilo "notebook" y tema "dark"
+    Entonces el CSS lleva el estilo "notebook"
     Y el CSS lleva el tema oscuro
-    Y el CSS no lleva el estilo "institucional"
+    Y el CSS no lleva el estilo "modern"
 
   Escenario: La hoja es única y está minificada
     Dado un proyecto vacío
-    Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+    Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
     Entonces el CSS no tiene comentarios ni saltos de línea
     Y el CSS pesa menos de 41000 bytes
 
   Escenario: Las tarjetas y el fondo usan el acento
     Dado un proyecto vacío
-    Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+    Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
     Entonces el CSS mezcla el acento en el fondo de las tarjetas
     Y el CSS mezcla el acento en el fondo del sitio
 
@@ -38,7 +38,7 @@ Característica: El CSS se genera sólo para la combinación activa
 
   Esquema del escenario: Cada acento llega a la hoja con sus once tonos
     Dado un proyecto vacío
-    Cuando compilo el CSS con acento "<acento>", estilo "clasico" y tema "light"
+    Cuando compilo el CSS con acento "<acento>", estilo "radar" y tema "light"
     Entonces el CSS lleva el acento "<acento>"
 
     Ejemplos:
@@ -73,30 +73,30 @@ Característica: El CSS se genera sólo para la combinación activa
   Regla de negocio: Las clases que puede escribir una autora
 
     Escenario: La alineación funciona en el sitio (#2652)
-      Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+      Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
       Entonces el CSS da a ".text-end" la propiedad "text-align:end"
       Y el CSS da a ".text-center" la propiedad "text-align:center"
 
     Escenario: La caja de un nombre propio ya no se parte (#2653)
-      Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+      Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
       Entonces el CSS da a ".text-nowrap" la propiedad "text-wrap:nowrap"
       Y el CSS da a ".hyphens-none" la propiedad "hyphens:none"
 
     Escenario: El marco limita el ancho a 1600px
-      Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+      Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
       Entonces el CSS da a ".marco" la propiedad "max-width:1600px"
 
     Escenario: Los tamaños de letra escalan (#2655)
-      Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+      Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
       Entonces el CSS da a ".text-sm" la propiedad "font-size:.875rem"
       Y el CSS da a ".text-4xl" la propiedad "font-size:2.25rem"
 
     Escenario: El párrafo con sangría se sangra (#2670)
-      Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+      Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
       Entonces el CSS da a ".indent-8" la propiedad "text-indent:2rem"
 
     Escenario: El epígrafe y el verso se estilan (#2649)
-      Cuando compilo el CSS con acento "lime", estilo "clasico" y tema "light"
+      Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
       Entonces el CSS da a ".dictum" la propiedad "max-width"
       Y el CSS da a ".dictum .author" la propiedad "font-style"
       Y el CSS da a ".verse" la propiedad "text-align"
@@ -138,6 +138,15 @@ Característica: El CSS se genera sólo para la combinación activa
       Cuando leo el styles.css del proyecto
       Entonces el CSS da a ".tarjeta--fragmento.tarjeta--auto" la propiedad "height: auto"
 
+    Escenario: Los rótulos del encabezado y las tarjetas no usan cursivas
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".meta-label em" la propiedad "font-style: normal"
+      Y el CSS da a ".tarjeta-chips .chip--titulo" la propiedad "font-family: var(--font-body)"
+
+    Escenario: La semblanza de creadora usa el ancho de 800px
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *)" la propiedad "max-width: 800px"
+
   Regla de negocio: La caché de CSS sólo depende del CSS y la configuración
 
     Esquema del escenario: La caché se comporta así ante cada cambio
@@ -151,5 +160,5 @@ Característica: El CSS se genera sólo para la combinación activa
         | lo vuelvo a calcular con la misma config    | no cambia |
         | cambio el HTML sin tocar la config          | no cambia |
         | cambio el acento a "blue"                   | cambia    |
-        | cambio el estilo a "editorial"              | cambia    |
+        | cambio el estilo a "press"              | cambia    |
         | cambio el tema a "dark"                     | cambia    |

@@ -17,7 +17,7 @@ Característica: init colectiva
       Y el directorio "paginas" existe
       Y el directorio "listas" existe
       Y el archivo "index.md" existe
-      Y el archivo "iteraciones.config.yaml" contiene "style: expresivo"
+      Y el archivo "iteraciones.config.yaml" contiene "style: notebook"
       Y el archivo "convocatorias.md" contiene "type: list"
       Y el archivo "menu.md" contiene "Convocatorias"
       Cuando construyo el proyecto

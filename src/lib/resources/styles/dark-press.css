@@ -1,4 +1,4 @@
-[data-style="editorial"] {
+[data-style="press"] {
   --paper-bg: #17140f;
   --grid-fine: color-mix(in oklab, var(--color-accent-300) 3%, transparent);
   --grid-bold: color-mix(in oklab, var(--color-accent-300) 8%, transparent);

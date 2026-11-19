@@ -355,7 +355,7 @@ export async function emit404(args: {
   const siteTitle = site?.title ?? 'iteraciones';
   const tagline = site?.description ?? '';
   const theme = site?.theme ?? 'dark';
-  const style = site?.style ?? 'clasico';
+  const style = site?.style ?? 'radar';
   const fontPreloads = fontPreloadTags(style, '.');
   const logo =
     args.renderCtx.logo === undefined
@@ -482,7 +482,7 @@ export async function emitSearch(args: {
   await writeStatic(cwd, outputDir, 'buscar.json', `${JSON.stringify(entradas, null, 2)}\n`);
   const datos = JSON.stringify(entradas).replace(/</g, '\\u003c');
   const theme = site?.theme === 'light' ? 'light' : 'dark';
-  const style = site?.style ?? 'clasico';
+  const style = site?.style ?? 'radar';
   const fontPreloads = fontPreloadTags(style, '.');
   const title = site?.title ?? 'iteraciones';
   const html = `<!doctype html>
@@ -884,7 +884,7 @@ function htmlVars(args: {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
     backgroundImage: background,
     hero,
-    style: htmlConfig?.site?.style ?? 'clasico',
+    style: htmlConfig?.site?.style ?? 'radar',
     fontPreloads: fontPreloadTags(htmlConfig?.site?.style, dir),
     labelFormatos: label('formatos', 'Formatos'),
     labelIndice: label('indice', 'Índice'),

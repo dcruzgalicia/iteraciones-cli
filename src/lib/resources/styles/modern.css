@@ -1,4 +1,4 @@
-[data-style="institucional"] {
+[data-style="modern"] {
   --font-title: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
   --paper-bg: #f6f8f7;
@@ -13,8 +13,8 @@
   --card-shadow-hover: 0 6px 16px rgb(0 0 0 / 0.08);
 }
 
-[data-style="institucional"] h1,
-[data-style="institucional"] h2,
-[data-style="institucional"] h3 {
+[data-style="modern"] h1,
+[data-style="modern"] h2,
+[data-style="modern"] h3 {
   letter-spacing: -0.02em;
 }

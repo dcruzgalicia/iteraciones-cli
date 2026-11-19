@@ -30,7 +30,7 @@ Característica: los assets de la salida
 
     Escenario: Un estilo con fuente propia copia solo sus fuentes
       Dado que la raíz del proyecto está vacía
-      Y una salida para los assets con estilo "expresivo"
+      Y una salida para los assets con estilo "notebook"
       Cuando construyo los assets con ese estilo
       Entonces en los assets hay:
         """

@@ -1,16 +1,25 @@
 import type { AccentColor } from './accent-palettes.js';
 
-export const HTML_STYLES = ['clasico', 'expresivo', 'editorial', 'institucional'] as const;
+export const HTML_STYLES = ['radar', 'notebook', 'press', 'modern'] as const;
 
 export type HtmlStyle = (typeof HTML_STYLES)[number];
 
-export const DEFAULT_HTML_STYLE: HtmlStyle = 'clasico';
+export const DEFAULT_HTML_STYLE: HtmlStyle = 'radar';
+
+export const HTML_STYLE_ALIASES: Record<string, HtmlStyle> = {
+  clasico: 'radar',
+  expresivo: 'notebook',
+  editorial: 'press',
+  institucional: 'modern',
+};
+
+export const HTML_STYLE_INPUTS = [...HTML_STYLES, ...Object.keys(HTML_STYLE_ALIASES)] as const;
 
 export const HTML_STYLE_COLORS: Record<HtmlStyle, AccentColor> = {
-  clasico: 'lime',
-  expresivo: 'amber',
-  editorial: 'stone',
-  institucional: 'blue',
+  radar: 'lime',
+  notebook: 'amber',
+  press: 'stone',
+  modern: 'blue',
 };
 
 export interface HtmlFont {
@@ -23,7 +32,7 @@ export interface HtmlFont {
 }
 
 export const STYLE_FONTS: Record<HtmlStyle, HtmlFont[]> = {
-  clasico: [
+  radar: [
     {
       family: 'Space Grotesk',
       source: 'space-grotesk/SpaceGrotesk-latin.woff2',
@@ -41,7 +50,7 @@ export const STYLE_FONTS: Record<HtmlStyle, HtmlFont[]> = {
       licenseDestination: 'chakra-petch-OFL.txt',
     },
   ],
-  expresivo: [
+  notebook: [
     {
       family: 'Caveat',
       source: 'caveat/Caveat-latin.woff2',
@@ -59,7 +68,7 @@ export const STYLE_FONTS: Record<HtmlStyle, HtmlFont[]> = {
       licenseDestination: 'nunito-OFL.txt',
     },
   ],
-  editorial: [
+  press: [
     {
       family: 'Playfair Display',
       source: 'playfair-display/PlayfairDisplay-latin.woff2',
@@ -77,7 +86,7 @@ export const STYLE_FONTS: Record<HtmlStyle, HtmlFont[]> = {
       licenseDestination: 'libre-baskerville-OFL.txt',
     },
   ],
-  institucional: [
+  modern: [
     {
       family: 'Public Sans',
       source: 'public-sans/PublicSans-latin.woff2',
@@ -98,6 +107,7 @@ export const STYLE_FONTS: Record<HtmlStyle, HtmlFont[]> = {
 };
 
 export function htmlStyle(style: string | undefined): HtmlStyle {
+  if (style !== undefined && Object.hasOwn(HTML_STYLE_ALIASES, style)) return HTML_STYLE_ALIASES[style] as HtmlStyle;
   return HTML_STYLES.includes(style as HtmlStyle) ? (style as HtmlStyle) : DEFAULT_HTML_STYLE;
 }
 

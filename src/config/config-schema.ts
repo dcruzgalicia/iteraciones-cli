@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ACCENT_COLORS } from '../lib/accent-palettes.js';
-import { DEFAULT_HTML_STYLE, HTML_STYLES } from '../lib/html-styles.js';
+import { DEFAULT_HTML_STYLE, HTML_STYLE_INPUTS, htmlStyle } from '../lib/html-styles.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
@@ -91,7 +91,11 @@ const HtmlSiteSchema = z
     backgroundImage: z.string().optional(),
     logoSize: z.string().optional().default(DEFAULT_HTML_FORMAT.site.logoSize),
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
-    style: z.enum(HTML_STYLES).optional().default(DEFAULT_HTML_STYLE),
+    style: z
+      .enum(HTML_STYLE_INPUTS)
+      .optional()
+      .default(DEFAULT_HTML_STYLE)
+      .transform((value) => htmlStyle(value)),
     color: z.enum(ACCENT_COLORS).optional(),
     showDates: z.boolean().default(DEFAULT_HTML_FORMAT.site.showDates),
     showCitation: z.boolean().optional(),

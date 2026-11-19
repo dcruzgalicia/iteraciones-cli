@@ -7,7 +7,7 @@ format:
   html:
     generate: true
     site:
-      style: editorial
+      style: press
       theme: light
   pdf:
     generate: true

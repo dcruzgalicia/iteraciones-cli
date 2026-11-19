@@ -1,4 +1,4 @@
-[data-style="clasico"] {
+[data-style="radar"] {
   --font-title: "Chakra Petch", "Space Grotesk", system-ui, sans-serif;
   --font-body: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --radio: 0;
@@ -14,9 +14,9 @@
   --card-shadow-hover: 10px 10px 0 var(--color-accent-600);
 }
 
-[data-style="clasico"] h1,
-[data-style="clasico"] h2,
-[data-style="clasico"] h3 {
+[data-style="radar"] h1,
+[data-style="radar"] h2,
+[data-style="radar"] h3 {
   font-weight: 600;
   letter-spacing: -0.02em;
 }

@@ -1,4 +1,4 @@
-[data-style="editorial"] {
+[data-style="press"] {
   --font-title: "Playfair Display", "Iowan Old Style", Baskerville, Georgia, serif;
   --font-body: "Libre Baskerville", "Iowan Old Style", Baskerville, Georgia, serif;
   --paper-bg: #faf6ec;
@@ -13,8 +13,8 @@
   --card-shadow-hover: none;
 }
 
-[data-style="editorial"] h1,
-[data-style="editorial"] h2,
-[data-style="editorial"] h3 {
+[data-style="press"] h1,
+[data-style="press"] h2,
+[data-style="press"] h3 {
   letter-spacing: -0.015em;
 }

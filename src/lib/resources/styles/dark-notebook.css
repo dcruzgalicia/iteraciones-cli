@@ -1,4 +1,4 @@
-[data-style="expresivo"] {
+[data-style="notebook"] {
   --paper-bg: #1d1915;
   --grid-fine: color-mix(in oklab, var(--color-accent-300) 5%, transparent);
   --grid-bold: color-mix(in oklab, var(--color-accent-300) 12%, transparent);
