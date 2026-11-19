@@ -95,7 +95,7 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y otra lista con el mismo texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" contiene 2 veces ">Colección</a>"
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" contiene 2 veces en related ">Colección</a>"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Antología"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Otra"
 

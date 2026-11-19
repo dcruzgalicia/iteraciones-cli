@@ -480,6 +480,10 @@ a:hover {
   box-shadow: var(--card-shadow-hover);
 }
 
+.page-sidebar .tarjeta {
+  background-color: color-mix(in oklab, var(--color-accent-500) 3%, var(--card-bg));
+}
+
 .tarjeta--identidad,
 .tarjeta--cabecera,
 .tarjeta--seccion,

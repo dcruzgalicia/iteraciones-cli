@@ -138,6 +138,10 @@ Característica: El CSS se genera sólo para la combinación activa
       Cuando leo el styles.css del proyecto
       Entonces el CSS da a ".tarjeta--fragmento.tarjeta--auto" la propiedad "height: auto"
 
+    Escenario: Las tarjetas del sidebar tienen un tono tenue del acento
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".page-sidebar .tarjeta" la propiedad "background-color: color-mix(in oklab, var(--color-accent-500) 3%, var(--card-bg))"
+
     Escenario: Los rótulos del encabezado y las tarjetas no usan cursivas
       Cuando leo el styles.css del proyecto
       Entonces el CSS da a ".meta-label em" la propiedad "font-style: normal"

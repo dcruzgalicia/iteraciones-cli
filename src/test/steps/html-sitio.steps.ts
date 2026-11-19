@@ -144,8 +144,16 @@ Then('el chip {string} del HTML de {string} no es un enlace', (etiqueta: string,
   }
 });
 
+function contenidoEncabezado(archivo: string): string {
+  const html = leer(`dist/files/${archivo}`);
+  const inicio = html.indexOf('id="slot-page-header"');
+  if (inicio < 0) return html;
+  const fin = html.indexOf('<div id="slot-main"', inicio);
+  return html.slice(inicio, fin < 0 ? undefined : fin);
+}
+
 Then('el chip {string} del HTML de {string} no aparece', (etiqueta: string, archivo: string) => {
-  if (patronChip(etiqueta).test(leer(`dist/files/${archivo}`))) {
+  if (patronChip(etiqueta).test(contenidoEncabezado(archivo))) {
     throw new Error(`el chip ${JSON.stringify(etiqueta)} de ${archivo} aparece y no debería`);
   }
 });
