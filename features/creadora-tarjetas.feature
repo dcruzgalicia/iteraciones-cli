@@ -64,12 +64,12 @@ Característica: las tarjetas de textos y colecciones en la página de la autora
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/autora-a.html" no dice ">Textos<"
       Y el archivo "dist/files/autora-a.html" pone "Bio de Autora A." antes que "Texto 2"
-      Y las tarjetas de "dist/files/autora-a.html" son hermanas de la bio
+      Y el archivo "dist/files/autora-a.html" dice "preview-grid"
       Y el archivo "dist/files/autora-a.html" dice "Leer texto completo →"
       Y el archivo "dist/files/autora-a.html" dice "Ver colección completa →"
       Y el archivo "dist/files/autora-a.html" dice ">Colección</a>"
-      Y el archivo "dist/files/autora-a.html" contiene 1 veces "Texto 1"
-      Y el archivo "dist/files/autora-a.html" contiene 1 veces en las publicaciones "Texto 2"
+      Y el archivo "dist/files/autora-a.html" contiene 2 veces "Texto 1"
+      Y el archivo "dist/files/autora-a.html" contiene 2 veces "Texto 2"
 
   Regla de negocio: Lo más reciente va primero
 
@@ -181,6 +181,7 @@ Característica: las tarjetas de textos y colecciones en la página de la autora
       Y el archivo "dist/files/autora-a.html" dice "paginacion"
       Y el archivo "dist/files/autora-a-2.html" no dice "Bio de Autora A."
       Y el archivo "dist/files/autora-a-2.html" no dice "card-document"
+      Y el archivo "dist/files/autora-a-2.html" no dice "Semblanza"
       Y el archivo "dist/files/autora-a-2.html" dice "Texto 1"
       Y el archivo "dist/files/autora-a-2.html" dice "← Anterior"
       Y el archivo "dist/files/autora-a-2.html" no dice ">Textos<"
@@ -203,5 +204,4 @@ Característica: las tarjetas de textos y colecciones en la página de la autora
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/autora-a.html" dice "Bio de Autora A."
       Y el archivo "dist/files/autora-a.html" no dice ">Textos<"
-      Y el archivo "dist/files/autora-a.html" no dice "Leer texto completo →"
-      Y el archivo "dist/files/autora-a.html" no dice "Ver colección completa →"
+      Y el archivo "dist/files/autora-a.html" no dice "preview-grid"

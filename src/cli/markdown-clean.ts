@@ -9,10 +9,6 @@ import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { relativeLabel } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
 
-export interface MarkdownCleanOptions {
-  check?: boolean;
-}
-
 export async function limpiaMarkdown(file: string, content: string): Promise<string> {
   const { yaml, body } = splitFrontmatter(content);
   if (body.trim() === '') return content;
@@ -29,7 +25,7 @@ export async function limpiaMarkdown(file: string, content: string): Promise<str
   return `---\n${yaml}\n---\n\n${conSalto}`;
 }
 
-export async function runMarkdownClean(cwd: string, args: string[], options: MarkdownCleanOptions = {}): Promise<void> {
+export async function runMarkdownClean(cwd: string, args: string[], options: { check?: boolean } = {}): Promise<void> {
   await runCommand('clean-markdown', async () => {
     const archivos = args.length > 0 ? args.map((ruta) => resolve(cwd, ruta)) : (await listMarkdownDocuments(cwd)).map((rel) => join(cwd, rel));
     if (archivos.length === 0) throw new BuildError('no hay archivos markdown que limpiar');

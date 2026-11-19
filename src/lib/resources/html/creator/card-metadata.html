@@ -1,0 +1,52 @@
+<div class="tarjeta tarjeta--cabecera">
+  <div class="chips cabecera-chips">
+    $if(doc-chip)$
+    $if(doc-chip-href)$
+    <a href="$doc-chip-href$" class="not-prose chip chip--tipo chip--enlace">$doc-chip$</a>
+    $endif$
+    $endif$
+    $if(collection-chips)$$collection-chips$$endif$
+    $if(keyword-chips)$$keyword-chips$$endif$
+  </div>
+  <div class="cabecera-cuerpo">
+    $if(creator-image)$
+    <img src="$creator-image$" alt="$creator-image-alt$" class="portada portada--front">
+    $endif$
+    <div class="cabecera-contenido">
+      $if(titlehead)$
+      <p class="titlehead">$titlehead$</p>
+      $endif$
+      $if(doc-title)$
+      <h1 class="titulo-pagina">$doc-title$</h1>
+      $endif$
+      $if(subtitle)$
+      <p class="subtitulo-pagina">$subtitle$</p>
+      $endif$
+      <div class="meta-grid">
+        $if(show-dates)$
+        $if(date-iso)$
+        <div class="meta-item">
+          <span class="meta-label">Publicado</span>
+          <span class="meta-valor"><time datetime="$date-iso$">$date$</time></span>
+        </div>
+        $endif$
+        $endif$
+        $if(subject)$
+        <div class="meta-item">
+          <span class="meta-label">Materia</span>
+          <span class="meta-valor">$subject$</span>
+        </div>
+        $endif$
+      </div>
+      $if(datos-meta)$
+      <div class="meta-grid cabecera-datos">
+        $datos-meta$
+      </div>
+      $endif$
+      <div class="resumen semblanza">
+        <span class="meta-label">Semblanza</span>
+        <div id="block-intro"></div>
+      </div>
+    </div>
+  </div>
+</div>

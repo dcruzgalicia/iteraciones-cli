@@ -161,9 +161,10 @@ Then('la página {int} del PDF está en escala de grises', (pagina: number) => {
 
 function pixelDeLaPagina(pagina: number): number[] {
   const tmp = join(world.root, '.iteraciones', 'tmp');
-  const render = corre('pdftoppm', ['-f', String(pagina), '-l', String(pagina), '-r', '20', '-png', String(world.pdf), join(tmp, 'pagina')]);
+  const prefijo = `pagina-${pagina}`;
+  const render = corre('pdftoppm', ['-f', String(pagina), '-l', String(pagina), '-r', '20', '-png', String(world.pdf), join(tmp, prefijo)]);
   if (render.codigo !== 0) throw new Error(`pdftoppm no pudo renderizar la página ${pagina}: ${render.error}`);
-  const archivo = readdirSync(tmp).find((f) => f.startsWith('pagina'));
+  const archivo = readdirSync(tmp).find((f) => f.startsWith(prefijo));
   if (archivo === undefined) throw new Error('pdftoppm no dejó ninguna imagen');
   const color = corre('magick', [join(tmp, archivo), '-format', '%[pixel:p{2,2}]', 'info:']);
   const numeros = [...color.salida.matchAll(/\d+/g)].map((m) => Number.parseInt(m[0] ?? '0', 10));
@@ -208,12 +209,12 @@ Then('las portadas del PDF conservan al menos {int} dpi', (dpi: number) => {
   }
 });
 
-Then('la última página del PDF es impar y es {string}', (portada: string) => {
+Then('la última página del PDF es par y es {string}', (portada: string) => {
   const info = corre('pdfinfo', [String(world.pdf)]);
   const match = info.salida.match(/^Pages:\s+(\d+)/m);
   if (match === null) throw new Error(`pdfinfo no dijo cuántas páginas tiene ${String(world.pdf)}: ${info.error}`);
   const paginas = Number.parseInt(match[1] ?? '0', 10);
-  if (paginas % 2 === 0) throw new Error(`la última página es ${paginas} y debería ser impar`);
+  if (paginas % 2 !== 0) throw new Error(`la última página es ${paginas} y debería ser par`);
   const esperada = PORTADAS.find((p) => p.campo === portada);
   if (esperada === undefined) throw new Error(`no conozco la portada ${portada}`);
   const r = pixelDeLaPagina(paginas)[0] ?? 0;
@@ -242,13 +243,26 @@ Then('la página {int} del PDF dice {string}', (pagina: number, texto: string) =
   }
 });
 
+Then('la página {int} del PDF tiene una imagen', (pagina: number) => {
+  const salida = corre('pdfimages', ['-list', String(world.pdf)]);
+  if (salida.codigo !== 0) throw new Error(`pdfimages no pudo leer el PDF: ${salida.error}`);
+  const paginas = new Set(
+    salida.salida
+      .split('\n')
+      .filter((linea) => /^\s*\d+\s+\d+\s+image\s/.test(linea))
+      .map((linea) => Number.parseInt(linea.trim().split(/\s+/)[0] ?? '0', 10)),
+  );
+  if (!paginas.has(pagina)) throw new Error(`la página ${pagina} no tiene imagen`);
+});
+
 Then('la página {int} del PDF es {string}', (pagina: number, portada: string) => {
   const esperada = PORTADAS.find((p) => p.campo === portada);
   if (esperada === undefined) throw new Error(`no conozco la portada ${portada}`);
   const tmp = join(world.root, '.iteraciones', 'tmp');
-  const render = corre('pdftoppm', ['-f', String(pagina), '-l', String(pagina), '-r', '20', '-png', String(world.pdf), join(tmp, 'pagina')]);
+  const prefijo = `portada-${pagina}`;
+  const render = corre('pdftoppm', ['-f', String(pagina), '-l', String(pagina), '-r', '20', '-png', String(world.pdf), join(tmp, prefijo)]);
   if (render.codigo !== 0) throw new Error(`pdftoppm no pudo renderizar la página ${pagina}: ${render.error}`);
-  const archivo = readdirSync(tmp).find((f) => f.startsWith('pagina'));
+  const archivo = readdirSync(tmp).find((f) => f.startsWith(prefijo));
   if (archivo === undefined) throw new Error('pdftoppm no dejó ninguna imagen');
   const color = corre('magick', [join(tmp, archivo), '-format', '%[pixel:p{2,2}]', 'info:']);
   const gris = Number.parseInt((color.salida.match(/\d+/) ?? ['0'])[0] ?? '0', 10);

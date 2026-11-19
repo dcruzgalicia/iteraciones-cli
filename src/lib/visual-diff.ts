@@ -274,11 +274,9 @@ interface CompareVisualInput {
   generated?: string;
   generatedPngs?: string[];
   workDir: string;
-  cachePath?: string;
-
-  diffDir?: string;
-
-  diffStem?: string;
+  cachePath: string;
+  diffDir: string;
+  diffStem: string;
 }
 
 async function comparePages(args: {
@@ -344,11 +342,11 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
     throw new BuildError('compareVisual necesita lo generado como imágenes o como PDF');
   }
   const key = cacheKey({ reference: await referenceHashOf(input), generated: await generatedHashOf(input) });
-  const cached = input.cachePath === undefined ? undefined : (await readCache(input.cachePath))[key];
+  const cached = (await readCache(input.cachePath))[key];
   if (cached !== undefined) return { ...cached, details: [], fromCache: true };
 
-  const diffDir = input.diffDir ?? input.workDir;
-  const diffStem = input.diffStem ?? 'documento';
+  const diffDir = input.diffDir;
+  const diffStem = input.diffStem;
   await mkdir(diffDir, { recursive: true });
   await rm(input.workDir, { recursive: true, force: true });
   await mkdir(input.workDir, { recursive: true });
@@ -372,14 +370,13 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
     pass,
   };
 
-  const keepWorkDir = diffDir === input.workDir && changed > 0;
   try {
-    if (pass && input.cachePath !== undefined) {
+    if (pass) {
       const { compared, unchanged, changed, referencePages, generatedPages } = result;
       await writeCache(input.cachePath, key, { compared, unchanged, changed, referencePages, generatedPages, pass });
     }
   } finally {
-    if (!keepWorkDir) await rm(input.workDir, { recursive: true, force: true });
+    await rm(input.workDir, { recursive: true, force: true });
   }
   return result;
 }

@@ -14,21 +14,6 @@ const LOCK_PATH = join('.iteraciones', 'preview.lock');
 
 const PREVIEW_PORT = 4321;
 
-const MIME_TYPES: Record<string, string> = {
-  '.css': 'text/css; charset=utf-8',
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.md': 'text/markdown; charset=utf-8',
-  '.pdf': 'application/pdf',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.epub': 'application/epub+zip',
-};
-
 const RELOAD_SCRIPT = '<script>(()=>{const s=new EventSource("/_preview/events");s.onmessage=()=>location.reload();})();</script>';
 
 export interface PreviewServer {
@@ -99,12 +84,10 @@ export function startPreviewServer(cwd: string, outputDir = join(cwd, DIST_FILES
       const headers = { 'Cache-Control': 'no-store' };
       if (extname(archivo) === '.html') {
         return new Response(inyectarRecarga(await Bun.file(archivo).text()), {
-          headers: { ...headers, 'Content-Type': MIME_TYPES['.html'] as string },
+          headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
         });
       }
-      return new Response(Bun.file(archivo), {
-        headers: { ...headers, 'Content-Type': MIME_TYPES[extname(archivo)] ?? 'application/octet-stream' },
-      });
+      return new Response(Bun.file(archivo), { headers });
     },
   });
 

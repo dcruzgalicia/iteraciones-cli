@@ -5,12 +5,20 @@ import { DEFAULT_HTML_FORMAT } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
-import { fmString, fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import {
+  fmString,
+  fmStringList,
+  fmTrimmedString,
+  metadataFieldValue,
+  resolveBooleanField,
+  resolveMetadataField,
+  resolveStringField,
+} from '../lib/frontmatter-fields.js';
 import { htmlStyle, STYLE_FONTS } from '../lib/html-styles.js';
 import { logWarning } from '../lib/logger.js';
 import { minifyHtml } from '../lib/minify.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
-import { posix } from '../lib/paths.js';
+import { posix, relativeAssetHref, relativePageHref } from '../lib/paths.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
 import type { LogoAsset } from './build-assets.js';
 import { htmlOwner, removeExtraHtmlPages } from './cleanup.js';
@@ -31,7 +39,6 @@ import {
   parseLetterheadHeight,
   preprocessDocumentImages,
   processWebImages,
-  relativeAssetHref,
   relImageMapFor,
   rewriteFmImagePaths,
   rewriteImagePaths,
@@ -59,24 +66,12 @@ import {
   KEYWORDS_DIR,
   primaryOutputExtension,
 } from './output-layout.js';
-import { espaciosNormales, formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
+import { espaciosNormales, formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, writeOutput } from './pipeline-io.js';
 import { type ExportContext, type FormatWorkSets, htmlKindFor, latexKindFor, type RenderContext } from './pipeline-setup.js';
 import { htmlPageFromMarkdown } from './render.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
 import { injectXmpMetadataIntoLatex, XMP_FIELDS } from './xmpdata.js';
-
-function htmlMetadataField(
-  fm: Record<string, unknown>,
-  formatCfg: Record<string, unknown> | undefined,
-  siteConfig: SiteConfig,
-  field: string,
-): string | undefined {
-  const resolved = resolveMetadataField(fm, formatCfg, siteConfig, field);
-  if (resolved === undefined) return undefined;
-  const joined = Array.isArray(resolved) ? resolved.join(', ') : String(resolved);
-  return joined || undefined;
-}
 
 interface TypeMeta {
   chip: string;
@@ -241,17 +236,38 @@ async function emitLatexAndQueuePdf(
   }
 }
 
+function imagenProcesada(raw: unknown, docDir: string, map: Map<string, string>): string | undefined {
+  const valor = fmTrimmedString(raw);
+  if (valor === undefined) return undefined;
+  const abs = isAbsolute(valor) ? valor : resolve(docDir, valor);
+  const processed = map.get(abs);
+  return processed !== undefined && processed !== abs ? processed : undefined;
+}
+
+function fondoDeTarjeta(
+  cubiertas: { frontCover?: unknown; backCover?: unknown },
+  dirAbs: string,
+  imagenes: Map<string, string> | undefined,
+): string | undefined {
+  for (const raw of [cubiertas.frontCover, cubiertas.backCover]) {
+    const valor = fmTrimmedString(raw);
+    if (valor === undefined) continue;
+    const abs = isAbsolute(valor) ? valor : resolve(dirAbs, valor);
+    const href = imagenes?.get(abs);
+    if (href === undefined || href === abs) continue;
+    return `<div class="tarjeta-fondo" aria-hidden="true"><img src="${href}" alt="" loading="lazy" decoding="async"></div>`;
+  }
+  return undefined;
+}
+
 function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<string, string>, fromDir: string): { front?: string; back?: string } {
   const covers: { front?: string; back?: string } = {};
   for (const [field, key] of [
     ['frontCover', 'front'],
     ['backCover', 'back'],
   ] as const) {
-    const raw = fm[field];
-    if (typeof raw !== 'string' || raw === '') continue;
-    const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
-    const processed = webMap.get(abs);
-    if (processed === undefined || processed === abs) continue;
+    const processed = imagenProcesada(fm[field], docDir, webMap);
+    if (processed === undefined) continue;
     covers[key] = relativeAssetHref(fromDir, `${ASSETS_IMAGES_DIR}/${basename(processed)}`);
   }
   return covers;
@@ -259,10 +275,7 @@ function htmlCoverUrls(fm: Record<string, unknown>, docDir: string, webMap: Map<
 
 function epubCoverPath(fm: Record<string, unknown>, docDir: string, epubMap: Map<string, string>): string | undefined {
   const raw = typeof fm.frontCover === 'string' && fm.frontCover !== '' ? fm.frontCover : fm.titleImage;
-  if (typeof raw !== 'string' || raw === '') return undefined;
-  const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
-  const processed = epubMap.get(abs);
-  return processed !== undefined && processed !== abs ? processed : undefined;
+  return imagenProcesada(raw, docDir, epubMap);
 }
 
 function contentChipPara(type: string | undefined): string | undefined {
@@ -278,10 +291,10 @@ function docChipHrefPara(dir: string, type: string | undefined, available?: Set<
 
 function logoVars(logo: LogoAsset | undefined, dir: string, logoSize: string | undefined): Pick<HtmlPageVars, 'logoBlock' | 'favicon'> {
   if (logo === undefined) return {};
-  const href = logo.kind === 'file' ? relativeHref(dir, logo.path) : '';
+  const href = logo.kind === 'file' ? relativePageHref(dir, logo.path) : '';
   return {
     logoBlock: logoBlockHtml(href, logoSize, logo.kind === 'inline' ? logo.svg : undefined),
-    favicon: logo.favicon === undefined ? undefined : `<link rel="icon" href="${relativeHref(dir, logo.favicon)}">`,
+    favicon: logo.favicon === undefined ? undefined : `<link rel="icon" href="${relativePageHref(dir, logo.favicon)}">`,
   };
 }
 
@@ -348,7 +361,7 @@ export async function emit404(args: {
     args.renderCtx.logo === undefined
       ? ''
       : logoBlockHtml(
-          args.renderCtx.logo.kind === 'file' ? relativeHref('.', args.renderCtx.logo.path) : '',
+          args.renderCtx.logo.kind === 'file' ? relativePageHref('.', args.renderCtx.logo.path) : '',
           site?.logoSize,
           args.renderCtx.logo.kind === 'inline' ? args.renderCtx.logo.svg : undefined,
         );
@@ -370,7 +383,7 @@ export async function emit404(args: {
   <meta name="robots" content="noindex">
   <title>Página no encontrada · ${Bun.escapeHTML(siteTitle)}</title>
   ${fontPreloads === undefined ? '' : fontPreloads}
-  ${ctx.needsCss ? `<link rel="stylesheet" href="${relativeHref('.', ASSETS_CSS_FILE)}">` : ''}
+  ${ctx.needsCss ? `<link rel="stylesheet" href="${relativePageHref('.', ASSETS_CSS_FILE)}">` : ''}
 </head>
 <body class="sitio">
   <div class="marco">
@@ -579,7 +592,7 @@ function publicationMetaHtml(args: {
   creatorHrefs: Map<string, string>;
   grupo?: 'visible' | 'tecnico';
 }): string | undefined {
-  const campo = (name: string): string | undefined => htmlMetadataField(args.fm, args.formatCfg, args.siteConfig, name);
+  const campo = (name: string): string | undefined => metadataFieldValue(args.fm, args.formatCfg, args.siteConfig, name);
   const texto = (name: string): string | undefined => {
     const valor = campo(name);
     return valor === undefined ? undefined : Bun.escapeHTML(valor);
@@ -703,7 +716,8 @@ function fontPreloadTags(style: string | undefined, dir: string): string | undef
   if (fonts.length === 0) return undefined;
   return fonts
     .map(
-      (font) => `<link rel="preload" href="${relativeHref(dir, `${ASSETS_FONTS_DIR}/${font.destination}`)}" as="font" type="font/woff2" crossorigin>`,
+      (font) =>
+        `<link rel="preload" href="${relativePageHref(dir, `${ASSETS_FONTS_DIR}/${font.destination}`)}" as="font" type="font/woff2" crossorigin>`,
     )
     .join('\n  ');
 }
@@ -726,6 +740,7 @@ function htmlVars(args: {
   keywordChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
+  backgroundImage?: string;
   docChipHrefOverride?: string;
   contentChipOverride?: string;
   indiceColeccion?: string;
@@ -761,15 +776,16 @@ function htmlVars(args: {
     sidebarExtras,
     pagination,
     discoveryIndex,
+    backgroundImage,
   } = args;
   const { ctx, lang, formatCfg } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, slug, outSlug, fm } = outputs;
   const titulo = doc.frontmatter.title || slug;
-  const subject = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject');
-  const abstractRaw = htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'abstract');
+  const subject = metadataFieldValue(fm, htmlConfig, ctx.siteConfig, 'subject');
+  const abstractRaw = metadataFieldValue(fm, htmlConfig, ctx.siteConfig, 'abstract');
   const keywords = keywordsFromFm(fm).map((keyword) => keyword.trim().toLocaleLowerCase('es'));
-  const metaDescription = opcional(htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'description') ?? htmlConfig?.site?.description);
+  const metaDescription = opcional(metadataFieldValue(fm, htmlConfig, ctx.siteConfig, 'description') ?? htmlConfig?.site?.description);
   const showDates = fm.showDates === false ? false : fm.showDates === true ? true : htmlConfig?.site?.showDates === true;
   const siteUrl = htmlConfig?.site?.url;
   const canonical = canonicalHref(siteUrl, dir, pageSlug ?? slug);
@@ -817,7 +833,20 @@ function htmlVars(args: {
     formatosHtml === undefined
       ? undefined
       : `<div class="meta-item cabecera-formatos"><span class="meta-label">Formatos</span><span class="nombres-enlazados meta-valor">${formatosHtml}</span></div>`;
-  const datosMeta = [publicationMeta, technicalMeta, formatosMeta].filter(Boolean).join('');
+  const creatorLinksHtml =
+    doc.frontmatter.type === 'creator'
+      ? getCreatorLinks(fm)
+          .map(
+            (link, i) =>
+              `${i === 0 ? '' : '<span class="separador-nombres">, </span>'}<span class="nombre"><a href="${Bun.escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer">${Bun.escapeHTML(link.name)}</a></span>`,
+          )
+          .join('')
+      : '';
+  const creatorLinksMeta =
+    creatorLinksHtml === ''
+      ? undefined
+      : `<div class="meta-item cabecera-redes"><span class="meta-label">Redes</span><span class="nombres-enlazados meta-valor">${creatorLinksHtml}</span></div>`;
+  const datosMeta = [publicationMeta, technicalMeta, formatosMeta, creatorLinksMeta].filter(Boolean).join('');
   const showCitation = htmlConfig?.site?.showCitation === true;
   const citationBlock =
     showCitation && (doc.frontmatter.type === undefined || doc.frontmatter.type === 'file' || doc.frontmatter.type === 'collection')
@@ -826,7 +855,7 @@ function htmlVars(args: {
           title: titulo,
           creators: doc.frontmatter.creator,
           date: doc.frontmatter.date,
-          publisher: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publisher'),
+          publisher: metadataFieldValue(fm, htmlConfig, ctx.siteConfig, 'publisher'),
           url: canonical,
           slug,
         })
@@ -844,14 +873,16 @@ function htmlVars(args: {
   const labels = htmlConfig?.site?.labels ?? {};
   const label = (key: string, fallback: string): string => labels[key] ?? fallback;
   const docChipHref = docChipHrefOverride ?? docChipHrefPara(dir, doc.frontmatter.type, available);
-  const paginaActual = relativeHref(dir, `${pageSlug ?? outSlug}.html`);
+  const paginaActual = relativePageHref(dir, `${pageSlug ?? outSlug}.html`);
   const home = htmlConfig?.site?.home;
   const hero =
     home !== undefined && doc.relativePath === 'index.md'
       ? `<section class="tarjeta tarjeta--hero"><div class="hero__cuerpo">${heroImage === undefined ? '' : `<img src="${heroImage}" alt="${Bun.escapeHTML(home.alt ?? home.title ?? '')}" class="hero__imagen">`}<div class="hero__texto">${home.title === undefined ? '' : `<h2 class="hero__titulo">${Bun.escapeHTML(home.title)}</h2>`}${home.text === undefined ? '' : `<p class="hero__descripcion">${Bun.escapeHTML(home.text)}</p>`}${home.url === undefined ? '' : `<p class="hero__accion"><a href="${Bun.escapeHTML(home.url)}" class="boton boton--hero">${Bun.escapeHTML(home.label ?? 'Conocer más')}</a></p>`}</div></div></section>`
       : undefined;
+  const background = backgroundImage ?? (renderCtx.siteBackground === undefined ? undefined : relativePageHref(dir, renderCtx.siteBackground));
   return {
     ...logoVars(renderCtx.logo, dir, htmlConfig?.site?.logoSize),
+    backgroundImage: background,
     hero,
     style: htmlConfig?.site?.style ?? 'clasico',
     fontPreloads: fontPreloadTags(htmlConfig?.site?.style, dir),
@@ -869,8 +900,8 @@ function htmlVars(args: {
     citationBlock,
     lang,
     theme: htmlConfig?.site?.theme,
-    css: cuando(ctx.needsCss, relativeHref(dir, ASSETS_CSS_FILE)),
-    iconTop: relativeHref(dir, `${ASSETS_IMAGES_DIR}/arrow-upward.webp`),
+    css: cuando(ctx.needsCss, relativePageHref(dir, ASSETS_CSS_FILE)),
+    iconTop: relativePageHref(dir, `${ASSETS_IMAGES_DIR}/arrow-upward.webp`),
     keywords: opcional(keywordsFromFm(fm).join(', ')),
     authorMeta: doc.frontmatter.creator.join(', '),
     docTitle: cuando(doc.frontmatter.title !== undefined && doc.frontmatter.title !== TITULO_POR_DEFECTO, doc.frontmatter.title ?? ''),
@@ -879,10 +910,10 @@ function htmlVars(args: {
     date: formatHumanDate(doc.frontmatter.date),
     dateIso: opcional(doc.frontmatter.date),
     showDates,
-    homeHref: cuando(hasHomePage, relativeHref(dir, 'index.html')),
+    homeHref: cuando(hasHomePage, relativePageHref(dir, 'index.html')),
     formats: formats !== undefined && formats.length > 0 ? formats : undefined,
 
-    titlehead: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
+    titlehead: metadataFieldValue(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
     subject: subjectVisible(subject, keywords),
     collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
     collectionCreator: nombresEnlazados(parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')), creatorHrefs),
@@ -910,7 +941,18 @@ function htmlVars(args: {
     docChipHref: docChipHref === '' || docChipHref === paginaActual ? undefined : docChipHref,
     extras: opcional(extras),
     sidebarExtras: opcional(sidebarExtras),
-    recientes: opcional(esListaIndex || doc.frontmatter.type === 'creator' ? '' : recentesCard(discoveryIndex, dir, label('recientes', 'Recientes'))),
+    recientes: opcional(
+      esListaIndex
+        ? ''
+        : recentesCards({
+            discoveryIndex,
+            dir,
+            cwd: renderCtx.ctx.cwd,
+            creatorHrefs,
+            imagenes: relImageMapFor(renderCtx.recentImages ?? new Map(), ASSETS_IMAGES_DIR, undefined, dir, true),
+            label: label('recientes', 'Reciente'),
+          }),
+    ),
     siteKeywords: opcional(
       siteKeywordsCard(
         discoveryIndex,
@@ -945,6 +987,7 @@ export interface EmitHtmlPageArgs {
   keywordChips?: string;
   announcementsTop?: string;
   announcementsBottom?: string;
+  backgroundImage?: string;
   docChipHrefOverride?: string;
   contentChipOverride?: string;
   synthetic?: boolean;
@@ -974,6 +1017,7 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
     keywordChips,
     announcementsTop,
     announcementsBottom,
+    backgroundImage,
     docChipHrefOverride,
     contentChipOverride,
     synthetic = false,
@@ -1028,6 +1072,7 @@ export async function emitHtmlPage(args: EmitHtmlPageArgs): Promise<void> {
         sidebarExtras,
         pagination,
         discoveryIndex,
+        backgroundImage,
       }),
       siteConfig: ctx.siteConfig,
       fm: outputs.fm,
@@ -1063,6 +1108,8 @@ export type CollectionEntry = {
   dirAbs?: string;
 
   image?: string;
+  frontCover?: string;
+  backCover?: string;
   body: string;
 };
 
@@ -1292,7 +1339,7 @@ export function memberHtmlHrefs(
     const slug = slugIndex.get(e.file)?.slug;
     if (slug === undefined) continue;
     const html = htmlPathFor(e.file, slug);
-    hrefs.set(e.file, relativeHref(baseDir, html));
+    hrefs.set(e.file, relativePageHref(baseDir, html));
   }
   return hrefs;
 }
@@ -1309,7 +1356,7 @@ export function creatorHrefs(discoveryIndex: Map<string, DiscoveryEntry>, fromDi
     if (typeof nombre !== 'string' || nombre.trim() === '') continue;
     if (hrefs.has(nombre)) continue;
     const html = htmlPathFor(ruta, entry.slug);
-    hrefs.set(nombre, relativeHref(fromDir, html));
+    hrefs.set(nombre, relativePageHref(fromDir, html));
   }
   return hrefs;
 }
@@ -1499,17 +1546,6 @@ export function primeraImagenDelCuerpo(body: string): string | undefined {
   if (md === null) return html?.[1];
   if (html === null) return md[1];
   return (md.index as number) <= (html.index as number) ? md[1] : html[1];
-}
-
-export function hrefsDeImagenes(imageMap: Map<string, string>, outputDir: string, dir: string): Map<string, string> {
-  const base = join(outputDir, dir);
-  const hrefs = new Map<string, string>();
-  for (const [abs, processed] of imageMap) {
-    if (processed === abs) continue;
-    const rel = posix(relative(base, processed));
-    hrefs.set(abs, rel.startsWith('.') ? rel : `./${rel}`);
-  }
-  return hrefs;
 }
 
 function figuraDeTarjeta(href: string, enlace: string | undefined, lazy = false): string {
@@ -1753,7 +1789,7 @@ function licenciaHtml(siteConfig: SiteConfig, dir: string, override?: string | f
   const licencia = licenciaResuelta(siteConfig, override);
   if (licencia === undefined) return undefined;
   const iconos = licencia.def.iconos
-    .map((nombre) => `<img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.webp`)}" alt="" class="licencia__icono">`)
+    .map((nombre) => `<img src="${relativePageHref(dir, `${ASSETS_IMAGES_DIR}/${nombre}.webp`)}" alt="" class="licencia__icono">`)
     .join('');
   const parrafos = licencia.def.parrafos.map((parrafo) => `<p>${parrafo}</p>`).join('');
   return [
@@ -1782,18 +1818,6 @@ export function creatorCard(
       doc.body.trim(),
     ].join('\n'),
   );
-}
-
-export function containersCard(
-  contenedores: { titulo: string; href: string; type: string | undefined }[],
-  dir: string,
-  available?: Set<string>,
-): string {
-  const chips: string[] = [];
-  if (contenedores.some((c) => c.type === 'collection')) chips.push(chipHtml('Colecciones', 'collection', dir, EXTRA_PILL_CLASSES, available));
-  if (contenedores.some((c) => c.type === 'list')) chips.push(chipHtml('Listas', 'list', dir, EXTRA_PILL_CLASSES, available));
-  const items = contenedores.map((c) => `- [${c.titulo}](${c.href})`).join('\n');
-  return extraCard([`<div class="chips chips--compactos">${chips.join('')}</div>`, '', items].join('\n'));
 }
 
 function keywordChipsCard(keywords: { titulo: string; href: string; count?: number }[], titleHref?: string, label = 'Palabras clave'): string {
@@ -1825,20 +1849,66 @@ function keywordIndexAvailable(discoveryIndex: Map<string, DiscoveryEntry>): boo
 }
 
 function keywordIndexHref(dir: string, discoveryIndex: Map<string, DiscoveryEntry>): string | undefined {
-  return keywordIndexAvailable(discoveryIndex) ? relativeHref(dir, `${KEYWORD_INDEX_SLUG}.html`) : undefined;
+  return keywordIndexAvailable(discoveryIndex) ? relativePageHref(dir, `${KEYWORD_INDEX_SLUG}.html`) : undefined;
 }
 
-function recentesCard(discoveryIndex: Map<string, DiscoveryEntry>, dir: string, label = 'Recientes'): string {
-  const recientes = miembrosDeUnType(discoveryIndex, 'file').slice(0, RECENTES_LIMIT);
-  if (recientes.length === 0) return '';
-  const items = recientes
-    .map((ruta) => {
-      const entry = discoveryIndex.get(ruta);
-      const html = htmlPathFor(ruta, entry?.slug);
-      return `<li><a href="${relativeHref(dir, html)}" class="enlace-acento">${Bun.escapeHTML(entry?.title ?? ruta)}</a></li>`;
+function recientesDe(discoveryIndex: Map<string, DiscoveryEntry>): string[] {
+  return [...discoveryIndex.entries()]
+    .filter(([ruta, entry]) => posix(ruta).replace(/^\.\//, '') !== 'index.md' && (tipoDe(entry) === 'file' || tipoDe(entry) === 'collection'))
+    .map(([ruta]) => ruta)
+    .sort((a, b) => {
+      const diferencia = fechaOrdenable(discoveryIndex.get(b)) - fechaOrdenable(discoveryIndex.get(a));
+      return diferencia !== 0 ? diferencia : a.localeCompare(b);
     })
-    .join('');
-  return `<div class="${EXTRA_CARD_CLASSES}"><div class="chips"><h2 class="${EXTRA_PILL_CLASSES}">${Bun.escapeHTML(label)}</h2></div><ul class="lista-enlaces lista-enlaces--disco lista-enlaces--compacta">${items}</ul></div>`;
+    .slice(0, RECENTES_LIMIT);
+}
+
+function recentesCards(args: {
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  dir: string;
+  cwd: string;
+  creatorHrefs: Map<string, string>;
+  imagenes?: Map<string, string>;
+  label: string;
+}): string {
+  return recientesDe(args.discoveryIndex)
+    .flatMap((ruta) => {
+      const entry = args.discoveryIndex.get(ruta);
+      if (entry === undefined) return [];
+      const card = metaCard({
+        chip: `<h2 class="not-prose chip chip--titulo">${Bun.escapeHTML(args.label)}</h2>`,
+        entry,
+        href: relativePageHref(args.dir, htmlPathFor(ruta, entry.slug)),
+        dirAbs: dirname(join(args.cwd, ruta)),
+        creatorHrefs: args.creatorHrefs,
+        discoveryIndex: args.discoveryIndex,
+        imagenes: args.imagenes,
+        anthologistLabel: fmString(entry.fm?.collectionCreatorPrefix, 'Antologadora'),
+      });
+      return [[CARD_WRAPPER, '', card, '', '</div>'].join('\n')];
+    })
+    .join('\n');
+}
+
+export async function preparaImagenesDeRecientes(args: {
+  cwd: string;
+  outputDir: string;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  pdfxActive: boolean;
+}): Promise<Map<string, string>> {
+  const imagenes: string[] = [];
+  for (const ruta of recientesDe(args.discoveryIndex)) {
+    const entry = args.discoveryIndex.get(ruta);
+    if (entry === undefined) continue;
+    const dir = dirname(join(args.cwd, ruta));
+    for (const raw of [entry.fm?.frontCover, entry.fm?.backCover]) {
+      const valor = fmTrimmedString(raw);
+      if (valor !== undefined) imagenes.push(isAbsolute(valor) ? valor : resolve(dir, valor));
+    }
+  }
+  if (imagenes.length === 0) return new Map();
+  const procesadas = await processWebImages(args.cwd, imagenes, join(args.outputDir, ASSETS_IMAGES_DIR), args.pdfxActive);
+  return procesadas.imageMap;
 }
 
 interface EnlaceMenu {
@@ -1889,7 +1959,7 @@ function esEnlaceExterno(url: string): boolean {
 
 function hrefDeMenu(url: string, dir: string): string {
   if (esEnlaceExterno(url) || /^(?:mailto|tel):/i.test(url) || url.startsWith('#')) return url;
-  return relativeHref(dir, url.replace(/^\.?\//, ''));
+  return relativePageHref(dir, url.replace(/^\.?\//, ''));
 }
 
 function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
@@ -1899,7 +1969,7 @@ function enlaceDeMenuChip(enlace: EnlaceMenu, dir: string): string {
 
 function menuHeaderLink(links: EnlaceMenu[], dir: string, menuLabel = 'Menú'): string | undefined {
   if (links.length === 0) return undefined;
-  return `<a href="${relativeHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="${Bun.escapeHTML(menuLabel)}"><img src="${relativeHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" width="24" height="24" class="menu-icono"><span>${Bun.escapeHTML(menuLabel)}</span></a>`;
+  return `<a href="${relativePageHref(dir, 'menu.html')}" class="${MENU_BUTTON_CLASSES}" aria-label="${Bun.escapeHTML(menuLabel)}"><img src="${relativePageHref(dir, `${ASSETS_IMAGES_DIR}/menu.webp`)}" alt="" width="24" height="24" class="menu-icono"><span>${Bun.escapeHTML(menuLabel)}</span></a>`;
 }
 
 function menuFooterContent(links: EnlaceMenu[], dir: string, menuLabel = 'Menú'): string | undefined {
@@ -1961,7 +2031,7 @@ async function renderAnuncios(args: {
       const destino = args.discoveryIndex.get(entry.file);
       if (destino?.slug === undefined) return '';
       const rel = htmlPathFor(entry.file, destino.slug);
-      return announcementCard(entry, relativeHref(args.dir, rel), args.dir, args.available, args.imagenes);
+      return announcementCard(entry, relativePageHref(args.dir, rel), args.dir, args.available, args.imagenes);
     })
     .filter((card) => card !== '')
     .join('\n\n');
@@ -1996,7 +2066,7 @@ async function anunciosDeLaPagina(args: {
   const anuncios = (await readAnuncios(args.discoveryIndex, args.cwd)).filter((entry) => posix(entry.file).replace(/^\.\//, '') !== args.docPath);
   const imagenes = new Map([
     ...args.imagenes,
-    ...(args.announcementImages === undefined ? [] : hrefsDeImagenes(args.announcementImages, args.outputDir, args.dir)),
+    ...(args.announcementImages === undefined ? [] : relImageMapFor(args.announcementImages, ASSETS_IMAGES_DIR, undefined, args.dir, true)),
   ]);
   const comunes = {
     discoveryIndex: args.discoveryIndex,
@@ -2063,7 +2133,7 @@ async function buildExtrasHtml(
   args: {
     tarjetas?: string;
     creatorDocs: CreatorDoc[];
-    contenedores: { titulo: string; href: string; type: string | undefined }[];
+    contenedores: { titulo: string; href: string; type: string | undefined; ruta: string }[];
     redesCreador: { name: string; url: string }[];
     duenoRedes: string;
     creatorImage?: string;
@@ -2075,6 +2145,8 @@ async function buildExtrasHtml(
     imagenes?: Map<string, string>;
     sourcePath: string;
     dir: string;
+    cwd: string;
+    discoveryIndex: Map<string, DiscoveryEntry>;
   },
   parte: 'main' | 'sidebar' | 'creator' = 'main',
 ): Promise<string> {
@@ -2098,15 +2170,28 @@ async function buildExtrasHtml(
     if (args.tarjetas === undefined || args.tarjetas === '') return parte === 'creator' ? '' : retrato;
     const tarjetasHtml = await render([args.tarjetas]);
     if (parte === 'creator') return tarjetasHtml;
-    return `<div class="creator-publications-grid">${retrato}${tarjetasHtml}</div>`;
+    return `<div class="preview-grid">${retrato}${tarjetasHtml}</div>`;
   }
 
   const partes: string[] = [];
   for (const doc of args.creatorDocs) {
     partes.push([CARD_WRAPPER, '', creatorCard(doc, args.dir, args.creatorHrefs, args.available, args.imagenes), '', '</div>'].join('\n'));
   }
-  if (args.contenedores.some((c) => c.type === 'collection')) {
-    partes.push([CARD_WRAPPER, '', containersCard(args.contenedores, args.dir, args.available), '', '</div>'].join('\n'));
+  for (const contenedor of args.contenedores.filter((c) => c.type === 'collection')) {
+    const entry = args.discoveryIndex.get(contenedor.ruta);
+    if (entry === undefined) continue;
+    const chip = chipHtml('Colección', 'collection', args.dir, EXTRA_PILL_CLASSES, args.available);
+    const card = metaCard({
+      chip,
+      entry,
+      href: contenedor.href,
+      dirAbs: dirname(join(args.cwd, contenedor.ruta)),
+      creatorHrefs: args.creatorHrefs,
+      discoveryIndex: args.discoveryIndex,
+      imagenes: args.imagenes,
+      anthologistLabel: fmString(entry.fm?.collectionCreatorPrefix, 'Antologadora'),
+    });
+    partes.push([CARD_WRAPPER, '', card, '', '</div>'].join('\n'));
   }
   if (args.redesCreador.length > 0) {
     partes.push([CARD_WRAPPER, '', creatorLinksCard(args.duenoRedes, args.redesCreador), '', '</div>'].join('\n'));
@@ -2288,7 +2373,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     true,
     discoveryIndex,
     { path: relativePath, outSlug: slug, showDates: renderCtx.formatCfg?.html?.site?.showDates === true },
-    hrefsDeImagenes(imageMap, outputDir, dir),
+    relImageMapFor(imageMap, ASSETS_IMAGES_DIR, undefined, dir, true),
   );
   const doc: BuildDocument = {
     filePath: join(cwd, relativePath),
@@ -2312,7 +2397,7 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     dir,
     available,
     creatorHrefs: hrefsCreadores,
-    imagenes: hrefsDeImagenes(imageMap, outputDir, dir),
+    imagenes: relImageMapFor(imageMap, ASSETS_IMAGES_DIR, undefined, dir, true),
     outputDir,
     announcementImages: renderCtx.announcementImages,
     filters: exportCtx.filters,
@@ -2404,7 +2489,7 @@ export async function emitKeywordLists(args: {
       imageMap: procesadas.imageMap,
       imageSizes: procesadas.sizes,
       docChip: 'Palabra clave',
-      docChipHref: keywordIndexAvailable(discoveryIndex) ? relativeHref(KEYWORDS_DIR, `${KEYWORD_INDEX_SLUG}.html`) : '',
+      docChipHref: keywordIndexAvailable(discoveryIndex) ? relativePageHref(KEYWORDS_DIR, `${KEYWORD_INDEX_SLUG}.html`) : '',
       warning: () => `no se escribió la lista de "${label}" porque "${KEYWORDS_DIR}/${slug}.html" es el archivo de ese documento`,
     });
   }
@@ -2468,7 +2553,7 @@ function chipsDePertenencia(
     if (contenedor?.type !== 'collection' || ruta === pagePath) continue;
     const titulo = Bun.escapeHTML(contenedor.title || ruta);
     const html = htmlPathFor(ruta, contenedor.slug);
-    chips.push(`<a href="${relativeHref(dir, html)}" class="not-prose chip chip--coleccion chip--enlace">${chipLabel(titulo)}</a>`);
+    chips.push(`<a href="${relativePageHref(dir, html)}" class="not-prose chip chip--coleccion chip--enlace">${chipLabel(titulo)}</a>`);
   }
   return chips;
 }
@@ -2631,7 +2716,10 @@ function collectionCard(
     href,
     lazy,
   );
-  const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
+  const fondo = e.type === 'creator' ? undefined : fondoDeTarjeta(e, e.dirAbs ?? '.', imagenes);
+  const clases = `${COLLECTION_CARD_CLASSES}${fondo === undefined ? '' : ' tarjeta--con-fondo'}`;
+  const card = [`:::: {class="${clases}"}`, ''];
+  if (fondo !== undefined) card.push(fondo, '');
   if (cabecera.chips !== '') card.push(cabecera.chips, '');
   const contenido = [...cabecera.cuerpo];
   const parrafos = fragment === '' ? [] : parrafosPlanos(fragment);
@@ -2651,6 +2739,57 @@ function collectionCard(
   }
   card.push('', '::::');
   return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');
+}
+
+function autorasDeEntrada(entry: DiscoveryEntry, discoveryIndex: Map<string, DiscoveryEntry>): string[] {
+  if (tipoDe(entry) !== 'collection') return entry.creator.filter((nombre) => nombre.trim() !== '');
+  const nombres = new Set<string>();
+  for (const file of entry.files ?? []) {
+    for (const nombre of discoveryIndex.get(file)?.creator ?? []) {
+      if (nombre.trim() !== '') nombres.add(nombre);
+    }
+  }
+  return [...nombres].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+interface MetaCardArgs {
+  chip: string;
+  entry: DiscoveryEntry;
+  href: string;
+  dirAbs: string;
+  creatorHrefs: Map<string, string>;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  imagenes?: Map<string, string>;
+  anthologistLabel: string;
+}
+
+function metaCard(args: MetaCardArgs): string {
+  const tipo = tipoDe(args.entry);
+  const titulo = args.entry.title || TITULO_POR_DEFECTO;
+  const autoras = autorasDeEntrada(args.entry, args.discoveryIndex);
+  const autorasHtml =
+    autoras.length === 0
+      ? AUTORA_POR_DEFECTO
+      : autoras.length === 1
+        ? renderNombres(autoras, tipo === 'collection' ? 'gris' : 'accent', args.creatorHrefs)
+        : 'Varias autoras';
+  const antologadora = tipo === 'collection' ? parseAuthors(args.entry.fm?.collectionCreator) : [];
+  const antologadoraHtml =
+    antologadora.length === 0
+      ? ''
+      : `<div class="antologadora"><span class="meta-label">${Bun.escapeHTML(args.anthologistLabel)}</span><span class="nombres-enlazados meta-valor">${renderNombres(antologadora, 'gris', args.creatorHrefs)}</span></div>`;
+  const fondo = fondoDeTarjeta(args.entry.fm ?? {}, args.dirAbs, args.imagenes);
+  const clases = `${COLLECTION_CARD_CLASSES}${fondo === undefined ? '' : ' tarjeta--con-fondo'}`;
+  return [
+    `<div class="${clases}">`,
+    ...(fondo === undefined ? [] : [fondo]),
+    `<div class="tarjeta-cabecera"><div class="tarjeta-chips">${args.chip}</div></div>`,
+    `<h3 class="not-prose tarjeta-titulo"><a href="${args.href}" class="enlace-miembro">${Bun.escapeHTML(titulo)}</a></h3>`,
+    `<h2 class="not-prose tarjeta-autor">${autorasHtml}</h2>`,
+    ...(antologadoraHtml === '' ? [] : [antologadoraHtml]),
+    `<p class="tarjeta-pie not-prose"><a href="${args.href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(tipo)} →</a></p>`,
+    '</div>',
+  ].join('\n');
 }
 
 function desplazaEncabezados(body: string, salto: number): string {
@@ -2867,14 +3006,7 @@ export async function collectionCreatorDocPaths(
   extractCreatorNames(collectionFm.contributor, creatorNames);
   if (creatorNames.size === 0) return [];
 
-  const paths: string[] = [];
-  for (const [relativePath, entry] of discoveryIndex.entries()) {
-    if (entry.type !== 'creator') continue;
-    const name = (entry.fm?.name ?? entry.fm?.title ?? '') as string;
-    if (!name || !creatorNames.has(name)) continue;
-    paths.push(relativePath);
-  }
-  return paths;
+  return creatorDocPathsFor([...creatorNames], discoveryIndex);
 }
 
 export async function resolveCollectionCreatorDocs(
@@ -2968,13 +3100,13 @@ function contenedoresDe(
   doc: BuildDocument,
   dir: string,
   discoveryIndex: Map<string, DiscoveryEntry>,
-): { titulo: string; href: string; type: string | undefined }[] {
+): { titulo: string; href: string; type: string | undefined; ruta: string }[] {
   const entry = discoveryIndex.get(doc.relativePath);
   const rutas = entry?.containedBy ?? [];
   return rutas.map((ruta) => {
     const contenedor = discoveryIndex.get(ruta);
     const html = htmlPathFor(ruta, contenedor?.slug);
-    return { titulo: contenedor?.title || ruta, href: relativeHref(dir, html), type: contenedor?.type };
+    return { titulo: contenedor?.title || ruta, href: relativePageHref(dir, html), type: contenedor?.type, ruta };
   });
 }
 
@@ -3020,6 +3152,7 @@ async function preprocessDocImages(
   content: string,
   renderCtx: RenderContext,
   extraEntries: CollectionEntry[] = [],
+  discoveryIndex?: Map<string, DiscoveryEntry>,
 ): Promise<DocumentImages> {
   const { ctx, plan, formatCfg } = renderCtx;
   const active = plan.activeFormats;
@@ -3031,6 +3164,18 @@ async function preprocessDocImages(
   const fmConLicencia = lowertitlebackLicencia === undefined ? fmBase : { ...fmBase, lowertitleback: lowertitlebackLicencia };
   const fmImagenes = renderCtx.pdfxActive ? fmConLicencia : { ...fmConLicencia, startpaper: undefined };
 
+  const imagenesContenedores: string[] = [];
+  if (active.html && discoveryIndex !== undefined) {
+    for (const ruta of discoveryIndex.get(doc.relativePath)?.containedBy ?? []) {
+      const contenedor = discoveryIndex.get(ruta);
+      if (contenedor?.type !== 'collection') continue;
+      const dir = dirname(join(ctx.cwd, ruta));
+      for (const raw of [contenedor.fm?.frontCover, contenedor.fm?.backCover]) {
+        const valor = fmTrimmedString(raw);
+        if (valor !== undefined) imagenesContenedores.push(isAbsolute(valor) ? valor : resolve(dir, valor));
+      }
+    }
+  }
   const membreteColeccion = collectionLetterheadFiles(collectionEntries);
   const alturaMembrete = collectionEntries
     .filter((e) => e.type === 'intervention')
@@ -3062,6 +3207,7 @@ async function preprocessDocImages(
         ? [resolve(ctx.cwd, formatCfg.html.site.home.image)]
         : []),
       ...(doc.frontmatter.type === 'creator' ? retratoDeLaPagina(outputs.fm, dirname(doc.filePath)) : []),
+      ...imagenesContenedores,
     ],
   });
 }
@@ -3149,6 +3295,7 @@ async function emitCollectionHtml(
   webMap: Map<string, string>,
   imageSizes: Map<string, ImageDimensions> | undefined,
   creatorLinks: { name: string; url: string }[],
+  backgroundImage: string | undefined,
 ): Promise<void> {
   const { ctx, plan, formatCfg } = renderCtx;
   if (!(plan.activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html'))) return;
@@ -3172,7 +3319,7 @@ async function emitCollectionHtml(
   const pageContent = esMenu
     ? [splitFrontmatter(content).body.trim(), menuPageMarkdown(enlacesMenuPage, outputs.dir)].filter((parte) => parte !== '').join('\n\n')
     : content;
-  const imagenes = hrefsDeImagenes(webMap, ctx.outputDir, outputs.dir);
+  const imagenes = relImageMapFor(webMap, ASSETS_IMAGES_DIR, undefined, outputs.dir, true);
   const esCreadora = doc.frontmatter.type === 'creator';
   const { paginas, tarjetasPaginas } = paginasDeLaPagina({
     doc,
@@ -3219,7 +3366,7 @@ async function emitCollectionHtml(
     creatorDocs,
     contenedores: contenedoresDe(doc, outputs.dir, discoveryIndex),
     palabrasClave,
-    redesCreador: esCreadora ? creatorLinks : [],
+    redesCreador: esCreadora ? [] : creatorLinks,
     duenoRedes,
     creatorImage,
     creatorAlt: creatorImage === undefined ? undefined : `Retrato de ${doc.frontmatter.title || outputs.slug}`,
@@ -3229,6 +3376,8 @@ async function emitCollectionHtml(
     imagenes,
     sourcePath: doc.filePath,
     dir: outputs.dir,
+    cwd: ctx.cwd,
+    discoveryIndex,
     available,
   };
   const extras = await extrasDeLaPagina(extrasComunes, tarjetasPaginas, parteDeExtras(doc.frontmatter.type));
@@ -3267,6 +3416,7 @@ async function emitCollectionHtml(
     keywordChips: keywordChips,
     announcementsTop: anunciosTop,
     announcementsBottom: anunciosBottom,
+    backgroundImage,
   });
   await removeExtraHtmlPages(ctx.outputDir, outputs.dir, outputs.outSlug, paginas.length, discoveryIndex);
 }
@@ -3292,11 +3442,26 @@ async function emitCollectionFormats(
   const docDir = dirname(doc.filePath);
   const mergedFm = mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd);
   const entradasCreadora = doc.frontmatter.type === 'creator' ? await entradasDeLaCreadora(doc, outputs, discoveryIndex, ctx.cwd) : [];
-  const images = await preprocessDocImages(doc, outputs, collectionEntries, creatorDocs, content, renderCtx, entradasCreadora);
+  const images = await preprocessDocImages(doc, outputs, collectionEntries, creatorDocs, content, renderCtx, entradasCreadora, discoveryIndex);
   const pdfImages = images.pdf ?? { imageMap: new Map<string, string>(), processedFiles: [], sizes: new Map(), names: new Map() };
-  const webMap = images.web?.imageMap ?? new Map<string, string>();
+  let webMap = images.web?.imageMap ?? new Map<string, string>();
+  let pageBackgroundAbs: string | undefined;
+  if (plan.activeFormats.html) {
+    const raw = fmTrimmedString(outputs.fm.backgroundImage);
+    if (raw !== undefined) {
+      const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
+      if (await Bun.file(abs).exists()) {
+        pageBackgroundAbs = abs;
+        const procesadas = await processWebImages(ctx.cwd, [abs], join(ctx.outputDir, ASSETS_IMAGES_DIR), renderCtx.pdfxActive);
+        webMap = new Map([...webMap, ...procesadas.imageMap]);
+      } else {
+        logWarning(`fondo de página no encontrado: "${raw}"`, 'build');
+      }
+    }
+  }
   const epubMap = images.epub?.imageMap ?? new Map<string, string>();
   const relImageMap = relImageMapFor(webMap, ASSETS_IMAGES_DIR, undefined, outputs.dir);
+  const pageBackgroundHref = pageBackgroundAbs === undefined ? undefined : relImageMap.get(pageBackgroundAbs);
 
   const fmAssets = rewriteFmImagePaths(outputs.fm, relImageMap, docDir);
 
@@ -3341,6 +3506,7 @@ async function emitCollectionFormats(
     webMap,
     images.web?.sizes,
     creatorLinks,
+    pageBackgroundHref,
   );
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
@@ -3468,11 +3634,8 @@ function retratoDePaginaHref(
   outputDir: string,
   dir: string,
 ): string | undefined {
-  const raw = fmTrimmedString(fm.image);
-  if (raw === undefined) return undefined;
-  const abs = isAbsolute(raw) ? raw : resolve(docDir, raw);
-  const processed = webMap.get(abs);
-  if (processed === undefined || processed === abs) return undefined;
+  const processed = imagenProcesada(fm.image, docDir, webMap);
+  if (processed === undefined) return undefined;
   return `./${posix(relative(join(outputDir, dir), processed))}`;
 }
 
@@ -3487,6 +3650,11 @@ function imagenesDeLasTarjetas(entradas: CollectionEntry[], cwd: string): string
     if (src !== undefined) imagenes.push(isAbsolute(src) ? src : resolve(dir, src));
     if (entrada.type === 'creator' && entrada.image !== undefined) {
       imagenes.push(isAbsolute(entrada.image) ? entrada.image : resolve(dir, entrada.image));
+    }
+    if (entrada.type !== 'creator') {
+      for (const raw of [entrada.frontCover, entrada.backCover]) {
+        if (raw !== undefined) imagenes.push(isAbsolute(raw) ? raw : resolve(dir, raw));
+      }
     }
   }
   return imagenes;

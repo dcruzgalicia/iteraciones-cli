@@ -5,6 +5,7 @@ export const DEFAULT_HTML_FORMAT = {
     title: 'iteraciones',
     description: 'escribir, compartir, re-existir',
     logo: '',
+    backgroundImage: undefined as string | undefined,
     logoSize: '50px',
     theme: 'dark' as const,
     style: 'clasico' as const,

@@ -12,11 +12,13 @@ import { relativeLabel } from '../lib/paths.js';
 import {
   agregaExcepcionesAlTexto,
   analyzePdf,
+  cuerpoLineas,
   esReglaDeEspaciado,
   nombreCortado,
   type OpcionesAnalisis,
   palabraSinCorte,
   parseaExcepciones,
+  pieRepetidas,
   TYPOGRAPHY_RULES,
   type TypographyIncidence,
 } from '../lib/pdf-typography.js';
@@ -125,12 +127,9 @@ function formatea(incidencia: TypographyIncidence): string {
     numeros.length < 2
       ? `línea ${numeros[0]}`
       : `líneas ${numeros[0]}-${numeros.at(-1)}${incidencia.total > lineas.length ? ` de ${incidencia.total}` : ''}`;
-  const cuerpo = lineas.map((l) => `         ${l.line}  ${l.text.trimEnd()}`).join('\n');
-  if (incidencia.type === 'repeated-first-letter' || incidencia.type === 'repeated-last-letter') {
-    const donde = incidencia.type === 'repeated-first-letter' ? 'empiezan' : 'terminan';
-    const letras = JSON.stringify(incidencia.letter).replace(/"/g, "'");
-    return `  pág ${incidencia.page}  ${rango}  ${incidencia.type}\n${cuerpo}\n         las ${numeros.length} ${donde} por ${letras}`;
-  }
+  const cuerpo = cuerpoLineas(incidencia).join('\n');
+  const pie = pieRepetidas(incidencia);
+  if (pie !== undefined) return `  pág ${incidencia.page}  ${rango}  ${incidencia.type}\n${cuerpo}\n${pie}`;
   return `  pág ${incidencia.page}  ${rango}  ${incidencia.type}\n${cuerpo}`;
 }
 
@@ -163,7 +162,11 @@ function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
   };
 }
 
-function cargarExcepciones(cwd: string, options: TypographyOptions, crear = false): ReturnType<typeof parseaExcepciones> {
+function cargarExcepciones(
+  cwd: string,
+  options: TypographyOptions,
+  crear = false,
+): { excepciones: ReturnType<typeof parseaExcepciones>; texto: string } {
   const ruta = resolve(cwd, options.exceptions ?? '.typography-exceptions');
   let contenido: string | undefined;
   try {
@@ -175,7 +178,7 @@ function cargarExcepciones(cwd: string, options: TypographyOptions, crear = fals
       throw new BuildError(`no existe el archivo de excepciones ${relativeLabel(cwd, ruta)}`);
     }
   }
-  return contenido === undefined ? [] : parseaExcepciones(contenido);
+  return { excepciones: contenido === undefined ? [] : parseaExcepciones(contenido), texto: contenido ?? '' };
 }
 
 function esSeleccion(spec: string): boolean {
@@ -261,12 +264,9 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
       return;
     }
 
-    const excepciones = cargarExcepciones(cwd, options, options.ignore !== undefined);
+    const { excepciones, texto: textoExcepciones } = cargarExcepciones(cwd, options, options.ignore !== undefined);
 
-    const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
-      pdf,
-      incidences: await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) }),
-    }));
+    const files = await analizaPdfs(cwd, targets, analisis, excepciones);
 
     if (options.ignore !== undefined) {
       const planas = files.flatMap((file) => file.incidences.map((incidencia) => ({ pdf: file.pdf, incidencia })));
@@ -277,12 +277,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
         return;
       }
       const ruta = resolve(cwd, options.exceptions ?? '.typography-exceptions');
-      let texto = '';
-      try {
-        texto = readFileSync(ruta, 'utf8');
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-      }
+      let texto = textoExcepciones;
       for (const pdf of new Set(numeros.map((numero) => (planas[numero - 1] as { pdf: string }).pdf))) {
         const archivo = relativeLabel(cwd, pdf);
         const elegidas = numeros.map((numero) => planas[numero - 1] as { pdf: string; incidencia: TypographyIncidence });
@@ -1065,7 +1060,7 @@ async function limpiaTypografia(
   porPdf: Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, string> }>;
 }> {
   await aseguraGit(cwd, '--clean');
-  const excepciones = cargarExcepciones(cwd, options, true);
+  const { excepciones } = cargarExcepciones(cwd, options, true);
   const analizados = await analizaPdfs(cwd, targets, analisis, excepciones);
   const planas = analizados.flatMap((file) => file.incidences.map((incidencia) => ({ pdf: file.pdf, incidencia })));
   const numeros =
@@ -1149,7 +1144,7 @@ async function arreglaTypografia(
   let exactMiss = 0;
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>();
 
-  const excepciones = cargarExcepciones(cwd, options);
+  const { excepciones } = cargarExcepciones(cwd, options);
   const analizados = await analizaPdfs(cwd, targets, analisis, excepciones);
   for (const { pdf, incidences } of analizados) {
     if (incidences.length === 0) continue;

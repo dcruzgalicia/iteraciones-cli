@@ -75,11 +75,11 @@ Característica: las portadas del PDF
       Y el libro lleva la portada "backCover"
       Y el libro lleva la portada "startpaper"
       Y el proyecto compila el PDF
-      Entonces el PDF del libro tiene 7 páginas
+      Entonces el PDF del libro tiene 6 páginas
       Y la página 1 del PDF es "frontCover"
       Y la página 2 del PDF está en blanco
       Y la página 3 del PDF es "startpaper"
-      Y la última página del PDF es impar y es "backCover"
+      Y la última página del PDF es par y es "backCover"
 
     Escenario: Con un solo startpaper, la guarda sigue siendo la primera
       Dado que la raíz del proyecto está vacía
@@ -162,7 +162,7 @@ Característica: las portadas del PDF
 
   Regla de negocio: Con PDF/X-1a la contraportada va al final
 
-    Escenario: La contraportada va a la última página impar
+    Escenario: La contraportada va a la última página par
       Dado que la raíz del proyecto está vacía
       Y el proyecto tiene un libro
       Y el proyecto activa PDFX
@@ -174,7 +174,7 @@ Característica: las portadas del PDF
       Entonces la página 1 del PDF es "frontCover"
       Y la página 2 del PDF está en blanco
       Y la página 3 del PDF dice "Un epígrafe de apertura"
-      Y la última página del PDF es impar y es "backCover"
+      Y la última página del PDF es par y es "backCover"
       Y la página 1 del PDF está en escala de grises
       Y la última página del PDF está en escala de grises
 
@@ -184,7 +184,15 @@ Característica: las portadas del PDF
       Y el proyecto activa PDFX
       Y el libro lleva la portada "backCover"
       Y el proyecto compila el PDF
-      Entonces la última página del PDF es impar y es "backCover"
+      Entonces la última página del PDF es par y es "backCover"
+
+    Escenario: Sin PDFX la contraportada va en la página 2
+      Dado que la raíz del proyecto está vacía
+      Y el proyecto tiene un libro
+      Y el libro lleva la portada "backCover"
+      Y el proyecto compila el PDF
+      Entonces la página 1 del PDF está en blanco
+      Y la página 2 del PDF tiene una imagen
 
   Regla de negocio: La imagen compartida de extratitle conserva su tamaño
 

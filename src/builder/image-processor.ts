@@ -3,6 +3,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:pat
 import { BuildError } from '../lib/errors.js';
 import { fmStringList } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
+import { relativeAssetHref, relativePageHref } from '../lib/paths.js';
 import { cpuConcurrency, exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { isScriptCapture, recordSupportCommand } from '../lib/script-recorder.js';
 import { resetToolVersionCache, toolVersionMagick } from '../lib/tool-version.js';
@@ -51,13 +52,6 @@ export function uniqueName(base: string, taken: Set<string>): string {
   }
   taken.add(name);
   return name;
-}
-
-export function relativeAssetHref(fromDir: string, asset: string): string {
-  const clean = fromDir.replace(/^\.\//, '').replace(/\/$/, '');
-  const depth = clean === '' || clean === '.' ? 0 : clean.split('/').filter(Boolean).length;
-  const prefix = depth === 0 ? './' : '../'.repeat(depth);
-  return `${prefix}${asset.replace(/^\.\//, '')}`;
 }
 
 interface ImageProcessSpec {
@@ -838,7 +832,16 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
 
   const webEpubSources = sources.filter((source) => source.field !== 'startpaper');
 
-  if (args.wants.web) {
+  const processWebEpub = async (opts: {
+    outputDir: string;
+    ext: 'webp' | 'jpg';
+    publish: boolean;
+    flatten: boolean;
+    restMaxWidthPx: number;
+    restQuality: number;
+    restFallbackAlphaQuality?: number;
+    targetDefine?: string;
+  }): Promise<ProcessedImages> => {
     const covers = webEpubSources.filter((source) => source.field === 'frontCover' || source.field === 'backCover');
     const rest = webEpubSources.filter((source) => source.field !== 'frontCover' && source.field !== 'backCover');
     const parts: ProcessedImages[] = [];
@@ -848,13 +851,13 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
         await processSources(
           covers,
           {
-            outputDir: args.dirs.web,
-            ext: 'webp',
+            outputDir: opts.outputDir,
+            ext: opts.ext,
             kind: 'web',
-            publish: true,
+            publish: opts.publish,
             maxWidthPx: coverWidth,
             quality: 70,
-            flatten: false,
+            flatten: opts.flatten,
             density300: false,
             grayscale: false,
             coverColor: false,
@@ -870,17 +873,18 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
         await processSources(
           rest,
           {
-            outputDir: args.dirs.web,
-            ext: 'webp',
+            outputDir: opts.outputDir,
+            ext: opts.ext,
             kind: 'web',
-            publish: true,
-            maxWidthPx: 1280,
+            publish: opts.publish,
+            maxWidthPx: opts.restMaxWidthPx,
             fallbackMaxWidthPx: 420,
-            quality: 50,
+            quality: opts.restQuality,
             fallbackQuality: 20,
-            fallbackAlphaQuality: 60,
+            fallbackAlphaQuality: opts.restFallbackAlphaQuality,
             maxBytes: 25 * 1024,
-            flatten: false,
+            targetDefine: opts.targetDefine,
+            flatten: opts.flatten,
             density300: false,
             grayscale: false,
             coverColor: false,
@@ -893,65 +897,31 @@ export async function preprocessDocumentImages(args: PreprocessArgs): Promise<Do
 
     let merged: ProcessedImages = { imageMap: new Map(), processedFiles: [], sizes: new Map(), names: new Map() };
     for (const part of parts) merged = mergeProcessedImages(merged, part);
-    result.web = merged;
+    return merged;
+  };
+
+  if (args.wants.web) {
+    result.web = await processWebEpub({
+      outputDir: args.dirs.web,
+      ext: 'webp',
+      publish: true,
+      flatten: false,
+      restMaxWidthPx: 1280,
+      restQuality: 50,
+      restFallbackAlphaQuality: 60,
+    });
   }
 
   if (args.wants.epub) {
-    const covers = webEpubSources.filter((source) => source.field === 'frontCover' || source.field === 'backCover');
-    const rest = webEpubSources.filter((source) => source.field !== 'frontCover' && source.field !== 'backCover');
-    const parts: ProcessedImages[] = [];
-
-    if (covers.length > 0) {
-      parts.push(
-        await processSources(
-          covers,
-          {
-            outputDir: args.dirs.epub,
-            ext: 'jpg',
-            kind: 'web',
-            publish: false,
-            maxWidthPx: coverWidth,
-            quality: 70,
-            flatten: true,
-            density300: false,
-            grayscale: false,
-            coverColor: false,
-          },
-          targets,
-          cacheDir,
-        ),
-      );
-    }
-
-    if (rest.length > 0) {
-      parts.push(
-        await processSources(
-          rest,
-          {
-            outputDir: args.dirs.epub,
-            ext: 'jpg',
-            kind: 'web',
-            publish: false,
-            maxWidthPx: 1024,
-            fallbackMaxWidthPx: 420,
-            quality: 55,
-            fallbackQuality: 20,
-            maxBytes: 25 * 1024,
-            targetDefine: 'jpeg:extent=25KB',
-            flatten: true,
-            density300: false,
-            grayscale: false,
-            coverColor: false,
-          },
-          targets,
-          cacheDir,
-        ),
-      );
-    }
-
-    let merged: ProcessedImages = { imageMap: new Map(), processedFiles: [], sizes: new Map(), names: new Map() };
-    for (const part of parts) merged = mergeProcessedImages(merged, part);
-    result.epub = merged;
+    result.epub = await processWebEpub({
+      outputDir: args.dirs.epub,
+      ext: 'jpg',
+      publish: false,
+      flatten: true,
+      restMaxWidthPx: 1024,
+      restQuality: 55,
+      targetDefine: 'jpeg:extent=25KB',
+    });
   }
 
   return result;
@@ -997,10 +967,12 @@ export function relImageMapFor(
   base = ASSETS_IMAGES_DIR,
   names?: Map<string, string>,
   fromDir = '.',
+  dotSlash = false,
 ): Map<string, string> {
+  const href = dotSlash ? relativePageHref : relativeAssetHref;
   return new Map(
     [...imageMap]
       .filter(([src, dst]) => dst !== src)
-      .map(([src, dst]): [string, string] => [src, relativeAssetHref(fromDir, `${base}/${names?.get(dst) ?? basename(dst)}`)]),
+      .map(([src, dst]): [string, string] => [src, href(fromDir, `${base}/${names?.get(dst) ?? basename(dst)}`)]),
   );
 }

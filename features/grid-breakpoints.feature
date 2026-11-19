@@ -16,14 +16,6 @@ Característica: columnas del grid por breakpoint
     Y preview-grid usa 2 columnas en 1120
     Y preview-grid usa 3 columnas en xl
 
-  Escenario: Las publicaciones de creadora nunca pasan de dos columnas
-    Cuando leo las utilidades de grid
-    Entonces creator-publications-grid usa 1 columna base
-    Y creator-publications-grid usa 2 columnas en 800
-    Y creator-publications-grid usa 1 columna en md
-    Y creator-publications-grid usa 2 columnas en 1120
-    Y creator-publications-grid nunca usa 3 columnas
-
   Escenario: En sm el contenido ocupa una columna y el aside dos
     Cuando leo las utilidades de grid
     Entonces las páginas con sidebar usan una columna en sm

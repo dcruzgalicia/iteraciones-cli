@@ -227,11 +227,20 @@ export async function composeLatexTemplate(opts: {
     lines.push('$endif$');
   } else {
     lines.push('$if(backCover)$');
+    lines.push('$if(frontCover)$');
+    lines.push('\\setcover{$backCover$}');
+    lines.push('\\coverblankpage');
+    lines.push('$else$');
+    lines.push('\\thispagestyle{empty}%');
+    lines.push('\\null\\clearpage');
     lines.push('\\setcover{$backCover$}');
     lines.push('\\coverblankpage');
     lines.push('$endif$');
+    lines.push('$endif$');
   }
+  lines.push('$if(frontCover)$');
   lines.push('\\coververso');
+  lines.push('$endif$');
   if (opts.pdfxActive === true) {
     lines.push('$if(startpaper)$');
     lines.push('\\setstartpaper{$startpaper$}');

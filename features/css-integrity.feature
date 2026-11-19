@@ -128,6 +128,12 @@ Característica: El CSS se genera sólo para la combinación activa
       Y el CSS da a ".sitio" la propiedad "background-size"
       Y el CSS no tiene "radial-gradient"
 
+    Escenario: El fondo personalizado usa cover, centrado y fijo
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".sitio--fondo" la propiedad "background-size: cover"
+      Y el CSS da a ".sitio--fondo" la propiedad "background-position: center"
+      Y el CSS da a ".sitio--fondo" la propiedad "background-attachment: fixed"
+
   Regla de negocio: La caché de CSS sólo depende del CSS y la configuración
 
     Esquema del escenario: La caché se comporta así ante cada cambio

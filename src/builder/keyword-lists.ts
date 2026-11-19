@@ -1,6 +1,6 @@
+import { relativePageHref } from '../lib/paths.js';
 import { slugBase } from './discover.js';
 import { KEYWORDS_DIR } from './output-layout.js';
-import { relativeHref } from './pipeline-io.js';
 import type { DiscoveryEntry } from './types.js';
 
 export interface KeywordList {
@@ -50,5 +50,5 @@ export function keywordMembers(discoveryIndex: Map<string, DiscoveryEntry>, slug
 
 export function keywordHref(dir: string, slug: string): string {
   if (dir === KEYWORDS_DIR) return `./${slug}.html`;
-  return relativeHref(dir, `${KEYWORDS_DIR}/${slug}.html`);
+  return relativePageHref(dir, `${KEYWORDS_DIR}/${slug}.html`);
 }

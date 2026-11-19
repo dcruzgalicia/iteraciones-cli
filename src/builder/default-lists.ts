@@ -1,4 +1,4 @@
-import { relativeHref } from './pipeline-io.js';
+import { relativePageHref } from '../lib/paths.js';
 
 export const DEFAULT_LISTS = [
   {
@@ -27,5 +27,5 @@ export function defaultListSlug(type: string | undefined): string | undefined {
 export function defaultListHref(dir: string, type: string | undefined): string | undefined {
   const slug = defaultListSlug(type);
   if (slug === undefined) return undefined;
-  return relativeHref(dir, `${slug}.html`);
+  return relativePageHref(dir, `${slug}.html`);
 }

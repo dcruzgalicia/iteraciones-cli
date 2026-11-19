@@ -24,7 +24,6 @@ interface Step {
   sortKey: string;
   argv: string[];
   env?: Record<string, string>;
-  cwd?: string;
   input?: string;
   inputPath?: string;
 
@@ -134,8 +133,8 @@ function recordPandoc(args: string[], options: ScriptExecOptions, stdout: string
   else push({ ...common, sortKey: options.scriptKey ?? options.input ?? '', raw: stdout, ext });
 }
 
-export function recordSupportCommand(section: Section, sortKey: string, argv: string[], cwd?: string): void {
-  push({ section, sortKey, argv, cwd });
+export function recordSupportCommand(section: Section, sortKey: string, argv: string[]): void {
+  push({ section, sortKey, argv });
 }
 
 export function resolveScriptStdout(raw: string, distPath: string | undefined, final: string, post?: string[]): void {
@@ -285,7 +284,6 @@ function renderCommand(step: Step, cap: Capture): string {
       .join(' ');
     cmd = `${prefix} ${cmd}`;
   }
-  if (step.cwd !== undefined) cmd = `(cd ${quote(relativeLabel(cap.root, step.cwd))} && ${cmd})`;
   const stdin = step.inputFrom?.target ?? step.inputPath;
   if (stdin !== undefined) cmd += ` < ${quote(relativeLabel(cap.root, stdin))}`;
   if (step.target !== undefined) cmd += ` > ${quote(relativeLabel(cap.root, step.target))}`;
