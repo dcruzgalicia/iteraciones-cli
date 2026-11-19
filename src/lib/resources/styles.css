@@ -536,6 +536,10 @@ a:hover {
   -webkit-line-clamp: 2;
 }
 
+.tarjeta--fragmento.tarjeta--auto {
+  height: auto;
+}
+
 .tarjeta--extra {
   overflow-wrap: anywhere;
   font-size: 0.875rem;

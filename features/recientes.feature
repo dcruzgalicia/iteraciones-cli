@@ -74,6 +74,7 @@ Característica: las tarjetas de entradas recientes del sidebar
       Y el archivo "dist/files/texto-6.html" dice "Texto 2"
       Y el archivo "dist/files/texto-6.html" no dice "Texto 1"
       Y el archivo "dist/files/texto-6.html" dice "Leer texto completo →"
+      Y el archivo "dist/files/texto-6.html" dice "tarjeta--auto"
 
     Escenario: La lista por defecto de index no lleva tarjetas de recientes
       Dado que la raíz del proyecto tiene un proyecto de prueba

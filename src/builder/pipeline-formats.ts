@@ -2779,7 +2779,7 @@ function metaCard(args: MetaCardArgs): string {
       ? ''
       : `<div class="antologadora"><span class="meta-label">${Bun.escapeHTML(args.anthologistLabel)}</span><span class="nombres-enlazados meta-valor">${renderNombres(antologadora, 'gris', args.creatorHrefs)}</span></div>`;
   const fondo = fondoDeTarjeta(args.entry.fm ?? {}, args.dirAbs, args.imagenes);
-  const clases = `${COLLECTION_CARD_CLASSES}${fondo === undefined ? '' : ' tarjeta--con-fondo'}`;
+  const clases = `${COLLECTION_CARD_CLASSES} tarjeta--auto${fondo === undefined ? '' : ' tarjeta--con-fondo'}`;
   return [
     `<div class="${clases}">`,
     ...(fondo === undefined ? [] : [fondo]),
