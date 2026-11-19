@@ -56,9 +56,9 @@ Característica: las reglas de los snapshots
 
   Regla de negocio: La comparación es estricta y no se configura
 
-    Escenario: dpi, umbral y fuzz son fijos
+    Escenario: El comparador usa 300 dpi
       Dado que la raíz del proyecto está vacía
-      Entonces la comparación es dpi 300, umbral 0 y fuzz 0
+      Entonces la comparación usa 300 dpi
 
   Regla de negocio: El directorio de trabajo vive dentro del proyecto cuando lo hay
 

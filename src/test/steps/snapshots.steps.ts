@@ -13,7 +13,6 @@ import {
   clearSnapshotImages,
   DPI,
   diffImageName,
-  FUZZ_PERCENT,
   formatVisualReport,
   formatVisualSummary,
   listPdfFiles,
@@ -24,7 +23,6 @@ import {
   snapshotImageName,
   snapshotStemFor,
   sortPageFiles,
-  THRESHOLD_PERCENT,
   visualSlug,
 } from '../../lib/visual-diff.js';
 import { pdfDeUnaPagina } from '../helpers/pdf.ts';
@@ -164,10 +162,8 @@ Then('el caché de los snapshots está en {string}', (esperado: string) => {
   if (leido !== expande(esperado)) throw new Error(`está en ${JSON.stringify(leido)} y debería estar en ${JSON.stringify(esperado)}`);
 });
 
-Then('la comparación es dpi {int}, umbral {int} y fuzz {int}', (dpi: number, umbral: number, fuzz: number) => {
-  if (DPI !== dpi || THRESHOLD_PERCENT !== umbral || FUZZ_PERCENT !== fuzz) {
-    throw new Error(`es dpi ${DPI}, umbral ${THRESHOLD_PERCENT}, fuzz ${FUZZ_PERCENT} y el escenario dice otra cosa`);
-  }
+Then('la comparación usa {int} dpi', (dpi: number) => {
+  if (DPI !== dpi) throw new Error(`es dpi ${DPI} y el escenario dice ${dpi}`);
 });
 
 Given('que comparé {int} páginas con {int} sin cambios y {int} modificadas', (comparadas: number, iguales: number, cambiadas: number) => {

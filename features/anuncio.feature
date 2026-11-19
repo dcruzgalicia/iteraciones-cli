@@ -25,6 +25,7 @@ Característica: los anuncios del sitio
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/tercera-convocatoria-por-historikas.html" existe
       Y el archivo "dist/files/index.html" pone "</main>" antes que "Tercera convocatoria"
+      Y el archivo "dist/files/index.html" dice "tarjeta--anuncio"
       Y el archivo "dist/files/anuncio.html" no existe
 
     Escenario: Con placement bottom aparece al final del sidebar

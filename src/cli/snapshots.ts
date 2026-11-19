@@ -204,12 +204,25 @@ async function saveSnapshots(cwd: string, run: SnapshotRun): Promise<void> {
   if (batch) await saveSiteMap(cwd, outputDir);
 }
 
+interface HtmlSnapshotPair {
+  html: string;
+  stem: string;
+  referencia?: string[];
+}
+
+async function htmlSnapshotPairs(cwd: string, outputDir: string, htmlFiles: string[]): Promise<HtmlSnapshotPair[]> {
+  const guardados = await listSnapshotImages(join(cwd, SNAPSHOTS_DIR));
+  return htmlFiles.map((html) => {
+    const stem = htmlStemFor(html, outputDir);
+    return { html, stem, referencia: guardados.get(stem) };
+  });
+}
+
 async function saveHtmlSnapshots(cwd: string, outputDir: string, htmlFiles: string[], store: string): Promise<number> {
   if (htmlFiles.length === 0) return 0;
   await mkdir(store, { recursive: true });
   let guardadas = 0;
-  for (const html of htmlFiles) {
-    const stem = htmlStemFor(html, outputDir);
+  for (const { html, stem } of await htmlSnapshotPairs(cwd, outputDir, htmlFiles)) {
     const captura = await captureHtmlShot(html);
     if (captura === undefined) continue;
     await clearSnapshotImages(store, stem);
@@ -341,22 +354,19 @@ function reportVerdict(cwd: string, compared: Compared[]): void {
 async function checkHtmlSnapshots(cwd: string, outputDir: string): Promise<ComparedHtml[]> {
   const htmlFiles = await listHtmlFiles(outputDir);
   if (htmlFiles.length === 0) return [];
-  const store = join(cwd, SNAPSHOTS_DIR);
-  const guardados = await listSnapshotImages(store);
-  const pendientes: Array<{ html: string; referencia: string[] }> = [];
+  const pares = await htmlSnapshotPairs(cwd, outputDir, htmlFiles);
+  const pendientes: Array<{ html: string; stem: string; referencia: string[] }> = [];
   const sinLineaBase: string[] = [];
-  for (const html of htmlFiles) {
-    const referencia = guardados.get(htmlStemFor(html, outputDir));
-    if (referencia === undefined) sinLineaBase.push(relativeLabel(cwd, html));
-    else pendientes.push({ html, referencia });
+  for (const par of pares) {
+    if (par.referencia === undefined) sinLineaBase.push(relativeLabel(cwd, par.html));
+    else pendientes.push({ html: par.html, stem: par.stem, referencia: par.referencia });
   }
   if (sinLineaBase.length > 0) {
     logInfo(`${plural(sinLineaBase.length, 'página HTML agregada')} sin captura, sin comparación: ${sinLineaBase.join(', ')}`, 'snapshots');
   }
   if (pendientes.length > 0) logInfo(`comparando ${plural(pendientes.length, 'página HTML', 'páginas HTML')}…`, 'snapshots');
 
-  const resultados = await mapWithConcurrency(pendientes, 4, async ({ html, referencia }) => {
-    const stem = htmlStemFor(html, outputDir);
+  const resultados = await mapWithConcurrency(pendientes, 4, async ({ html, stem, referencia }) => {
     const captura = await captureHtmlShot(html);
     if (captura === undefined) return undefined;
     const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(html));

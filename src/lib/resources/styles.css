@@ -31,6 +31,10 @@
   --acento-suave: color-mix(in oklab, var(--color-accent-500) 12%, transparent);
   --acento-hover: color-mix(in oklab, var(--color-accent-500) 20%, transparent);
   --acento-sombra: color-mix(in oklab, var(--color-accent-500) 30%, transparent);
+  --anuncio-bg: var(--color-accent-700);
+  --anuncio-texto: #fff;
+  --anuncio-borde: color-mix(in oklab, var(--color-accent-900) 60%, transparent);
+  --anuncio-sombra: color-mix(in oklab, var(--color-accent-900) 40%, transparent);
   --radio: 0.375rem;
   --radio-tarjeta: 0.5rem;
   --paper-bg: color-mix(in oklab, var(--color-accent-500) 8%, var(--color-stone-50));
@@ -550,6 +554,41 @@ a:hover {
   font-size: 0.875rem;
   line-height: 1.5;
   padding: 0.75rem;
+}
+
+.tarjeta--anuncio,
+.page-sidebar .tarjeta--anuncio {
+  background-color: var(--anuncio-bg);
+  border-color: var(--anuncio-borde);
+  box-shadow: 5px 5px 0 0 var(--anuncio-sombra);
+  color: var(--anuncio-texto);
+}
+
+.tarjeta--anuncio:hover {
+  border-color: var(--color-accent-900);
+  box-shadow: 6px 6px 0 0 color-mix(in oklab, var(--color-accent-900) 50%, transparent);
+}
+
+.tarjeta--anuncio :is(h1, h2, h3, h4, h5, h6, p, li, dt, dd, blockquote, strong, em, span, a) {
+  color: var(--anuncio-texto);
+}
+
+.tarjeta--anuncio .chip {
+  --chip-bg: color-mix(in oklab, #fff 18%, transparent);
+  --chip-border: color-mix(in oklab, #fff 55%, transparent);
+  --chip-text: var(--anuncio-texto);
+}
+
+.tarjeta--anuncio .boton {
+  background: #fff;
+  border-color: #fff;
+  color: var(--color-accent-800);
+}
+
+.tarjeta--anuncio .boton:hover {
+  background: var(--color-accent-100);
+  border-color: var(--color-accent-100);
+  color: var(--color-accent-900);
 }
 
 .tarjeta--extra.prose {

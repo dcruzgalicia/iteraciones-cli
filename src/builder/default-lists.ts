@@ -1,22 +1,20 @@
 import { relativePageHref } from '../lib/paths.js';
+import { TYPE_META, type TypeKey } from './type-meta.js';
+
+const lista = (type: TypeKey, slug: string) => ({
+  type,
+  slug,
+  title: TYPE_META[type].listTitle ?? '',
+  description: TYPE_META[type].listDescription ?? '',
+});
 
 export const DEFAULT_LISTS = [
-  {
-    type: 'file',
-    slug: 'texto',
-    title: 'Textos',
-    description: 'Textos compartidos por esta comunidad.',
-  },
-  { type: 'collection', slug: 'coleccion', title: 'Colecciones', description: 'Conjuntos de contenidos reunidos por esta comunidad.' },
-  { type: 'creator', slug: 'creadora', title: 'Colaboradoras', description: 'Personas que participan en esta comunidad.' },
-  { type: 'list', slug: 'lista', title: 'Listas', description: 'Listas de contenidos de esta comunidad.' },
-  { type: 'announcement', slug: 'anuncio', title: 'Anuncios', description: 'Avisos de esta comunidad.' },
-  {
-    type: 'all',
-    slug: 'index',
-    title: 'Publicaciones',
-    description: 'Publicaciones compartidas por esta comunidad.',
-  },
+  lista('file', 'texto'),
+  lista('collection', 'coleccion'),
+  lista('creator', 'creadora'),
+  lista('list', 'lista'),
+  lista('announcement', 'anuncio'),
+  lista('all', 'index'),
 ] as const;
 
 export function defaultListSlug(type: string | undefined): string | undefined {

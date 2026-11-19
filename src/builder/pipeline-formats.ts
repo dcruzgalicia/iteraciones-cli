@@ -55,6 +55,7 @@ import {
   removeEmptyToc,
 } from './latex-composer.js';
 import { detectPageSize } from './latex-preamble.js';
+import { DEFAULT_LICENSE, type LicenseDef, licenseDef } from './licenses.js';
 import { fechaOrdenable } from './list-filter.js';
 import {
   ASSETS_CSS_FILE,
@@ -69,16 +70,10 @@ import {
 import { espaciosNormales, formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, writeOutput } from './pipeline-io.js';
 import { type ExportContext, type FormatWorkSets, htmlKindFor, latexKindFor, type RenderContext } from './pipeline-setup.js';
 import { htmlPageFromMarkdown } from './render.js';
+import { TYPE_META, type TypeKey } from './type-meta.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
 import { injectXmpMetadataIntoLatex, XMP_FIELDS } from './xmpdata.js';
-
-interface TypeMeta {
-  chip: string;
-  contentChip?: string;
-  memberLabel?: string;
-  cta?: string;
-}
 
 let htmlLabels: Record<string, string> = {};
 
@@ -90,20 +85,14 @@ function uiLabel(key: string, fallback: string): string {
   return htmlLabels[key] ?? fallback;
 }
 
-const TYPE_META: Record<string, TypeMeta> = {
-  file: { chip: 'Texto', contentChip: 'Contenido', memberLabel: 'Texto', cta: 'Leer texto completo' },
-  collection: { chip: 'Colección', memberLabel: 'Colección', cta: 'Ver colección completa' },
-  creator: { chip: 'Colaboradora', contentChip: 'Bio', memberLabel: 'Colaboradora', cta: 'Ver página de la creadora' },
-  list: { chip: 'Lista', memberLabel: 'Lista', cta: 'Ver lista completa' },
-  menu: { chip: 'Menú', contentChip: 'Menú' },
-  announcement: { chip: 'Anuncio', memberLabel: 'Anuncio', cta: 'Leer anuncio' },
-  all: { chip: 'Publicaciones' },
-};
+function typeLabel(type: string | undefined, key: 'chip' | 'memberLabel'): string {
+  if (type === undefined || type === 'file') return uiLabel('texto', TYPE_META.file[key]);
+  if (type === 'creator') return uiLabel('colaboradora', TYPE_META.creator[key]);
+  return TYPE_META[type as TypeKey]?.[key] ?? TYPE_META.file[key];
+}
 
 function docChipLabel(type: string | undefined): string {
-  if (type === undefined || type === 'file') return uiLabel('texto', 'Texto');
-  if (type === 'creator') return uiLabel('colaboradora', 'Colaboradora');
-  return TYPE_META[type]?.chip ?? 'Texto';
+  return typeLabel(type, 'chip');
 }
 
 export interface DocumentOutputs {
@@ -279,7 +268,7 @@ function epubCoverPath(fm: Record<string, unknown>, docDir: string, epubMap: Map
 }
 
 function contentChipPara(type: string | undefined): string | undefined {
-  return type === undefined || type === 'file' ? uiLabel('contenido', 'Contenido') : TYPE_META[type]?.contentChip;
+  return type === undefined || type === 'file' ? uiLabel('contenido', 'Contenido') : TYPE_META[type as TypeKey]?.contentChip;
 }
 
 function docChipHrefPara(dir: string, type: string | undefined, available?: Set<string>): string | undefined {
@@ -1620,9 +1609,7 @@ const EXTRA_PILL_SPACED_CLASSES = 'not-prose chip chip--titulo chip--espaciado';
 const MEMBER_BADGE_CLASSES = 'not-prose tarjeta-badge';
 
 function memberTypeLabel(type: string | undefined): string {
-  if (type === undefined || type === 'file') return uiLabel('texto', 'Texto');
-  if (type === 'creator') return uiLabel('colaboradora', 'Colaboradora');
-  return TYPE_META[type]?.memberLabel ?? 'Texto';
+  return typeLabel(type, 'memberLabel');
 }
 
 function chipLabel(label: string): string {
@@ -1648,6 +1635,14 @@ const MEMBER_LINK_CLASSES = 'enlace-miembro';
 
 const CARD_CTA_CLASSES = 'boton boton--cta';
 
+function tarjetaPie(href: string, type: string | undefined): string {
+  return `<p class="tarjeta-pie not-prose"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(type)} →</a></p>`;
+}
+
+function clasesTarjeta(fondo: string | undefined, auto = false): string {
+  return `${COLLECTION_CARD_CLASSES}${auto ? ' tarjeta--auto' : ''}${fondo === undefined ? '' : ' tarjeta--con-fondo'}`;
+}
+
 const MENU_BUTTON_CLASSES = 'chip chip--menu';
 
 const MENU_LINK_CLASSES = 'chip chip--coleccion chip--enlace';
@@ -1659,38 +1654,17 @@ const KEYWORD_INDEX_SLUG = 'keyword';
 const SIDEBAR_KEYWORD_CHIP_CLASSES = 'not-prose chip chip--keyword chip--enlace chip--conteo';
 const KEYWORD_BADGE_CLASSES = 'chip__badge';
 function ctaDeTarjeta(type: string | undefined): string {
-  if (type === undefined || type === 'file') return uiLabel('leer-texto-completo', 'Leer texto completo');
-  return TYPE_META[type]?.cta ?? 'Leer texto completo';
+  if (type === undefined || type === 'file') return uiLabel('leer-texto-completo', TYPE_META.file.cta ?? '');
+  return TYPE_META[type as TypeKey]?.cta ?? TYPE_META.file.cta ?? '';
 }
 
 const EXTRA_CARD_CLASSES = 'tarjeta tarjeta--extra prose contenido-compacto';
 
-function extraCard(inner: string): string {
-  return [`:::: {class="${EXTRA_CARD_CLASSES}"}`, '', inner, '', '::::'].join('\n');
+function extraCard(inner: string, extraClasses = ''): string {
+  const classes = `${EXTRA_CARD_CLASSES}${extraClasses === '' ? '' : ` ${extraClasses}`}`;
+  return [`:::: {class="${classes}"}`, '', inner, '', '::::'].join('\n');
 }
 
-interface LicenciaDef {
-  iconos: readonly string[];
-  parrafos: readonly string[];
-}
-
-const TEXTO_CC_BY_NC_ND = [
-  'Algunos derechos reservados. Esta obra está bajo una Licencia Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional. Usted es libre de compartir, copiar y redistribuir el material en cualquier medio o formato, pero debe dar crédito de manera adecuada, brindar un enlace a la&nbsp;licencia e indicar si se han realizado cambios. No puede hacer uso de esta obra con propósitos comerciales, ni remezclar, transformar o crear obras derivadas, ni distribuir el material modificado.',
-] as const;
-
-const TEXTO_PF = [
-  'Algunos derechos reservados. Esta obra está bajo una Licencia de Producción Feminista. Usted es libre de compartir, copiar, distribuir y adaptar esta obra en cualquier medio o formato, pero debe dar crédito a todas las personas que hicieron posible su creación, reconocer sus contribuciones e indicar si ha realizado cambios. Si remezcla, transforma o crea a partir de esta obra, debe distribuir la obra derivada bajo esta misma licencia; además, los materiales y archivos necesarios para su creación, modificación y reproducción deben ser de acceso público, de modo que cualquiera pueda consultar, modificar y reutilizar la obra derivada. La explotación comercial solo está permitida a cooperativas, organizaciones, colectivas y redes autogestivas que se identifiquen y organicen bajo principios feministas, anticapitalistas, antirracistas y decoloniales.',
-] as const;
-
-const LICENCIAS: Record<string, LicenciaDef> = {
-  'CC-BY-NC-ND-4.0': { iconos: ['cc', 'by', 'nc', 'nd'], parrafos: TEXTO_CC_BY_NC_ND },
-  'PF-AC-PR-FA-1.0': {
-    iconos: ['pf', 'ac', 'pr', 'fa'],
-    parrafos: TEXTO_PF,
-  },
-};
-
-const LICENCIA_POR_DEFECTO = 'CC-BY-NC-ND-4.0';
 const LICENSE_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/license');
 
 function normalizarLicencia(valor: string | undefined): string | undefined {
@@ -1714,14 +1688,14 @@ function licenciaExplicita(override: string | false | undefined, siteConfig: Sit
 
 interface LicenciaResuelta {
   id: string;
-  def: LicenciaDef;
+  def: LicenseDef;
 }
 
 function licenciaResuelta(siteConfig: SiteConfig, override?: string | false): LicenciaResuelta | undefined {
   const explicita = licenciaExplicita(override, siteConfig);
   if (explicita === false) return undefined;
-  const id = normalizarLicencia(explicita) ?? LICENCIA_POR_DEFECTO;
-  const def = LICENCIAS[id];
+  const id = normalizarLicencia(explicita) ?? DEFAULT_LICENSE;
+  const def = licenseDef(id);
   return def === undefined ? undefined : { id, def };
 }
 
@@ -1732,16 +1706,16 @@ export function licenciaEfectiva(fm: Record<string, unknown>, siteConfig: SiteCo
 export function iconosDeLicencias(ids: Iterable<string>): Set<string> {
   const iconos = new Set<string>();
   for (const id of ids) {
-    for (const icono of LICENCIAS[id]?.iconos ?? []) iconos.add(icono);
+    for (const icono of licenseDef(id)?.iconos ?? []) iconos.add(icono);
   }
   return iconos;
 }
 
-function licenciaTexto(def: LicenciaDef): string {
+function licenciaTexto(def: LicenseDef): string {
   return def.parrafos.join('\n\n');
 }
 
-function licenciaMarkdown(def: LicenciaDef): string {
+function licenciaMarkdown(def: LicenseDef): string {
   return `## Licencia\n\n${licenciaTexto(def).replace(/&nbsp;/g, ' ')}`;
 }
 
@@ -1761,7 +1735,7 @@ function conLicenciaAlFinal(base: string, fm: Record<string, unknown>, siteConfi
   return `${base}\n\n${licencia}`;
 }
 
-function licenciaLowertitleback(def: LicenciaDef, docDir: string): string {
+function licenciaLowertitleback(def: LicenseDef, docDir: string): string {
   const iconos = def.iconos
     .map((nombre) => {
       const iconPath = relative(docDir, join(LICENSE_RESOURCES_DIR, `${nombre}.svg`));
@@ -2017,6 +1991,7 @@ function announcementCard(
         ? ''
         : `<p class="tarjeta-pie tarjeta-pie--anuncio not-prose"><a href="${href}" class="${CARD_CTA_CLASSES}">Leer anuncio →</a></p>`,
     ].join('\n'),
+    'tarjeta--anuncio',
   );
 }
 
@@ -2705,7 +2680,7 @@ function collectionCard(
     lazy,
   );
   const fondo = e.type === 'creator' ? undefined : fondoDeTarjeta(e, e.dirAbs ?? '.', imagenes);
-  const clases = `${COLLECTION_CARD_CLASSES}${fondo === undefined ? '' : ' tarjeta--con-fondo'}`;
+  const clases = clasesTarjeta(fondo);
   const card = [`:::: {class="${clases}"}`, ''];
   if (fondo !== undefined) card.push(fondo, '');
   if (cabecera.chips !== '') card.push(cabecera.chips, '');
@@ -2723,7 +2698,7 @@ function collectionCard(
   }
   card.push(...contenido);
   if (href !== undefined) {
-    card.push('', `<p class="tarjeta-pie not-prose"><a href="${href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(e.type)} →</a></p>`);
+    card.push('', tarjetaPie(href, e.type));
   }
   card.push('', '::::');
   return [CARD_WRAPPER, '', ...card, '', '</div>'].join('\n');
@@ -2767,15 +2742,15 @@ function metaCard(args: MetaCardArgs): string {
       ? ''
       : `<div class="antologadora"><span class="meta-label">${Bun.escapeHTML(args.anthologistLabel)}</span><span class="nombres-enlazados meta-valor">${renderNombres(antologadora, 'gris', args.creatorHrefs)}</span></div>`;
   const fondo = fondoDeTarjeta(args.entry.fm ?? {}, args.dirAbs, args.imagenes);
-  const clases = `${COLLECTION_CARD_CLASSES} tarjeta--auto${fondo === undefined ? '' : ' tarjeta--con-fondo'}`;
+  const clases = clasesTarjeta(fondo, true);
   return [
     `<div class="${clases}">`,
     ...(fondo === undefined ? [] : [fondo]),
     `<div class="tarjeta-cabecera"><div class="tarjeta-chips">${args.chip}</div></div>`,
-    `<h3 class="not-prose tarjeta-titulo"><a href="${args.href}" class="enlace-miembro">${Bun.escapeHTML(titulo)}</a></h3>`,
+    titleHtmlPara(titulo, args.href),
     `<h2 class="not-prose tarjeta-autor">${autorasHtml}</h2>`,
     ...(antologadoraHtml === '' ? [] : [antologadoraHtml]),
-    `<p class="tarjeta-pie not-prose"><a href="${args.href}" class="${CARD_CTA_CLASSES}">${ctaDeTarjeta(tipo)} →</a></p>`,
+    tarjetaPie(args.href, tipo),
     '</div>',
   ].join('\n');
 }
@@ -3594,6 +3569,44 @@ function placementDe(entry: CollectionEntry, discoveryIndex: Map<string, Discove
   return discoveryIndex.get(entry.file)?.fm?.placement === 'bottom' ? 'bottom' : 'top';
 }
 
+function miembrosAll(discoveryIndex: Map<string, DiscoveryEntry>, rutas: string[]): string[] {
+  const nombre = (ruta: string): string => discoveryIndex.get(ruta)?.title ?? ruta;
+  const esPublicacionDe = (ruta: string, autora: string): boolean => {
+    const entry = discoveryIndex.get(ruta);
+    if (entry === undefined || tipoDe(entry) !== 'file') return false;
+    return [...entry.creator, ...parseAuthors(entry.fm?.contributor)].includes(autora);
+  };
+  const tipoDeRuta = (ruta: string): string => {
+    const entry = discoveryIndex.get(ruta);
+    return entry === undefined ? '' : tipoDe(entry);
+  };
+  const publicaciones = rutas.filter((ruta) => tipoDeRuta(ruta) !== 'creator');
+  publicaciones.sort((a, b) => {
+    const diferencia = fechaOrdenable(discoveryIndex.get(b)) - fechaOrdenable(discoveryIndex.get(a));
+    return diferencia !== 0 ? diferencia : a.localeCompare(b);
+  });
+
+  const despues = new Map<string, string[]>();
+  const sinPublicacion: string[] = [];
+  for (const ruta of rutas.filter((r) => tipoDeRuta(r) === 'creator')) {
+    const autora = nombre(ruta);
+    const publicacion = publicaciones.find((pub) => esPublicacionDe(pub, autora));
+    if (publicacion === undefined) sinPublicacion.push(ruta);
+    else {
+      const lista = despues.get(publicacion) ?? [];
+      lista.push(ruta);
+      despues.set(publicacion, lista);
+    }
+  }
+
+  const ordenadas = (lista: string[]): string[] => lista.sort((a, b) => nombre(a).localeCompare(nombre(b), 'es') || a.localeCompare(b));
+  const resultado: string[] = [];
+  for (const publicacion of publicaciones) {
+    resultado.push(publicacion, ...ordenadas(despues.get(publicacion) ?? []));
+  }
+  return [...resultado, ...ordenadas(sinPublicacion)];
+}
+
 function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: string): string[] {
   const rutas = [...discoveryIndex.entries()]
     .filter(([, entry]) => (type === 'all' ? tipoDe(entry) !== 'menu' && tipoDe(entry) !== 'announcement' : tipoDe(entry) === type))
@@ -3603,6 +3616,7 @@ function miembrosDeUnType(discoveryIndex: Map<string, DiscoveryEntry>, type: str
     const nombre = (ruta: string): string => discoveryIndex.get(ruta)?.title ?? ruta;
     return rutas.sort((a, b) => nombre(a).localeCompare(nombre(b), 'es') || a.localeCompare(b));
   }
+  if (type === 'all') return miembrosAll(discoveryIndex, rutas);
   return rutas.sort((a, b) => {
     const diferencia = fechaOrdenable(discoveryIndex.get(b)) - fechaOrdenable(discoveryIndex.get(a));
     return diferencia !== 0 ? diferencia : a.localeCompare(b);

@@ -327,12 +327,17 @@ function fechaMaxima(discoveryIndex: Map<string, DiscoveryEntry>, rutas: string[
   return maxima;
 }
 
+const SIN_PUBLICACION = '0000-01-01';
+
 function asignaListDate(discoveryIndex: Map<string, DiscoveryEntry>, creatorOwners: Map<string, string[]>): void {
   for (const [creatorPath, entry] of discoveryIndex) {
     if (entry.type !== 'creator') continue;
-    const maxima = fechaMaxima(discoveryIndex, creatorOwners.get(creatorPath) ?? []);
-    if (maxima === undefined) delete entry.listDate;
-    else entry.listDate = maxima.texto;
+    const propias = (creatorOwners.get(creatorPath) ?? []).filter((ruta) => {
+      const dueno = discoveryIndex.get(ruta);
+      return dueno !== undefined && (dueno.type === undefined || dueno.type === 'file');
+    });
+    const maxima = fechaMaxima(discoveryIndex, propias) ?? fechaMaxima(discoveryIndex, creatorOwners.get(creatorPath) ?? []);
+    entry.listDate = maxima?.texto ?? SIN_PUBLICACION;
   }
 }
 

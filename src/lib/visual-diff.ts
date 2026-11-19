@@ -8,9 +8,6 @@ import { isDir, isInside } from './paths.js';
 import { exec, mapWithConcurrency } from './run.js';
 
 export const DPI = 300;
-export const FUZZ_PERCENT = 0;
-export const THRESHOLD_PERCENT = 0;
-
 export const REMOVED_TINT = '#C0392B';
 export const REMOVED_BLEND = '30';
 export const ADDED_TINT = '#2E8B57';
@@ -153,7 +150,7 @@ interface CacheEntry {
 }
 
 function cacheKey(hashes: { reference: string; generated: string }): string {
-  return hashString(`${hashes.reference}:${hashes.generated}:${DPI}:${FUZZ_PERCENT}:${THRESHOLD_PERCENT}`).slice(0, 32);
+  return hashString(`${hashes.reference}:${hashes.generated}:${DPI}`).slice(0, 32);
 }
 
 async function readCache(path: string): Promise<Record<string, CacheEntry>> {
@@ -253,7 +250,7 @@ async function comparePngPair(args: PngPair): Promise<{ diffPercent: number; not
     args.note = `cambió de tamaño: ${size.width}x${size.height} → ${generatedSize.width}x${generatedSize.height}`;
   }
 
-  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', `${FUZZ_PERCENT}%`, reference, generated, 'null:'], {
+  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', '0%', reference, generated, 'null:'], {
     timeoutMs: 60_000,
   });
   if (compare.exitCode > 1) {
@@ -264,7 +261,7 @@ async function comparePngPair(args: PngPair): Promise<{ diffPercent: number; not
   const differing = Number.parseFloat(metricLine);
   if (!Number.isFinite(differing)) throw new BuildError(`no se pudo leer la métrica de magick compare: "${metricLine}"`);
   const diffPercent = (100 * differing) / (size.width * size.height);
-  if (diffPercent > THRESHOLD_PERCENT) {
+  if (diffPercent > 0) {
     await paintDiffImage({ ...args, referencePng: reference, generatedPng: generated });
   }
   return { diffPercent, ...(args.note === undefined ? {} : { note: args.note }) };
@@ -306,7 +303,7 @@ async function comparePages(args: {
         scratch: join(args.workDir, `diff-${page}`),
       });
       await forceUnlink(generatedPng);
-      if (diffPercent > THRESHOLD_PERCENT || note !== undefined) {
+      if (diffPercent > 0 || note !== undefined) {
         details.push({ page, diffPercent, diffImage, ...(note === undefined ? {} : { note }) });
       }
     },
@@ -410,8 +407,5 @@ export function formatVisualSummary(result: VisualDiffResult, label?: (path: str
 
 export function formatVisualReport(report: VisualReport, label?: (path: string) => string): string {
   const { result, referenceLabel, generatedLabel } = report;
-  return [
-    `visual: ${generatedLabel} vs ${referenceLabel} · ${DPI} dpi · umbral ${THRESHOLD_PERCENT} % · fuzz ${FUZZ_PERCENT} %`,
-    ...formatVisualSummary(result, label),
-  ].join('\n');
+  return [`visual: ${generatedLabel} vs ${referenceLabel} · ${DPI} dpi · umbral 0 % · fuzz 0 %`, ...formatVisualSummary(result, label)].join('\n');
 }
