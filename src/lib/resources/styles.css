@@ -44,6 +44,7 @@
   --card-shadow: 5px 5px 0 0 color-mix(in oklab, var(--color-accent-500) 35%, transparent);
   --card-shadow-hover: 6px 6px 0 0 color-mix(in oklab, var(--color-accent-500) 40%, transparent);
   --font-title: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --title-size-boost: 0px;
   --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -613,7 +614,7 @@ a:hover {
 .sitio-titulo {
   color: var(--acento-texto);
   font-family: var(--font-title);
-  font-size: 1.375rem;
+  font-size: calc(1.375rem + var(--title-size-boost));
   font-weight: 600;
   line-height: 1;
 }
@@ -733,7 +734,6 @@ a:hover {
   --chip-bg: var(--acento-suave);
   --chip-border: var(--acento-borde);
   --chip-text: var(--acento-texto);
-  font-family: var(--font-title);
   font-weight: 400;
 }
 
@@ -844,7 +844,7 @@ a:hover {
 .tarjeta-titulo {
   margin-bottom: 1rem;
   color: var(--titulo-tarjeta);
-  font-size: 1.125rem;
+  font-size: calc(1.125rem + var(--title-size-boost));
   font-weight: 700;
   line-height: 1.25;
   text-align: left;
@@ -856,11 +856,11 @@ a:hover {
 
 .tarjeta-titulo.tarjeta-titulo--sidebar {
   margin-top: 1rem;
-  font-size: 1.125rem;
+  font-size: calc(1.125rem + var(--title-size-boost));
 }
 
 .tarjeta-titulo.tarjeta-titulo--creadora {
-  font-size: 1.125rem;
+  font-size: calc(1.125rem + var(--title-size-boost));
   line-height: 1.25;
 }
 
@@ -1101,7 +1101,7 @@ a:hover {
 .titulo-pagina {
   margin-top: 0.75rem;
   color: var(--titulo-pagina);
-  font-size: 1.875rem;
+  font-size: calc(1.875rem + var(--title-size-boost));
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.25;
@@ -1166,11 +1166,6 @@ a:hover {
 }
 
 .meta-label em {
-  font-style: normal;
-}
-
-.tarjeta-chips .chip--titulo {
-  font-family: var(--font-body);
   font-style: normal;
 }
 
@@ -1633,7 +1628,7 @@ a:hover {
 .hero__titulo {
   margin: 0;
   color: var(--acento-texto);
-  font-size: 1.5rem;
+  font-size: calc(1.5rem + var(--title-size-boost));
   font-weight: 700;
 }
 
@@ -1726,7 +1721,7 @@ a:hover {
 
 .error-titulo {
   color: var(--acento-texto);
-  font-size: 1.5rem;
+  font-size: calc(1.5rem + var(--title-size-boost));
   font-weight: 700;
   line-height: 1.2;
 }
@@ -1903,15 +1898,15 @@ a:hover {
 }
 
 .prose h1:not(.not-prose):not(.not-prose *) {
-  font-size: 2.15em;
+  font-size: calc(2.15em + var(--title-size-boost));
 }
 
 .prose h2:not(.not-prose):not(.not-prose *) {
-  font-size: 1.65em;
+  font-size: calc(1.65em + var(--title-size-boost));
 }
 
 .prose h3:not(.not-prose):not(.not-prose *) {
-  font-size: 1.35em;
+  font-size: calc(1.35em + var(--title-size-boost));
 }
 
 .prose h4:not(.not-prose):not(.not-prose *) {
@@ -2030,11 +2025,18 @@ a:hover {
   font-family: var(--font-title);
 }
 
-[data-style] .chip--titulo {
-  font-family: var(--font-title);
+[data-style] .chip {
+  font-family: var(--font-body);
+  font-style: normal;
 }
 
 [data-style] .tarjeta-autor {
+  font-family: var(--font-body);
+}
+
+[data-style="notebook"] .tarjeta-titulo--centrado,
+[data-style="notebook"] .tarjeta-titulo--creadora {
+  --title-size-boost: 0px;
   font-family: var(--font-body);
 }
 
@@ -2073,7 +2075,7 @@ a:hover {
   }
 
   .sitio-titulo {
-    font-size: 1.5rem;
+    font-size: calc(1.5rem + var(--title-size-boost));
   }
 
   .sitio-lema {
@@ -2110,15 +2112,15 @@ a:hover {
   }
 
   .tarjeta-titulo {
-    font-size: 1.375rem;
+    font-size: calc(1.375rem + var(--title-size-boost));
   }
 
   .tarjeta-titulo.tarjeta-titulo--sidebar {
-    font-size: 1.125rem;
+    font-size: calc(1.125rem + var(--title-size-boost));
   }
 
   .tarjeta-titulo.tarjeta-titulo--creadora {
-    font-size: 1.25rem;
+    font-size: calc(1.25rem + var(--title-size-boost));
   }
 
   .tarjeta-fecha {
@@ -2134,7 +2136,7 @@ a:hover {
   }
 
   .titulo-pagina {
-    font-size: 2.25rem;
+    font-size: calc(2.25rem + var(--title-size-boost));
   }
 
   .subtitulo-pagina {
@@ -2174,7 +2176,7 @@ a:hover {
   }
 
   .hero__titulo {
-    font-size: 1.875rem;
+    font-size: calc(1.875rem + var(--title-size-boost));
   }
 
   .hero__descripcion {
@@ -2190,7 +2192,7 @@ a:hover {
   }
 
   .error-titulo {
-    font-size: 1.875rem;
+    font-size: calc(1.875rem + var(--title-size-boost));
   }
 }
 
@@ -2237,7 +2239,7 @@ a:hover {
 
 @media (min-width: 960px) {
   .sitio-titulo {
-    font-size: 1.5625rem;
+    font-size: calc(1.5625rem + var(--title-size-boost));
   }
 
   .sitio-lema {
@@ -2300,7 +2302,7 @@ a:hover {
   }
 
   .sitio-titulo {
-    font-size: 1.625rem;
+    font-size: calc(1.625rem + var(--title-size-boost));
   }
 
   .sitio-lema {
@@ -2335,7 +2337,7 @@ a:hover {
   }
 
   .tarjeta-titulo {
-    font-size: 1.5rem;
+    font-size: calc(1.5rem + var(--title-size-boost));
   }
 
   .tarjeta-fecha {
@@ -2355,7 +2357,7 @@ a:hover {
   }
 
   .titulo-pagina {
-    font-size: 3rem;
+    font-size: calc(3rem + var(--title-size-boost));
   }
 
   .subtitulo-pagina {
@@ -2391,7 +2393,7 @@ a:hover {
   }
 
   .hero__titulo {
-    font-size: 2.25rem;
+    font-size: calc(2.25rem + var(--title-size-boost));
   }
 
   .buscar-marco {
@@ -2405,7 +2407,7 @@ a:hover {
 
 @media (min-width: 1600px) {
   .sitio-titulo {
-    font-size: 1.75rem;
+    font-size: calc(1.75rem + var(--title-size-boost));
   }
 
   .sitio-lema {
@@ -2413,7 +2415,7 @@ a:hover {
   }
 
   .titulo-pagina {
-    font-size: 3.75rem;
+    font-size: calc(3.75rem + var(--title-size-boost));
   }
 
   .meta-label {

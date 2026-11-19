@@ -1,6 +1,7 @@
 [data-style="notebook"] {
   --font-title: "Caveat", "Bradley Hand", cursive;
   --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --title-size-boost: 2px;
   --paper-bg: #fbf5e7;
   --grid-fine: color-mix(in oklab, var(--color-accent-700) 4%, transparent);
   --grid-bold: color-mix(in oklab, var(--color-accent-700) 10%, transparent);

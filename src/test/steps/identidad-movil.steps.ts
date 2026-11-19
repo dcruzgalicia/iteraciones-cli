@@ -97,7 +97,8 @@ Then('el bloque sm centra la marca y las acciones', () => {
 
 Then('el título de la identidad mide {word} en {word}', (medida: string, breakpoint: string) => {
   const regla = reglaIdentidad('.sitio-titulo', breakpoint);
-  if (!regla.includes(`font-size: ${medida}`)) {
+  const patron = new RegExp(`font-size: (?:calc\\()?${medida.replaceAll('.', '\\.')}\\b`);
+  if (!patron.test(regla)) {
     throw new Error(`el título de la identidad no mide ${medida} en ${breakpoint}: ${regla}`);
   }
 });
