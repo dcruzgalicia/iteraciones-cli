@@ -23,7 +23,7 @@ Característica: El CSS se genera sólo para la combinación activa
     Dado un proyecto vacío
     Cuando compilo el CSS con acento "lime", estilo "radar" y tema "light"
     Entonces el CSS no tiene comentarios ni saltos de línea
-    Y el CSS pesa menos de 42000 bytes
+    Y el CSS pesa menos de 44000 bytes
 
   Escenario: Las tarjetas y el fondo usan el acento
     Dado un proyecto vacío
@@ -156,6 +156,12 @@ Característica: El CSS se genera sólo para la combinación activa
     Escenario: La semblanza no se limita en móvil
       Cuando leo el styles.css del proyecto
       Entonces el CSS da a ".semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *)" la propiedad "max-width: none"
+
+    Escenario: La tarjeta de anuncio usa el acento con texto contrastante
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".tarjeta--anuncio" la propiedad "background-color: var(--anuncio-bg)"
+      Y el CSS da a ".tarjeta--anuncio :is(h1, h2, h3, h4, h5, h6, p, li, dt, dd, blockquote, strong, em, span, a)" la propiedad "color: var(--anuncio-texto)"
+      Y el CSS da a ".tarjeta--anuncio .boton" la propiedad "background: #fff"
 
     Escenario: La semblanza de creadora deja 12px arriba y abajo
       Cuando leo el styles.css del proyecto

@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { basename, dirname, join } from 'node:path';
 import { stringify } from 'yaml';
 import { slugify } from '../builder/discover.js';
+import { LICENSE_DEFS } from '../builder/licenses.js';
 import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats } from '../config/site-config.js';
@@ -32,8 +33,7 @@ const NETLIFY_CACHE_VERSION = '1.0.3';
 
 const LICENCIAS = [
   { label: 'Usar la licencia global', value: '' },
-  { label: 'CC BY-NC-ND 4.0', value: 'CC-BY-NC-ND-4.0' },
-  { label: 'PF-AC-PR-FA-1.0', value: 'PF-AC-PR-FA-1.0' },
+  ...Object.entries(LICENSE_DEFS).map(([value, def]) => ({ label: def.label, value })),
 ];
 
 const IDIOMAS: Record<string, string> = {

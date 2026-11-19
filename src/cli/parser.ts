@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { TEMPLATE_KINDS } from '../builder/pipeline-setup.js';
-import { DPI, FUZZ_PERCENT, THRESHOLD_PERCENT } from '../lib/visual-diff.js';
+import { DPI } from '../lib/visual-diff.js';
 import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
 import { configHelp } from './config-help.js';
@@ -325,7 +325,7 @@ Ejemplos:
       'after',
       `
 Requiere pdftoppm (poppler) y ImageMagick. Compara página por página sobre PNGs de ${DPI} dpi, con
-fuzz ${FUZZ_PERCENT} % y umbral ${THRESHOLD_PERCENT} % de píxeles distintos: la comparación es visual y
+fuzz 0 % y umbral 0 % de píxeles distintos: la comparación es visual y
 LaTeX rinde la misma página aunque el PDF cambie de bytes, así que un píxel de diferencia es un cambio.
 Las páginas del HTML se capturan con el navegador de Bun y se comparan igual.
 

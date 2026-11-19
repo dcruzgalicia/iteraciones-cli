@@ -1,3 +1,4 @@
+import { DEFAULT_LICENSE, LICENSE_IDS } from '../builder/licenses.js';
 import { PAGE_NUMBER_OPTIONS } from '../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { ACCENT_COLORS } from '../lib/accent-palettes.js';
@@ -26,7 +27,7 @@ Si no existe, se usan estos valores por defecto:
   disabledFilters: []                      filtros Lua del paquete que se apagan
   disabledPreambleFilters: []              filtros de preámbulo que se apagan
   luaFilters: []                           filtros Lua propios del proyecto
-  license: PF-AC-PR-FA-1.0                  licencia del proyecto: PF-AC-PR-FA-1.0 (por defecto) | CC-BY-NC-ND-4.0
+  license: ${DEFAULT_LICENSE}                  licencia del proyecto: ${DEFAULT_LICENSE} (por defecto) | ${LICENSE_IDS.filter((id) => id !== DEFAULT_LICENSE).join(' | ')}
 
   format.html.generate: ${html.generate}                 HTML
     format.html.site.title: ${html.site?.title}
@@ -39,7 +40,7 @@ Si no existe, se usan estos valores por defecto:
     format.html.site.showDates: ${html.site?.showDates}         muestra las fechas en tarjetas y páginas
     format.html.site.rss: ${html.site?.rss}               genera feed.xml con los contenidos con fecha
     format.html.pageSize: ${html.pageSize}              tarjetas por página en las colecciones
-    format.html.site.license: ${html.site.license ?? '(por defecto)'}   PF-AC-PR-FA-1.0 | CC-BY-NC-ND-4.0 (hereda del nivel superior)
+    format.html.site.license: ${html.site.license ?? '(por defecto)'}   ${LICENSE_IDS.join(' | ')} (hereda del nivel superior)
 
   format.latex.generate: ${d.format.latex.generate}               .tex
   format.pdf.generate: ${d.format.pdf.generate}                   PDF (necesita LaTeX)

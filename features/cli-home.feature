@@ -31,7 +31,7 @@ Característica: El home y la bibliografía se resuelven antes de publicar
       Y el archivo "dist/files/test-document.html" contiene 'href="./index.html"'
       Y el archivo "dist/files/index.html" existe
 
-    Escenario: La creadora del index comparte la fecha de su última publicación
+    Escenario: La creadora del index va después de su publicación más reciente
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Dado que el archivo "autora.md" tiene este contenido
       """
@@ -56,7 +56,97 @@ Característica: El home y la bibliografía se resuelven antes de publicar
       """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "dist/files/index.html" pone 'href="./autora.html"' antes de 'href="./texto.html"'
+      Y el archivo "dist/files/index.html" pone 'href="./texto.html"' antes de 'href="./autora.html"'
+
+    Escenario: La colección no adelanta la fecha de su creadora
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Dado que el archivo "autora.md" tiene este contenido
+      """
+      ---
+      type: creator
+      name: Ana
+      slug: autora
+      ---
+
+      Bio.
+      """
+      Dado que el archivo "texto.md" tiene este contenido
+      """
+      ---
+      title: Texto
+      slug: texto
+      creator: Ana
+      date: 2020-01-01
+      ---
+
+      Contenido.
+      """
+      Dado que el archivo "antologia.md" tiene este contenido
+      """
+      ---
+      title: Antología
+      slug: antologia
+      type: collection
+      date: 2030-01-01
+      files:
+        - texto.md
+      ---
+
+      Intro.
+      """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/index.html" pone 'href="./antologia.html"' antes de 'href="./texto.html"'
+      Y el archivo "dist/files/index.html" pone 'href="./texto.html"' antes de 'href="./autora.html"'
+
+    Escenario: Dos creadoras con la misma fecha van después de su texto
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Dado que el archivo "autora-a.md" tiene este contenido
+      """
+      ---
+      type: creator
+      name: Ana A
+      slug: autora-a
+      ---
+
+      Bio.
+      """
+      Dado que el archivo "autora-b.md" tiene este contenido
+      """
+      ---
+      type: creator
+      name: Ana B
+      slug: autora-b
+      ---
+
+      Bio.
+      """
+      Dado que el archivo "texto-a.md" tiene este contenido
+      """
+      ---
+      title: Texto A
+      slug: texto-a
+      creator: Ana A
+      date: 2026-01-01
+      ---
+
+      Contenido.
+      """
+      Dado que el archivo "texto-b.md" tiene este contenido
+      """
+      ---
+      title: Texto B
+      slug: texto-b
+      creator: Ana B
+      date: 2026-01-01
+      ---
+
+      Contenido.
+      """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "dist/files/index.html" pone 'href="./texto-a.html"' antes de 'href="./autora-a.html"'
+      Y el archivo "dist/files/index.html" pone 'href="./texto-b.html"' antes de 'href="./autora-b.html"'
 
     Escenario: Con index.md la tarjeta identidad enlaza al home
       Dado que la raíz del proyecto tiene un proyecto de prueba
