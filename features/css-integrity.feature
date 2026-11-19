@@ -147,7 +147,6 @@ Característica: El CSS se genera sólo para la combinación activa
       Entonces el CSS da a ".meta-label em" la propiedad "font-style: normal"
       Y el CSS da a "[data-style] .chip" la propiedad "font-family: var(--font-body)"
       Y el CSS da a "[data-style] .chip" la propiedad "font-style: normal"
-      Y el CSS da a "[data-style=\"notebook\"] .tarjeta-titulo--centrado" la propiedad "font-family: var(--font-body)"
       Y el CSS no tiene "[data-style] .chip--titulo"
 
     Escenario: Los títulos con Caveat crecen 2px en notebook

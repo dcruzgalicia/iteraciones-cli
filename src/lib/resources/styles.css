@@ -2034,12 +2034,6 @@ a:hover {
   font-family: var(--font-body);
 }
 
-[data-style="notebook"] .tarjeta-titulo--centrado,
-[data-style="notebook"] .tarjeta-titulo--creadora {
-  --title-size-boost: 0px;
-  font-family: var(--font-body);
-}
-
 @media (min-width: 640px) {
   .tarjeta--identidad,
   .tarjeta--cabecera,
