@@ -157,6 +157,12 @@ Característica: El CSS se genera sólo para la combinación activa
       Cuando leo el styles.css del proyecto
       Entonces el CSS da a ".semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *)" la propiedad "max-width: none"
 
+    Escenario: La semblanza de creadora deja 12px arriba y abajo
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".semblanza" la propiedad "margin-block: 0.75rem"
+      Y el CSS da a ".semblanza + .meta-grid" la propiedad "margin-top: 0.75rem"
+      Y el CSS da a ".cabecera-cuerpo--creador .meta-grid:not(:has(.meta-item))" la propiedad "display: none"
+
   Regla de negocio: La caché de CSS sólo depende del CSS y la configuración
 
     Esquema del escenario: La caché se comporta así ante cada cambio

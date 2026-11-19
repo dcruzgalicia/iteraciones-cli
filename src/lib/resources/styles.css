@@ -1027,6 +1027,10 @@ a:hover {
   grid-column: auto;
 }
 
+.cabecera-cuerpo--creador .meta-grid:not(:has(.meta-item)) {
+  display: none;
+}
+
 .cabecera-cuerpo--creador .portada--creador {
   justify-self: center;
 }
@@ -1862,6 +1866,23 @@ a:hover {
 
 .prose.contenido-tamano :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {
   max-width: 48ch;
+}
+
+.semblanza {
+  margin-block: 0.75rem;
+}
+
+.semblanza .intro-coleccion > :first-child:not(.not-prose):not(.not-prose *) {
+  margin-top: 0;
+}
+
+.semblanza .intro-coleccion > :last-child:not(.not-prose):not(.not-prose *) {
+  margin-bottom: 0;
+}
+
+.semblanza + .meta-grid,
+.semblanza + .meta-grid + .meta-grid {
+  margin-top: 0.75rem;
 }
 
 .semblanza .intro-coleccion :is(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6):not(.not-prose):not(.not-prose *) {
