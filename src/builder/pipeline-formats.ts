@@ -2254,60 +2254,31 @@ async function emitKeywordIndex(args: {
   listas: { slug: string; label: string; miembros: string[] }[];
 }): Promise<void> {
   const { cwd, outputDir, renderCtx, exportCtx, discoveryIndex, listas } = args;
-  const { plan, formatCfg } = renderCtx;
+  const { plan } = renderCtx;
   if (!plan.activeFormats.html) return;
 
-  const hrefsCreadores = creatorHrefs(discoveryIndex, '.');
-  const available = availableDefaultListSlugs(discoveryIndex);
-  const siteTitle = formatCfg?.html?.site?.title ?? 'iteraciones';
-  const menu = menuDelSitio(enlacesDelMenu(discoveryIndex), siteTitle, '.', formatCfg?.html?.site?.labels?.menu ?? 'Menú');
-  const doc: BuildDocument = {
-    filePath: join(cwd, `${KEYWORD_INDEX_SLUG}.md`),
-    relativePath: `${KEYWORD_INDEX_SLUG}.md`,
-    frontmatter: { title: 'Palabras clave', date: '', creator: [], type: 'file', files: listas.flatMap((lista) => lista.miembros) },
-  };
-  const outputs: DocumentOutputs = {
-    slug: KEYWORD_INDEX_SLUG,
-    outSlug: KEYWORD_INDEX_SLUG,
-    dir: '.',
-    fm: { title: 'Palabras clave', type: 'file' },
-    content: '',
-    outBase: (name: string): string => join(outputDir, name),
-  };
-  const imagePaths = await writeListImagePaths(cwd, KEYWORD_INDEX_SLUG, new Map());
-  const { top: anunciosTop, bottom: anunciosBottom } = await anunciosDeLaPagina({
-    discoveryIndex,
+  await emitListPage({
     cwd,
-    dir: '.',
-    available,
-    creatorHrefs: hrefsCreadores,
-    imagenes: new Map(),
     outputDir,
-    announcementImages: renderCtx.announcementImages,
-    filters: exportCtx.filters,
-    imagePaths,
-    sourcePath: doc.filePath,
-  });
-  await emitHtmlPage({
-    doc: doc,
-    outputs: outputs,
-    renderCtx: renderCtx,
-    exportCtx: exportCtx,
-    discoveryIndex: discoveryIndex,
-    imagePaths: imagePaths,
-    paginas: [keywordIndexContent(listas)],
-    creatorHrefs: hrefsCreadores,
-    extras: '',
-    sidebarExtras: '',
-    docChipOverride: 'Lista',
-    menuHeader: menu.header,
-    menuFooterPlain: menu.footer,
-    collectionChips: '',
-    keywordChips: '',
-    announcementsTop: anunciosTop,
-    announcementsBottom: anunciosBottom,
+    renderCtx,
+    exportCtx,
+    discoveryIndex,
+    relativePath: `${KEYWORD_INDEX_SLUG}.md`,
+    slug: KEYWORD_INDEX_SLUG,
+    dir: '.',
+    title: 'Palabras clave',
+    description: '',
+    miembros: listas.flatMap((lista) => lista.miembros),
+    entradas: [],
+    pageSize: 0,
+    hrefsCreadores: creatorHrefs(discoveryIndex, '.'),
+    available: availableDefaultListSlugs(discoveryIndex),
+    imageKey: KEYWORD_INDEX_SLUG,
+    imageMap: new Map(),
+    docChip: 'Lista',
     docChipHrefOverride: '',
     contentChipOverride: 'Palabras clave',
+    paginas: [keywordIndexContent(listas)],
     synthetic: true,
   });
 }
@@ -2333,7 +2304,11 @@ interface EmitListPageArgs {
   imageSizes?: Map<string, ImageDimensions>;
   docChip: string;
   docChipHref?: string;
-  warning: (dueno: string) => string;
+  docChipHrefOverride?: string;
+  contentChipOverride?: string;
+  paginas?: string[];
+  synthetic?: boolean;
+  warning?: (dueno: string) => string;
 }
 
 async function emitListPage(args: EmitListPageArgs): Promise<void> {
@@ -2358,38 +2333,45 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     imageSizes,
     docChip,
     docChipHref,
+    docChipHrefOverride,
+    contentChipOverride,
+    paginas: paginasOverride,
+    synthetic = false,
     warning,
   } = args;
-  const dueno = htmlOwner(discoveryIndex, dir, slug);
-  if (dueno !== undefined) {
+  const dueno = synthetic ? undefined : htmlOwner(discoveryIndex, dir, slug);
+  if (dueno !== undefined && warning !== undefined) {
     logWarning(warning(dueno), 'build');
     return;
   }
 
   const memberHrefs = memberHtmlHrefs(relativePath, entradas, discoveryIndex, dir);
-  const paginas = collectionCardsPages(
-    entradas,
-    memberHrefs,
-    description,
-    pageSize,
-    hrefsCreadores,
-    dir,
-    available,
-    true,
-    discoveryIndex,
-    { path: relativePath, outSlug: slug, showDates: renderCtx.formatCfg?.html?.site?.showDates === true },
-    relImageMapFor(imageMap, ASSETS_IMAGES_DIR, undefined, dir, true),
-  );
+  const paginas =
+    paginasOverride ??
+    collectionCardsPages(
+      entradas,
+      memberHrefs,
+      description,
+      pageSize,
+      hrefsCreadores,
+      dir,
+      available,
+      true,
+      discoveryIndex,
+      { path: relativePath, outSlug: slug, showDates: renderCtx.formatCfg?.html?.site?.showDates === true },
+      relImageMapFor(imageMap, ASSETS_IMAGES_DIR, undefined, dir, true),
+    );
+  const docType = synthetic ? 'file' : 'list';
   const doc: BuildDocument = {
     filePath: join(cwd, relativePath),
     relativePath,
-    frontmatter: { title, date: '', creator: [], type: 'list', files: miembros },
+    frontmatter: { title, date: '', creator: [], type: docType, files: miembros },
   };
   const outputs: DocumentOutputs = {
     slug,
     outSlug: slug,
     dir,
-    fm: { title, type: 'list' },
+    fm: { title, type: docType },
     content: '',
     outBase: (name: string): string => join(outputDir, dir === '.' ? '' : dir, name),
   };
@@ -2422,11 +2404,12 @@ async function emitListPage(args: EmitListPageArgs): Promise<void> {
     menuHeader: menu.header,
     menuFooterPlain: menu.footer,
     docChipOverride: docChip,
-    docChipHrefOverride: docChipHref,
+    docChipHrefOverride: docChipHrefOverride ?? docChipHref,
+    contentChipOverride,
     announcementsTop: anunciosTop,
     announcementsBottom: anunciosBottom,
   });
-  await removeExtraHtmlPages(outputDir, dir, slug, paginas.length, discoveryIndex);
+  if (!synthetic) await removeExtraHtmlPages(outputDir, dir, slug, paginas.length, discoveryIndex);
 }
 
 export async function emitKeywordLists(args: {

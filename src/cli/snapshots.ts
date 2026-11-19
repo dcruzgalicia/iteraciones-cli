@@ -6,6 +6,7 @@ import { captureHtmlShot } from '../lib/html-shot.js';
 import { logError, logInfo, logSuccess, logWarning, runCommand } from '../lib/logger.js';
 import { isDir, posix, relativeLabel } from '../lib/paths.js';
 import { plural } from '../lib/plural.js';
+import { mapWithConcurrency } from '../lib/run.js';
 import type { VisualDiffResult } from '../lib/visual-diff.js';
 import {
   clearDiffImages,
@@ -342,36 +343,45 @@ async function checkHtmlSnapshots(cwd: string, outputDir: string): Promise<Compa
   if (htmlFiles.length === 0) return [];
   const store = join(cwd, SNAPSHOTS_DIR);
   const guardados = await listSnapshotImages(store);
-  const comparados: ComparedHtml[] = [];
+  const pendientes: Array<{ html: string; referencia: string[] }> = [];
   const sinLineaBase: string[] = [];
   for (const html of htmlFiles) {
-    const stem = htmlStemFor(html, outputDir);
-    const referencia = guardados.get(stem);
-    if (referencia === undefined) {
-      sinLineaBase.push(relativeLabel(cwd, html));
-      continue;
-    }
-    const captura = await captureHtmlShot(html);
-    if (captura === undefined) continue;
-    const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(html));
-    await mkdir(dirname(workDir), { recursive: true });
-
-    const generada = join(dirname(workDir), 'generada.png');
-    await writeFile(generada, captura.png);
-    const result = await compareVisual({
-      referencePngs: referencia,
-      generatedPngs: [generada],
-      workDir,
-      cachePath,
-      diffDir: join(cwd, DIFF_DIR),
-      diffStem: stem,
-    });
-    comparados.push({ html, entry: { referenceLabel: `${SNAPSHOTS_DIR}/${stem}`, result } });
+    const referencia = guardados.get(htmlStemFor(html, outputDir));
+    if (referencia === undefined) sinLineaBase.push(relativeLabel(cwd, html));
+    else pendientes.push({ html, referencia });
   }
   if (sinLineaBase.length > 0) {
     logInfo(`${plural(sinLineaBase.length, 'página HTML agregada')} sin captura, sin comparación: ${sinLineaBase.join(', ')}`, 'snapshots');
   }
-  return comparados;
+  if (pendientes.length > 0) logInfo(`comparando ${plural(pendientes.length, 'página HTML', 'páginas HTML')}…`, 'snapshots');
+
+  const resultados = await mapWithConcurrency(pendientes, 4, async ({ html, referencia }) => {
+    const stem = htmlStemFor(html, outputDir);
+    const captura = await captureHtmlShot(html);
+    if (captura === undefined) return undefined;
+    const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(html));
+    const base = dirname(workDir);
+    await mkdir(base, { recursive: true });
+
+    const generada = join(base, `${stem}-generada.png`);
+    await writeFile(generada, captura.png);
+    let result: VisualDiffResult;
+    try {
+      result = await compareVisual({
+        referencePngs: referencia,
+        generatedPngs: [generada],
+        workDir,
+        cachePath,
+        diffDir: join(cwd, DIFF_DIR),
+        diffStem: stem,
+      });
+    } finally {
+      await rm(generada, { force: true });
+    }
+    logInfo(`${relativeLabel(cwd, html)} · ${formatVisualSummary(result, (path) => relativeLabel(cwd, path))[0] ?? ''}`, 'snapshots');
+    return { html, entry: { referenceLabel: `${SNAPSHOTS_DIR}/${stem}`, result } };
+  });
+  return resultados.filter((resultado): resultado is ComparedHtml => resultado !== undefined);
 }
 
 function htmlFailureSummary(cwd: string, failed: ComparedHtml[]): string {
@@ -392,16 +402,20 @@ async function checkAll(cwd: string, run: SnapshotRun): Promise<void> {
 
   const compared: Compared[] = [];
   for (const pdf of comparables) {
+    logInfo(`comparando ${relativeLabel(cwd, pdf)}…`, 'snapshots');
     compared.push({ pdf, entry: await compareOne(cwd, pdf, run.outputDir, run.explicitReference) });
   }
 
-  const htmlComparados = await checkHtmlSnapshots(cwd, run.outputDir);
+  const htmlComparados = run.batch ? await checkHtmlSnapshots(cwd, run.outputDir) : [];
   const htmlFallidos = htmlComparados.filter(({ entry }) => !entry.result.pass);
   if (htmlFallidos.length > 0) {
     process.exitCode = 1;
-    logError(`${plural(htmlFallidos.length, 'página HTML')} con regresión visual:\n${htmlFailureSummary(cwd, htmlFallidos)}`, 'snapshots');
+    logError(
+      `${plural(htmlFallidos.length, 'página HTML', 'páginas HTML')} con regresión visual:\n${htmlFailureSummary(cwd, htmlFallidos)}`,
+      'snapshots',
+    );
   } else if (htmlComparados.length > 0) {
-    logSuccess(`sin diferencias visuales en ${plural(htmlComparados.length, 'página HTML')}`, 'snapshots');
+    logSuccess(`sin diferencias visuales en ${plural(htmlComparados.length, 'página HTML', 'páginas HTML')}`, 'snapshots');
   }
 
   if (compared.length === 0) return;

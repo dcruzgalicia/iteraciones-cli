@@ -7,6 +7,8 @@ const HTML_SHOT_MAX_HEIGHT = 16384;
 
 const HTML_SHOT_MIN_HEIGHT = 900;
 
+const HTML_SHOT_TIMEOUT_MS = 20_000;
+
 const SIN_ANIMACIONES = `(() => {
   const estilo = document.createElement('style');
   estilo.textContent = '*,*::before,*::after{animation:none !important;transition:none !important}';
@@ -22,12 +24,19 @@ export async function captureHtmlShot(htmlPath: string): Promise<{ png: Buffer; 
     logWarning(`no hay navegador para capturar el HTML: ${(err as Error).message}`, 'snapshots');
     return undefined;
   }
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await capturaUna(htmlPath, view);
+    return await Promise.race([
+      capturaUna(htmlPath, view),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`la captura superó ${HTML_SHOT_TIMEOUT_MS / 1000}s`)), HTML_SHOT_TIMEOUT_MS);
+      }),
+    ]);
   } catch (err) {
     logWarning(`no se pudo capturar "${htmlPath}": ${(err as Error).message}`, 'snapshots');
     return undefined;
   } finally {
+    clearTimeout(timer);
     view.close();
   }
 }

@@ -21,21 +21,13 @@ import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { readFrontmatter } from '../lib/frontmatter.js';
 import { logSuccess, runCommand } from '../lib/logger.js';
-import { buildImagesContext, readSourceDocument } from './merge.js';
+import { assertCollectionFiles, buildImagesContext, readSourceDocument } from './merge.js';
 
 function outputRootFor(output: string, dir: string): string {
   const outDir = dirname(output);
   const root = dir === '.' ? outDir : outDir.slice(0, outDir.length - dir.length - 1);
   if (join(root, dir) !== outDir) throw new BuildError(`-o debe vivir en el mismo nivel que el origen ("${dir}")`);
   return root;
-}
-
-async function collectionFiles(cwd: string, relativePath: string, fm: Record<string, unknown>, input: string): Promise<string[]> {
-  if (fm.type !== 'collection') return [];
-  const raw = Array.isArray(fm.files) ? fm.files.filter((f): f is string => typeof f === 'string') : [];
-  const files = await resolveCollectionFiles(raw, relativePath, cwd);
-  if (files.length === 0) throw new BuildError(`"${input}": la collection no tiene archivos en files`);
-  return files;
 }
 
 export async function runMarkdown(cwd: string, input: string, options: { output?: string }): Promise<void> {
@@ -49,7 +41,9 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     const output = resolve(cwd, options.output);
     const siteConfig = await loadSiteConfig(cwd);
     const dir = dirname(relativePath);
-    const rootFiles = await collectionFiles(cwd, relativePath, fm, input);
+    const rawFiles = fm.type === 'collection' ? assertCollectionFiles(fm, input) : [];
+    const rootFiles = await resolveCollectionFiles(rawFiles, relativePath, cwd);
+    if (fm.type === 'collection' && rootFiles.length === 0) throw new BuildError(`"${input}": la collection no tiene archivos en files`);
 
     if (fm.type === 'collection') fm.creator = await aggregateCollectionCreators({ files: rootFiles }, cwd);
     const entries = rootFiles.length > 0 ? await readCollectionEntries(rootFiles, relativePath, [cwd, join(cwd, dir)]) : [];

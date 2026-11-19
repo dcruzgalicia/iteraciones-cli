@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { MD_READER } from '../lib/pandoc-runner.js';
-import { toolVersionLatexmk, toolVersionMagick, toolVersionMinify, toolVersionPdfToPpm } from '../lib/tool-version.js';
+import { toolVersion } from '../lib/tool-version.js';
 import { LUA_FILTERS_ROOT } from './filter-resolver.js';
 import { HTML_RESOURCES_DIR, htmlResourceFiles } from './html-composer.js';
 import { PKG_PREAMBLE_DIR, PKG_PREAMBLE_SHARED_DIR, projectPreambleDirs } from './preamble-loader.js';
@@ -138,10 +138,10 @@ export async function computeConfigHashes(
   const toc = String(siteConfig.toc ?? false);
   const lang = String(siteConfig.language ?? '');
   const [magick, pdftoppm, latexmk, minify] = await Promise.all([
-    toolVersionMagick(),
-    toolVersionPdfToPpm(),
-    toolVersionLatexmk(),
-    toolVersionMinify(),
+    toolVersion('magick'),
+    toolVersion('pdftoppm'),
+    toolVersion('latexmk'),
+    toolVersion('minify'),
   ]);
   const hashes = {
     pdf: computeFormatHash(JSON.stringify(fmt?.pdf ?? {}), [String(fmt?.latex?.generate ?? false), toc, lang, latexmk, pdftoppm]),

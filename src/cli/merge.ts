@@ -42,7 +42,7 @@ async function printFlags(siteConfig: SiteConfig, cwd: string) {
   };
 }
 
-function assertCollectionFiles(fm: Record<string, unknown>, label: string): string[] {
+export function assertCollectionFiles(fm: Record<string, unknown>, label: string): string[] {
   if (fm.type !== 'collection') {
     throw new BuildError(`"${label}" no es una collection (type: ${typeof fm.type === 'string' ? fm.type : 'sin type'})`);
   }
