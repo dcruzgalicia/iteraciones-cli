@@ -31,7 +31,7 @@
   --acento-suave: color-mix(in oklab, var(--color-accent-500) 12%, transparent);
   --acento-hover: color-mix(in oklab, var(--color-accent-500) 20%, transparent);
   --acento-sombra: color-mix(in oklab, var(--color-accent-500) 30%, transparent);
-  --anuncio-bg: var(--color-accent-700);
+  --anuncio-bg: color-mix(in oklab, var(--color-accent-700) 50%, var(--color-stone-800));
   --anuncio-texto: #fff;
   --anuncio-borde: color-mix(in oklab, var(--color-accent-900) 60%, transparent);
   --anuncio-sombra: color-mix(in oklab, var(--color-accent-900) 40%, transparent);
