@@ -23,7 +23,11 @@ const CARDS = [
 ];
 
 function sinMarco(type: string, card: string): boolean {
-  return card === 'card-referencias.html' || card === 'card-identity.html' || (type === 'collection' && card === 'card-contenido.html');
+  return (
+    card === 'card-referencias.html' ||
+    card === 'card-identity.html' ||
+    ((type === 'collection' || type === 'creator') && card === 'card-contenido.html')
+  );
 }
 
 async function readCard(type: string, card: string): Promise<string> {
@@ -220,7 +224,7 @@ Then('las tres tienen exactamente las mismas tarjetas', async () => {
 
 Then('el esqueleto compartido trae el fondo de papel milimetrado', async () => {
   const skeleton = await readFile(join(RESOURCES, 'html', 'skeleton.html'), 'utf8');
-  if (!skeleton.includes('class="sitio"')) throw new Error('el esqueleto no trae la clase del sitio');
+  if (!skeleton.includes('class="sitio')) throw new Error('el esqueleto no trae la clase del sitio');
 });
 
 Then('el marcador de referencias no lleva marco propio', async () => {

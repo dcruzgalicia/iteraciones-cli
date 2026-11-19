@@ -13,11 +13,6 @@ export function espaciosNormales(texto: string): string {
   return texto.replace(/&nbsp;|&#160;|&#xa0;|\u00a0/gi, ' ');
 }
 
-export function relativeHref(dir: string, file: string): string {
-  const depth = dir === '.' ? 0 : dir.split('/').length;
-  return `./${'../'.repeat(depth)}${file}`;
-}
-
 export async function writeOutput(path: string, content: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await Bun.write(path, content);
@@ -67,10 +62,10 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
 }
 
 const FORMAT_LINK_META = {
-  pdf: { name: 'PDF', description: 'Documento final para lectura e impresión' },
-  epub: { name: 'EPUB', description: 'Edición adaptable para lectura digital' },
-  latex: { name: 'LaTeX', description: 'Archivo fuente para composición tipográfica' },
-  markdown: { name: 'Markdown', description: 'Texto fuente reutilizable y portable' },
+  pdf: { name: 'PDF' },
+  epub: { name: 'EPUB' },
+  latex: { name: 'LaTeX' },
+  markdown: { name: 'Markdown' },
 } as const;
 
 export function formatLinksFor(plan: BuildMetadata, outSlug: string, type?: string): FormatsLink[] {
@@ -98,6 +93,8 @@ export function parseFileFrontmatter(
   letterhead: string[];
   letterheadHeight: string | undefined;
   image: string | undefined;
+  frontCover: string | undefined;
+  backCover: string | undefined;
   body: string;
 } {
   const { yaml, body } = splitFrontmatter(content);
@@ -113,6 +110,8 @@ export function parseFileFrontmatter(
       letterhead: [],
       letterheadHeight: undefined,
       image: undefined,
+      frontCover: undefined,
+      backCover: undefined,
       body,
     };
   }
@@ -129,6 +128,8 @@ export function parseFileFrontmatter(
     letterhead: fmStringList(parsed.letterhead) ?? [],
     letterheadHeight: fmTrimmedString(parsed.letterheadHeight),
     image: fmTrimmedString(parsed.image),
+    frontCover: fmTrimmedString(parsed.frontCover),
+    backCover: fmTrimmedString(parsed.backCover),
     body,
   };
 }

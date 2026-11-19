@@ -350,6 +350,17 @@ export function parseaExcepciones(texto: string): ExcepcionTipografia[] {
   return excepciones;
 }
 
+export function cuerpoLineas(incidencia: { lineas: LineaCoincidencia[] }): string[] {
+  return incidencia.lineas.map((linea) => `         ${linea.line}  ${linea.text.trimEnd()}`);
+}
+
+export function pieRepetidas(incidencia: { type: string; letter?: string; lineas: LineaCoincidencia[] }): string | undefined {
+  if (incidencia.type !== 'repeated-first-letter' && incidencia.type !== 'repeated-last-letter') return undefined;
+  const donde = incidencia.type === 'repeated-first-letter' ? 'empiezan' : 'terminan';
+  const letra = JSON.stringify(incidencia.letter ?? '').replace(/"/g, "'");
+  return `         las ${incidencia.lineas.length} ${donde} por ${letra}`;
+}
+
 export function formateaExcepcion(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'single-word-line' || incidencia.type === 'stretched-line' || incidencia.type === 'shrunk-line') {
     return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${incidencia.text.trim()}`;
@@ -361,12 +372,9 @@ export function formateaExcepcion(incidencia: TypographyIncidence): string {
   const desde = lineas[0]?.line ?? incidencia.line;
   const hasta = lineas.at(-1)?.line ?? desde;
   const partes = [`  pág ${incidencia.page}  líneas ${desde}-${hasta}  ${incidencia.type}`];
-  for (const linea of lineas) partes.push(`         ${linea.line}  ${linea.text.trimEnd()}`);
-  if (incidencia.type === 'repeated-first-letter' || incidencia.type === 'repeated-last-letter') {
-    const donde = incidencia.type === 'repeated-first-letter' ? 'empiezan' : 'terminan';
-    const letra = JSON.stringify(incidencia.letter).replace(/"/g, "'");
-    partes.push(`         las ${lineas.length} ${donde} por ${letra}`);
-  }
+  partes.push(...cuerpoLineas(incidencia));
+  const pie = pieRepetidas(incidencia);
+  if (pie !== undefined) partes.push(pie);
   return partes.join('\n');
 }
 

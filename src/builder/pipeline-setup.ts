@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
-import { type LogoAsset, writeLogoAssets } from './build-assets.js';
+import { type LogoAsset, writeLogoAssets, writeSiteBackground } from './build-assets.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { loadFilterGroups } from './filter-resolver.js';
 import { composeHtmlTemplate, type HtmlDocType } from './html-composer.js';
@@ -163,6 +163,8 @@ export interface RenderContext {
   pageDimensions: { w: number; h: number; textW: number } | undefined;
 
   announcementImages?: Map<string, string>;
+  recentImages?: Map<string, string>;
+  siteBackground?: string;
 }
 
 export interface ExportContext extends EffectiveTemplates {
@@ -193,12 +195,14 @@ export async function buildPoolContexts(
   const siteConfig = ctx.siteConfig;
   const lang = siteConfig.language ?? DEFAULT_SITE_CONFIG.language;
   const logo = plan.activeFormats.html ? await writeLogoAssets(ctx.cwd, ctx.outputDir, siteConfig) : undefined;
+  const siteBackground = plan.activeFormats.html ? await writeSiteBackground(ctx.cwd, ctx.outputDir, siteConfig) : undefined;
   const renderCtx: RenderContext = {
     ctx,
     plan,
     formatCfg: ctx.siteConfig.format,
     lang,
     logo,
+    siteBackground,
     warnedLangs: new Set<string>(),
     pdfxActive: templates.pdfxActive,
     cropActive: templates.cropActive,

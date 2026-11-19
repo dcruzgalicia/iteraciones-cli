@@ -4,14 +4,21 @@ import { parse, stringify } from 'yaml';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
-import { fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import {
+  fmStringList,
+  fmTrimmedString,
+  metadataFieldValue,
+  resolveBooleanField,
+  resolveMetadataField,
+  resolveStringField,
+} from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
-import { isInside, posix } from '../lib/paths.js';
+import { isInside, posix, relativeAssetHref } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { luaFilterArgs, MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { COVER_IMAGE_FIELDS, type ProcessedImages, parseLetterheadHeight, relativeAssetHref, uniqueName } from './image-processor.js';
+import { COVER_IMAGE_FIELDS, type ProcessedImages, parseLetterheadHeight, uniqueName } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { ASSETS_PDF_IMAGES_DIR } from './output-layout.js';
 import { metadataArgs } from './pandoc-metadata.js';
@@ -159,11 +166,10 @@ function resolveTitlePageValue(
   field: string,
   isCollection: boolean,
 ): string | undefined {
-  const resolved = resolveMetadataField(fm, formatCfg, siteConfig, field);
+  const resolved = metadataFieldValue(fm, formatCfg, siteConfig, field);
   if (resolved === undefined) return undefined;
   if (!isCollection && fm[field] !== undefined) return undefined;
-  const joined = Array.isArray(resolved) ? resolved.join(', ') : resolved;
-  return joined || undefined;
+  return resolved;
 }
 
 function buildTitlePageOverrides(

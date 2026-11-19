@@ -23,14 +23,18 @@ function removeEmptySlot(html: string, name: string): string {
 
 function removeEmptyGridSlots(html: string): string {
   let resultado = html;
-  for (const name of ['publications', 'related', 'sidebar']) {
+  for (const name of ['related', 'sidebar']) {
     resultado = removeEmptySlot(resultado, name);
   }
   return resultado.replace(/<aside id="slot-aside"[^>]*>\s*<\/aside>/, '');
 }
 
+function removeEmptySemblanza(html: string): string {
+  return html.replace(/<div class="resumen semblanza">\s*<span class="meta-label">Semblanza<\/span>\s*<\/div>/g, '');
+}
+
 export function postProcessHtml(html: string, refsCardTemplate: string, refsLabel = 'Referencias'): string {
-  const withIntro = moveCollectionIntro(removeTocReferencesLink(html));
+  const withIntro = removeEmptySemblanza(moveCollectionIntro(removeTocReferencesLink(html)));
   const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate, refsLabel);
   if (block === undefined) return removeEmptyGridSlots(clean);
   if (!clean.includes(REFS)) {

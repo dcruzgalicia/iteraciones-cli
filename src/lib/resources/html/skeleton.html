@@ -14,7 +14,7 @@
   $if(favicon)$$favicon$$endif$
   $if(keywords)$<meta name="keywords" content="$keywords$">$endif$
 </head>
-<body id="top" class="sitio">
+<body id="top" class="sitio$if(background-image)$ sitio--fondo$endif$"$if(background-image)$ style="--sitio-fondo:url('$background-image$')"$endif$>
 
   <a href="#contenido" class="salto-contenido">Saltar al contenido</a>
 
@@ -30,7 +30,6 @@
         <div id="slot-page-header" class="page-header"></div>
         <div class="page-content">
           <div id="slot-main" class="page-main"></div>
-          <div id="slot-publications" class="page-publications creator-publications-grid"></div>
         </div>
       </main>
       <aside id="slot-aside" class="page-aside" aria-label="Información">

@@ -16,6 +16,7 @@ import {
   emitSearch,
   emitSitemap,
   preparaImagenesDeAnuncios,
+  preparaImagenesDeRecientes,
   processDocumentFormats,
   setHtmlLabels,
 } from './pipeline-formats.js';
@@ -96,6 +97,12 @@ export async function documentPipeline(
 
   if (activeFormats.html) {
     renderCtx.announcementImages = await preparaImagenesDeAnuncios({
+      cwd: ctx.cwd,
+      outputDir: ctx.outputDir,
+      discoveryIndex,
+      pdfxActive: renderCtx.pdfxActive,
+    });
+    renderCtx.recentImages = await preparaImagenesDeRecientes({
       cwd: ctx.cwd,
       outputDir: ctx.outputDir,
       discoveryIndex,

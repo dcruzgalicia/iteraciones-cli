@@ -268,6 +268,26 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
   return undefined;
 }
 
+export async function writeSiteBackground(cwd: string, outputDir: string, siteConfig: SiteConfig): Promise<string | undefined> {
+  const raw = siteConfig.format?.html?.site?.backgroundImage?.trim();
+  if (raw === undefined || raw === '') return undefined;
+  if (raw.split('/').includes('..') || raw.startsWith('/')) {
+    throw new BuildError(`backgroundImage: ruta inválida "${raw}" — debe ser relativa al proyecto`);
+  }
+  const src = join(cwd, raw);
+  if (!(await Bun.file(src).exists())) {
+    logWarning(`fondo no encontrado: "${raw}"`, 'assets');
+    return undefined;
+  }
+  const dest = join(outputDir, ASSETS_IMAGES_DIR, 'site-background.webp');
+  await mkdir(dirname(dest), { recursive: true });
+  if (!(await spawnMagick([src, '-resize', '1920x>', '-strip', '-quality', '60', dest]))) {
+    logWarning(`no se pudo convertir el fondo "${raw}" a WebP`, 'assets');
+    return undefined;
+  }
+  return `${ASSETS_IMAGES_DIR}/site-background.webp`;
+}
+
 async function iconAWebp(src: string, dest: string, size: number, tint?: string): Promise<boolean> {
   await mkdir(dirname(dest), { recursive: true });
   const args = ['-background', 'none', src, '-resize', `${size}x${size}`, '-strip', '-define', 'webp:lossless=true'];

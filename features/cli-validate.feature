@@ -163,6 +163,22 @@ Característica: validate revisa el proyecto y dice qué corregir
       Entonces el comando termina con el código de salida 1
       Y el error dice '"creator" debe ser un texto o una lista de textos'
 
+    Escenario: backgroundImage con un número donde va texto
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Dado que el archivo "malo.md" tiene este contenido
+      """
+      ---
+      title: "Ok"
+      backgroundImage: 5
+      ---
+
+      # Hola
+      """
+
+      Cuando corro "validate"
+      Entonces el comando termina con el código de salida 1
+      Y el error dice '"backgroundImage" debe ser un texto'
+
   Regla de negocio: Un frontmatter dudoso avisa sin bloquear
 
     Escenario: Una fecha que no es ISO

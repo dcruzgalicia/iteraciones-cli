@@ -8,8 +8,8 @@ import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { logInfo, logSuccess, logWarning } from '../lib/logger.js';
-import { initProject } from './init.js';
+import { logSuccess, logWarning } from '../lib/logger.js';
+import { initProject, report } from './init.js';
 
 const require = createRequire(import.meta.url);
 
@@ -151,6 +151,26 @@ function campoOrden(): Record<string, unknown> {
 function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string, cwd: string): string {
   const dominio = `${slug}.netlify.app`;
   const medios = { media_folder: '/assets/images', public_folder: '../assets/images' };
+  const coleccion = (
+    name: string,
+    label: string,
+    singular: string,
+    fields: Record<string, unknown>[],
+    extras: Record<string, unknown> = {},
+  ): Record<string, unknown> => ({
+    name,
+    label,
+    label_singular: singular,
+    folder: name,
+    create: true,
+    extension: 'md',
+    format: 'frontmatter',
+    identifier_field: 'title',
+    ...medios,
+    slug: '{{slug}}',
+    ...extras,
+    fields,
+  });
 
   const config = {
     backend: {
@@ -174,20 +194,11 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
     public_folder: 'assets/images',
     output: { omit_empty_optional_fields: true },
     collections: [
-      {
-        name: 'textos',
-        label: 'Textos',
-        label_singular: 'Texto',
-        folder: 'textos',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'title',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{title}} — {{creator}}',
-        sortable_fields: ['date', 'title', 'creator'],
-        fields: [
+      coleccion(
+        'textos',
+        'Textos',
+        'Texto',
+        [
           campoTitulo(),
           campoSubtitulo(),
           campoRelacion('creator', 'Autora', 'creadoras'),
@@ -199,20 +210,13 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('file'),
         ],
-      },
-      {
-        name: 'creadoras',
-        label: 'Creadoras',
-        label_singular: 'Creadora',
-        folder: 'creadoras',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'name',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{name}}',
-        fields: [
+        { summary: '{{title}} — {{creator}}', sortable_fields: ['date', 'title', 'creator'] },
+      ),
+      coleccion(
+        'creadoras',
+        'Creadoras',
+        'Creadora',
+        [
           campo('name', 'Nombre', 'string', { required: true }),
           campoCuerpo('Semblanza'),
           campo('image', 'Retrato', 'image', { required: false }),
@@ -220,20 +224,13 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('creator'),
         ],
-      },
-      {
-        name: 'colecciones',
-        label: 'Colecciones',
-        label_singular: 'Colección',
-        folder: 'colecciones',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'title',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{title}}',
-        fields: [
+        { identifier_field: 'name', summary: '{{name}}' },
+      ),
+      coleccion(
+        'colecciones',
+        'Colecciones',
+        'Colección',
+        [
           campoTitulo(),
           campoSubtitulo(),
           campo('collectionCreatorPrefix', 'Rol de la antologadora', 'string', { required: false }),
@@ -251,20 +248,13 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('collection'),
         ],
-      },
-      {
-        name: 'anuncios',
-        label: 'Anuncios',
-        label_singular: 'Anuncio',
-        folder: 'anuncios',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'title',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{title}}',
-        fields: [
+        { summary: '{{title}}' },
+      ),
+      coleccion(
+        'anuncios',
+        'Anuncios',
+        'Anuncio',
+        [
           campoTitulo(),
           campoCuerpo(),
           campoFecha(),
@@ -273,34 +263,20 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('announcement'),
         ],
-      },
-      {
-        name: 'listas',
-        label: 'Listas',
-        label_singular: 'Lista',
-        folder: 'listas',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'title',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{title}}',
-        fields: [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFiltro(), campoOrden(), campoSlug(), campoType('list')],
-      },
-      {
-        name: 'intervenciones',
-        label: 'Intervenciones',
-        label_singular: 'Intervención',
-        folder: 'intervenciones',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'title',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{title}}',
-        fields: [
+        { summary: '{{title}}' },
+      ),
+      coleccion(
+        'listas',
+        'Listas',
+        'Lista',
+        [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFiltro(), campoOrden(), campoSlug(), campoType('list')],
+        { summary: '{{title}}' },
+      ),
+      coleccion(
+        'intervenciones',
+        'Intervenciones',
+        'Intervención',
+        [
           campoTitulo(),
           campoSubtitulo(),
           campoRelacion('creator', 'Autora', 'creadoras'),
@@ -318,35 +294,20 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('intervention'),
         ],
-      },
-      {
-        name: 'paginas',
-        label: 'Páginas',
-        label_singular: 'Página',
-        folder: 'paginas',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'title',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{title}}',
-        fields: [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFecha(), campoLicencia(), campoIdioma(idioma), campoSlug(), campoType('file')],
-      },
-      {
-        name: 'documentos',
-        label: 'Documentos',
-        label_singular: 'Documento',
-        folder: 'documentos',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'title',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{title}} — {{creator}}',
-        sortable_fields: ['date', 'title', 'creator'],
-        fields: [
+        { summary: '{{title}}' },
+      ),
+      coleccion(
+        'paginas',
+        'Páginas',
+        'Página',
+        [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFecha(), campoLicencia(), campoIdioma(idioma), campoSlug(), campoType('file')],
+        { summary: '{{title}}' },
+      ),
+      coleccion(
+        'documentos',
+        'Documentos',
+        'Documento',
+        [
           campoTitulo(),
           campoRelacion('creator', 'Autora', 'creadoras'),
           campoRelacion('contributor', 'Colaboradoras', 'creadoras'),
@@ -363,21 +324,15 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoCuerpo(),
           campoType('file'),
         ],
-      },
-      {
-        name: 'convocatorias',
-        label: 'Convocatorias',
-        label_singular: 'Convocatoria',
-        folder: 'convocatorias',
-        create: true,
-        extension: 'md',
-        format: 'frontmatter',
-        identifier_field: 'title',
-        ...medios,
-        slug: '{{slug}}',
-        summary: '{{title}}',
-        fields: [campoTitulo(), campoFecha(), campoCuerpo(), campoLicencia(), campoIdioma(idioma), campoSlug(), campoType('file')],
-      },
+        { summary: '{{title}} — {{creator}}', sortable_fields: ['date', 'title', 'creator'] },
+      ),
+      coleccion(
+        'convocatorias',
+        'Convocatorias',
+        'Convocatoria',
+        [campoTitulo(), campoFecha(), campoCuerpo(), campoLicencia(), campoIdioma(idioma), campoSlug(), campoType('file')],
+        { summary: '{{title}}' },
+      ),
       {
         name: 'menu',
         label: 'Menú',
@@ -568,11 +523,6 @@ export async function initSveltia(cwd: string): Promise<void> {
       'palabras-clave',
     ].map((dir) => mkdir(join(cwd, dir), { recursive: true })),
   );
-
-  const report = (created: boolean, archivo: string): void => {
-    if (created) logSuccess(`creado ${archivo}`, 'init');
-    else logInfo(`omitido ${archivo} (ya existe)`, 'init');
-  };
 
   const adminIndex = join(cwd, 'admin', 'index.html');
   const adminConfig = join(cwd, 'admin', 'config.yml');

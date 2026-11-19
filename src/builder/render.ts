@@ -51,6 +51,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
     ['doc-chip-href', vars.docChipHref],
     ['content-chip', vars.contentChip],
     ['icon-top', vars.iconTop],
+    ['background-image', vars.backgroundImage],
     ['front-cover', vars.frontCover],
     ['front-cover-alt', vars.frontCoverAlt],
     ['back-cover', vars.backCover],

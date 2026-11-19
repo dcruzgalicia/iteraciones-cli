@@ -21,3 +21,15 @@ export async function isDir(path: string): Promise<boolean> {
     return false;
   }
 }
+
+export function relativeAssetHref(fromDir: string, asset: string): string {
+  const clean = fromDir.replace(/^\.\//, '').replace(/\/$/, '');
+  const depth = clean === '' || clean === '.' ? 0 : clean.split('/').filter(Boolean).length;
+  const prefix = depth === 0 ? './' : '../'.repeat(depth);
+  return `${prefix}${asset.replace(/^\.\//, '')}`;
+}
+
+export function relativePageHref(fromDir: string, file: string): string {
+  const rel = relativeAssetHref(fromDir, file);
+  return rel.startsWith('./') ? rel : `./${rel}`;
+}

@@ -14,18 +14,18 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Y el archivo "dist/files/test-document.html" dice 'target="_blank"'
       Y las redes aparecen una vez en el header y otra en el footer
 
-  Regla de negocio: Las redes de la creadora van en su tarjeta
+  Regla de negocio: Las redes de la creadora van en su encabezado
 
-    Escenario: La creadora con enlaces tiene su tarjeta con su nombre
+    Escenario: La creadora con enlaces tiene su fila de redes en el encabezado
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con una creadora con redes
       Cuando hago un build del proyecto
-      Entonces el HTML de "ana-ruiz.html" tiene la tarjeta de redes de "Ana Ruiz"
+      Entonces el HTML de "ana-ruiz.html" tiene la fila de redes de "Ana Ruiz"
       Y el HTML de "ana-ruiz.html" contiene "https://instagram.com/ana"
       Y el cuerpo de "ana-ruiz.html" no lleva las redes en negritas
-      Y los enlaces de la tarjeta de redes de "ana-ruiz.html" abren en otra pestaña
+      Y los enlaces de la fila de redes de "ana-ruiz.html" abren en otra pestaña
 
-    Escenario: La creadora sin enlaces no tiene tarjeta de redes
+    Escenario: La creadora sin enlaces no tiene fila de redes
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un proyecto con una creadora con redes
       Cuando hago un build del proyecto

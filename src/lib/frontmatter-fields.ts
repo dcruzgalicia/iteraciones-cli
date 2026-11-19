@@ -54,3 +54,10 @@ export function resolveBooleanField(fm: CfgMap, formatCfg: CfgMap | undefined, r
   }
   return undefined;
 }
+
+export function metadataFieldValue(fm: CfgMap, formatCfg: CfgMap | undefined, rootCfg: CfgMap, field: string): string | undefined {
+  const resolved = resolveMetadataField(fm, formatCfg, rootCfg, field);
+  if (resolved === undefined) return undefined;
+  const joined = Array.isArray(resolved) ? resolved.join(', ') : resolved;
+  return joined || undefined;
+}

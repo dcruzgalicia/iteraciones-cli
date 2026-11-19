@@ -54,7 +54,7 @@ Característica: El chip de tipo lleva a la lista de ese type
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/creadora.html" dice "Ana García"
-      Y el archivo "dist/files/creadora.html" no dice "Anónima"
+      Y la lista "dist/files/creadora.html" no dice "Anónima"
 
   Regla de negocio: El chip es un enlace
 

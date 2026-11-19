@@ -23,6 +23,7 @@ Característica: la configuración del proyecto
         | format: { html: { site: { description: Hola } } } | format.html.site.description| Hola                  |
         | language: en-US                                   | language                   | en-US                 |
         | format: { html: { site: { logo: logo.png } } }    | format.html.site.logo      | logo.png              |
+        | format: { html: { site: { backgroundImage: fondo.png } } } | format.html.site.backgroundImage | fondo.png |
         | disabledFilters: [15-hyphenation-rules]            | disabledFilters            | 15-hyphenation-rules      |
         | disabledPreambleFilters: [97-eso-pic]              | disabledPreambleFilters    | 97-eso-pic               |
         | luaFilters: [mi-filtro.lua]                        | luaFilters                 | mi-filtro.lua            |

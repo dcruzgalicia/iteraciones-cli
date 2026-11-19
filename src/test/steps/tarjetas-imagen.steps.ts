@@ -10,6 +10,10 @@ function crearImagen(ruta: string, color = 'red'): void {
   if (proc.exitCode !== 0) throw new Error(`magick no pudo crear ${ruta}`);
 }
 
+Given('existe la imagen {string}', (ruta: string) => {
+  crearImagen(ruta);
+});
+
 Given('un texto en {string} que empieza con la imagen {string}', (dir: string, archivo: string) => {
   crearImagen(`${dir}/${archivo}`);
   escribirEnProyecto(`${dir}/tres-libros.md`, `---\ntitle: Tres libros\n---\n\n![Mapa](${archivo})\n\nPrimer párrafo del texto.\n`);

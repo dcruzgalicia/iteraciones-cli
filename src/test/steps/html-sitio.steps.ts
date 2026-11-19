@@ -45,18 +45,20 @@ Given('un proyecto con una creadora con redes', () => {
   escribirEnProyecto('sin-redes.md', '---\nname: Sin Redes\ntype: creator\n---\n\nBio sin enlaces.\n');
 });
 
-Then('el HTML de {string} tiene la tarjeta de redes de {string}', (archivo: string, dueno: string) => {
+Then('el HTML de {string} tiene la fila de redes de {string}', (archivo: string, dueno: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const tarjeta = new RegExp(`<h2[^>]*>Redes</h2><span class="chip chip--red">${RegExp.escape(dueno)}</span>`);
-  if (!tarjeta.test(html)) throw new Error(`${archivo} no tiene la tarjeta de redes de ${dueno}`);
+  const fila = /<div class="meta-item cabecera-redes"><span class="meta-label">Redes<\/span>[\s\S]*?<\/div>/.exec(html)?.[0] ?? '';
+  if (fila === '' || !html.includes(dueno)) throw new Error(`${archivo} no tiene la fila de redes de ${dueno}`);
 });
 
-Then('los enlaces de la tarjeta de redes de {string} abren en otra pestaña', (archivo: string) => {
+Then('los enlaces de la fila de redes de {string} abren en otra pestaña', (archivo: string) => {
   const html = leer(`dist/files/${archivo}`);
-  const tarjeta = /<h2[^>]*>Redes<\/h2><span class="chip chip--red">[^<]*<\/span>[\s\S]*?<\/ul>/.exec(html)?.[0] ?? '';
-  if (tarjeta === '') throw new Error(`${archivo} no tiene la tarjeta de redes`);
-  const enlaces = [...tarjeta.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
-  if (enlaces.length === 0) throw new Error(`la tarjeta de redes de ${archivo} no tiene enlaces`);
+  const inicio = html.indexOf('<div class="meta-item cabecera-redes">');
+  const fin = inicio < 0 ? -1 : html.indexOf('</div>', inicio);
+  if (inicio < 0 || fin < 0) throw new Error(`${archivo} no tiene la fila de redes`);
+  const fila = html.slice(inicio, fin);
+  const enlaces = [...fila.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
+  if (enlaces.length === 0) throw new Error(`la fila de redes de ${archivo} no tiene enlaces`);
   for (const enlace of enlaces) {
     if (!enlace.includes('target="_blank"')) throw new Error(`un enlace de redes de ${archivo} no abre en otra pestaña: ${enlace}`);
   }

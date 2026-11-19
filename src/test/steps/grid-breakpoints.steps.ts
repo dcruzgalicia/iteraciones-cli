@@ -179,13 +179,6 @@ Then('la contraportada va antes que la portada', () => {
   }
 });
 
-Then('creator-publications-grid nunca usa 3 columnas', () => {
-  const texto = bloque('creator-publications-grid');
-  if (/repeat\(3,/.test(texto)) {
-    throw new Error('creator-publications-grid usa 3 columnas');
-  }
-});
-
 Then('las páginas con sidebar usan una columna en sm', () => {
   const texto = mediaRango(640, 959, '.content-grid.page-file');
   const tiene = ['.content-grid.page-file', '.content-grid.page-collection', '.content-grid.page-creator'].every((selector) =>
@@ -200,37 +193,6 @@ Then('el aside usa dos columnas internas en sm', () => {
   const texto = mediaRango(640, 959, '.content-grid.page-file .page-aside');
   if (!texto.includes('grid-template-columns: repeat(2, minmax(0, 1fr))')) {
     throw new Error(`el aside no usa dos columnas internas en sm: ${texto}`);
-  }
-});
-
-Then('el retrato de la bio se limita a {int}px y se centra', (maximo: number) => {
-  const regla = base('contenido-retrato');
-  if (!regla.includes(`max-width: ${maximo}px`)) {
-    throw new Error(`el retrato de la bio no se limita a ${maximo}px: ${regla}`);
-  }
-  if (!regla.includes('align-self: center')) {
-    throw new Error(`el retrato de la bio no está centrado: ${regla}`);
-  }
-});
-
-Then('el retrato de la bio va arriba en {word}', (breakpoint: string) => {
-  const regla = reglaDe(mediaGlobal(breakpointPx(breakpoint), '.contenido-flex {'), '.contenido-flex');
-  if (regla.includes('flex-direction: row')) {
-    throw new Error(`el retrato de la bio no va arriba en ${breakpoint}: ${regla}`);
-  }
-});
-
-Then('el retrato y el contenido de la bio van lado a lado en {word}', (breakpoint: string) => {
-  const regla = reglaDe(mediaGlobal(breakpointPx(breakpoint), '.contenido-flex {'), '.contenido-flex');
-  if (!regla.includes('flex-direction: row')) {
-    throw new Error(`el retrato y el contenido no van lado a lado en ${breakpoint}: ${regla}`);
-  }
-});
-
-Then('el retrato de la bio no tiene ancho fijo en {word}', (breakpoint: string) => {
-  const regla = reglaDe(mediaGlobal(breakpointPx(breakpoint), '.contenido-retrato {'), '.contenido-retrato');
-  if (/(?:^|\n)\s*(?:width|flex-basis):/.test(regla)) {
-    throw new Error(`el retrato de la bio tiene un ancho fijo en ${breakpoint}: ${regla}`);
   }
 });
 

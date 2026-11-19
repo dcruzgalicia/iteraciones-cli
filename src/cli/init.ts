@@ -35,6 +35,11 @@ async function ensureGitignore(cwd: string): Promise<GitignoreResult> {
   return 'actualizado';
 }
 
+export function report(created: boolean, archivo: string): void {
+  if (created) logSuccess(`creado ${archivo}`, 'init');
+  else logInfo(`omitido ${archivo} (ya existe)`, 'init');
+}
+
 export async function initProject(cwd: string): Promise<void> {
   const gitignore = await ensureGitignore(cwd);
   if (gitignore === 'actualizado') logSuccess('actualizado .gitignore (node_modules/)', 'init');

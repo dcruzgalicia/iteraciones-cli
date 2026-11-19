@@ -15,13 +15,25 @@ Given('tres creadoras con fechas: {string} en 2026, {string} en 2020 y {string} 
   escribirEnProyecto('marta.md', creadora(sinFecha, ''));
 });
 
-Then('la lista {string} ordena a {string}', (archivo: string, nombres: string) => {
+function contenidoPrincipal(archivo: string): string {
   const html = readFileSync(join(world.root, archivo), 'utf8');
+  const inicio = html.indexOf('id="slot-main"');
+  if (inicio < 0) return html;
+  const fin = html.indexOf('</main>', inicio);
+  return fin < 0 ? html.slice(inicio) : html.slice(inicio, fin);
+}
+
+Then('la lista {string} ordena a {string}', (archivo: string, nombres: string) => {
+  const html = contenidoPrincipal(archivo);
   const leidos = [...html.matchAll(/<h3[^>]*>(?:<a[^>]*>)?([^<]+)/g)].map((m) => (m[1] ?? '').trim());
   const esperados = nombres.split(',').map((n) => n.trim());
   if (JSON.stringify(leidos) !== JSON.stringify(esperados)) {
     throw new Error(`la lista ordena ${JSON.stringify(leidos)} y debería ${JSON.stringify(esperados)}`);
   }
+});
+
+Then('la lista {string} no dice {string}', (archivo: string, texto: string) => {
+  if (contenidoPrincipal(archivo).includes(texto)) throw new Error(`la lista sí dice ${JSON.stringify(texto)}`);
 });
 
 Given('un texto de {string}', (nombre: string) => {
@@ -156,17 +168,6 @@ Then('el chip {string} enlaza a {string}', (chip: string, destino: string) => {
   if (enlazado !== destino) {
     throw new Error(`el chip ${JSON.stringify(chip)} enlaza a ${JSON.stringify(enlazado)} y debería a ${JSON.stringify(destino)}`);
   }
-});
-
-Then('las tarjetas de {string} son hermanas de la bio', (archivo: string) => {
-  const html = readFileSync(join(world.root, archivo), 'utf8');
-  const inicio = html.indexOf('id="card-document"');
-  if (inicio < 0) throw new Error(`${archivo} no tiene tarjeta de bio`);
-  const cierre = html.indexOf('</article></div>', inicio);
-  if (cierre < 0) throw new Error(`${archivo} no cierra la tarjeta de bio`);
-  const primeraTarjeta = html.indexOf('tarjeta--fragmento', inicio);
-  if (primeraTarjeta < 0) throw new Error(`${archivo} no tiene tarjetas de textos o colecciones`);
-  if (primeraTarjeta < cierre) throw new Error(`${archivo} mete las tarjetas dentro de la bio`);
 });
 
 Then('la página de la creadora no lleva la tarjeta de textos', () => {

@@ -29,4 +29,4 @@ export const ACCENT_COLORS = [
 
 export type AccentColor = (typeof ACCENT_COLORS)[number];
 
-export const ACCENT_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
+export const ACCENT_SHADES = [100, 200, 300, 400, 500, 600, 700, 800, 900] as const;

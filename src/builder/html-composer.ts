@@ -14,7 +14,7 @@ export type HtmlDocType = 'file' | 'collection' | 'creator' | 'list' | 'menu' | 
 const CARD_DIRS: Record<HtmlDocType, string> = {
   file: 'file',
   collection: 'collection',
-  creator: 'file',
+  creator: 'creator',
   list: 'collection',
   menu: 'file',
   announcement: 'file',
@@ -148,8 +148,9 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   const header = headerHtml(identity, menuHeader, redes);
   const esCreador = type === 'creator';
   const pageType = esCreador ? 'creator' : type === 'collection' || type === 'list' ? 'collection' : 'file';
-  const main = esCreador ? contenido : [contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
-  const publications = esCreador ? ['$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n') : '';
+  const main = esCreador
+    ? [contenido, '$if(extras)$<div class="preview-grid">$extras$</div>$endif$', '$if(pagination)$$pagination$$endif$'].join('\n')
+    : [contenido, '$if(extras)$$extras$$endif$', '$if(pagination)$$pagination$$endif$'].join('\n');
   const related = [...relatedCards, referencias].join('\n');
   const sidebar = ['$if(announcements-top)$$announcements-top$$endif$', ...siteCards, '$if(announcements-bottom)$$announcements-bottom$$endif$'].join(
     '\n',
@@ -163,7 +164,6 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, type: HtmlDocT
   html = fillSlot(html, 'hero', '$if(hero)$$hero$$endif$');
   html = fillSlot(html, 'page-header', metadata);
   html = fillSlot(html, 'main', main);
-  html = fillSlot(html, 'publications', publications);
   html = fillSlot(html, 'related', related);
   html = fillSlot(html, 'sidebar', sidebar);
   return html;
@@ -182,6 +182,8 @@ export interface HtmlPageVars {
   logoBlock?: string;
 
   favicon?: string;
+
+  backgroundImage?: string;
 
   keywords?: string;
   theme?: string;
@@ -248,9 +250,4 @@ export interface FormatsLink {
   href: string;
   key: ExportFormatKey;
   name: string;
-  description: string;
-}
-
-export function buildFormatsArgs(formats: FormatsLink[]): string[] {
-  return formats.map((f) => `--variable=fmt-${f.key}:${f.href}`);
 }

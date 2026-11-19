@@ -42,9 +42,12 @@ Característica: la plantilla HTML que se entrega a pandoc
       Y la plantilla dice "$body$"
       Y la plantilla no dice "$if(collection)$"
 
-    Escenario: Una creadora también lleva su article
+    Escenario: Una creadora lleva su semblanza en el encabezado
       Dado que la plantilla HTML se compone para "creator"
-      Entonces la plantilla dice "<article"
+      Entonces la plantilla dice "Semblanza"
+      Y la plantilla dice "block-intro"
+      Y la plantilla dice "$body$"
+      Y la plantilla no dice "<article"
       Y la plantilla no dice "$if(collection)$"
 
   Regla de negocio: El header abre el layout y el footer lo cierra

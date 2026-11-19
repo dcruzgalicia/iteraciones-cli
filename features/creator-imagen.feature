@@ -29,7 +29,7 @@ Característica: el retrato de la creadora en sus tarjetas
       Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Retrato de Ana García"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" pone "Retrato de Ana García" antes que "class=\"not-prose tarjeta-titulo tarjeta-titulo--centrado tarjeta-titulo--creadora\""
 
-    Escenario: La página de la creadora integra el retrato en la tarjeta de bio
+    Escenario: La página de la creadora integra el retrato en la tarjeta de encabezado
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y una creadora llamada "Ana García" con retrato "ana.jpg"
@@ -37,11 +37,12 @@ Característica: el retrato de la creadora en sus tarjetas
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/ana-garcia.html" dice "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" dice "-ana.webp"
-      Y el archivo "dist/files/ana-garcia.html" dice "contenido-retrato"
+      Y el archivo "dist/files/ana-garcia.html" dice "portada portada--front"
+      Y el archivo "dist/files/ana-garcia.html" dice "Semblanza"
+      Y el archivo "dist/files/ana-garcia.html" no dice "contenido-retrato"
+      Y el archivo "dist/files/ana-garcia.html" no dice "card-document"
       Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-identity\"" antes que "-ana.webp"
-      Y el archivo "dist/files/ana-garcia.html" pone "<div id=\"card-document\"" antes que "-ana.webp"
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "Bio de Ana García."
-      Y el archivo "dist/files/ana-garcia.html" pone ">Bio</h2>" antes que "-ana.webp"
 
     Escenario: El retrato queda antes de los textos de la creadora
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -52,9 +53,10 @@ Característica: el retrato de la creadora en sus tarjetas
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/ana-garcia.html" pone "content-grid page-creator" antes que "Retrato de Ana García"
       Y el archivo "dist/files/ana-garcia.html" pone "Retrato de Ana García" antes que "tarjeta--fragmento"
-      Y el archivo "dist/files/ana-garcia.html" dice "contenido-retrato"
+      Y el archivo "dist/files/ana-garcia.html" dice "portada portada--front"
+      Y el archivo "dist/files/ana-garcia.html" no dice "contenido-retrato"
 
-    Escenario: Sin retrato la bio y los textos se apilan
+    Escenario: Sin retrato la semblanza y los textos se apilan
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y el proyecto produce html
       Y una creadora llamada "Ana García"
@@ -91,27 +93,3 @@ Característica: el retrato de la creadora en sus tarjetas
       Entonces el comando termina con el código de salida 0
       Y la salida dice "no existe"
       Y el archivo "dist/files/creadora.html" no dice "Retrato de"
-
-  Regla de negocio: El retrato de la bio se limita y deja el resto al contenido
-
-    Escenario: En móvil el retrato se limita y se centra
-      Cuando leo las utilidades de grid
-      Entonces el retrato de la bio se limita a 320px y se centra
-
-    Escenario: En sm el retrato va arriba del contenido
-      Cuando leo las utilidades de grid
-      Entonces el retrato de la bio va arriba en sm
-
-    Escenario: En md el retrato sigue arriba del contenido
-      Cuando leo las utilidades de grid
-      Entonces el retrato de la bio va arriba en md
-
-    Escenario: En lg el retrato va al lado del contenido
-      Cuando leo las utilidades de grid
-      Entonces el retrato y el contenido de la bio van lado a lado en lg
-
-    Escenario: En md, lg y xl el retrato conserva su límite
-      Cuando leo las utilidades de grid
-      Entonces el retrato de la bio no tiene ancho fijo en md
-      Y el retrato de la bio no tiene ancho fijo en lg
-      Y el retrato de la bio no tiene ancho fijo en xl

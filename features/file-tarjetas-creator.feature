@@ -67,17 +67,26 @@ Característica: Las tarjetas que van al final de la página de un texto
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "href=\"./antologia-por-ana-garcia.html\""
 
-  Regla de negocio: La tarjeta de las colecciones lleva chips, no un título
+  Regla de negocio: Cada colección del texto tiene su tarjeta
 
-    Escenario: El texto no lleva el título de la tarjeta
+    Escenario: La tarjeta de la colección muestra autoras y antologadora
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
-      Y el texto es de una colección y de una lista
+      Y una colección de "Editora"
+      Y otra colección con el mismo texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "También está en"
+      Entonces la tarjeta de las colecciones lleva el chip "Colección"
+      Y el chip "Colección" enlaza a "./coleccion.html"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Antología"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Ana García"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Antologadora"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Editora"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Ver colección completa →"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" no dice ">Colecciones</h2>"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" no dice ">Listas</h2>"
 
-    Escenario: Un texto en una colección y en una lista lleva los dos chips
+    Escenario: Un texto en dos colecciones lleva dos tarjetas
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
       Y el texto es de una colección y de una lista
@@ -85,12 +94,11 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y otra lista con el mismo texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
-      Entonces la tarjeta de las colecciones lleva el chip "Colecciones"
-      Y la tarjeta de las colecciones lleva el chip "Listas"
-      Y el chip "Colecciones" enlaza a "./coleccion.html"
-      Y el chip "Listas" enlaza a "./lista.html"
+      Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" contiene 2 veces ">Colección</a>"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Antología"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Otra"
 
-    Escenario: Un texto sólo en listas no lleva la tarjeta de colecciones
+    Escenario: Un texto sólo en listas no lleva tarjeta de colección
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Y un texto de "Ana García"
       Y el texto está en una lista
@@ -98,7 +106,8 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y el proyecto produce html
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/un-texto-por-ana-garcia.html" no dice "href=\"./mi-lista.html\""
-      Y la tarjeta de las colecciones no lleva el chip "Colecciones"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" no dice ">Colección</a>"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" no dice ">Listas</h2>"
 
   Regla de negocio: La biografía de la creadora lleva su chip
 

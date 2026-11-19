@@ -88,6 +88,7 @@ const HtmlSiteSchema = z
     title: z.string().default(DEFAULT_HTML_FORMAT.site.title),
     description: z.string().default(DEFAULT_HTML_FORMAT.site.description),
     logo: z.string().default(DEFAULT_HTML_FORMAT.site.logo),
+    backgroundImage: z.string().optional(),
     logoSize: z.string().optional().default(DEFAULT_HTML_FORMAT.site.logoSize),
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
     style: z.enum(HTML_STYLES).optional().default(DEFAULT_HTML_STYLE),
