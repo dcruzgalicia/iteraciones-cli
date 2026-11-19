@@ -77,6 +77,8 @@ Característica: columnas del grid por breakpoint
       Cuando leo las utilidades de grid
       Entonces la cabecera de creadora apila la foto y el contenido
       Y la cabecera de creadora usa la foto y el resto en lg
+      Y la foto de creadora se centra cuando va arriba
+      Y la foto de creadora va a la izquierda en lg
 
     Escenario: En móvil el título conserva su margen superior
       Cuando leo las utilidades de grid

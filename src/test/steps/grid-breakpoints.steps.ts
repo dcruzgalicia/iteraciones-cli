@@ -259,3 +259,13 @@ Then('la cabecera de creadora usa la foto y el resto en lg', () => {
     throw new Error(`la cabecera de creadora no usa foto y resto en lg: ${regla}`);
   }
 });
+
+Then('la foto de creadora se centra cuando va arriba', () => {
+  const regla = base('cabecera-cuerpo--creador .portada--creador');
+  if (!regla.includes('justify-self: center')) throw new Error(`la foto de creadora no se centra arriba: ${regla}`);
+});
+
+Then('la foto de creadora va a la izquierda en lg', () => {
+  const regla = reglaEnMedia(1280, '.cabecera-cuerpo--creador .portada--creador');
+  if (!regla.includes('justify-self: start')) throw new Error(`la foto de creadora no va a la izquierda en lg: ${regla}`);
+});
