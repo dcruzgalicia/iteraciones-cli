@@ -134,6 +134,10 @@ Característica: El CSS se genera sólo para la combinación activa
       Y el CSS da a ".sitio--fondo" la propiedad "background-position: center"
       Y el CSS da a ".sitio--fondo" la propiedad "background-attachment: fixed"
 
+    Escenario: Las tarjetas de recientes y colección se ajustan al contenido
+      Cuando leo el styles.css del proyecto
+      Entonces el CSS da a ".tarjeta--fragmento.tarjeta--auto" la propiedad "height: auto"
+
   Regla de negocio: La caché de CSS sólo depende del CSS y la configuración
 
     Esquema del escenario: La caché se comporta así ante cada cambio

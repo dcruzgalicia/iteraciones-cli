@@ -83,6 +83,7 @@ Característica: Las tarjetas que van al final de la página de un texto
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Antologadora"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Editora"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "Ver colección completa →"
+      Y el archivo "dist/files/un-texto-por-ana-garcia.html" dice "tarjeta--auto"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" no dice ">Colecciones</h2>"
       Y el archivo "dist/files/un-texto-por-ana-garcia.html" no dice ">Listas</h2>"
 
