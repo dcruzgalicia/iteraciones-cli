@@ -5,7 +5,7 @@
     "": {
       "name": "iteraciones-cli",
       "dependencies": {
-        "@sveltia/cms": "0.261.0",
+        "@sveltia/cms": "0.270.0",
         "commander": "^15.0.0",
         "ignore": "^7.0.6",
         "yaml": "^2.9.0",
@@ -151,7 +151,9 @@
 
     "@simple-libs/stream-utils": ["@simple-libs/stream-utils@2.0.0", "", {}, "sha512-fCTuZK4QBa+39Oz9l4OGfJfz+GpwCp3AqO7Zch3to99xHPgstVsRFpeQ8LNd2o1Gv8raL2mCFwiaHh7bFSp5DQ=="],
 
-    "@sveltia/cms": ["@sveltia/cms@0.261.0", "", { "dependencies": { "@shikijs/langs": "4.6.0", "@shikijs/themes": "4.6.0", "exifr": "^7.1.3", "immutable": "^5.1.9", "leaflet": "^1.9.4", "pdfjs-dist": "^6.5.438", "svgo": "^4.1.0", "terra-draw": "^1.39.0", "terra-draw-leaflet-adapter": "1.0.3", "turndown": "^7.2.5" }, "peerDependencies": { "@types/react": "^19.3.0" }, "optionalPeers": ["@types/react"] }, "sha512-et4T4WdZhycPh49RmaqWeqitgoqgtl0muMvw85WLD4zdGNRiZaqWNc28LVZWNQ3LQsw1jDdJ4iiintaTpJ3x4w=="],
+    "@sindresorhus/transliterate": ["@sindresorhus/transliterate@3.1.0", "", {}, "sha512-xSMZIoi9tqXNXNdcJWdvVSiNmFiHnE8PjlV9Yb0I33zX2UrbNooiVpOdAvEjdrYYLLUEnvvqCnm+wTyU12wDng=="],
+
+    "@sveltia/cms": ["@sveltia/cms@0.270.0", "", { "dependencies": { "@shikijs/langs": "4.6.0", "@shikijs/themes": "4.6.0", "@sindresorhus/transliterate": "^3.1.0", "exifr": "^7.1.3", "immutable": "^5.2.1", "leaflet": "^1.9.4", "pdfjs-dist": "^6.5.438", "svgo": "^4.1.0", "terra-draw": "^1.40.0", "turndown": "^7.2.5" }, "peerDependencies": { "@types/react": "^19.3.0" }, "optionalPeers": ["@types/react"] }, "sha512-Stnnsl8m5LDjdir7yWY/ebKIrtcw6wRXUWF03MwXddFopZxQGktSUL02Zm/LPtXvgeS/vpAeSr66ZdVzek5ZEA=="],
 
     "@teppeis/multimaps": ["@teppeis/multimaps@3.0.0", "", {}, "sha512-ID7fosbc50TbT0MK0EG12O+gAP3W3Aa/Pz4DaTtQtEvlc9Odaqi0de+xuZ7Li2GtK4HzEX7IuRWS/JmZLksR3Q=="],
 
@@ -301,7 +303,7 @@
 
     "ignore": ["ignore@7.0.6", "", {}, "sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw=="],
 
-    "immutable": ["immutable@5.1.9", "", {}, "sha512-m8nVez3rwrgmWxtLMt1ZYXB2Lv7OKYn/disyxAlSDYAlKSlFoPPfIAmAM/M5xqL4m4C/wAPw7S2/CNaUii1Hxg=="],
+    "immutable": ["immutable@5.2.1", "", {}, "sha512-CgXNM1BhKqpMjFHTyqQSk09OWqzHNJ/U4BdeBgXoBdR2DdgBdOSv131cO1/YMgzopqnka3B/i949UaMLEKUxOA=="],
 
     "import-fresh": ["import-fresh@3.3.1", "", { "dependencies": { "parent-module": "^1.0.0", "resolve-from": "^4.0.0" } }, "sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ=="],
 
@@ -423,9 +425,7 @@
 
     "tagged-tag": ["tagged-tag@1.0.0", "", {}, "sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng=="],
 
-    "terra-draw": ["terra-draw@1.39.0", "", {}, "sha512-W9myUqAlxTQYydNM6cI1kmaU3/i9IlNUfzbfjr7sZVfE5YrJ1ogEpMTKKXdlXdON7tB/nMd3sPL26u7CAzCxKA=="],
-
-    "terra-draw-leaflet-adapter": ["terra-draw-leaflet-adapter@1.0.3", "", { "peerDependencies": { "leaflet": "^1.9.4", "terra-draw": "^1.0.0" } }, "sha512-yYUDwyKxGj69pUzd4L2YclXwAxNhuXI01DCm8KbOtGxnf4I+PmFsAQrwA/sU5EbdaOj1AaPrPqadihgFvrSOng=="],
+    "terra-draw": ["terra-draw@1.40.0", "", {}, "sha512-HMq/Eo0pU5nAm+KqKYYCoTChenh5PWXOFguIwIM1+w6jy7+smBElC3a7NRRqLGBb9oq/zOVZYypFUMui+JeqIA=="],
 
     "tiny-case": ["tiny-case@1.0.3", "", {}, "sha512-Eet/eeMhkO6TX8mnUteS9zgPbUMQa4I6Kkp5ORiBD5476/m+PIRiumP5tmh5ioJpH7k51Kehawy2UDfsnxxY8Q=="],
 

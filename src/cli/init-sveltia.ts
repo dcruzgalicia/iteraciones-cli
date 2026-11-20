@@ -431,7 +431,7 @@ interface Paquete {
 
 function versionSveltia(): string {
   const propio = require('../../package.json') as { dependencies?: Record<string, string> };
-  return propio.dependencies?.['@sveltia/cms'] ?? '0.261.0';
+  return propio.dependencies?.['@sveltia/cms'] ?? '0.270.0';
 }
 
 function fusionarPaquete(existente: Paquete | null, cwd: string, conCache: boolean): { paquete: Paquete; cambios: string[] } {
