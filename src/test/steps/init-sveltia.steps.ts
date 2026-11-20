@@ -22,6 +22,12 @@ interface Campo {
 interface Coleccion {
   name?: string;
   folder?: string;
+  path?: string;
+  preview_path?: string;
+  filter?: { field?: string; value?: unknown };
+  nested?: { depth?: number; subfolders?: boolean };
+  meta?: { path?: { index_file?: string } };
+  editor?: { preview?: boolean };
   fields?: Campo[];
   files?: Array<{ file?: string; fields?: Campo[] }>;
 }
@@ -61,6 +67,54 @@ Then('la configuración de Sveltia declara la colección {string} en la carpeta 
   if (col === undefined) throw new Error(`no existe la colección ${JSON.stringify(nombre)}`);
   if (col.folder !== carpeta)
     throw new Error(`la colección ${nombre} usa folder=${JSON.stringify(col.folder)} y debía ser ${JSON.stringify(carpeta)}`);
+});
+
+Then('la configuración de Sveltia no declara la colección {string}', (nombre: string) => {
+  if (config().collections?.some((c) => c.name === nombre) === true) throw new Error(`la colección ${JSON.stringify(nombre)} no debería existir`);
+});
+
+Then('la colección {string} usa la ruta {string}', (nombre: string, ruta: string) => {
+  const actual = coleccion(nombre).path;
+  if (actual !== ruta) throw new Error(`la colección ${nombre} usa path=${JSON.stringify(actual)} y debía ser ${JSON.stringify(ruta)}`);
+});
+
+Then('la colección {string} anida con profundidad {int} sin subcarpetas', (nombre: string, profundidad: number) => {
+  const nested = coleccion(nombre).nested;
+  if (nested?.depth !== profundidad || nested.subfolders !== false) {
+    throw new Error(`la colección ${nombre} anida con ${JSON.stringify(nested)} y debía ser depth=${profundidad} sin subcarpetas`);
+  }
+});
+
+Then('la colección {string} anida con profundidad {int} con subcarpetas', (nombre: string, profundidad: number) => {
+  const nested = coleccion(nombre).nested;
+  if (nested?.depth !== profundidad || nested.subfolders !== true) {
+    throw new Error(`la colección ${nombre} anida con ${JSON.stringify(nested)} y debía ser depth=${profundidad} con subcarpetas`);
+  }
+});
+
+Then('la colección {string} filtra el campo {string} con el valor {string}', (nombre: string, campo: string, valor: string) => {
+  const filter = coleccion(nombre).filter;
+  if (filter?.field !== campo || filter.value !== valor) {
+    throw new Error(`la colección ${nombre} filtra con ${JSON.stringify(filter)} y debía ser ${campo}=${valor}`);
+  }
+});
+
+Then('la colección {string} no usa meta.path', (nombre: string) => {
+  if (coleccion(nombre).meta?.path !== undefined) throw new Error(`la colección ${nombre} no debería declarar meta.path`);
+});
+
+Then('la colección {string} usa el archivo índice {string}', (nombre: string, indice: string) => {
+  const actual = coleccion(nombre).meta?.path?.index_file;
+  if (actual !== indice) throw new Error(`la colección ${nombre} usa index_file=${JSON.stringify(actual)} y debía ser ${JSON.stringify(indice)}`);
+});
+
+Then('la colección {string} tiene el preview path {string}', (nombre: string, preview: string) => {
+  const actual = coleccion(nombre).preview_path;
+  if (actual !== preview) throw new Error(`la colección ${nombre} usa preview_path=${JSON.stringify(actual)} y debía ser ${JSON.stringify(preview)}`);
+});
+
+Then('la colección {string} no tiene preview', (nombre: string) => {
+  if (coleccion(nombre).editor?.preview !== false) throw new Error(`la colección ${nombre} no debería tener preview`);
 });
 
 Then('la configuración de Sveltia declara el archivo {string}', (archivo: string) => {

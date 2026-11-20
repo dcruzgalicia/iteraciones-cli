@@ -42,9 +42,22 @@ const IDIOMAS: Record<string, string> = {
   en: 'English',
 };
 
+const CREADORA_EJEMPLO = [
+  '---',
+  'name: "Ejemplo"',
+  'slug: ejemplo',
+  'type: creator',
+  '---',
+  '',
+  'Esta es una semblanza de ejemplo. Reemplázala o bórrala desde el admin.',
+  '',
+].join('\n');
+
 const TEXTO_EJEMPLO = [
   '---',
   'title: "Texto de ejemplo"',
+  'creator:',
+  '  - "Ejemplo"',
   'type: file',
   '---',
   '',
@@ -87,7 +100,7 @@ function campoType(tipo: string): Record<string, unknown> {
   return campo('type', 'Tipo', 'hidden', { default: tipo });
 }
 
-function campoRelacion(name: string, label: string, coleccion: string, multiple = true): Record<string, unknown> {
+function campoRelacion(name: string, label: string, coleccion: string, multiple = true, required = false): Record<string, unknown> {
   return campo(name, label, 'relation', {
     collection: coleccion,
     value_field: 'name',
@@ -95,7 +108,7 @@ function campoRelacion(name: string, label: string, coleccion: string, multiple 
     display_fields: ['name'],
     dropdown_threshold: 0,
     ...(multiple ? { multiple: true } : {}),
-    required: false,
+    required,
   });
 }
 
@@ -107,10 +120,10 @@ function campoSubtitulo(): Record<string, unknown> {
   return campo('subtitle', 'Subtítulo', 'string', { required: false });
 }
 
-function campoTitulo(): Record<string, unknown> {
+function campoTitulo(required = false): Record<string, unknown> {
   return campo('title', 'Título', 'string', {
-    required: false,
-    hint: 'Si se deja vacío, la CLI usará «Sin título».',
+    required,
+    ...(required ? {} : { hint: 'Si se deja vacío, la CLI usará «Sin título».' }),
   });
 }
 
@@ -199,9 +212,9 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         'Textos',
         'Texto',
         [
-          campoTitulo(),
+          campoTitulo(true),
           campoSubtitulo(),
-          campoRelacion('creator', 'Autora', 'creadoras'),
+          campoRelacion('creator', 'Autora', 'creadoras', true, true),
           campoCuerpo(),
           campoFecha(),
           campoRelacion('keywords', 'Palabras clave', 'palabras_clave'),
@@ -210,7 +223,14 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('file'),
         ],
-        { summary: '{{title}} — {{creator}}', sortable_fields: ['date', 'title', 'creator'] },
+        {
+          path: '{{creator.0 | slugify}}/{{slug}}',
+          nested: { depth: 2, subfolders: false, summary: '{{dirname}} / {{title}}' },
+          filter: { field: 'type', value: 'file' },
+          preview_path: 'textos/{{dirname}}/{{filename}}.html',
+          summary: '{{title}} — {{creator}}',
+          sortable_fields: ['date', 'title', 'creator'],
+        },
       ),
       coleccion(
         'creadoras',
@@ -224,7 +244,15 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('creator'),
         ],
-        { identifier_field: 'name', summary: '{{name}}' },
+        {
+          folder: 'textos',
+          identifier_field: 'name',
+          nested: { depth: 2, subfolders: true, summary: '{{name}}' },
+          meta: { path: { index_file: 'creadora' } },
+          filter: { field: 'type', value: 'creator' },
+          preview_path: 'textos/{{fields.slug}}/{{fields.slug}}.html',
+          summary: '{{name}}',
+        },
       ),
       coleccion(
         'colecciones',
@@ -248,7 +276,11 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('collection'),
         ],
-        { summary: '{{title}}' },
+        {
+          filter: { field: 'type', value: 'collection' },
+          preview_path: 'colecciones/{{filename}}.html',
+          summary: '{{title}}',
+        },
       ),
       coleccion(
         'anuncios',
@@ -263,14 +295,22 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('announcement'),
         ],
-        { summary: '{{title}}' },
+        {
+          filter: { field: 'type', value: 'announcement' },
+          preview_path: 'anuncios/{{filename}}.html',
+          summary: '{{title}}',
+        },
       ),
       coleccion(
         'listas',
         'Listas',
         'Lista',
         [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFiltro(), campoOrden(), campoSlug(), campoType('list')],
-        { summary: '{{title}}' },
+        {
+          filter: { field: 'type', value: 'list' },
+          preview_path: '{{filename}}.html',
+          summary: '{{title}}',
+        },
       ),
       coleccion(
         'intervenciones',
@@ -294,44 +334,11 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoSlug(),
           campoType('intervention'),
         ],
-        { summary: '{{title}}' },
-      ),
-      coleccion(
-        'paginas',
-        'Páginas',
-        'Página',
-        [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFecha(), campoLicencia(), campoIdioma(idioma), campoSlug(), campoType('file')],
-        { summary: '{{title}}' },
-      ),
-      coleccion(
-        'documentos',
-        'Documentos',
-        'Documento',
-        [
-          campoTitulo(),
-          campoRelacion('creator', 'Autora', 'creadoras'),
-          campoRelacion('contributor', 'Colaboradoras', 'creadoras'),
-          campo('publisher', 'Editorial', 'string', { required: false }),
-          campo('identifier', 'Identificador', 'string', { required: false }),
-          campo('doi', 'DOI', 'string', { required: false }),
-          campo('isbn', 'ISBN', 'string', { required: false }),
-          campo('abstract', 'Resumen', 'text', { required: false }),
-          campoRelacion('keywords', 'Palabras clave', 'palabras_clave'),
-          campoFecha(),
-          campoLicencia(),
-          campoIdioma(idioma),
-          campoSlug(),
-          campoCuerpo(),
-          campoType('file'),
-        ],
-        { summary: '{{title}} — {{creator}}', sortable_fields: ['date', 'title', 'creator'] },
-      ),
-      coleccion(
-        'convocatorias',
-        'Convocatorias',
-        'Convocatoria',
-        [campoTitulo(), campoFecha(), campoCuerpo(), campoLicencia(), campoIdioma(idioma), campoSlug(), campoType('file')],
-        { summary: '{{title}}' },
+        {
+          filter: { field: 'type', value: 'intervention' },
+          editor: { preview: false },
+          summary: '{{title}}',
+        },
       ),
       {
         name: 'menu',
@@ -341,6 +348,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
             name: 'menu',
             label: 'Menú principal',
             file: 'menu.md',
+            preview_path: 'menu.html',
             fields: [camposEnlaces(), campoType('menu')],
           },
         ],
@@ -508,20 +516,9 @@ export async function initSveltia(cwd: string): Promise<void> {
   const rama = detectarRama(cwd);
 
   await Promise.all(
-    [
-      'admin',
-      'admin/vendor',
-      'paginas',
-      'textos',
-      'documentos',
-      'creadoras',
-      'colecciones',
-      'convocatorias',
-      'listas',
-      'anuncios',
-      'intervenciones',
-      'palabras-clave',
-    ].map((dir) => mkdir(join(cwd, dir), { recursive: true })),
+    ['admin', 'admin/vendor', 'textos/ejemplo', 'colecciones', 'listas', 'anuncios', 'intervenciones', 'palabras-clave'].map((dir) =>
+      mkdir(join(cwd, dir), { recursive: true }),
+    ),
   );
 
   const adminIndex = join(cwd, 'admin', 'index.html');
@@ -538,7 +535,8 @@ export async function initSveltia(cwd: string): Promise<void> {
   report(configCreado, 'admin/config.yml');
   report(vendorCreado, 'admin/vendor/sveltia-cms.js');
   report(await writeExclusive(join(cwd, 'palabras-clave', '.gitkeep'), ''), 'palabras-clave/.gitkeep');
-  report(await writeExclusive(join(cwd, 'textos', 'ejemplo.md'), TEXTO_EJEMPLO), 'textos/ejemplo.md');
+  report(await writeExclusive(join(cwd, 'textos', 'ejemplo', 'creadora.md'), CREADORA_EJEMPLO), 'textos/ejemplo/creadora.md');
+  report(await writeExclusive(join(cwd, 'textos', 'ejemplo', 'ejemplo.md'), TEXTO_EJEMPLO), 'textos/ejemplo/ejemplo.md');
   const netlifyPath = join(cwd, 'netlify.toml');
   const netlifyCreado = await writeExclusive(netlifyPath, netlifyToml());
   const conCache =

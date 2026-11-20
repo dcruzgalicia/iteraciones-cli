@@ -21,7 +21,13 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "index.md" no existe
       Y el archivo "menu.md" no existe
       Y el archivo "bibliography.bib" no existe
-      Y el archivo "textos/ejemplo.md" existe
+      Y el archivo "textos/ejemplo/creadora.md" existe
+      Y el archivo "textos/ejemplo/ejemplo.md" existe
+      Y el archivo "textos/ejemplo.md" no existe
+      Y el directorio "paginas" no existe
+      Y el directorio "documentos" no existe
+      Y el directorio "convocatorias" no existe
+      Y el directorio "creadoras" no existe
       Y el archivo "creadoras/ejemplo.md" no existe
       Y el archivo "colecciones/ejemplo.md" no existe
       Y el archivo "listas/ejemplo.md" no existe
@@ -35,23 +41,36 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la configuración de Sveltia usa el backend "github"
       Y la configuración de Sveltia declara la colección "textos" en la carpeta "textos"
       Y la configuración de Sveltia declara la colección "colecciones" en la carpeta "colecciones"
-      Y la configuración de Sveltia declara la colección "creadoras" en la carpeta "creadoras"
+      Y la configuración de Sveltia declara la colección "creadoras" en la carpeta "textos"
       Y la configuración de Sveltia declara la colección "intervenciones" en la carpeta "intervenciones"
       Y la configuración de Sveltia declara la colección "listas" en la carpeta "listas"
       Y la configuración de Sveltia declara la colección "anuncios" en la carpeta "anuncios"
-      Y la configuración de Sveltia declara la colección "paginas" en la carpeta "paginas"
-      Y la configuración de Sveltia declara la colección "documentos" en la carpeta "documentos"
-      Y la configuración de Sveltia declara la colección "convocatorias" en la carpeta "convocatorias"
+      Y la configuración de Sveltia no declara la colección "paginas"
+      Y la configuración de Sveltia no declara la colección "documentos"
+      Y la configuración de Sveltia no declara la colección "convocatorias"
       Y la configuración de Sveltia declara el archivo "menu.md"
       Y la configuración de Sveltia declara el campo "collectionCreator" en la colección "colecciones"
       Y la configuración de Sveltia declara el campo "placement" en la colección "anuncios"
       Y la configuración de Sveltia ofrece la licencia "CC-BY-NC-ND-4.0"
       Y la configuración de Sveltia ofrece la licencia "PF-AC-PR-FA-1.0"
 
-    Escenario: La configuración sigue el layout de Histórikas
+    Escenario: La configuración sigue el layout por autora
       Dado que la raíz del proyecto está vacía
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
+      Y la colección "textos" usa la ruta "{{creator.0 | slugify}}/{{slug}}"
+      Y la colección "textos" anida con profundidad 2 sin subcarpetas
+      Y la colección "creadoras" anida con profundidad 2 con subcarpetas
+      Y la colección "textos" filtra el campo "type" con el valor "file"
+      Y la colección "creadoras" filtra el campo "type" con el valor "creator"
+      Y la colección "textos" no usa meta.path
+      Y la colección "creadoras" usa el archivo índice "creadora"
+      Y la colección "textos" tiene el preview path "textos/{{dirname}}/{{filename}}.html"
+      Y la colección "creadoras" tiene el preview path "textos/{{fields.slug}}/{{fields.slug}}.html"
+      Y la colección "colecciones" tiene el preview path "colecciones/{{filename}}.html"
+      Y la colección "anuncios" tiene el preview path "anuncios/{{filename}}.html"
+      Y la colección "listas" tiene el preview path "{{filename}}.html"
+      Y la colección "intervenciones" no tiene preview
       Y el campo "type" de la colección "menu" está oculto con el valor "menu"
       Y el campo "image" de la colección "creadoras" es de tipo "image"
       Y el campo "creator" de la colección "textos" es una relación con "creadoras"
@@ -96,7 +115,8 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el campo "filter" de la colección "listas" no aparece en la vista previa
       Y el campo "pages" de la colección "intervenciones" no aparece en la vista previa
       Y el campo "letterhead" de la colección "intervenciones" no aparece en la vista previa
-      Y el campo "title" de la colección "textos" no es obligatorio
+      Y el campo "title" de la colección "textos" es obligatorio
+      Y el campo "creator" de la colección "textos" es obligatorio
       Y el campo "slug" de la colección "textos" no es obligatorio
 
     Escenario: Configura Netlify y las herramientas del build
@@ -250,4 +270,5 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el sitio generado tiene el archivo "admin/config.yml"
       Y el sitio generado tiene el archivo "admin/vendor/sveltia-cms.js"
       Y el sitio generado tiene el archivo "index.html"
-      Y el sitio generado tiene el archivo "textos/texto-de-ejemplo.html"
+      Y el sitio generado tiene el archivo "textos/ejemplo/ejemplo.html"
+      Y el sitio generado tiene el archivo "textos/ejemplo/texto-de-ejemplo-por-ejemplo.html"
