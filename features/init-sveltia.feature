@@ -34,6 +34,13 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "anuncios/ejemplo.md" no existe
       Y el archivo "intervenciones/ejemplo.md" no existe
 
+    Escenario: Copia la versión actual de Sveltia
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el paquete declara la dependencia "@sveltia/cms" con el valor "0.270.0"
+      Y el archivo "admin/vendor/sveltia-cms.js" dice "0.270.0"
+
     Escenario: La configuración de Sveltia cubre todos los types
       Dado que la raíz del proyecto está vacía
       Cuando corro "init sveltia"
