@@ -18,7 +18,7 @@ const DEFAULT_GITIGNORE = [
 
 type GitignoreResult = 'creado' | 'actualizado' | 'sin-cambios';
 
-async function ensureGitignore(cwd: string): Promise<GitignoreResult> {
+async function writeGitignore(cwd: string): Promise<GitignoreResult> {
   const ruta = join(cwd, '.gitignore');
   const existente = await Bun.file(ruta)
     .text()
@@ -35,15 +35,14 @@ async function ensureGitignore(cwd: string): Promise<GitignoreResult> {
   return 'actualizado';
 }
 
-export function report(created: boolean, archivo: string): void {
-  if (created) logSuccess(`creado ${archivo}`, 'init');
-  else logInfo(`omitido ${archivo} (ya existe)`, 'init');
+export function report(created: boolean, archivo: string, context = 'create'): void {
+  if (created) logSuccess(`creado ${archivo}`, context);
+  else logInfo(`omitido ${archivo} (ya existe)`, context);
 }
 
-export async function initProject(cwd: string): Promise<void> {
-  const gitignore = await ensureGitignore(cwd);
-  if (gitignore === 'actualizado') logSuccess('actualizado .gitignore (node_modules/)', 'init');
-  else if (gitignore === 'creado') logSuccess('creado .gitignore', 'init');
-  else logInfo('omitido .gitignore (ya existe)', 'init');
-  logSuccess("proyecto inicializado. Crea un archivo .md y ejecuta 'iteraciones build'.", 'init');
+export async function ensureGitignore(cwd: string, context = 'create'): Promise<void> {
+  const gitignore = await writeGitignore(cwd);
+  if (gitignore === 'actualizado') logSuccess('actualizado .gitignore (node_modules/)', context);
+  else if (gitignore === 'creado') logSuccess('creado .gitignore', context);
+  else logInfo('omitido .gitignore (ya existe)', context);
 }

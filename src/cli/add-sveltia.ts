@@ -10,15 +10,11 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { logSuccess, logWarning } from '../lib/logger.js';
-import { initProject, report } from './init.js';
+import { ensureGitignore, report } from './project-files.js';
 
 const require = createRequire(import.meta.url);
 
 export type SveltiaWorkflow = 'simple' | 'editorial' | 'open-authoring';
-
-export interface SveltiaOptions {
-  workflow?: SveltiaWorkflow;
-}
 
 const ADMIN_INDEX = [
   '<!doctype html>',
@@ -517,9 +513,8 @@ function brewfile(format: Awaited<ReturnType<typeof loadSiteConfig>>['format']):
   return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
 }
 
-export async function initSveltia(cwd: string, options: SveltiaOptions = {}): Promise<void> {
-  await initProject(cwd);
-  const workflow = options.workflow ?? 'open-authoring';
+export async function addSveltia(cwd: string, workflow: SveltiaWorkflow): Promise<void> {
+  await ensureGitignore(cwd, 'add');
 
   const { language, format } = await loadSiteConfig(cwd);
   const slug = slugify(basename(cwd)) || 'iteraciones';
@@ -542,12 +537,12 @@ export async function initSveltia(cwd: string, options: SveltiaOptions = {}): Pr
   ]);
   const vendorCreado = await copiarVendorSveltia(vendor);
 
-  report(indexCreado, 'admin/index.html');
-  report(configCreado, 'admin/config.yml');
-  report(vendorCreado, 'admin/vendor/sveltia-cms.js');
-  report(await writeExclusive(join(cwd, 'keywords', '.gitkeep'), ''), 'keywords/.gitkeep');
-  report(await writeExclusive(join(cwd, 'texts', 'ejemplo', 'creadora.md'), CREADORA_EJEMPLO), 'texts/ejemplo/creadora.md');
-  report(await writeExclusive(join(cwd, 'texts', 'ejemplo', 'ejemplo.md'), TEXTO_EJEMPLO), 'texts/ejemplo/ejemplo.md');
+  report(indexCreado, 'admin/index.html', 'add');
+  report(configCreado, 'admin/config.yml', 'add');
+  report(vendorCreado, 'admin/vendor/sveltia-cms.js', 'add');
+  report(await writeExclusive(join(cwd, 'keywords', '.gitkeep'), ''), 'keywords/.gitkeep', 'add');
+  report(await writeExclusive(join(cwd, 'texts', 'ejemplo', 'creadora.md'), CREADORA_EJEMPLO), 'texts/ejemplo/creadora.md', 'add');
+  report(await writeExclusive(join(cwd, 'texts', 'ejemplo', 'ejemplo.md'), TEXTO_EJEMPLO), 'texts/ejemplo/ejemplo.md', 'add');
   const netlifyPath = join(cwd, 'netlify.toml');
   const netlifyCreado = await writeExclusive(netlifyPath, netlifyToml());
   const conCache =
@@ -557,11 +552,11 @@ export async function initSveltia(cwd: string, options: SveltiaOptions = {}): Pr
         .text()
         .catch(() => '')
     ).includes('netlify-plugin-cache');
-  report(netlifyCreado, 'netlify.toml');
+  report(netlifyCreado, 'netlify.toml', 'add');
   const brew = brewfile(format);
-  if (brew === undefined) logWarning('no hay formatos activos; no se generó Brewfile.netlify', 'init');
-  else report(await writeExclusive(join(cwd, 'Brewfile.netlify'), brew), 'Brewfile.netlify');
-  if (repo.startsWith('OWNER/')) logWarning(`no encontré un remoto de GitHub; admin/config.yml usa ${repo}`, 'init');
+  if (brew === undefined) logWarning('no hay formatos activos; no se generó Brewfile.netlify', 'add');
+  else report(await writeExclusive(join(cwd, 'Brewfile.netlify'), brew), 'Brewfile.netlify', 'add');
+  if (repo.startsWith('OWNER/')) logWarning(`no encontré un remoto de GitHub; admin/config.yml usa ${repo}`, 'add');
 
   const paquetePath = join(cwd, 'package.json');
   const crudo = await Bun.file(paquetePath)
@@ -572,14 +567,14 @@ export async function initSveltia(cwd: string, options: SveltiaOptions = {}): Pr
     try {
       existente = JSON.parse(crudo) as Paquete;
     } catch {
-      logWarning('package.json no es JSON válido; se dejó intacto', 'init');
+      logWarning('package.json no es JSON válido; se dejó intacto', 'add');
     }
   }
   if (crudo === null || existente !== null) {
     const { paquete, cambios } = fusionarPaquete(existente, cwd, conCache);
     await writeFile(paquetePath, `${JSON.stringify(paquete, null, 2)}\n`);
-    logSuccess(cambios.length === 0 ? 'package.json sin cambios' : `actualizado package.json (${cambios.join(', ')})`, 'init');
+    logSuccess(cambios.length === 0 ? 'package.json sin cambios' : `actualizado package.json (${cambios.join(', ')})`, 'add');
   }
 
-  logSuccess('admin de Sveltia listo. Ajusta admin/config.yml y ejecuta el build.', 'init');
+  logSuccess('admin de Sveltia listo. Ajusta admin/config.yml y ejecuta el build.', 'add');
 }

@@ -2,7 +2,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { CommanderError } from 'commander';
-import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../../cli/dispatcher.js';
+import { runAdd, runBuild, runClean, runCreate, runDoctor, runFilters, runNew, runValidate } from '../../cli/dispatcher.js';
 import { checkReadPermissions, checkWritePermissions } from '../../cli/doctor/system-checks.js';
 import { buildProgram } from '../../cli/parser.js';
 import { capture, world } from './cli-world.steps.js';
@@ -25,8 +25,8 @@ const COMMANDS: Record<string, (root: string) => Promise<unknown>> = {
   new: (root) => runNew(root, 'doc.md'),
   clean: runClean,
   'list-filters': runFilters,
-  init: runInit,
-  'init sveltia': (root) => runInit(root, 'sveltia'),
+  create: (root) => runCreate(root, undefined, { prompt: false }),
+  'add sveltia': (root) => runAdd(root, 'sveltia', { prompt: false }),
 };
 
 Given('que la raíz del proyecto no existe', () => {

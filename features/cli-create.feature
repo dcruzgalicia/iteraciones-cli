@@ -18,6 +18,32 @@ Característica: create arma el proyecto mínimo y las integraciones opcionales
       Y la configuración activa los formatos "html"
       Y el archivo "iteraciones.config.yaml" dice "license: CC-BY-NC-ND-4.0"
 
+    Escenario: create crea la raíz que no existe
+      Dado que la raíz del proyecto no existe todavía
+      Cuando parseo el comando "create --no-prompt" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo ".gitignore" existe
+      Y el archivo "iteraciones.config.yaml" existe
+
+    Escenario: create no sobreescribe un .gitignore preexistente
+      Dado que la raíz del proyecto está vacía
+      Y que el archivo ".gitignore" tiene este contenido
+        """
+        node_modules/
+        """
+      Cuando parseo el comando "create --no-prompt" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo ".gitignore" quedó con este contenido
+      """
+      node_modules/
+      """
+
+    Escenario: create no sobreescribe un proyecto existente
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Cuando parseo el comando "create --no-prompt" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "iteraciones.config.yaml" contiene "Test"
+
     Escenario: El proyecto mínimo compila
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "create --no-prompt" sobre la raíz del proyecto

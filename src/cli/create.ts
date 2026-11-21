@@ -8,9 +8,9 @@ import { ACCENT_COLORS, type AccentColor } from '../lib/accent-palettes.js';
 import { ConfigError } from '../lib/errors.js';
 import { HTML_STYLE_INPUTS, type HtmlStyle, htmlStyle } from '../lib/html-styles.js';
 import { logInfo, logSuccess, logWarning } from '../lib/logger.js';
-import { initProject, report } from './init.js';
-import { initSveltia, type SveltiaWorkflow } from './init-sveltia.js';
-import { initTemplate, isTemplateName, TEMPLATE_NAMES } from './project-templates/index.js';
+import { addSveltia, type SveltiaWorkflow } from './add-sveltia.js';
+import { ensureGitignore, report } from './project-files.js';
+import { createProjectTemplate, isTemplateName, TEMPLATE_NAMES } from './project-templates/index.js';
 import { createPrompter, isInteractive, type Prompter } from './prompts.js';
 
 const FORMATS = ['html', 'pdf', 'epub', 'latex', 'markdown'] as const;
@@ -325,12 +325,12 @@ async function resolverProyecto(
 
 async function escribirProyecto(root: string, resolved: ResolvedProject): Promise<void> {
   await mkdir(root, { recursive: true });
-  await initProject(root);
+  await ensureGitignore(root, 'create');
   report(await writeExclusive(resolve(root, 'iteraciones.config.yaml'), projectConfig(resolved)), 'iteraciones.config.yaml');
   report(await writeExclusive(resolve(root, 'index.md'), projectIndex(resolved.title)), 'index.md');
   if (resolved.bibliography !== undefined) await escribirBibliografia(root, resolved.bibliography);
   if (resolved.useGit) await initGit(root, resolved.remote);
-  if (resolved.sveltia) await initSveltia(root, { workflow: resolved.workflow });
+  if (resolved.sveltia) await addSveltia(root, resolved.workflow);
   logSuccess(`proyecto creado en ${root}. Ejecuta 'iteraciones build'.`, 'create');
 }
 
@@ -342,9 +342,9 @@ async function crearDesdePlantilla(cwd: string, directory: string | undefined, o
   }
   const root = directory === undefined ? cwd : resolve(cwd, directory);
   await mkdir(root, { recursive: true });
-  await initTemplate(root, template);
+  await createProjectTemplate(root, template);
   if (options.sveltia === true || options.editorialWorkflow === true || options.openAuthoring === true) {
-    await initSveltia(root, { workflow: workflowFromFlags(options) });
+    await addSveltia(root, workflowFromFlags(options));
   }
   if (options.git === true || options.remote !== undefined) await initGit(root, options.remote);
 }

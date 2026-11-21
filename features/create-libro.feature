@@ -1,4 +1,4 @@
-Característica: init libro
+Característica: create libro
 
   Como quien publica un libro con PDF y EPUB
   Quiero un proyecto con índice, portada y descargas
@@ -6,9 +6,9 @@ Característica: init libro
 
   Regla de negocio: La plantilla libro activa TOC, oculta fechas y genera PDF/EPUB
 
-    Escenario: init libro activa TOC y oculta fechas
+    Escenario: create libro activa TOC y oculta fechas
       Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "init libro" sobre la raíz del proyecto
+      Cuando parseo el comando "create --template libro --no-prompt" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" contiene "style: press"
       Y el archivo "iteraciones.config.yaml" contiene "toc: true"

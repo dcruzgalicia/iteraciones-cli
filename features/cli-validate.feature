@@ -26,7 +26,7 @@ Característica: validate revisa el proyecto y dice qué corregir
       Entonces el comando termina con el código de salida 0
       Y la salida dice "sin errores"
 
-  Regla de negocio: Una configuración sin documentos sugiere init
+  Regla de negocio: Una configuración sin documentos sugiere add sveltia
 
     Escenario: Una configuración sin documentos
       Dado que la raíz del proyecto está vacía

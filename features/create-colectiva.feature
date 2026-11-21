@@ -1,4 +1,4 @@
-Característica: init colectiva
+Característica: create colectiva
 
   Como quien coordina una colectiva
   Quiero la portada, el menú y las carpetas de sus types
@@ -6,9 +6,9 @@ Característica: init colectiva
 
   Regla de negocio: La plantilla colectiva deja los types y la portada listos
 
-    Escenario: init colectiva deja portada, menú y los types de la colectiva
+    Escenario: create colectiva deja portada, menú y los types de la colectiva
       Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "init colectiva" sobre la raíz del proyecto
+      Cuando parseo el comando "create --template colectiva --no-prompt" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el directorio "textos" existe
       Y el directorio "creadoras" existe

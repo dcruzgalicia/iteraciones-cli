@@ -4,67 +4,6 @@ Característica: El argv llega entero hasta el comando
   Quiero que lo que escribo después del binario llegue al comando correcto
   Para no tener que saber qué función llama por dentro
 
-  Regla de negocio: init deja un proyecto listo para compilar
-
-    Escenario: init crea los archivos de un proyecto
-      Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y el archivo "iteraciones.config.yaml" no existe
-      Y el archivo ".gitignore" existe
-      Y el archivo "index.md" no existe
-      Y el archivo "bibliography.bib" no existe
-
-    Escenario: El .gitignore de init cubre lo que el build genera
-      Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el archivo ".gitignore" contiene "dist/"
-      Y el archivo ".gitignore" contiene ".iteraciones/"
-      Y el archivo ".gitignore" contiene "build.sh"
-      Y el archivo ".gitignore" contiene "diff/"
-
-    Escenario: init no genera configuración
-      Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y el archivo "iteraciones.config.yaml" no existe
-      Y el proyecto recién creado pasa validate
-      Y la salida de error no lleva ningún error
-
-  Regla de negocio: init no pisa lo que ya está
-
-    Escenario: init no sobreescribe un .gitignore preexistente
-      Dado que la raíz del proyecto está vacía
-      Dado que el archivo ".gitignore" tiene este contenido
-      """
-      node_modules/
-      """
-      Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y el archivo ".gitignore" quedó con este contenido
-      """
-      node_modules/
-      """
-
-    Escenario: init no sobreescribe un proyecto que ya existe
-      Dado que la raíz del proyecto tiene un proyecto de prueba
-      Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y el archivo "iteraciones.config.yaml" contiene "Test"
-
-  Regla de negocio: init crea la raíz que no existe
-
-    Escenario: init crea el directorio y el proyecto compila
-      Dado que la raíz del proyecto no existe todavía
-      Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y la salida dice "creado el directorio"
-      Y el archivo "iteraciones.config.yaml" no existe
-      Y el archivo "index.md" no existe
-      Y compilo el proyecto recién creado
-      Y el comando termina con el código de salida 0
-      Y la salida dice "No se encontraron documentos Markdown"
-
   Regla de negocio: new con --title por argv
 
     Escenario: El título explícito por argv gana sobre el nombre del archivo

@@ -1,5 +1,5 @@
 import { ConfigError } from '../lib/errors.js';
-import { initSveltia, type SveltiaWorkflow } from './init-sveltia.js';
+import { addSveltia, type SveltiaWorkflow } from './add-sveltia.js';
 import { createPrompter, isInteractive } from './prompts.js';
 
 export interface AddOptions {
@@ -39,5 +39,5 @@ export async function addExtension(cwd: string, extension: string, options: AddO
   if (workflow === undefined) {
     workflow = options.prompt === false ? 'simple' : await promptWorkflow();
   }
-  await initSveltia(cwd, { workflow });
+  await addSveltia(cwd, workflow);
 }
