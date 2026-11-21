@@ -14,6 +14,12 @@ import { initProject, report } from './init.js';
 
 const require = createRequire(import.meta.url);
 
+export type SveltiaWorkflow = 'simple' | 'editorial' | 'open-authoring';
+
+export interface SveltiaOptions {
+  workflow?: SveltiaWorkflow;
+}
+
 const ADMIN_INDEX = [
   '<!doctype html>',
   '<html lang="es">',
@@ -161,7 +167,7 @@ function campoOrden(): Record<string, unknown> {
   });
 }
 
-function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string, cwd: string): string {
+function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string, cwd: string, workflow: SveltiaWorkflow): string {
   const dominio = `${slug}.netlify.app`;
   const medios = { media_folder: '/assets/images', public_folder: '../assets/images' };
   const coleccion = (
@@ -185,19 +191,23 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
     fields,
   });
 
-  const config = {
-    backend: {
-      name: 'github',
-      repo,
-      branch: rama,
-      site_domain: dominio,
-      auth_scope: 'public_repo',
-      open_authoring: true,
-    },
+  const backend: Record<string, unknown> = {
+    name: 'github',
+    repo,
+    branch: rama,
+    site_domain: dominio,
+  };
+  if (workflow === 'open-authoring') {
+    backend.auth_scope = 'public_repo';
+    backend.open_authoring = true;
+  }
+
+  const config: Record<string, unknown> = {
+    backend,
     site_url: `https://${dominio}`,
     display_url: `https://${dominio}`,
     show_preview_links: false,
-    publish_mode: 'editorial_workflow',
+    ...(workflow === 'simple' ? {} : { publish_mode: 'editorial_workflow' }),
     slug: {
       encoding: 'ascii',
       clean_accents: true,
@@ -507,8 +517,9 @@ function brewfile(format: Awaited<ReturnType<typeof loadSiteConfig>>['format']):
   return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
 }
 
-export async function initSveltia(cwd: string): Promise<void> {
+export async function initSveltia(cwd: string, options: SveltiaOptions = {}): Promise<void> {
   await initProject(cwd);
+  const workflow = options.workflow ?? 'open-authoring';
 
   const { language, format } = await loadSiteConfig(cwd);
   const slug = slugify(basename(cwd)) || 'iteraciones';
@@ -527,7 +538,7 @@ export async function initSveltia(cwd: string): Promise<void> {
 
   const [indexCreado, configCreado] = await Promise.all([
     writeExclusive(adminIndex, ADMIN_INDEX),
-    writeExclusive(adminConfig, configuracionSveltia(language, repo, rama, slug, cwd)),
+    writeExclusive(adminConfig, configuracionSveltia(language, repo, rama, slug, cwd, workflow)),
   ]);
   const vendorCreado = await copiarVendorSveltia(vendor);
 

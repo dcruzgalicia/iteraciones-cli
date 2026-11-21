@@ -36,7 +36,7 @@ Característica: validate revisa el proyecto y dice qué corregir
       """
       Cuando corro "validate"
       Entonces el comando termina con el código de salida 0
-      Y la salida dice "iteraciones init sveltia"
+      Y la salida dice "iteraciones add sveltia"
 
   Regla de negocio: Un documento sin contenido es un error
 

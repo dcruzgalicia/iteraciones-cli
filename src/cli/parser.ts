@@ -2,16 +2,20 @@ import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { TEMPLATE_KINDS } from '../builder/pipeline-setup.js';
 import { DPI } from '../lib/visual-diff.js';
+import type { AddOptions } from './add.js';
 import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
 import { configHelp } from './config-help.js';
 import { runCover } from './cover.js';
+import type { CreateOptions } from './create.js';
 import {
   defaultNewDocumentPath,
   isNewDocumentType,
   NEW_DOCUMENT_TYPES,
+  runAdd,
   runBuild,
   runClean,
+  runCreate,
   runDoctor,
   runFilters,
   runInit,
@@ -49,18 +53,26 @@ function translateCommanderError(message: string): string {
     .join('\n');
 }
 
-const EDITORIAL_COMMANDS = ['init', 'new', 'build', 'preview', 'validate', 'clean', 'doctor', 'list-filters'];
+const HELP_GROUPS: Array<{ heading: string; commands: string[] }> = [
+  { heading: 'Crear:', commands: ['create', 'new', 'add'] },
+  { heading: 'Construir:', commands: ['build', 'preview', 'validate'] },
+  { heading: 'Mantenimiento:', commands: ['clean', 'doctor', 'list-filters'] },
+  { heading: 'Compatibilidad:', commands: ['init'] },
+];
 
-function rangoEditorial(name: string): number {
-  const indice = EDITORIAL_COMMANDS.indexOf(name);
-  return indice < 0 ? EDITORIAL_COMMANDS.length : indice;
+const HELP_ORDER = HELP_GROUPS.flatMap((group) => group.commands);
+
+function rangoAyuda(name: string): number {
+  const indice = HELP_ORDER.indexOf(name);
+  return indice < 0 ? HELP_ORDER.length : indice;
 }
 
 function agruparAyuda(program: Command): void {
   for (const command of program.commands) {
-    command.helpGroup(rangoEditorial(command.name()) < EDITORIAL_COMMANDS.length ? 'Flujo editorial:' : 'Comandos avanzados:');
+    const grupo = HELP_GROUPS.find((group) => group.commands.includes(command.name()));
+    if (grupo !== undefined) command.helpGroup(grupo.heading);
   }
-  const ordenados = [...program.commands].sort((a, b) => rangoEditorial(a.name()) - rangoEditorial(b.name()));
+  const ordenados = [...program.commands].sort((a, b) => rangoAyuda(a.name()) - rangoAyuda(b.name()));
   (program as unknown as { commands: Command[] }).commands = ordenados;
 }
 
@@ -71,8 +83,8 @@ export function buildProgram(): Command {
     .name(packageJson.name.replace(/-cli$/, ''))
     .version(packageJson.version, '-V, --version', 'muestra la versión')
     .helpOption('-h, --help', 'muestra la ayuda')
-    .helpCommand('help [comando]', 'muestra la ayuda de un comando')
-    .commandsGroup('Comandos avanzados:');
+    .commandsGroup('Ayuda:')
+    .helpCommand('help [comando]', 'muestra la ayuda de un comando');
   program.addHelpText(
     'before',
     `escribir, compartir, re-existir
@@ -80,11 +92,15 @@ export function buildProgram(): Command {
 Construye documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Markdown (pandoc + CSS propio).
 
 Primeros pasos:
-  iteraciones init blog             crea un proyecto con una plantilla (blog, libro, colectiva, repositorio)
+  iteraciones create                crea un proyecto mínimo con HTML
+  iteraciones create --template blog  crea un proyecto con una plantilla (blog, libro, colectiva, repositorio)
   iteraciones new texto             crea un documento del type indicado
   iteraciones new posts/doc.md      crea un documento con frontmatter mínimo
   iteraciones build                 construye los documentos del proyecto
   iteraciones preview               construye y sirve el sitio en local
+
+Alias: render = build; check = doctor. Los comandos internos no se listan;
+iteraciones help <comando> muestra la ayuda de cualquiera de ellos.
 `,
   );
   program.addHelpText(
@@ -104,7 +120,66 @@ Markdown: pandoc más los filtros del paquete. "iteraciones list-filters" dice q
   const projectRoot = (): string => program.opts().projectRoot ?? process.cwd();
 
   program
+    .command('create [directorio]')
+    .description('crea un proyecto; con --no-prompt, HTML mínimo sin preguntas, y con --template, una plantilla compilable')
+    .option('--no-prompt', 'no hace preguntas; usa las opciones y los valores por defecto')
+    .option('--template <nombre>', `plantilla: ${TEMPLATE_NAMES.join(' | ')}`)
+    .option('--title <título>', 'título del sitio (por defecto: el nombre del directorio)')
+    .option('--description <descripción>', 'descripción del sitio')
+    .option('--format <lista>', 'formatos separados por coma: html, pdf, epub, latex, markdown (por defecto: html)')
+    .option('--license <licencia>', 'licencia: CC-BY-NC-ND-4.0, PF-AC-PR-FA-1.0 o ninguna')
+    .option('--bibliography <ruta>', 'archivo .bib relativo al proyecto; si no existe, se crea vacío')
+    .option('--theme <tema>', 'tema HTML: light o dark')
+    .option('--style <estilo>', 'estilo HTML: radar, notebook, press o modern')
+    .option('--color <color>', 'color de acento del HTML')
+    .option('--sveltia', 'agrega el admin de Sveltia')
+    .option('--editorial-workflow', 'Sveltia con editorial workflow')
+    .option('--open-authoring', 'Sveltia con editorial workflow y open authoring')
+    .option('--git', 'inicializa Git')
+    .option('--remote <url>', 'agrega origin al repositorio Git')
+    .addHelpText(
+      'after',
+      `
+Con una plantilla no se combinan --title, --description, --format, --license,
+--bibliography ni las opciones de HTML.
+
+Ejemplos:
+  iteraciones create                          proyecto mínimo con HTML
+  iteraciones create --no-prompt              lo mismo, sin preguntas
+  iteraciones create --template blog          proyecto de blog
+  iteraciones create --format html,pdf --license CC-BY-NC-ND-4.0
+  iteraciones create --sveltia --open-authoring
+  iteraciones create mi-sitio --no-prompt     crea el proyecto en mi-sitio/
+`,
+    )
+    .action(async (directorio: string | undefined, opts: CreateOptions) => {
+      await runCreate(projectRoot(), directorio, opts);
+    });
+
+  program
+    .command('add <extensión>')
+    .description('agrega una integración al proyecto existente; por ahora, sveltia')
+    .option('--no-prompt', 'no hace preguntas; usa --workflow y los valores por defecto')
+    .option('--workflow <flujo>', 'flujo de Sveltia: simple, editorial u open-authoring (por defecto: simple)')
+    .addHelpText(
+      'after',
+      `
+Extensiones: sveltia
+
+Ejemplos:
+  iteraciones add sveltia                        pregunta el flujo y agrega el admin
+  iteraciones add sveltia --no-prompt            agrega el admin con flujo simple
+  iteraciones add sveltia --no-prompt --workflow editorial
+  iteraciones add sveltia --no-prompt --workflow open-authoring
+`,
+    )
+    .action(async (extension: string, opts: AddOptions) => {
+      await runAdd(projectRoot(), extension, opts);
+    });
+
+  program
     .command('build [paths...]')
+    .alias('render')
     .description('construye los documentos del proyecto a partir de los archivos Markdown; con paths, solo esos documentos y su cierre')
     .option('--full', 'build completo desde cero: elimina la salida anterior y la caché')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
@@ -133,7 +208,7 @@ Ejemplos:
     });
 
   program
-    .command('merge <path>')
+    .command('merge <path>', { hidden: true })
     .description('escribe la entrada exacta de pandoc de una collection en .iteraciones/collections/ (formatos: latex | html | epub | markdown)')
     .requiredOption('-f, --format <formato>', 'formato de la entrada a generar (latex | html | epub | markdown)')
     .requiredOption('-o, --output <path>', 'ruta del .md de salida')
@@ -153,7 +228,7 @@ Ejemplos:
     });
 
   program
-    .command('template <tipo>')
+    .command('template <tipo>', { hidden: true })
     .description('escribe una plantilla de .iteraciones/templates (las que pandoc recibe por --template)')
     .option('-o, --output <path>', 'ruta de la plantilla de salida')
     .addHelpText(
@@ -171,7 +246,7 @@ Ejemplos:
     });
 
   program
-    .command('post <tipo>')
+    .command('post <tipo>', { hidden: true })
     .description('aplica el post-proceso de iteraciones a una salida cruda de pandoc que recibe por stdin')
     .requiredOption('-o, --output <path>', 'ruta del archivo de salida')
     .option('--post <path>', 'manifiesto .iteraciones/post/<slug>.json (obligatorio en latex)')
@@ -192,7 +267,7 @@ Ejemplos:
     });
 
   program
-    .command('prepare')
+    .command('prepare', { hidden: true })
     .description('prepara directorios para los comandos externos y deja la plantilla XMP en su slot de latexmk')
     .option('--dir <path>', 'directorio a crear (se puede repetir)', collect, [])
     .option('--xmp <path>', 'slot que recibe la plantilla pdfx.xmp (se puede repetir)', collect, [])
@@ -209,7 +284,7 @@ Ejemplos:
     });
 
   program
-    .command('assets')
+    .command('assets', { hidden: true })
     .description('genera la hoja de estilos y copia al directorio de salida las fuentes del paquete y el logo que referencia el HTML')
     .requiredOption('-o, --output <path>', 'directorio de salida')
     .option('--licenses <nombres>', 'iconos de licencia a copiar, separados por coma')
@@ -226,7 +301,7 @@ Ejemplos:
     });
 
   program
-    .command('bundle')
+    .command('bundle', { hidden: true })
     .description('replica en la salida los insumos del proyecto que un rebuild necesita (config, preamble*, filters, bibliografía)')
     .requiredOption('-o, --output <path>', 'directorio de salida')
     .addHelpText(
@@ -241,7 +316,7 @@ Ejemplos:
     });
 
   program
-    .command('markdown <path>')
+    .command('markdown <path>', { hidden: true })
     .description('escribe el markdown de dist (#2436) con las mismas salidas que usa iteraciones build')
     .requiredOption('-o, --output <path>', 'ruta del .md de salida')
     .addHelpText(
@@ -259,7 +334,7 @@ Ejemplos:
     });
 
   program
-    .command('clean-markdown [paths...]')
+    .command('clean-markdown [paths...]', { hidden: true })
     .description('limpia el markdown de origen: quita shrink, stretch, runt, text-nowrap y espacios duros, y deja cada párrafo en una línea')
     .option('--check', 'sólo informa qué archivos cambiarían, sin escribirlos')
     .addHelpText(
@@ -280,7 +355,7 @@ Ejemplos:
     });
 
   program
-    .command('cover <png>')
+    .command('cover <png>', { hidden: true })
     .description('mueve la portada que pdftoppm dejó en su nombre final y retira los residuos')
     .addHelpText(
       'after',
@@ -293,7 +368,7 @@ Ejemplos:
       await runCover(projectRoot(), png);
     });
 
-  const pdf = program.command('pdf').description('operaciones sobre el PDF de trabajo de latexmk');
+  const pdf = program.command('pdf', { hidden: true }).description('operaciones sobre el PDF de trabajo de latexmk');
   pdf
     .command('collect <slot>')
     .description('retira los auxiliares del slot y deja el PDF compilado en su destino')
@@ -310,7 +385,7 @@ Ejemplos:
     });
 
   const snapshots = program
-    .command('snapshots')
+    .command('snapshots', { hidden: true })
     .description('línea base de regresión visual: imágenes de cada página para comparar contra el build (#2479)');
 
   snapshots
@@ -384,7 +459,7 @@ Ejemplos:
     });
 
   program
-    .command('typography [paths...]')
+    .command('typography [paths...]', { hidden: true })
     .description('detecta en los PDF líneas de una sola palabra, líneas consecutivas que coinciden y nombres propios cortados por el guion')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
     .option('--pages <páginas>', 'sólo esas páginas del PDF: 3 (esa sola), 3-80 (el rango) o una lista: 3,7,10-12')
@@ -445,7 +520,7 @@ empezar en otro punto. El folio sí se usa, para no reportarlo como línea de un
 
   program
     .command('init [tipo]')
-    .description('crea el .gitignore mínimo; con una plantilla crea un proyecto compilable, y con "sveltia" agrega el admin')
+    .description('alias deprecado de create, create --template y add sveltia; se mantiene por compatibilidad')
     .addHelpText(
       'after',
       `
@@ -512,6 +587,7 @@ Ejemplos:
 
   program
     .command('doctor')
+    .alias('check')
     .description('verifica el entorno de build')
     .option('--info', 'muestra también la configuración del proyecto')
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')

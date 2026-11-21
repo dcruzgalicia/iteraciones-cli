@@ -45,6 +45,12 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "announcements/ejemplo.md" no existe
       Y el archivo "interventions/ejemplo.md" no existe
 
+    Escenario: init sveltia avisa que está deprecado
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el error dice "deprecado"
+
     Escenario: Copia la versión actual de Sveltia
       Dado que la raíz del proyecto está vacía
       Cuando corro "init sveltia"
