@@ -19,6 +19,6 @@ export function isTemplateName(value: string): value is TemplateName {
   return (TEMPLATE_NAMES as readonly string[]).includes(value);
 }
 
-export async function initTemplate(cwd: string, name: TemplateName): Promise<void> {
+export async function createProjectTemplate(cwd: string, name: TemplateName): Promise<void> {
   await writeTemplate(cwd, name, TEMPLATES[name]);
 }

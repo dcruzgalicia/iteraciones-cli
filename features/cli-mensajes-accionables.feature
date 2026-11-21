@@ -120,10 +120,11 @@ Característica: El CLI habla en español y dice qué hacer
       Entonces ambos checks fallan
       Y ambos detalles dicen que la ruta no existe
 
-  Regla de negocio: init crea la raíz en lugar de fallar
+  Regla de negocio: create crea la raíz en lugar de fallar
 
-    Escenario: init crea un proyecto en una raíz inexistente
+    Escenario: create crea un proyecto en una raíz inexistente
       Dado que la raíz del proyecto no existe
-      Cuando corro "init"
+      Cuando corro "create"
       Entonces el comando termina con el código de salida 0
       Y el archivo ".gitignore" existe
+      Y el archivo "iteraciones.config.yaml" existe

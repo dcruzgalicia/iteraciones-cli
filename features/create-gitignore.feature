@@ -1,4 +1,4 @@
-Característica: init agrega node_modules al .gitignore
+Característica: create agrega node_modules al .gitignore
 
   Como quien va a instalar dependencias del proyecto
   Quiero que node_modules quede ignorado
@@ -8,7 +8,7 @@ Característica: init agrega node_modules al .gitignore
 
     Escenario: En una carpeta vacía
       Dado que la raíz del proyecto está vacía
-      Cuando corro "init"
+      Cuando corro "create"
       Entonces el comando termina con el código de salida 0
       Y el archivo ".gitignore" dice "node_modules/"
 
@@ -19,7 +19,7 @@ Característica: init agrega node_modules al .gitignore
         dist/
         mi-regla/
         """
-      Cuando corro "init"
+      Cuando corro "create"
       Entonces el comando termina con el código de salida 0
       Y el archivo ".gitignore" dice "dist/"
       Y el archivo ".gitignore" dice "mi-regla/"
@@ -32,13 +32,13 @@ Característica: init agrega node_modules al .gitignore
         node_modules/
         dist/
         """
-      Cuando corro "init"
+      Cuando corro "create"
       Entonces el comando termina con el código de salida 0
       Y el archivo ".gitignore" menciona "node_modules/" una sola vez
       Y el archivo ".gitignore" dice "dist/"
 
-    Escenario: init sveltia aplica la misma regla
+    Escenario: add sveltia aplica la misma regla
       Dado que la raíz del proyecto está vacía
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo ".gitignore" dice "node_modules/"

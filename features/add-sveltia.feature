@@ -1,14 +1,14 @@
-Característica: init sveltia deja un proyecto listo para el admin
+Característica: add sveltia deja un proyecto listo para el admin
 
   Como quien publica un sitio con Sveltia
   Quiero que la CLI cree el admin, el layout y la configuración de Netlify
   Para no configurar Sveltia ni el despliegue a mano
 
-  Regla de negocio: init sveltia crea el admin y el layout sin sobrescribir
+  Regla de negocio: add sveltia crea el admin y el layout sin sobrescribir
 
     Escenario: Crea el admin, las carpetas y un texto inicial
       Dado que la raíz del proyecto está vacía
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" no existe
       Y el archivo ".gitignore" existe
@@ -45,22 +45,16 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "announcements/ejemplo.md" no existe
       Y el archivo "interventions/ejemplo.md" no existe
 
-    Escenario: init sveltia avisa que está deprecado
-      Dado que la raíz del proyecto está vacía
-      Cuando corro "init sveltia"
-      Entonces el comando termina con el código de salida 0
-      Y el error dice "deprecado"
-
     Escenario: Copia la versión actual de Sveltia
       Dado que la raíz del proyecto está vacía
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el paquete declara la dependencia "@sveltia/cms" con el valor "0.270.0"
       Y el archivo "admin/vendor/sveltia-cms.js" dice "0.270.0"
 
     Escenario: La configuración de Sveltia cubre todos los types
       Dado que la raíz del proyecto está vacía
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y la configuración de Sveltia usa el backend "github"
       Y la configuración de Sveltia declara la colección "textos" en la carpeta "texts"
@@ -81,7 +75,7 @@ Característica: init sveltia deja un proyecto listo para el admin
 
     Escenario: La configuración sigue el layout por autora
       Dado que la raíz del proyecto está vacía
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y la colección "textos" usa la ruta "{{creator.0 | slugify}}/{{slug}}"
       Y la colección "textos" anida con profundidad 2 sin subcarpetas
@@ -143,7 +137,7 @@ Característica: init sveltia deja un proyecto listo para el admin
 
     Escenario: Configura Netlify y las herramientas del build
       Dado que la raíz del proyecto se llama "segunda-iteracion"
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "netlify.toml" dice "[build]"
       Y el archivo "netlify.toml" dice "command = \"bun run build\""
@@ -174,7 +168,7 @@ Característica: init sveltia deja un proyecto listo para el admin
           latex:
             generate: true
         """
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "Brewfile.netlify" dice "brew \"texlive\""
       Y el archivo "Brewfile.netlify" dice "brew \"biber\""
@@ -185,7 +179,7 @@ Característica: init sveltia deja un proyecto listo para el admin
 
     Escenario: Normaliza el nombre con acentos
       Dado que la raíz del proyecto se llama "Histórikas"
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y la configuración de Sveltia usa el repositorio "OWNER/historikas"
       Y la configuración de Sveltia usa el dominio "historikas.netlify.app"
@@ -207,7 +201,7 @@ Característica: init sveltia deja un proyecto listo para el admin
           markdown:
             generate: false
         """
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "Brewfile.netlify" no existe
       Y el error dice "no hay formatos activos"
@@ -215,7 +209,7 @@ Característica: init sveltia deja un proyecto listo para el admin
     Escenario: Detecta el repo y la rama
       Dado que la raíz del proyecto está vacía
       Y el proyecto tiene un remoto de GitHub "git@github.com:acme/sitio.git" en la rama "produccion"
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y la configuración de Sveltia usa el repositorio "acme/sitio"
       Y la configuración de Sveltia usa la rama "produccion"
@@ -223,7 +217,7 @@ Característica: init sveltia deja un proyecto listo para el admin
 
     Escenario: Sin remoto deja placeholders y avisa
       Dado que la raíz del proyecto está vacía
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "OWNER/"
       Y el paquete no declara la dependencia "iteraciones-cli"
@@ -232,8 +226,8 @@ Característica: init sveltia deja un proyecto listo para el admin
     Escenario: Ejecutar dos veces no duplica ni cambia valores
       Dado que la raíz del proyecto está vacía
       Y el proyecto tiene un remoto de GitHub "git@github.com:acme/sitio.git"
-      Cuando corro "init sveltia"
-      Y corro "init sveltia"
+      Cuando corro "add sveltia"
+      Y corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y la configuración de Sveltia usa el repositorio "acme/sitio"
       Y la configuración de Sveltia usa la rama "main"
@@ -247,7 +241,7 @@ Característica: init sveltia deja un proyecto listo para el admin
         """
         {"name":"mi-sitio","scripts":{"test":"echo ok"},"devDependencies":{"otra":"1.0.0","netlify-plugin-cache":"0.9.0"}}
         """
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el paquete conserva el script "test"
       Y el paquete conserva la dependencia "otra"
@@ -274,7 +268,7 @@ Característica: init sveltia deja un proyecto listo para el admin
         """
         brew "pandoc"
         """
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "mio/proyecto"
       Y el archivo "admin/config.yml" no dice "OWNER/REPO"
@@ -285,7 +279,7 @@ Característica: init sveltia deja un proyecto listo para el admin
 
     Escenario: El build publica el admin
       Dado que la raíz del proyecto está vacía
-      Cuando corro "init sveltia"
+      Cuando corro "add sveltia"
       Y hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el sitio generado tiene el archivo "admin/index.html"

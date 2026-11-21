@@ -18,7 +18,6 @@ import {
   runCreate,
   runDoctor,
   runFilters,
-  runInit,
   runNew,
   runValidate,
 } from './dispatcher.js';
@@ -57,7 +56,6 @@ const HELP_GROUPS: Array<{ heading: string; commands: string[] }> = [
   { heading: 'Crear:', commands: ['create', 'new', 'add'] },
   { heading: 'Construir:', commands: ['build', 'preview', 'validate'] },
   { heading: 'Mantenimiento:', commands: ['clean', 'doctor', 'list-filters'] },
-  { heading: 'Compatibilidad:', commands: ['init'] },
 ];
 
 const HELP_ORDER = HELP_GROUPS.flatMap((group) => group.commands);
@@ -516,27 +514,6 @@ empezar en otro punto. El folio sí se usa, para no reportarlo como línea de un
     )
     .action(async (paths: string[], opts: TypographyOptions) => {
       await runTypography(projectRoot(), paths, opts);
-    });
-
-  program
-    .command('init [tipo]')
-    .description('alias deprecado de create, create --template y add sveltia; se mantiene por compatibilidad')
-    .addHelpText(
-      'after',
-      `
-Plantillas: ${TEMPLATE_NAMES.join(' | ')}
-
-Ejemplos:
-  iteraciones init                  prepara el .gitignore del proyecto en el directorio actual
-  iteraciones init blog             crea un proyecto de blog sin contenido de ejemplo
-  iteraciones init libro            crea un proyecto de libro con PDF y EPUB
-  iteraciones init colectiva        crea portada, menú y carpetas para una colectiva
-  iteraciones init repositorio      crea catálogo, metadatos y licencias
-  iteraciones init sveltia          agrega el admin de Sveltia y el layout para publicarlo
-`,
-    )
-    .action(async (tipo?: string) => {
-      await runInit(projectRoot(), tipo);
     });
 
   program

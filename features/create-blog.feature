@@ -1,4 +1,4 @@
-Característica: init blog
+Característica: create blog
 
   Como quien publica notas con fecha
   Quiero un proyecto con orden cronológico y sin índice
@@ -6,9 +6,9 @@ Característica: init blog
 
   Regla de negocio: La plantilla blog activa fechas y orden cronológico
 
-    Escenario: init blog activa fechas y orden cronológico sin TOC
+    Escenario: create blog activa fechas y orden cronológico sin TOC
       Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "init blog" sobre la raíz del proyecto
+      Cuando parseo el comando "create --template blog --no-prompt" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" contiene "style: notebook"
       Y el archivo "iteraciones.config.yaml" contiene "toc: false"

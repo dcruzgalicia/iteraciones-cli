@@ -1,11 +1,11 @@
-Característica: init, build y validate funcionan de punta a punta
+Característica: create, build y validate funcionan de punta a punta
   Como quien empieza un proyecto desde cero
   Quiero que el CLI cree el proyecto y lo construya sin pasos manuales
   Para que el primer build de una persona nueva funcione
 
-  Escenario: init deja un proyecto vacío y build no falla
+  Escenario: un proyecto vacío compila
     Dado un directorio vacío
-    Cuando inicializo el proyecto
+    Cuando preparo el proyecto vacío
     Entonces el proyecto no tiene configuración
     Cuando compilo el proyecto entero desde cero
     Entonces el comando termina con el código de salida 0
@@ -26,7 +26,7 @@ Característica: init, build y validate funcionan de punta a punta
 
   Escenario: El build genera un HTML por documento
     Dado un directorio vacío
-    Cuando inicializo el proyecto
+    Cuando preparo el proyecto vacío
     Y creo el índice
     Y creo los capítulos uno y dos
     Y compilo el proyecto entero desde cero

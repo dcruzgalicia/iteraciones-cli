@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
 import { runBuild, runNew } from '../../cli/dispatcher.js';
-import { initProject } from '../../cli/init.js';
+import { ensureGitignore } from '../../cli/project-files.js';
 import { validateProject } from '../../cli/validate.js';
 import { distPath, initTestProject } from '../helpers.js';
 import { capture } from './cli-world.steps.js';
@@ -45,8 +45,8 @@ Given('un proyecto con un documento de frontmatter sin cerrar', async () => {
   await writeFile(join(world.dir, 'bad.md'), '---\ntitle: "sin cerrar\n---\n\nContenido.\n', 'utf8');
 });
 
-When('inicializo el proyecto', async () => {
-  await initProject(world.dir);
+When('preparo el proyecto vacío', async () => {
+  await ensureGitignore(world.dir);
 });
 
 When('creo el índice', async () => {
@@ -117,7 +117,7 @@ When('valido el proyecto', async () => {
 
 Then('el proyecto no tiene configuración', async () => {
   if (await Bun.file(join(world.dir, 'iteraciones.config.yaml')).exists()) {
-    throw new Error('init no debería crear la configuración');
+    throw new Error('el proyecto vacío no debería tener configuración');
   }
 });
 

@@ -302,7 +302,7 @@ const CHEQUEOS: Record<string, Chequeo> = {
     if (!/^\s*iteraciones markdown \S+ -o \S+dist\/files\/\S+\.md$/m.test(script)) falla('falta `iteraciones markdown … -o dist/files/….md`');
   },
   'subcomandos prohibidos': ({ script, falla }) => {
-    if (/\biteraciones\s+(build|new|init|clean|validate|doctor)\b/.test(script)) falla('no debe invocar build/new/init/clean/validate/doctor');
+    if (/\biteraciones\s+(build|new|clean|validate|doctor)\b/.test(script)) falla('no debe invocar build/new/clean/validate/doctor');
     if (!/^\s*iteraciones (template|post|prepare|assets|markdown) /m.test(script)) falla('falta al menos un subcomando permitido');
     if (script.includes('iteraciones merge')) falla('no debe invocar iteraciones merge');
   },

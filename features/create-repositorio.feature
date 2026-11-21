@@ -1,4 +1,4 @@
-Característica: init repositorio
+Característica: create repositorio
 
   Como quien publica un repositorio de documentos
   Quiero metadatos, licencias y una página de catálogo
@@ -6,9 +6,9 @@ Característica: init repositorio
 
   Regla de negocio: La plantilla repositorio deja metadatos, catálogo y licencia
 
-    Escenario: init repositorio deja metadatos, catálogo y licencia
+    Escenario: create repositorio deja metadatos, catálogo y licencia
       Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "init repositorio" sobre la raíz del proyecto
+      Cuando parseo el comando "create --template repositorio --no-prompt" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" contiene "publisher:"
       Y el archivo "iteraciones.config.yaml" contiene "license: CC-BY-NC-ND-4.0"
