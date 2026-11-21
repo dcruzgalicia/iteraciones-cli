@@ -157,6 +157,13 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "admin/config.yml" dice "display_url: https://segunda-iteracion.netlify.app"
       Y el paquete declara la dependencia "netlify-plugin-cache" con el valor "1.0.3"
 
+    Escenario: Evita construir Deploy Previews
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "init sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "netlify.toml" dice "[context.deploy-preview]"
+      Y el archivo "netlify.toml" dice "ignore = \"exit 0\""
+
     Escenario: Agrega TeX al Brewfile cuando el proyecto genera PDF o LaTeX
       Dado que la raíz del proyecto está vacía
       Y que el archivo "iteraciones.config.yaml" tiene este contenido
