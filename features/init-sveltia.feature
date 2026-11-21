@@ -72,8 +72,8 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la colección "creadoras" filtra el campo "type" con el valor "creator"
       Y la colección "textos" no usa meta.path
       Y la colección "creadoras" usa el archivo índice "creadora"
-      Y la colección "textos" tiene el preview path "textos/{{dirname}}/{{filename}}.html"
-      Y la colección "creadoras" tiene el preview path "textos/{{fields.slug}}/{{fields.slug}}.html"
+      Y la colección "textos" tiene el preview path "textos/{{dirname}}/{{fields.slug | default('{{fields.title}}-por-{{fields.creator.0}}') | slugify}}.html"
+      Y la colección "creadoras" tiene el preview path "textos/{{dirname}}/{{fields.slug | default('{{fields.name}}') | slugify}}.html"
       Y la colección "colecciones" tiene el preview path "colecciones/{{filename}}.html"
       Y la colección "anuncios" tiene el preview path "anuncios/{{filename}}.html"
       Y la colección "listas" tiene el preview path "{{filename}}.html"
