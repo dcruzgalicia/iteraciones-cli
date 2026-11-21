@@ -145,6 +145,12 @@ function accent500(color: string | undefined): string | undefined {
   return value === undefined ? undefined : (Bun.color(value, 'hex') ?? undefined);
 }
 
+function accentLogo(color: string | undefined, theme: 'light' | 'dark'): string | undefined {
+  const name = ACCENT_COLORS.includes(color as AccentColor) ? (color as AccentColor) : 'lime';
+  const value = ACCENT_PALETTE_VALUES[name][theme === 'dark' ? 300 : 700];
+  return value === undefined ? undefined : (Bun.color(value, 'hex') ?? undefined);
+}
+
 async function colorCount(src: string): Promise<number> {
   const proc = Bun.spawn(['magick', src, '-resize', '64x64', '-alpha', 'off', '-format', '%k', 'info:'], { stdout: 'pipe', stderr: 'ignore' });
   const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
@@ -240,7 +246,7 @@ export async function writeLogoAssets(cwd: string, outputDir: string, siteConfig
   const logo = siteConfig.format?.html?.site?.logo?.trim();
   const html = siteConfig.format?.html;
   const size = logoPx(html?.site?.logoSize);
-  const accent = accent500(htmlStyleColor(html?.site?.style, html?.site?.color));
+  const accent = accentLogo(htmlStyleColor(html?.site?.style, html?.site?.color), html?.site?.theme ?? 'light');
 
   if (!logo) {
     if (await rasterSvgLogo(DEFAULT_LOGO, outputDir, size, accent)) {
