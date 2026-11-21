@@ -13,10 +13,12 @@ import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig
 import { todayIso } from '../lib/date.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
 import { htmlStyleColor } from '../lib/html-styles.js';
-import { fail, logError, logInfo, logSuccess, writeJson } from '../lib/logger.js';
+import { fail, logError, logInfo, logSuccess, logWarning, writeJson } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { isDir } from '../lib/paths.js';
 import { ProcessSpawnError } from '../lib/run.js';
+import { type AddOptions, addExtension } from './add.js';
+import { type CreateOptions, createProject } from './create.js';
 import type { CheckResult } from './doctor/system-checks.js';
 import { checksOk, collectChecks, doctorEnvironment } from './doctor.js';
 import { listFilters, type RunFiltersOptions } from './filters.js';
@@ -201,15 +203,30 @@ export async function runInit(cwd: string, tipo?: string): Promise<void> {
     cwd,
     'init',
     () => {
-      if (tipo === 'sveltia') return initSveltia(cwd);
-      if (tipo !== undefined && isTemplateName(tipo)) return initTemplate(cwd, tipo);
+      if (tipo === 'sveltia') {
+        logWarning("'init sveltia' está deprecado; usa 'iteraciones add sveltia'", 'init');
+        return initSveltia(cwd);
+      }
+      if (tipo !== undefined && isTemplateName(tipo)) {
+        logWarning(`'init ${tipo}' está deprecado; usa 'iteraciones create --template ${tipo}'`, 'init');
+        return initTemplate(cwd, tipo);
+      }
       if (tipo !== undefined) {
         throw new ConfigError(`tipo de init desconocido: "${tipo}"; los tipos son: sveltia, ${TEMPLATE_NAMES.join(', ')}`, cwd);
       }
+      logWarning("'init' está deprecado; usa 'iteraciones create'", 'init');
       return initProject(cwd);
     },
     { createRoot: true },
   );
+}
+
+export async function runCreate(cwd: string, directory: string | undefined, options: CreateOptions = {}): Promise<void> {
+  await runCliCommand(cwd, 'create', () => createProject(cwd, directory, options), { createRoot: true });
+}
+
+export async function runAdd(cwd: string, extension: string, options: AddOptions = {}): Promise<void> {
+  await runCliCommand(cwd, 'add', () => addExtension(cwd, extension, options));
 }
 
 export async function runValidate(cwd: string, options: { json?: boolean } = {}): Promise<void> {

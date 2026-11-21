@@ -53,7 +53,7 @@ Característica: El CLI habla en español y dice qué hacer
     Escenario: El help raíz ofrece el slogan, el ejemplo rápido y los enlaces
       Cuando parseo el argv "--help"
       Entonces la ayuda contiene "escribir, compartir, re-existir"
-      Y la ayuda contiene "iteraciones init"
+      Y la ayuda contiene "iteraciones create"
       Y la ayuda contiene "iteraciones new posts/doc.md"
       Y la ayuda contiene "iteraciones build"
       Y la ayuda contiene "iteraciones.config.yaml"
