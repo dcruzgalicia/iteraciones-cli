@@ -494,9 +494,6 @@ function netlifyToml(): string {
     '  [plugins.inputs]',
     '    paths = [".iteraciones", "dist"]',
     '',
-    '[context.deploy-preview]',
-    '  ignore = "exit 0"',
-    '',
   ].join('\n');
 }
 
