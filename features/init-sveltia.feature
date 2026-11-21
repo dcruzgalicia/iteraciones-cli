@@ -72,11 +72,8 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y la colección "creadoras" filtra el campo "type" con el valor "creator"
       Y la colección "textos" no usa meta.path
       Y la colección "creadoras" usa el archivo índice "creadora"
-      Y la colección "textos" tiene el preview path "textos/{{dirname}}/{{fields.slug | default('{{fields.title}}-por-{{fields.creator.0}}') | slugify}}.html"
-      Y la colección "creadoras" tiene el preview path "textos/{{dirname}}/{{fields.slug | default('{{fields.name}}') | slugify}}.html"
-      Y la colección "colecciones" tiene el preview path "colecciones/{{filename}}.html"
-      Y la colección "anuncios" tiene el preview path "anuncios/{{filename}}.html"
-      Y la colección "listas" tiene el preview path "{{filename}}.html"
+      Y el archivo "admin/config.yml" dice "show_preview_links: false"
+      Y el archivo "admin/config.yml" no dice "preview_path"
       Y la colección "intervenciones" no tiene preview
       Y el campo "type" de la colección "menu" está oculto con el valor "menu"
       Y el campo "image" de la colección "creadoras" es de tipo "image"

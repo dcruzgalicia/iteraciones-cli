@@ -196,6 +196,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
     },
     site_url: `https://${dominio}`,
     display_url: `https://${dominio}`,
+    show_preview_links: false,
     publish_mode: 'editorial_workflow',
     slug: {
       encoding: 'ascii',
@@ -227,7 +228,6 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           path: '{{creator.0 | slugify}}/{{slug}}',
           nested: { depth: 2, subfolders: false, summary: '{{dirname}} / {{title}}' },
           filter: { field: 'type', value: 'file' },
-          preview_path: "textos/{{dirname}}/{{fields.slug | default('{{fields.title}}-por-{{fields.creator.0}}') | slugify}}.html",
           summary: '{{title}} — {{creator}}',
           sortable_fields: ['date', 'title', 'creator'],
         },
@@ -250,7 +250,6 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           nested: { depth: 2, subfolders: true, summary: '{{name}}' },
           meta: { path: { index_file: 'creadora' } },
           filter: { field: 'type', value: 'creator' },
-          preview_path: "textos/{{dirname}}/{{fields.slug | default('{{fields.name}}') | slugify}}.html",
           summary: '{{name}}',
         },
       ),
@@ -278,7 +277,6 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         ],
         {
           filter: { field: 'type', value: 'collection' },
-          preview_path: 'colecciones/{{filename}}.html',
           summary: '{{title}}',
         },
       ),
@@ -297,7 +295,6 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         ],
         {
           filter: { field: 'type', value: 'announcement' },
-          preview_path: 'anuncios/{{filename}}.html',
           summary: '{{title}}',
         },
       ),
@@ -308,7 +305,6 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFiltro(), campoOrden(), campoSlug(), campoType('list')],
         {
           filter: { field: 'type', value: 'list' },
-          preview_path: '{{filename}}.html',
           summary: '{{title}}',
         },
       ),
@@ -348,7 +344,6 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
             name: 'menu',
             label: 'Menú principal',
             file: 'menu.md',
-            preview_path: 'menu.html',
             fields: [camposEnlaces(), campoType('menu')],
           },
         ],
