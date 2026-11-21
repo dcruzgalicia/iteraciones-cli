@@ -15,24 +15,35 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el archivo "admin/index.html" existe
       Y el archivo "admin/config.yml" existe
       Y el archivo "admin/vendor/sveltia-cms.js" existe
-      Y el archivo "palabras-clave/.gitkeep" existe
+      Y el archivo "keywords/.gitkeep" existe
       Y el archivo "netlify.toml" existe
       Y el archivo "Brewfile.netlify" existe
       Y el archivo "index.md" no existe
       Y el archivo "menu.md" no existe
       Y el archivo "bibliography.bib" no existe
-      Y el archivo "textos/ejemplo/creadora.md" existe
-      Y el archivo "textos/ejemplo/ejemplo.md" existe
-      Y el archivo "textos/ejemplo.md" no existe
+      Y el archivo "texts/ejemplo/creadora.md" existe
+      Y el archivo "texts/ejemplo/ejemplo.md" existe
+      Y el archivo "texts/ejemplo.md" no existe
+      Y el directorio "textos" no existe
+      Y el directorio "colecciones" no existe
+      Y el directorio "listas" no existe
+      Y el directorio "anuncios" no existe
+      Y el directorio "intervenciones" no existe
+      Y el directorio "palabras-clave" no existe
       Y el directorio "paginas" no existe
       Y el directorio "documentos" no existe
       Y el directorio "convocatorias" no existe
       Y el directorio "creadoras" no existe
+      Y el directorio "collections" existe
+      Y el directorio "lists" existe
+      Y el directorio "announcements" existe
+      Y el directorio "interventions" existe
+      Y el directorio "keywords" existe
       Y el archivo "creadoras/ejemplo.md" no existe
-      Y el archivo "colecciones/ejemplo.md" no existe
-      Y el archivo "listas/ejemplo.md" no existe
-      Y el archivo "anuncios/ejemplo.md" no existe
-      Y el archivo "intervenciones/ejemplo.md" no existe
+      Y el archivo "collections/ejemplo.md" no existe
+      Y el archivo "lists/ejemplo.md" no existe
+      Y el archivo "announcements/ejemplo.md" no existe
+      Y el archivo "interventions/ejemplo.md" no existe
 
     Escenario: Copia la versión actual de Sveltia
       Dado que la raíz del proyecto está vacía
@@ -46,12 +57,13 @@ Característica: init sveltia deja un proyecto listo para el admin
       Cuando corro "init sveltia"
       Entonces el comando termina con el código de salida 0
       Y la configuración de Sveltia usa el backend "github"
-      Y la configuración de Sveltia declara la colección "textos" en la carpeta "textos"
-      Y la configuración de Sveltia declara la colección "colecciones" en la carpeta "colecciones"
-      Y la configuración de Sveltia declara la colección "creadoras" en la carpeta "textos"
-      Y la configuración de Sveltia declara la colección "intervenciones" en la carpeta "intervenciones"
-      Y la configuración de Sveltia declara la colección "listas" en la carpeta "listas"
-      Y la configuración de Sveltia declara la colección "anuncios" en la carpeta "anuncios"
+      Y la configuración de Sveltia declara la colección "textos" en la carpeta "texts"
+      Y la configuración de Sveltia declara la colección "colecciones" en la carpeta "collections"
+      Y la configuración de Sveltia declara la colección "creadoras" en la carpeta "texts"
+      Y la configuración de Sveltia declara la colección "intervenciones" en la carpeta "interventions"
+      Y la configuración de Sveltia declara la colección "listas" en la carpeta "lists"
+      Y la configuración de Sveltia declara la colección "anuncios" en la carpeta "announcements"
+      Y la configuración de Sveltia declara la colección "palabras_clave" en la carpeta "keywords"
       Y la configuración de Sveltia no declara la colección "paginas"
       Y la configuración de Sveltia no declara la colección "documentos"
       Y la configuración de Sveltia no declara la colección "convocatorias"
@@ -274,5 +286,5 @@ Característica: init sveltia deja un proyecto listo para el admin
       Y el sitio generado tiene el archivo "admin/config.yml"
       Y el sitio generado tiene el archivo "admin/vendor/sveltia-cms.js"
       Y el sitio generado tiene el archivo "index.html"
-      Y el sitio generado tiene el archivo "textos/ejemplo/ejemplo.html"
-      Y el sitio generado tiene el archivo "textos/ejemplo/texto-de-ejemplo-por-ejemplo.html"
+      Y el sitio generado tiene el archivo "texts/ejemplo/ejemplo.html"
+      Y el sitio generado tiene el archivo "texts/ejemplo/texto-de-ejemplo-por-ejemplo.html"

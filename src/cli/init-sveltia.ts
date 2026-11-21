@@ -225,6 +225,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoType('file'),
         ],
         {
+          folder: 'texts',
           path: '{{creator.0 | slugify}}/{{slug}}',
           nested: { depth: 2, subfolders: false, summary: '{{dirname}} / {{title}}' },
           filter: { field: 'type', value: 'file' },
@@ -245,7 +246,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoType('creator'),
         ],
         {
-          folder: 'textos',
+          folder: 'texts',
           identifier_field: 'name',
           nested: { depth: 2, subfolders: true, summary: '{{name}}' },
           meta: { path: { index_file: 'creadora' } },
@@ -270,12 +271,13 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campo('files', 'Textos incluidos', 'list', {
             required: true,
             label_singular: 'Texto',
-            hint: 'Rutas relativas al repositorio, por ejemplo: textos/mi-texto.md.',
+            hint: 'Rutas relativas al repositorio, por ejemplo: texts/mi-texto.md.',
           }),
           campoSlug(),
           campoType('collection'),
         ],
         {
+          folder: 'collections',
           filter: { field: 'type', value: 'collection' },
           summary: '{{title}}',
         },
@@ -294,6 +296,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoType('announcement'),
         ],
         {
+          folder: 'announcements',
           filter: { field: 'type', value: 'announcement' },
           summary: '{{title}}',
         },
@@ -304,6 +307,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         'Lista',
         [campoTitulo(), campoSubtitulo(), campoCuerpo(), campoFiltro(), campoOrden(), campoSlug(), campoType('list')],
         {
+          folder: 'lists',
           filter: { field: 'type', value: 'list' },
           summary: '{{title}}',
         },
@@ -331,6 +335,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
           campoType('intervention'),
         ],
         {
+          folder: 'interventions',
           filter: { field: 'type', value: 'intervention' },
           editor: { preview: false },
           summary: '{{title}}',
@@ -353,7 +358,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
         label: 'Palabras clave',
         label_singular: 'Palabra clave',
         description: 'Vocabulario reutilizable para el campo «Palabras clave». No genera contenido en el sitio.',
-        folder: 'palabras-clave',
+        folder: 'keywords',
         extension: 'json',
         format: 'json',
         identifier_field: 'name',
@@ -511,7 +516,7 @@ export async function initSveltia(cwd: string): Promise<void> {
   const rama = detectarRama(cwd);
 
   await Promise.all(
-    ['admin', 'admin/vendor', 'textos/ejemplo', 'colecciones', 'listas', 'anuncios', 'intervenciones', 'palabras-clave'].map((dir) =>
+    ['admin', 'admin/vendor', 'texts/ejemplo', 'collections', 'lists', 'announcements', 'interventions', 'keywords'].map((dir) =>
       mkdir(join(cwd, dir), { recursive: true }),
     ),
   );
@@ -529,9 +534,9 @@ export async function initSveltia(cwd: string): Promise<void> {
   report(indexCreado, 'admin/index.html');
   report(configCreado, 'admin/config.yml');
   report(vendorCreado, 'admin/vendor/sveltia-cms.js');
-  report(await writeExclusive(join(cwd, 'palabras-clave', '.gitkeep'), ''), 'palabras-clave/.gitkeep');
-  report(await writeExclusive(join(cwd, 'textos', 'ejemplo', 'creadora.md'), CREADORA_EJEMPLO), 'textos/ejemplo/creadora.md');
-  report(await writeExclusive(join(cwd, 'textos', 'ejemplo', 'ejemplo.md'), TEXTO_EJEMPLO), 'textos/ejemplo/ejemplo.md');
+  report(await writeExclusive(join(cwd, 'keywords', '.gitkeep'), ''), 'keywords/.gitkeep');
+  report(await writeExclusive(join(cwd, 'texts', 'ejemplo', 'creadora.md'), CREADORA_EJEMPLO), 'texts/ejemplo/creadora.md');
+  report(await writeExclusive(join(cwd, 'texts', 'ejemplo', 'ejemplo.md'), TEXTO_EJEMPLO), 'texts/ejemplo/ejemplo.md');
   const netlifyPath = join(cwd, 'netlify.toml');
   const netlifyCreado = await writeExclusive(netlifyPath, netlifyToml());
   const conCache =
