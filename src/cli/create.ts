@@ -7,8 +7,10 @@ import { writeExclusive } from '../builder/pipeline-io.js';
 import { ACCENT_COLORS, type AccentColor } from '../lib/accent-palettes.js';
 import { ConfigError } from '../lib/errors.js';
 import { HTML_STYLE_INPUTS, type HtmlStyle, htmlStyle } from '../lib/html-styles.js';
-import { logInfo, logSuccess, logWarning } from '../lib/logger.js';
-import { addSveltia, type SveltiaWorkflow } from './add-sveltia.js';
+import { logInfo, logSuccess } from '../lib/logger.js';
+import { addSveltia, DEFAULT_APP_ID, DEFAULT_BRANCH, DEFAULT_REPO, DEFAULT_SITE_URL, type SveltiaWorkflow } from './add-sveltia.js';
+import { DEFAULT_BUILD_IMAGE, writeGitlabPages } from './gitlab-pages.js';
+import { ensurePackage } from './package-json.js';
 import { ensureGitignore, report } from './project-files.js';
 import { createProjectTemplate, isTemplateName, TEMPLATE_NAMES } from './project-templates/index.js';
 import { createPrompter, isInteractive, type Prompter } from './prompts.js';
@@ -33,8 +35,12 @@ export interface CreateOptions {
   sveltia?: boolean;
   editorialWorkflow?: boolean;
   openAuthoring?: boolean;
-  git?: boolean;
-  remote?: string;
+  repo?: string;
+  branch?: string;
+  siteUrl?: string;
+  appId?: string;
+  buildImage?: string;
+  deploy?: string;
 }
 
 interface ResolvedProject {
@@ -48,8 +54,12 @@ interface ResolvedProject {
   color: AccentColor;
   sveltia: boolean;
   workflow: SveltiaWorkflow;
-  useGit: boolean;
-  remote: string | undefined;
+  repo: string;
+  branch: string;
+  siteUrl: string;
+  appId: string;
+  buildImage: string;
+  deployGitlabPages: boolean;
 }
 
 function configError(message: string): ConfigError {
@@ -150,23 +160,10 @@ function validateBibliography(bibliography: string): string {
   return bibliography;
 }
 
-function git(cwd: string, args: string[]): boolean {
-  const proc = Bun.spawnSync(['git', ...args], { cwd, stdout: 'ignore', stderr: 'ignore' });
-  return proc.exitCode === 0;
-}
-
-async function initGit(root: string, remote: string | undefined): Promise<void> {
-  if (!git(root, ['rev-parse', '--is-inside-work-tree'])) {
-    if (!git(root, ['init'])) throw configError('no se pudo inicializar el repositorio Git');
-    logSuccess('inicializado repositorio Git', 'create');
-  }
-  if (remote === undefined) return;
-  if (git(root, ['remote', 'get-url', 'origin'])) {
-    logWarning('ya existe el remoto origin; no se reemplazó', 'create');
-    return;
-  }
-  if (!git(root, ['remote', 'add', 'origin', remote])) throw configError(`no se pudo agregar el remoto "${remote}"`);
-  logSuccess(`agregado remoto origin ${remote}`, 'create');
+function parseDeploy(raw: string | undefined): boolean {
+  if (raw === undefined) return false;
+  if (raw.trim().toLowerCase() !== 'gitlab-pages') throw configError(`destino de deploy desconocido: "${raw}"; usa gitlab-pages`);
+  return true;
 }
 
 async function escribirBibliografia(root: string, bibliography: string): Promise<void> {
@@ -262,15 +259,37 @@ async function elegirSveltia(options: CreateOptions, prompt: Prompter | undefine
   return { sveltia, workflow };
 }
 
-async function elegirGit(options: CreateOptions, prompt: Prompter | undefined): Promise<{ useGit: boolean; remote: string | undefined }> {
-  let remote = options.remote;
-  let useGit = options.git === true || remote !== undefined;
-  if (prompt !== undefined && options.git === undefined && remote === undefined) useGit = await prompt.yesNo('¿Inicializar Git?', false);
-  if (prompt !== undefined && useGit && remote === undefined) {
-    remote = await prompt.ask('Remoto Git (vacío = ninguno)', '');
-    if (remote === '') remote = undefined;
+async function elegirPublicacion(
+  options: CreateOptions,
+  prompt: Prompter | undefined,
+  sveltia: boolean,
+): Promise<{
+  repo: string;
+  branch: string;
+  siteUrl: string;
+  appId: string;
+  buildImage: string;
+  deployGitlabPages: boolean;
+}> {
+  const deploy = options.deploy !== undefined ? parseDeploy(options.deploy) : sveltia;
+  const buildImage = options.buildImage ?? DEFAULT_BUILD_IMAGE;
+
+  if (!deploy) {
+    return {
+      repo: DEFAULT_REPO,
+      branch: DEFAULT_BRANCH,
+      siteUrl: DEFAULT_SITE_URL,
+      appId: DEFAULT_APP_ID,
+      buildImage,
+      deployGitlabPages: false,
+    };
   }
-  return { useGit, remote };
+
+  const repo = options.repo ?? (prompt === undefined ? DEFAULT_REPO : await prompt.ask('Repositorio de GitLab (OWNER/REPO)', DEFAULT_REPO));
+  const branch = options.branch ?? (prompt === undefined ? DEFAULT_BRANCH : await prompt.ask('Rama de GitLab', DEFAULT_BRANCH));
+  const siteUrl = options.siteUrl ?? (prompt === undefined ? DEFAULT_SITE_URL : await prompt.ask('URL pública del sitio', DEFAULT_SITE_URL));
+  const appId = options.appId ?? (prompt === undefined ? DEFAULT_APP_ID : await prompt.ask('Application ID de GitLab', DEFAULT_APP_ID));
+  return { repo, branch, siteUrl, appId, buildImage, deployGitlabPages: true };
 }
 
 async function resolverOpciones(root: string, prompt: Prompter | undefined, options: CreateOptions): Promise<ResolvedProject> {
@@ -281,8 +300,8 @@ async function resolverOpciones(root: string, prompt: Prompter | undefined, opti
   const license = await elegirLicencia(options.license, prompt);
   const html = await elegirHtml(options, prompt, formats);
   const sveltia = await elegirSveltia(options, prompt);
-  const git = await elegirGit(options, prompt);
-  return { title, description, formats, bibliography, license, ...html, ...sveltia, ...git };
+  const publicacion = await elegirPublicacion(options, prompt, sveltia.sveltia);
+  return { title, description, formats, bibliography, license, ...html, ...sveltia, ...publicacion };
 }
 
 async function confirmar(root: string, resolved: ResolvedProject, prompt: Prompter): Promise<boolean> {
@@ -291,7 +310,7 @@ async function confirmar(root: string, resolved: ResolvedProject, prompt: Prompt
     `formatos: ${resolved.formats.join(', ')}`,
     `licencia: ${resolved.license ?? 'ninguna'}`,
     `Sveltia: ${resolved.sveltia ? resolved.workflow : 'no'}`,
-    `Git: ${resolved.useGit ? 'sí' : 'no'}`,
+    `GitLab: ${resolved.deployGitlabPages ? `${resolved.repo}@${resolved.branch}` : 'no'}`,
   ];
   logInfo(resumen.join('; '), 'create');
   if (await prompt.yesNo('¿Crear el proyecto?', true)) return true;
@@ -329,8 +348,21 @@ async function escribirProyecto(root: string, resolved: ResolvedProject): Promis
   report(await writeExclusive(resolve(root, 'iteraciones.config.yaml'), projectConfig(resolved)), 'iteraciones.config.yaml');
   report(await writeExclusive(resolve(root, 'index.md'), projectIndex(resolved.title)), 'index.md');
   if (resolved.bibliography !== undefined) await escribirBibliografia(root, resolved.bibliography);
-  if (resolved.useGit) await initGit(root, resolved.remote);
-  if (resolved.sveltia) await addSveltia(root, resolved.workflow);
+
+  if (resolved.sveltia) {
+    await addSveltia(root, {
+      workflow: resolved.workflow,
+      repo: resolved.repo,
+      branch: resolved.branch,
+      siteUrl: resolved.siteUrl,
+      appId: resolved.appId,
+      buildImage: resolved.buildImage,
+    });
+  } else if (resolved.deployGitlabPages) {
+    await ensurePackage(root, { sveltia: false }, 'create');
+    await writeGitlabPages(root, resolved.buildImage, 'create');
+  }
+
   logSuccess(`proyecto creado en ${root}. Ejecuta 'iteraciones build'.`, 'create');
 }
 
@@ -343,10 +375,23 @@ async function crearDesdePlantilla(cwd: string, directory: string | undefined, o
   const root = directory === undefined ? cwd : resolve(cwd, directory);
   await mkdir(root, { recursive: true });
   await createProjectTemplate(root, template);
-  if (options.sveltia === true || options.editorialWorkflow === true || options.openAuthoring === true) {
-    await addSveltia(root, workflowFromFlags(options));
+
+  const sveltia = options.sveltia === true || options.editorialWorkflow === true || options.openAuthoring === true;
+  const deploy = options.deploy !== undefined ? parseDeploy(options.deploy) : sveltia;
+  const publicacion = {
+    repo: options.repo ?? DEFAULT_REPO,
+    branch: options.branch ?? DEFAULT_BRANCH,
+    siteUrl: options.siteUrl ?? DEFAULT_SITE_URL,
+    appId: options.appId ?? DEFAULT_APP_ID,
+    buildImage: options.buildImage ?? DEFAULT_BUILD_IMAGE,
+  };
+
+  if (sveltia) {
+    await addSveltia(root, { workflow: workflowFromFlags(options), ...publicacion });
+  } else if (deploy) {
+    await ensurePackage(root, { sveltia: false }, 'create');
+    await writeGitlabPages(root, publicacion.buildImage, 'create');
   }
-  if (options.git === true || options.remote !== undefined) await initGit(root, options.remote);
 }
 
 export async function createProject(cwd: string, directory: string | undefined, options: CreateOptions = {}): Promise<void> {

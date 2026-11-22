@@ -1,7 +1,7 @@
-Característica: add sveltia deja un proyecto listo para el admin
+Característica: add sveltia deja un proyecto listo para GitLab
 
-  Como quien publica un sitio con Sveltia
-  Quiero que la CLI cree el admin, el layout y la configuración de Netlify
+  Como quien publica un sitio con Sveltia en GitLab
+  Quiero que la CLI cree el admin, el layout y la configuración de GitLab Pages
   Para no configurar Sveltia ni el despliegue a mano
 
   Regla de negocio: add sveltia crea el admin y el layout sin sobrescribir
@@ -12,12 +12,13 @@ Característica: add sveltia deja un proyecto listo para el admin
       Entonces el comando termina con el código de salida 0
       Y el archivo "iteraciones.config.yaml" no existe
       Y el archivo ".gitignore" existe
+      Y el archivo ".gitlab-ci.yml" existe
       Y el archivo "admin/index.html" existe
       Y el archivo "admin/config.yml" existe
       Y el archivo "admin/vendor/sveltia-cms.js" existe
       Y el archivo "keywords/.gitkeep" existe
-      Y el archivo "netlify.toml" existe
-      Y el archivo "Brewfile.netlify" existe
+      Y el archivo "netlify.toml" no existe
+      Y el archivo "Brewfile.netlify" no existe
       Y el archivo "index.md" no existe
       Y el archivo "menu.md" no existe
       Y el archivo "bibliography.bib" no existe
@@ -52,6 +53,58 @@ Característica: add sveltia deja un proyecto listo para el admin
       Y el paquete declara la dependencia "@sveltia/cms" con el valor "0.270.0"
       Y el archivo "admin/vendor/sveltia-cms.js" dice "0.270.0"
 
+    Escenario: Configura GitLab y deja placeholders
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "add sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y la configuración de Sveltia usa el backend "gitlab"
+      Y la configuración de Sveltia usa autenticación PKCE
+      Y la configuración de Sveltia usa el repositorio "OWNER/REPO"
+      Y la configuración de Sveltia usa la rama "main"
+      Y la configuración de Sveltia usa la URL "https://example.com"
+      Y el archivo "admin/config.yml" dice "app_id: YOUR_GITLAB_APP_ID"
+      Y el archivo "admin/config.yml" no dice "github"
+      Y el archivo "admin/config.yml" no dice "netlify"
+      Y el error dice "OWNER/REPO"
+
+    Escenario: Usa repo, rama, URL y app ID explícitos
+      Dado que la raíz del proyecto está vacía
+      Cuando parseo el comando "add sveltia --no-prompt --deploy gitlab-pages --repo grupo/subgrupo/sitio --branch produccion --site-url https://historikas.example --app-id abc123" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la configuración de Sveltia usa el backend "gitlab"
+      Y la configuración de Sveltia usa el repositorio "grupo/subgrupo/sitio"
+      Y la configuración de Sveltia usa la rama "produccion"
+      Y la configuración de Sveltia usa la URL "https://historikas.example"
+      Y el archivo "admin/config.yml" dice "app_id: abc123"
+      Y el archivo "admin/config.yml" no dice "github"
+      Y el archivo "admin/config.yml" no dice "netlify"
+
+    Escenario: No genera archivos de Netlify ni GitHub
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "add sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el archivo "netlify.toml" no existe
+      Y el archivo "Brewfile.netlify" no existe
+      Y el paquete no declara la dependencia "netlify-plugin-cache"
+      Y el archivo "admin/config.yml" no dice "github"
+      Y el archivo "admin/config.yml" no dice "auth_scope"
+      Y el archivo "admin/config.yml" no dice "site_domain"
+
+    Escenario: Genera GitLab Pages con cache incremental
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "add sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y el archivo ".gitlab-ci.yml" dice "pages:"
+      Y el archivo ".gitlab-ci.yml" dice "cache:"
+      Y el archivo ".gitlab-ci.yml" dice ".iteraciones/"
+      Y el archivo ".gitlab-ci.yml" dice "dist/"
+      Y el archivo ".gitlab-ci.yml" dice "image:"
+      Y el archivo ".gitlab-ci.yml" dice "publish: dist/files"
+      Y el archivo ".gitlab-ci.yml" dice "bun install --frozen-lockfile"
+      Y el archivo ".gitlab-ci.yml" dice "bun run build"
+      Y el archivo ".gitlab-ci.yml" no dice "netlify"
+      Y el archivo ".gitlab-ci.yml" no dice "before_script"
+
     Escenario: Todas las colecciones comparten el mismo directorio de medios
       Dado que la raíz del proyecto está vacía
       Cuando corro "add sveltia"
@@ -62,7 +115,7 @@ Característica: add sveltia deja un proyecto listo para el admin
       Dado que la raíz del proyecto está vacía
       Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
-      Y la configuración de Sveltia usa el backend "github"
+      Y la configuración de Sveltia usa el backend "gitlab"
       Y la configuración de Sveltia declara la colección "textos" en la carpeta "texts"
       Y la configuración de Sveltia declara la colección "colecciones" en la carpeta "collections"
       Y la configuración de Sveltia declara la colección "creadoras" en la carpeta "texts"
@@ -141,111 +194,36 @@ Característica: add sveltia deja un proyecto listo para el admin
       Y el campo "creator" de la colección "textos" es obligatorio
       Y el campo "slug" de la colección "textos" no es obligatorio
 
-    Escenario: Configura Netlify y las herramientas del build
-      Dado que la raíz del proyecto se llama "segunda-iteracion"
-      Cuando corro "add sveltia"
-      Entonces el comando termina con el código de salida 0
-      Y el archivo "netlify.toml" dice "[build]"
-      Y el archivo "netlify.toml" dice "command = \"bun run build\""
-      Y el archivo "netlify.toml" dice "publish = \"dist/files\""
-      Y el archivo "netlify.toml" dice "BUN_VERSION"
-      Y el archivo "netlify.toml" dice "netlify-plugin-cache"
-      Y el archivo "netlify.toml" dice ".iteraciones"
-      Y el archivo "Brewfile.netlify" dice "brew \"pandoc\""
-      Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
-      Y el archivo "Brewfile.netlify" dice "brew \"librsvg\""
-      Y el archivo "Brewfile.netlify" no dice "minify"
-      Y el archivo "Brewfile.netlify" no dice "poppler"
-      Y el archivo "Brewfile.netlify" no dice "texlive"
-      Y la configuración de Sveltia usa el repositorio "OWNER/segunda-iteracion"
-      Y la configuración de Sveltia usa el dominio "segunda-iteracion.netlify.app"
-      Y el archivo "admin/config.yml" dice "site_url: https://segunda-iteracion.netlify.app"
-      Y el archivo "admin/config.yml" dice "display_url: https://segunda-iteracion.netlify.app"
-      Y el paquete declara la dependencia "netlify-plugin-cache" con el valor "1.0.3"
-
-    Escenario: Agrega TeX al Brewfile cuando el proyecto genera PDF o LaTeX
+    Escenario: Usa el flujo editorial
       Dado que la raíz del proyecto está vacía
-      Y que el archivo "iteraciones.config.yaml" tiene este contenido
-        """
-        language: es-MX
-        format:
-          html:
-            generate: false
-          latex:
-            generate: true
-        """
-      Cuando corro "add sveltia"
+      Cuando parseo el comando "add sveltia --no-prompt --workflow editorial" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "Brewfile.netlify" dice "brew \"texlive\""
-      Y el archivo "Brewfile.netlify" dice "brew \"biber\""
-      Y el archivo "Brewfile.netlify" dice "brew \"poppler\""
-      Y el archivo "Brewfile.netlify" dice "brew \"imagemagick\""
-      Y el archivo "Brewfile.netlify" dice "brew \"librsvg\""
-      Y el archivo "Brewfile.netlify" no dice "minify"
+      Y el archivo "admin/config.yml" dice "publish_mode: editorial_workflow"
+      Y la configuración de Sveltia no habilita open authoring
 
-    Escenario: Normaliza el nombre con acentos
-      Dado que la raíz del proyecto se llama "Histórikas"
-      Cuando corro "add sveltia"
-      Entonces el comando termina con el código de salida 0
-      Y la configuración de Sveltia usa el repositorio "OWNER/historikas"
-      Y la configuración de Sveltia usa el dominio "historikas.netlify.app"
-
-    Escenario: No genera Brewfile sin formatos activos
+    Escenario: Usa open authoring
       Dado que la raíz del proyecto está vacía
-      Y que el archivo "iteraciones.config.yaml" tiene este contenido
-        """
-        language: es-MX
-        format:
-          html:
-            generate: false
-          latex:
-            generate: false
-          pdf:
-            generate: false
-          epub:
-            generate: false
-          markdown:
-            generate: false
-        """
-      Cuando corro "add sveltia"
+      Cuando parseo el comando "add sveltia --no-prompt --workflow open-authoring" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el archivo "Brewfile.netlify" no existe
-      Y el error dice "no hay formatos activos"
-
-    Escenario: Detecta el repo y la rama
-      Dado que la raíz del proyecto está vacía
-      Y el proyecto tiene un remoto de GitHub "git@github.com:acme/sitio.git" en la rama "produccion"
-      Cuando corro "add sveltia"
-      Entonces el comando termina con el código de salida 0
-      Y la configuración de Sveltia usa el repositorio "acme/sitio"
-      Y la configuración de Sveltia usa la rama "produccion"
-      Y el paquete no declara la dependencia "iteraciones-cli"
-
-    Escenario: Sin remoto deja placeholders y avisa
-      Dado que la raíz del proyecto está vacía
-      Cuando corro "add sveltia"
-      Entonces el comando termina con el código de salida 0
-      Y el archivo "admin/config.yml" dice "OWNER/"
-      Y el paquete no declara la dependencia "iteraciones-cli"
-      Y el error dice "no encontré un remoto de GitHub"
+      Y el archivo "admin/config.yml" dice "publish_mode: editorial_workflow"
+      Y la configuración de Sveltia habilita open authoring
 
     Escenario: Ejecutar dos veces no duplica ni cambia valores
       Dado que la raíz del proyecto está vacía
-      Y el proyecto tiene un remoto de GitHub "git@github.com:acme/sitio.git"
-      Cuando corro "add sveltia"
-      Y corro "add sveltia"
+      Cuando parseo el comando "add sveltia --no-prompt --repo acme/sitio --site-url https://acme.example" sobre la raíz del proyecto
+      Y parseo el comando "add sveltia --no-prompt --repo acme/sitio --site-url https://acme.example" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y la configuración de Sveltia usa el repositorio "acme/sitio"
       Y la configuración de Sveltia usa la rama "main"
       Y el archivo "admin/config.yml" menciona "acme/sitio" una sola vez
-      Y el paquete no declara la dependencia "iteraciones-cli"
-      Y el paquete declara la dependencia "netlify-plugin-cache" con el valor "1.0.3"
+      Y el paquete declara la dependencia "iteraciones-cli"
+      Y el paquete no declara la dependencia "netlify-plugin-cache"
 
     Escenario: El paquete conserva lo existente y agrega lo mínimo
       Dado que la raíz del proyecto está vacía
       Y que el archivo "package.json" tiene este contenido
         """
-        {"name":"mi-sitio","scripts":{"test":"echo ok"},"devDependencies":{"otra":"1.0.0","netlify-plugin-cache":"0.9.0"}}
+        {"name":"mi-sitio","scripts":{"test":"echo ok"},"devDependencies":{"otra":"1.0.0"}}
         """
       Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
@@ -254,34 +232,29 @@ Característica: add sveltia deja un proyecto listo para el admin
       Y el paquete declara el script "build"
       Y el paquete declara el script "dev"
       Y el paquete declara la dependencia "@sveltia/cms"
-      Y el paquete declara la dependencia "netlify-plugin-cache" con el valor "0.9.0"
-      Y el paquete no declara la dependencia "iteraciones-cli"
+      Y el paquete declara la dependencia "iteraciones-cli"
+      Y el paquete no declara la dependencia "netlify-plugin-cache"
 
-    Escenario: No sobrescribe el admin, Netlify ni el Brewfile existentes
+    Escenario: No sobrescribe el admin ni el CI existentes
       Dado que la raíz del proyecto está vacía
       Y que el archivo "admin/config.yml" tiene este contenido
         """
         backend:
-          name: github
+          name: gitlab
           repo: mio/proyecto
         """
-      Y que el archivo "netlify.toml" tiene este contenido
+      Y que el archivo ".gitlab-ci.yml" tiene este contenido
         """
-        [build]
-          command = "otro"
-        """
-      Y que el archivo "Brewfile.netlify" tiene este contenido
-        """
-        brew "pandoc"
+        pages:
+          script:
+            - otro
         """
       Cuando corro "add sveltia"
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "mio/proyecto"
       Y el archivo "admin/config.yml" no dice "OWNER/REPO"
-      Y el archivo "netlify.toml" dice "otro"
-      Y el archivo "netlify.toml" no dice "bun run build"
-      Y el archivo "Brewfile.netlify" no dice "imagemagick"
-      Y el paquete no declara la dependencia "netlify-plugin-cache"
+      Y el archivo ".gitlab-ci.yml" dice "otro"
+      Y el archivo ".gitlab-ci.yml" no dice "publish: dist/files"
 
     Escenario: El build publica el admin
       Dado que la raíz del proyecto está vacía

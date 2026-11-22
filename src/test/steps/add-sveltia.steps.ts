@@ -1,9 +1,9 @@
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Given, Then } from '@cucumber/cucumber';
+import { Then } from '@cucumber/cucumber';
 import { parse } from 'yaml';
 import { distPath } from '../helpers.js';
-import { tempRoot, world } from './cli-world.steps.js';
+import { world } from './cli-world.steps.js';
 
 interface Campo {
   name?: string;
@@ -35,7 +35,9 @@ interface Coleccion {
 }
 
 interface ConfigSveltia {
-  backend?: { name?: string; repo?: string; branch?: string; site_domain?: string };
+  backend?: { name?: string; repo?: string; branch?: string; auth_type?: string; app_id?: string; open_authoring?: boolean };
+  site_url?: string;
+  display_url?: string;
   media_folder?: string;
   public_folder?: string;
   collections?: Coleccion[];
@@ -252,21 +254,6 @@ Then('el archivo {string} menciona {string} una sola vez', (relativa: string, te
   if (veces !== 1) throw new Error(`${relativa} menciona ${JSON.stringify(texto)} ${veces} veces y debía ser una`);
 });
 
-function git(cwd: string, args: string[]): void {
-  const proc = Bun.spawnSync(['git', ...args], { cwd, stdout: 'ignore', stderr: 'ignore' });
-  if (proc.exitCode !== 0) throw new Error(`git ${args.join(' ')} falló en ${cwd}`);
-}
-
-Given('el proyecto tiene un remoto de GitHub {string}', (url: string) => {
-  git(world.root, ['init', '-b', 'main']);
-  git(world.root, ['remote', 'add', 'origin', url]);
-});
-
-Given('el proyecto tiene un remoto de GitHub {string} en la rama {string}', (url: string, rama: string) => {
-  git(world.root, ['init', '-b', rama]);
-  git(world.root, ['remote', 'add', 'origin', url]);
-});
-
 Then('la configuración de Sveltia usa el repositorio {string}', (repo: string) => {
   if (config().backend?.repo !== repo) {
     throw new Error(`el repo es ${JSON.stringify(config().backend?.repo)} y debía ser ${JSON.stringify(repo)}`);
@@ -279,20 +266,31 @@ Then('la configuración de Sveltia usa la rama {string}', (rama: string) => {
   }
 });
 
-Then('la configuración de Sveltia usa el dominio {string}', (dominio: string) => {
-  if (config().backend?.site_domain !== dominio) {
-    throw new Error(`el dominio es ${JSON.stringify(config().backend?.site_domain)} y debía ser ${JSON.stringify(dominio)}`);
+Then('la configuración de Sveltia usa autenticación PKCE', () => {
+  const backend = config().backend;
+  if (backend?.auth_type !== 'pkce' || backend.app_id === undefined || backend.app_id === '') {
+    throw new Error(`la autenticación no es PKCE: ${JSON.stringify({ auth_type: backend?.auth_type, app_id: backend?.app_id })}`);
   }
+});
+
+Then('la configuración de Sveltia usa la URL {string}', (url: string) => {
+  const c = config();
+  if (c.site_url !== url || c.display_url !== url) {
+    throw new Error(`site_url=${JSON.stringify(c.site_url)} y display_url=${JSON.stringify(c.display_url)}; debían ser ${JSON.stringify(url)}`);
+  }
+});
+
+Then('la configuración de Sveltia habilita open authoring', () => {
+  if (config().backend?.open_authoring !== true) throw new Error('open_authoring no está habilitado');
+});
+
+Then('la configuración de Sveltia no habilita open authoring', () => {
+  if (config().backend?.open_authoring !== undefined) throw new Error('open_authoring no debería estar habilitado');
 });
 
 Then('el paquete declara la dependencia {string} con el valor {string}', (nombre: string, valor: string) => {
   const actual = dependencias(paquete())[nombre];
   if (actual !== valor) throw new Error(`la dependencia ${nombre} vale ${JSON.stringify(actual)} y debía ser ${JSON.stringify(valor)}`);
-});
-
-Given('que la raíz del proyecto se llama {string}', (nombre: string) => {
-  world.root = join(tempRoot('iteraciones-cli-nombre-'), nombre);
-  mkdirSync(world.root, { recursive: true });
 });
 
 Then('el campo {string} de la colección {string} no aparece en la vista previa', (nombre: string, col: string) => {

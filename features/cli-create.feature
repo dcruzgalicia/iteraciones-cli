@@ -58,6 +58,13 @@ Característica: create arma el proyecto mínimo y las integraciones opcionales
       Y el proyecto recién creado pasa validate
       Y la salida de error no lleva ningún error
 
+  Regla de negocio: La CLI sólo escribe configuración
+
+    Escenario: create y add Sveltia no ejecutan comandos externos
+      Dado que la raíz del proyecto está vacía
+      Cuando creo el proyecto y agrego Sveltia sin comandos externos
+      Entonces el comando termina con el código de salida 0
+
   Regla de negocio: Los formatos y la bibliografía se eligen con opciones
 
     Escenario: create activa PDF además de HTML
@@ -108,30 +115,43 @@ Característica: create arma el proyecto mínimo y las integraciones opcionales
       Cuando parseo el comando "create --no-prompt --sveltia" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" existe
+      Y el archivo ".gitlab-ci.yml" existe
+      Y la configuración de Sveltia usa el backend "gitlab"
       Y el archivo "admin/config.yml" no dice "publish_mode"
       Y el archivo "admin/config.yml" no dice "open_authoring"
+      Y el archivo "admin/config.yml" no dice "github"
+      Y el archivo "admin/config.yml" no dice "netlify"
+
+    Escenario: create --sveltia usa el repo, la rama y la URL indicados
+      Dado que la raíz del proyecto está vacía
+      Cuando parseo el comando "create --no-prompt --sveltia --repo grupo/subgrupo/sitio --branch produccion --site-url https://historikas.example --app-id abc123" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la configuración de Sveltia usa el repositorio "grupo/subgrupo/sitio"
+      Y la configuración de Sveltia usa la rama "produccion"
+      Y la configuración de Sveltia usa la URL "https://historikas.example"
+      Y el archivo "admin/config.yml" dice "app_id: abc123"
 
     Escenario: create --sveltia --editorial-workflow activa el flujo editorial
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "create --no-prompt --sveltia --editorial-workflow" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "publish_mode: editorial_workflow"
-      Y el archivo "admin/config.yml" no dice "open_authoring"
+      Y la configuración de Sveltia no habilita open authoring
 
     Escenario: create --sveltia --open-authoring activa open authoring
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "create --no-prompt --sveltia --open-authoring" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "publish_mode: editorial_workflow"
-      Y el archivo "admin/config.yml" dice "open_authoring: true"
+      Y la configuración de Sveltia habilita open authoring
 
-  Regla de negocio: Git se inicializa sólo si se pide
-
-    Escenario: create --git inicializa el repositorio
+    Escenario: create --deploy gitlab-pages sin Sveltia
       Dado que la raíz del proyecto está vacía
-      Cuando parseo el comando "create --no-prompt --git" sobre la raíz del proyecto
+      Cuando parseo el comando "create --no-prompt --deploy gitlab-pages" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
-      Y el directorio ".git" existe
+      Y el archivo ".gitlab-ci.yml" existe
+      Y el archivo "package.json" existe
+      Y el archivo "admin/config.yml" no existe
 
   Regla de negocio: add agrega Sveltia a un proyecto existente
 
@@ -140,22 +160,25 @@ Característica: create arma el proyecto mínimo y las integraciones opcionales
       Cuando parseo el comando "add sveltia --no-prompt" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" existe
+      Y el archivo ".gitlab-ci.yml" existe
+      Y la configuración de Sveltia usa el backend "gitlab"
       Y el archivo "admin/config.yml" no dice "publish_mode"
-      Y el archivo "admin/config.yml" no dice "open_authoring"
+      Y la configuración de Sveltia no habilita open authoring
+      Y el archivo "netlify.toml" no existe
 
     Escenario: add sveltia --workflow editorial activa el flujo editorial
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "add sveltia --no-prompt --workflow editorial" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "publish_mode: editorial_workflow"
-      Y el archivo "admin/config.yml" no dice "open_authoring"
+      Y la configuración de Sveltia no habilita open authoring
 
     Escenario: add sveltia --workflow open-authoring activa open authoring
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "add sveltia --no-prompt --workflow open-authoring" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "admin/config.yml" dice "publish_mode: editorial_workflow"
-      Y el archivo "admin/config.yml" dice "open_authoring: true"
+      Y la configuración de Sveltia habilita open authoring
 
     Escenario: add rechaza una extensión desconocida
       Dado que la raíz del proyecto está vacía

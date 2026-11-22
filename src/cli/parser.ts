@@ -133,20 +133,27 @@ Markdown: pandoc más los filtros del paquete. "iteraciones list-filters" dice q
     .option('--sveltia', 'agrega el admin de Sveltia')
     .option('--editorial-workflow', 'Sveltia con editorial workflow')
     .option('--open-authoring', 'Sveltia con editorial workflow y open authoring')
-    .option('--git', 'inicializa Git')
-    .option('--remote <url>', 'agrega origin al repositorio Git')
+    .option('--repo <owner/repo>', 'repositorio de GitLab (por defecto: placeholder OWNER/REPO)')
+    .option('--branch <rama>', 'rama de GitLab (por defecto: main)')
+    .option('--site-url <url>', 'URL pública del sitio (por defecto: placeholder https://example.com)')
+    .option('--app-id <id>', 'Application ID de la OAuth App de GitLab (por defecto: placeholder)')
+    .option('--build-image <imagen>', 'imagen de build para GitLab CI')
+    .option('--deploy <destino>', 'genera despliegue: gitlab-pages')
     .addHelpText(
       'after',
       `
 Con una plantilla no se combinan --title, --description, --format, --license,
 --bibliography ni las opciones de HTML.
 
+La CLI sólo pregunta y escribe configuración: no crea repositorios, no ejecuta
+Git, no registra OAuth y no publica ni ejecuta CI/CD.
+
 Ejemplos:
   iteraciones create                          proyecto mínimo con HTML
   iteraciones create --no-prompt              lo mismo, sin preguntas
   iteraciones create --template blog          proyecto de blog
   iteraciones create --format html,pdf --license CC-BY-NC-ND-4.0
-  iteraciones create --sveltia --open-authoring
+  iteraciones create --sveltia --open-authoring --repo grupo/sitio --site-url https://sitio.example
   iteraciones create mi-sitio --no-prompt     crea el proyecto en mi-sitio/
 `,
     )
@@ -159,16 +166,25 @@ Ejemplos:
     .description('agrega una integración al proyecto existente; por ahora, sveltia')
     .option('--no-prompt', 'no hace preguntas; usa --workflow y los valores por defecto')
     .option('--workflow <flujo>', 'flujo de Sveltia: simple, editorial u open-authoring (por defecto: simple)')
+    .option('--repo <owner/repo>', 'repositorio de GitLab (por defecto: placeholder OWNER/REPO)')
+    .option('--branch <rama>', 'rama de GitLab (por defecto: main)')
+    .option('--site-url <url>', 'URL pública del sitio (por defecto: placeholder https://example.com)')
+    .option('--app-id <id>', 'Application ID de la OAuth App de GitLab (por defecto: placeholder)')
+    .option('--build-image <imagen>', 'imagen de build para GitLab CI')
+    .option('--deploy <destino>', 'genera despliegue: gitlab-pages')
     .addHelpText(
       'after',
       `
 Extensiones: sveltia
 
+La CLI sólo pregunta y escribe configuración: no crea repositorios, no ejecuta
+Git, no registra OAuth y no publica ni ejecuta CI/CD.
+
 Ejemplos:
-  iteraciones add sveltia                        pregunta el flujo y agrega el admin
-  iteraciones add sveltia --no-prompt            agrega el admin con flujo simple
-  iteraciones add sveltia --no-prompt --workflow editorial
+  iteraciones add sveltia                        pregunta flujo, repo y URL
+  iteraciones add sveltia --no-prompt            usa placeholders y flujo simple
   iteraciones add sveltia --no-prompt --workflow open-authoring
+  iteraciones add sveltia --no-prompt --repo grupo/sitio --site-url https://sitio.example
 `,
     )
     .action(async (extension: string, opts: AddOptions) => {

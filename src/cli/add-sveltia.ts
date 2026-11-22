@@ -1,20 +1,34 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { basename, dirname, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { stringify } from 'yaml';
-import { slugify } from '../builder/discover.js';
 import { LICENSE_DEFS } from '../builder/licenses.js';
 import { writeExclusive } from '../builder/pipeline-io.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { computeActiveFormats } from '../config/site-config.js';
-import { BuildError } from '../lib/errors.js';
+import { BuildError, ConfigError } from '../lib/errors.js';
 import { logSuccess, logWarning } from '../lib/logger.js';
+import { DEFAULT_BUILD_IMAGE, writeGitlabPages } from './gitlab-pages.js';
+import { ensurePackage } from './package-json.js';
 import { ensureGitignore, report } from './project-files.js';
 
 const require = createRequire(import.meta.url);
 
 export type SveltiaWorkflow = 'simple' | 'editorial' | 'open-authoring';
+
+export interface SveltiaOptions {
+  workflow: SveltiaWorkflow;
+  repo?: string;
+  branch?: string;
+  siteUrl?: string;
+  appId?: string;
+  buildImage?: string;
+}
+
+export const DEFAULT_REPO = 'OWNER/REPO';
+export const DEFAULT_BRANCH = 'main';
+export const DEFAULT_SITE_URL = 'https://example.com';
+export const DEFAULT_APP_ID = 'YOUR_GITLAB_APP_ID';
 
 const ADMIN_INDEX = [
   '<!doctype html>',
@@ -30,8 +44,6 @@ const ADMIN_INDEX = [
   '</html>',
   '',
 ].join('\n');
-
-const NETLIFY_CACHE_VERSION = '1.0.3';
 
 const LICENCIAS = [
   { label: 'Usar la licencia global', value: '' },
@@ -163,8 +175,15 @@ function campoOrden(): Record<string, unknown> {
   });
 }
 
-function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string, cwd: string, workflow: SveltiaWorkflow): string {
-  const dominio = `${slug}.netlify.app`;
+function configuracionSveltia(
+  idioma: string,
+  repo: string,
+  rama: string,
+  siteUrl: string,
+  appId: string,
+  cwd: string,
+  workflow: SveltiaWorkflow,
+): string {
   const coleccion = (
     name: string,
     label: string,
@@ -186,20 +205,18 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
   });
 
   const backend: Record<string, unknown> = {
-    name: 'github',
+    name: 'gitlab',
     repo,
     branch: rama,
-    site_domain: dominio,
+    auth_type: 'pkce',
+    app_id: appId,
   };
-  if (workflow === 'open-authoring') {
-    backend.auth_scope = 'public_repo';
-    backend.open_authoring = true;
-  }
+  if (workflow === 'open-authoring') backend.open_authoring = true;
 
   const config: Record<string, unknown> = {
     backend,
-    site_url: `https://${dominio}`,
-    display_url: `https://${dominio}`,
+    site_url: siteUrl,
+    display_url: siteUrl,
     show_preview_links: false,
     ...(workflow === 'simple' ? {} : { publish_mode: 'editorial_workflow' }),
     slug: {
@@ -425,99 +442,59 @@ async function copiarVendorSveltia(destino: string): Promise<boolean> {
   return true;
 }
 
-interface Paquete {
-  name?: string;
-  scripts?: Record<string, string>;
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-  [clave: string]: unknown;
+function configError(message: string): ConfigError {
+  return new ConfigError(message, '');
 }
 
-function versionSveltia(): string {
-  const propio = require('../../package.json') as { dependencies?: Record<string, string> };
-  return propio.dependencies?.['@sveltia/cms'] ?? '0.270.0';
-}
-
-function fusionarPaquete(existente: Paquete | null, cwd: string, conCache: boolean): { paquete: Paquete; cambios: string[] } {
-  const paquete: Paquete = existente ?? { name: basename(cwd), private: true };
-  const cambios: string[] = [];
-
-  paquete.scripts ??= {};
-  for (const [nombre, comando] of [
-    ['build', 'iteraciones build'],
-    ['dev', 'iteraciones preview'],
-  ] as const) {
-    if (paquete.scripts[nombre] === undefined) {
-      paquete.scripts[nombre] = comando;
-      cambios.push(`scripts.${nombre}`);
-    }
+function normalizeRepo(repo: string | undefined): string {
+  const value = repo?.trim() || DEFAULT_REPO;
+  if (value === DEFAULT_REPO) return value;
+  if (/\s/.test(value) || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+$/.test(value)) {
+    throw configError(`repositorio de GitLab inválido: "${value}"; usa owner/repo o group/subgroup/repo`);
   }
+  return value;
+}
 
-  paquete.devDependencies ??= {};
-  if (paquete.devDependencies['@sveltia/cms'] === undefined) {
-    paquete.devDependencies['@sveltia/cms'] = versionSveltia();
-    cambios.push('devDependencies.@sveltia/cms');
+function normalizeBranch(branch: string | undefined): string {
+  const value = branch?.trim() || DEFAULT_BRANCH;
+  if (value === '' || /\s/.test(value)) throw configError(`rama de GitLab inválida: "${value}"`);
+  return value;
+}
+
+function normalizeSiteUrl(siteUrl: string | undefined): string {
+  const value = (siteUrl?.trim() || DEFAULT_SITE_URL).replace(/\/+$/, '');
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('protocolo');
+  } catch {
+    throw configError(`URL del sitio inválida: "${value}"; usa una URL http o https`);
   }
-  if (conCache && paquete.devDependencies['netlify-plugin-cache'] === undefined) {
-    paquete.devDependencies['netlify-plugin-cache'] = NETLIFY_CACHE_VERSION;
-    cambios.push('devDependencies.netlify-plugin-cache');
-  }
-
-  return { paquete, cambios };
+  return value;
 }
 
-function salidaGit(cwd: string, args: string[]): string | undefined {
-  const proc = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'ignore' });
-  if (proc.exitCode !== 0) return undefined;
-  const salida = new TextDecoder().decode(proc.stdout).trim();
-  return salida === '' ? undefined : salida;
+function normalizeAppId(appId: string | undefined): string {
+  return appId?.trim() || DEFAULT_APP_ID;
 }
 
-function detectarRepo(cwd: string): string | undefined {
-  const url = salidaGit(cwd, ['remote', 'get-url', 'origin']);
-  if (url === undefined) return undefined;
-  const match = /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/.exec(url);
-  return match?.[1] !== undefined && match[2] !== undefined ? `${match[1]}/${match[2]}` : undefined;
+function normalizeBuildImage(buildImage: string | undefined): string {
+  return buildImage?.trim() || DEFAULT_BUILD_IMAGE;
 }
 
-function detectarRama(cwd: string): string {
-  return salidaGit(cwd, ['branch', '--show-current']) ?? 'main';
+function avisarPlaceholders(repo: string, siteUrl: string, appId: string): void {
+  if (repo === DEFAULT_REPO) logWarning(`admin/config.yml usa el repositorio ${DEFAULT_REPO}; cámbialo por el de GitLab`, 'add');
+  if (siteUrl === DEFAULT_SITE_URL) logWarning(`admin/config.yml usa ${DEFAULT_SITE_URL}; cámbialo por la URL pública`, 'add');
+  if (appId === DEFAULT_APP_ID) logWarning(`admin/config.yml usa ${DEFAULT_APP_ID}; cámbialo por el Application ID de GitLab`, 'add');
 }
 
-function netlifyToml(): string {
-  return [
-    '[build]',
-    '  command = "bun run build"',
-    '  publish = "dist/files"',
-    '',
-    '  [build.environment]',
-    `    BUN_VERSION = "${Bun.version}"`,
-    '',
-    '[[plugins]]',
-    '  package = "netlify-plugin-cache"',
-    '  [plugins.inputs]',
-    '    paths = [".iteraciones", "dist"]',
-    '',
-  ].join('\n');
-}
-
-function brewfile(format: Awaited<ReturnType<typeof loadSiteConfig>>['format']): string | undefined {
-  const active = new Set(computeActiveFormats(format));
-  if (active.size === 0) return undefined;
-
-  const formulas = ['pandoc', 'imagemagick', 'librsvg'];
-  if (active.has('pdf') || active.has('latex')) formulas.push('texlive', 'biber', 'poppler');
-  if (active.has('pdf')) formulas.push('ghostscript');
-  return `${formulas.map((formula) => `brew "${formula}"`).join('\n')}\n`;
-}
-
-export async function addSveltia(cwd: string, workflow: SveltiaWorkflow): Promise<void> {
+export async function addSveltia(cwd: string, options: SveltiaOptions): Promise<void> {
   await ensureGitignore(cwd, 'add');
 
-  const { language, format } = await loadSiteConfig(cwd);
-  const slug = slugify(basename(cwd)) || 'iteraciones';
-  const repo = detectarRepo(cwd) ?? `OWNER/${slug}`;
-  const rama = detectarRama(cwd);
+  const repo = normalizeRepo(options.repo);
+  const rama = normalizeBranch(options.branch);
+  const siteUrl = normalizeSiteUrl(options.siteUrl);
+  const appId = normalizeAppId(options.appId);
+  const buildImage = normalizeBuildImage(options.buildImage);
+  const { language } = await loadSiteConfig(cwd);
 
   await Promise.all(
     ['admin', 'admin/vendor', 'texts/ejemplo', 'collections', 'lists', 'announcements', 'interventions', 'keywords'].map((dir) =>
@@ -531,7 +508,7 @@ export async function addSveltia(cwd: string, workflow: SveltiaWorkflow): Promis
 
   const [indexCreado, configCreado] = await Promise.all([
     writeExclusive(adminIndex, ADMIN_INDEX),
-    writeExclusive(adminConfig, configuracionSveltia(language, repo, rama, slug, cwd, workflow)),
+    writeExclusive(adminConfig, configuracionSveltia(language, repo, rama, siteUrl, appId, cwd, options.workflow)),
   ]);
   const vendorCreado = await copiarVendorSveltia(vendor);
 
@@ -541,38 +518,10 @@ export async function addSveltia(cwd: string, workflow: SveltiaWorkflow): Promis
   report(await writeExclusive(join(cwd, 'keywords', '.gitkeep'), ''), 'keywords/.gitkeep', 'add');
   report(await writeExclusive(join(cwd, 'texts', 'ejemplo', 'creadora.md'), CREADORA_EJEMPLO), 'texts/ejemplo/creadora.md', 'add');
   report(await writeExclusive(join(cwd, 'texts', 'ejemplo', 'ejemplo.md'), TEXTO_EJEMPLO), 'texts/ejemplo/ejemplo.md', 'add');
-  const netlifyPath = join(cwd, 'netlify.toml');
-  const netlifyCreado = await writeExclusive(netlifyPath, netlifyToml());
-  const conCache =
-    netlifyCreado ||
-    (
-      await Bun.file(netlifyPath)
-        .text()
-        .catch(() => '')
-    ).includes('netlify-plugin-cache');
-  report(netlifyCreado, 'netlify.toml', 'add');
-  const brew = brewfile(format);
-  if (brew === undefined) logWarning('no hay formatos activos; no se generó Brewfile.netlify', 'add');
-  else report(await writeExclusive(join(cwd, 'Brewfile.netlify'), brew), 'Brewfile.netlify', 'add');
-  if (repo.startsWith('OWNER/')) logWarning(`no encontré un remoto de GitHub; admin/config.yml usa ${repo}`, 'add');
 
-  const paquetePath = join(cwd, 'package.json');
-  const crudo = await Bun.file(paquetePath)
-    .text()
-    .catch(() => null);
-  let existente: Paquete | null = null;
-  if (crudo !== null) {
-    try {
-      existente = JSON.parse(crudo) as Paquete;
-    } catch {
-      logWarning('package.json no es JSON válido; se dejó intacto', 'add');
-    }
-  }
-  if (crudo === null || existente !== null) {
-    const { paquete, cambios } = fusionarPaquete(existente, cwd, conCache);
-    await writeFile(paquetePath, `${JSON.stringify(paquete, null, 2)}\n`);
-    logSuccess(cambios.length === 0 ? 'package.json sin cambios' : `actualizado package.json (${cambios.join(', ')})`, 'add');
-  }
+  await writeGitlabPages(cwd, buildImage, 'add');
+  await ensurePackage(cwd, { sveltia: true }, 'add');
+  avisarPlaceholders(repo, siteUrl, appId);
 
-  logSuccess('admin de Sveltia listo. Ajusta admin/config.yml y ejecuta el build.', 'add');
+  logSuccess('admin de Sveltia listo. Completa admin/config.yml y .gitlab-ci.yml antes de publicar.', 'add');
 }

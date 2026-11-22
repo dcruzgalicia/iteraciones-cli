@@ -121,7 +121,7 @@ function capturarVivo(fn: () => Promise<void>): Promise<void> {
 
 Given('que el proyecto tiene un admin', () => {
   escribirEnProyecto('admin/index.html', '<!doctype html><html><body>admin de prueba</body></html>');
-  escribirEnProyecto('admin/config.yml', 'backend:\n  name: github\n');
+  escribirEnProyecto('admin/config.yml', 'backend:\n  name: gitlab\n');
 });
 
 When('arranco preview', () => {
