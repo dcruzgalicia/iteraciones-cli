@@ -128,8 +128,7 @@ export async function checkPdfCheck(): Promise<CheckResult> {
     return {
       label: 'iteraciones-pdfcheck disponible',
       ok: false,
-      detail:
-        'no encontrado — la validación PDF/X-1a se omite. Instala Rust con rustup: https://doc.rust-lang.org/book/ch01-01-installation.html (el build lo compila) o descarga el precompilado de GitHub Releases',
+      detail: 'no encontrado — la validación PDF/X-1a se omite. Instala Rust con rustup: https://rustup.rs/ (el build lo compila)',
       warn: true,
     };
   }
@@ -218,7 +217,7 @@ export function checkBiber(): CheckResult {
     label: 'biber disponible',
     ok: false,
     detail:
-      'no encontrado — las citas PDF con biblatex fallarán al compilar. Viene con TeX Live/MacTeX full (tlmgr install biber) o: https://github.com/plk/biber',
+      'no encontrado — las citas PDF con biblatex fallarán al compilar. Viene con TeX Live/MacTeX full (tlmgr install biber) o: https://ctan.org/pkg/biber',
     warn: true,
   };
 }

@@ -13,3 +13,6 @@ RUN apt-get update \
  && dpkg -i /tmp/pandoc.deb \
  && rm /tmp/pandoc.deb \
  && rm -rf /var/lib/apt/lists/*
+
+COPY docker/smoke-test.sh /usr/local/bin/smoke-test
+RUN chmod +x /usr/local/bin/smoke-test

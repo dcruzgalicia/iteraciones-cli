@@ -9,3 +9,7 @@ Característica: imagen de build para GitLab CI
     Escenario: El Dockerfile trae Bun, pandoc, ImageMagick y librsvg
       Dado que la raíz del proyecto está vacía
       Entonces el Dockerfile de build usa paquetes nativos y no Homebrew
+
+    Escenario: El pipeline publica la imagen en tags
+      Dado que la raíz del proyecto está vacía
+      Entonces el pipeline de GitLab construye y publica la imagen en tags
