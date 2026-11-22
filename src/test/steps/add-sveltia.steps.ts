@@ -24,6 +24,8 @@ interface Coleccion {
   folder?: string;
   path?: string;
   preview_path?: string;
+  media_folder?: string;
+  public_folder?: string;
   filter?: { field?: string; value?: unknown };
   nested?: { depth?: number; subfolders?: boolean };
   meta?: { path?: { index_file?: string } };
@@ -34,6 +36,8 @@ interface Coleccion {
 
 interface ConfigSveltia {
   backend?: { name?: string; repo?: string; branch?: string; site_domain?: string };
+  media_folder?: string;
+  public_folder?: string;
   collections?: Coleccion[];
 }
 
@@ -59,6 +63,17 @@ function camposDe(col: Coleccion): Campo[] {
 Then('la configuración de Sveltia usa el backend {string}', (nombre: string) => {
   if (config().backend?.name !== nombre) {
     throw new Error(`el backend es ${JSON.stringify(config().backend?.name)} y debía ser ${JSON.stringify(nombre)}`);
+  }
+});
+
+Then('todas las colecciones comparten el directorio de medios {string} con la URL {string}', (media: string, url: string) => {
+  const c = config();
+  if (c.media_folder !== media) throw new Error(`media_folder es ${JSON.stringify(c.media_folder)} y debía ser ${JSON.stringify(media)}`);
+  if (c.public_folder !== url) throw new Error(`public_folder es ${JSON.stringify(c.public_folder)} y debía ser ${JSON.stringify(url)}`);
+  for (const col of c.collections ?? []) {
+    if (col.media_folder !== undefined || col.public_folder !== undefined) {
+      throw new Error(`la colección ${JSON.stringify(col.name)} redefine media_folder/public_folder y no debería`);
+    }
   }
 });
 
