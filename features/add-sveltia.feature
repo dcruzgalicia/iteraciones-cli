@@ -79,6 +79,12 @@ Característica: add sveltia deja un proyecto listo para GitLab
       Y el archivo "admin/config.yml" no dice "github"
       Y el archivo "admin/config.yml" no dice "netlify"
 
+    Escenario: Deriva la URL pública del dominio
+      Dado que la raíz del proyecto está vacía
+      Cuando parseo el comando "add sveltia --no-prompt --site-domain historikas.example" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la configuración de Sveltia usa la URL "https://historikas.example"
+
     Escenario: No genera archivos de Netlify ni GitHub
       Dado que la raíz del proyecto está vacía
       Cuando corro "add sveltia"
