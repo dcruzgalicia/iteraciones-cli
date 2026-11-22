@@ -117,25 +117,24 @@ export function startPreviewServer(cwd: string, outputDir = join(cwd, DIST_FILES
 
 export type Snapshot = Map<string, number>;
 
+async function scanInto(dir: string, glob: string, entradas: string[]): Promise<void> {
+  try {
+    for await (const file of new Bun.Glob(glob).scan({ cwd: dir })) entradas.push(join(dir, file));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+}
+
 export async function previewInputs(cwd: string): Promise<string[]> {
   const entradas: string[] = [join(cwd, 'iteraciones.config.yaml'), ...(await listMarkdownDocuments(cwd)).map((rel) => join(cwd, rel))];
 
   const loaded = await loadSiteConfigIfPresent(cwd).catch(() => null);
   if (loaded) entradas.push(...(await resolveBibOptions(cwd, loaded.config).catch(() => ({ bibFiles: [] }))).bibFiles);
 
-  for (const [dir, glob] of projectFilterSpecs(cwd)) {
-    try {
-      for await (const file of new Bun.Glob(glob).scan({ cwd: dir })) entradas.push(join(dir, file));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-    }
-  }
+  for (const [dir, glob] of projectFilterSpecs(cwd)) await scanInto(dir, glob, entradas);
 
-  try {
-    for await (const file of new Bun.Glob('admin/**/*').scan({ cwd })) entradas.push(join(cwd, file));
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-  }
+  await scanInto(cwd, 'admin/**/*', entradas);
+  await scanInto(cwd, 'static/**/*', entradas);
 
   return [...new Set(entradas.filter(Boolean))];
 }
