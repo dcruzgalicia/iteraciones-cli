@@ -52,6 +52,12 @@ Característica: add sveltia deja un proyecto listo para el admin
       Y el paquete declara la dependencia "@sveltia/cms" con el valor "0.270.0"
       Y el archivo "admin/vendor/sveltia-cms.js" dice "0.270.0"
 
+    Escenario: Todas las colecciones comparten el mismo directorio de medios
+      Dado que la raíz del proyecto está vacía
+      Cuando corro "add sveltia"
+      Entonces el comando termina con el código de salida 0
+      Y todas las colecciones comparten el directorio de medios "assets/images" con la URL "/assets/images"
+
     Escenario: La configuración de Sveltia cubre todos los types
       Dado que la raíz del proyecto está vacía
       Cuando corro "add sveltia"

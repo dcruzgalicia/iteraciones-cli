@@ -165,7 +165,6 @@ function campoOrden(): Record<string, unknown> {
 
 function configuracionSveltia(idioma: string, repo: string, rama: string, slug: string, cwd: string, workflow: SveltiaWorkflow): string {
   const dominio = `${slug}.netlify.app`;
-  const medios = { media_folder: '/assets/images', public_folder: '../assets/images' };
   const coleccion = (
     name: string,
     label: string,
@@ -181,7 +180,6 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
     extension: 'md',
     format: 'frontmatter',
     identifier_field: 'title',
-    ...medios,
     slug: '{{slug}}',
     ...extras,
     fields,
@@ -211,7 +209,7 @@ function configuracionSveltia(idioma: string, repo: string, rama: string, slug: 
       sanitize_replacement: '-',
     },
     media_folder: 'assets/images',
-    public_folder: 'assets/images',
+    public_folder: '/assets/images',
     output: { omit_empty_optional_fields: true },
     collections: [
       coleccion(
