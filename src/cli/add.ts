@@ -1,5 +1,13 @@
 import { ConfigError } from '../lib/errors.js';
-import { addSveltia, DEFAULT_APP_ID, DEFAULT_BRANCH, DEFAULT_REPO, DEFAULT_SITE_URL, type SveltiaWorkflow } from './add-sveltia.js';
+import {
+  addSveltia,
+  DEFAULT_APP_ID,
+  DEFAULT_BRANCH,
+  DEFAULT_REPO,
+  DEFAULT_SITE_URL,
+  type SveltiaWorkflow,
+  siteUrlFromDomain,
+} from './add-sveltia.js';
 import { createPrompter, isInteractive, type Prompter } from './prompts.js';
 
 export interface AddOptions {
@@ -8,6 +16,7 @@ export interface AddOptions {
   repo?: string;
   branch?: string;
   siteUrl?: string;
+  siteDomain?: string;
   appId?: string;
   buildImage?: string;
   deploy?: string;
@@ -52,7 +61,7 @@ async function elegirDatos(
 ): Promise<{ repo: string; branch: string; siteUrl: string; appId: string }> {
   const repo = options.repo ?? (await preguntar(prompt, 'Repositorio de GitLab (OWNER/REPO)', DEFAULT_REPO));
   const branch = options.branch ?? (await preguntar(prompt, 'Rama de GitLab', DEFAULT_BRANCH));
-  const siteUrl = options.siteUrl ?? (await preguntar(prompt, 'URL pública del sitio', DEFAULT_SITE_URL));
+  const siteUrl = options.siteUrl ?? siteUrlFromDomain(options.siteDomain) ?? (await preguntar(prompt, 'URL pública del sitio', DEFAULT_SITE_URL));
   const appId = options.appId ?? (await preguntar(prompt, 'Application ID de GitLab', DEFAULT_APP_ID));
   return { repo, branch, siteUrl, appId };
 }

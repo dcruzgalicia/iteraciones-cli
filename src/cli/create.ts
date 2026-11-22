@@ -8,7 +8,15 @@ import { ACCENT_COLORS, type AccentColor } from '../lib/accent-palettes.js';
 import { ConfigError } from '../lib/errors.js';
 import { HTML_STYLE_INPUTS, type HtmlStyle, htmlStyle } from '../lib/html-styles.js';
 import { logInfo, logSuccess } from '../lib/logger.js';
-import { addSveltia, DEFAULT_APP_ID, DEFAULT_BRANCH, DEFAULT_REPO, DEFAULT_SITE_URL, type SveltiaWorkflow } from './add-sveltia.js';
+import {
+  addSveltia,
+  DEFAULT_APP_ID,
+  DEFAULT_BRANCH,
+  DEFAULT_REPO,
+  DEFAULT_SITE_URL,
+  type SveltiaWorkflow,
+  siteUrlFromDomain,
+} from './add-sveltia.js';
 import { DEFAULT_BUILD_IMAGE, writeGitlabPages } from './gitlab-pages.js';
 import { ensurePackage } from './package-json.js';
 import { ensureGitignore, report } from './project-files.js';
@@ -38,6 +46,7 @@ export interface CreateOptions {
   repo?: string;
   branch?: string;
   siteUrl?: string;
+  siteDomain?: string;
   appId?: string;
   buildImage?: string;
   deploy?: string;
@@ -287,7 +296,10 @@ async function elegirPublicacion(
 
   const repo = options.repo ?? (prompt === undefined ? DEFAULT_REPO : await prompt.ask('Repositorio de GitLab (OWNER/REPO)', DEFAULT_REPO));
   const branch = options.branch ?? (prompt === undefined ? DEFAULT_BRANCH : await prompt.ask('Rama de GitLab', DEFAULT_BRANCH));
-  const siteUrl = options.siteUrl ?? (prompt === undefined ? DEFAULT_SITE_URL : await prompt.ask('URL pública del sitio', DEFAULT_SITE_URL));
+  const siteUrl =
+    options.siteUrl ??
+    siteUrlFromDomain(options.siteDomain) ??
+    (prompt === undefined ? DEFAULT_SITE_URL : await prompt.ask('URL pública del sitio', DEFAULT_SITE_URL));
   const appId = options.appId ?? (prompt === undefined ? DEFAULT_APP_ID : await prompt.ask('Application ID de GitLab', DEFAULT_APP_ID));
   return { repo, branch, siteUrl, appId, buildImage, deployGitlabPages: true };
 }
@@ -381,7 +393,7 @@ async function crearDesdePlantilla(cwd: string, directory: string | undefined, o
   const publicacion = {
     repo: options.repo ?? DEFAULT_REPO,
     branch: options.branch ?? DEFAULT_BRANCH,
-    siteUrl: options.siteUrl ?? DEFAULT_SITE_URL,
+    siteUrl: options.siteUrl ?? siteUrlFromDomain(options.siteDomain) ?? DEFAULT_SITE_URL,
     appId: options.appId ?? DEFAULT_APP_ID,
     buildImage: options.buildImage ?? DEFAULT_BUILD_IMAGE,
   };

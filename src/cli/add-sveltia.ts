@@ -461,6 +461,14 @@ function normalizeBranch(branch: string | undefined): string {
   return value;
 }
 
+export function siteUrlFromDomain(domain: string | undefined): string | undefined {
+  const limpio = domain
+    ?.trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/+$/, '');
+  return limpio === undefined || limpio === '' ? undefined : `https://${limpio}`;
+}
+
 function normalizeSiteUrl(siteUrl: string | undefined): string {
   const value = (siteUrl?.trim() || DEFAULT_SITE_URL).replace(/\/+$/, '');
   try {
