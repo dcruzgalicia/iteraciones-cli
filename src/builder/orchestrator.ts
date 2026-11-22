@@ -36,6 +36,7 @@ import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, vali
 import { validateConfigFilePaths, validateConfigRules } from './project-validator.js';
 import type { BuildState } from './state-serialize.js';
 import { loadStateFile, persistCompletedState } from './state-serialize.js';
+import { copyStaticFiles } from './static-files.js';
 import { assertBuildTools } from './tool-preflight.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 
@@ -559,6 +560,7 @@ async function finishBuild(
   const formats = params.empty ? [] : computeActiveFormats(deps.siteConfig.format);
 
   await writeBundle(deps.cwd, deps.outputDir, deps.siteConfig);
+  await copyStaticFiles(deps.cwd, deps.outputDir);
   await deps.progress.finish(
     params.processedCount,
     params.cachedCount,
