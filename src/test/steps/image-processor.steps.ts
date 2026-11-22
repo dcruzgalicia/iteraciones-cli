@@ -1,5 +1,5 @@
 import { spyOn } from 'bun:test';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import {
   computeProcessTargets,
@@ -10,6 +10,7 @@ import {
   scanInlineImageSources,
   scanTitlePageFieldImages,
 } from '../../builder/image-processor.js';
+import { normalizeMediaPaths } from '../../lib/media-paths.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 const DIR_DOC = '/proyecto/capitulos';
@@ -37,6 +38,10 @@ Given('que hay una imagen procesada fuera del directorio del documento', () => {
 
 When('reescribo las rutas de imagen del contenido:', (contenido: string) => {
   world.contenido = rewriteImagePaths(contenido.replace(/<br>/g, '\n'), new Map(world.mapaImagenes), DIR_DOC);
+});
+
+When('normalizo las rutas de imagen de {string} en el proyecto {string}:', (relative: string, root: string, contenido: string) => {
+  world.contenido = normalizeMediaPaths(contenido.replace(/<br>/g, '\n'), dirname(join(root, relative)), root);
 });
 
 Then('el contenido reescrito dice {string}', (texto: string) => {

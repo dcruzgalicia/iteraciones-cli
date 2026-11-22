@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { applyCreatorTitle, parseFrontmatterRecord, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
+import { normalizeMediaPaths } from '../lib/media-paths.js';
 import type { BuildMetadata } from './build-planner.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { FormatsLink } from './html-composer.js';
@@ -38,7 +39,7 @@ export async function writeIfChanged(path: string, content: string): Promise<voi
   await writeOutput(path, content);
 }
 
-export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
+export async function readMarkdownOrWarn(doc: BuildDocument, projectRoot = ''): Promise<string> {
   let content: string;
   try {
     content = await Bun.file(doc.filePath).text();
@@ -58,7 +59,7 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
         : `"${doc.filePath}" está vacío; agrega un body para proceder con el build`,
     );
   }
-  return content;
+  return projectRoot === '' ? content : normalizeMediaPaths(content, dirname(doc.filePath), projectRoot);
 }
 
 const FORMAT_LINK_META = {
