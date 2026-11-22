@@ -27,6 +27,7 @@ import { computeActiveFormats, resolveDisabledPreambleConfig, toActiveFormats } 
 import { BuildError } from '../lib/errors.js';
 import { readFrontmatter } from '../lib/frontmatter.js';
 import { logSuccess, runCommand } from '../lib/logger.js';
+import { normalizeMediaPaths } from '../lib/media-paths.js';
 import { posix } from '../lib/paths.js';
 
 const FORMATS = ['latex', 'html', 'epub', 'markdown'] as const;
@@ -65,7 +66,7 @@ export async function readSourceDocument(cwd: string, input: string): Promise<So
   } catch {
     throw new BuildError(`no se pudo leer "${input}"`);
   }
-  return { inputPath, relativePath: posix(relative(cwd, inputPath)), text };
+  return { inputPath, relativePath: posix(relative(cwd, inputPath)), text: normalizeMediaPaths(text, dirname(inputPath), cwd) };
 }
 
 async function readCollectionSource(cwd: string, input: string) {

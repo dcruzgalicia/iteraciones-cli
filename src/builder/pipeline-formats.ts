@@ -16,6 +16,7 @@ import {
 } from '../lib/frontmatter-fields.js';
 import { htmlStyle, STYLE_FONTS } from '../lib/html-styles.js';
 import { logWarning } from '../lib/logger.js';
+import { normalizeMediaPaths } from '../lib/media-paths.js';
 import { minifyHtml } from '../lib/minify.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { posix, relativeAssetHref, relativePageHref } from '../lib/paths.js';
@@ -1127,7 +1128,7 @@ export async function readCollectionEntries(
   for (const [indice, file] of files.entries()) {
     const candidates = [...new Set(bases.map((base) => join(base, file)))];
     const { text, dir } = await readEntryText(candidates, collectionPath, file);
-    const parsed = parseFileFrontmatter(text, file);
+    const parsed = parseFileFrontmatter(normalizeMediaPaths(text, dir, bases[0] ?? dir), file);
     parsed.letterhead = parsed.letterhead.map((p) => (isAbsolute(p) ? p : resolve(dir, p)));
 
     const rootRelative = posix(file).replace(/^\.\//, '');
@@ -2948,7 +2949,7 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, label:
   } catch {
     throw new BuildError(`${label}: archivo de creator no encontrado: "${relativePath}"`);
   }
-  const { yaml, body } = splitFrontmatter(text);
+  const { yaml, body } = splitFrontmatter(normalizeMediaPaths(text, dirname(filePath), cwd));
   const { name, links, image } =
     yaml === undefined ? { name: '', links: [], image: undefined } : await parseCreatorDoc(yaml, filePath, relativePath, label);
   if (!body.trim()) {
@@ -3736,7 +3737,7 @@ export async function processDocumentFormats(
 ): Promise<void> {
   const { ctx } = renderCtx;
 
-  const content = await readMarkdownOrWarn(doc);
+  const content = await readMarkdownOrWarn(doc, ctx.cwd);
 
   const entry = discoveryIndex.get(doc.relativePath);
   const slug = doc.slug ?? basename(doc.relativePath, '.md');

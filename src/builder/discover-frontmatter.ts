@@ -1,7 +1,9 @@
+import { dirname } from 'node:path';
 import { BUILD_ERROR_CODES, BuildError, formatUserError, translateSystemError } from '../lib/errors.js';
 import { applyCreatorTitle, parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
+import { normalizeMediaFields } from '../lib/media-paths.js';
 import { plural } from '../lib/plural.js';
 import {
   dictumWidthWarnings,
@@ -145,8 +147,10 @@ export async function parseDocument(args: {
   const { relativePath, filePath, mtime, size, decisionText, decisionHash } = args;
   const text = await readDocumentText(filePath, relativePath, decisionText);
   const ingested = parseFrontmatter(relativePath, text, args.issues);
+  const fm = ingested.fm === undefined ? undefined : (normalizeMediaFields(ingested.fm, dirname(filePath), args.cwd) as Record<string, unknown>);
   args.index.set(relativePath, {
     ...ingested,
+    fm,
     mtime,
     size,
     hash: decisionHash ?? hashString(text),
