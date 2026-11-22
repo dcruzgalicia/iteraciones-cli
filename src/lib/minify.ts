@@ -23,9 +23,7 @@ export async function checkMinify(): Promise<{ label: string; ok: boolean; detai
     label: 'minify instalado',
     ok,
     warn: true,
-    detail: ok
-      ? 'minifica el HTML de la salida'
-      : 'no encontrado en PATH. Instálalo desde https://github.com/tdewolff/minify (por ejemplo: brew install minify)',
+    detail: ok ? 'minifica el HTML de la salida' : 'no encontrado en PATH. Instálalo con tu gestor de paquetes (por ejemplo: brew install minify)',
   };
 }
 

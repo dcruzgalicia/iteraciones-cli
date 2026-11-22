@@ -1,0 +1,31 @@
+stages:
+  - test
+  - image
+
+typecheck:
+  stage: test
+  image: oven/bun:1-debian
+  interruptible: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+  script:
+    - bun install --frozen-lockfile
+    - bun run typecheck
+
+build-image:
+  stage: image
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+    PANDOC_VERSION: "3.14"
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker build --platform linux/amd64 --build-arg "PANDOC_VERSION=${PANDOC_VERSION}" -f docker/iteraciones-build.Dockerfile -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG" .
+    - docker run --rm "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG" /usr/local/bin/smoke-test
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
