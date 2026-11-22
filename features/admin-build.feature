@@ -24,7 +24,7 @@ Característica: el build publica el admin de Sveltia
       Y que el archivo "admin/config.yml" tiene este contenido
         """
         backend:
-          name: github
+          name: gitlab
         """
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0

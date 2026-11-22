@@ -7,7 +7,7 @@ Característica: los enlaces del sitio y el índice paginado de una colección
       Y el sitio declara los enlaces:
       """
       Mastodon | https://mastodon.social/@iteraciones
-      GitHub | https://github.com/dcruzgalicia
+      Ejemplo | https://example.com/dcruzgalicia
       """
       Cuando hago un build del proyecto
       Entonces el archivo "dist/files/test-document.html" dice "Redes"
