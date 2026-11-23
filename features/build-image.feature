@@ -6,7 +6,7 @@ Característica: imagen de build para GitLab CI
 
   Regla de negocio: La imagen usa paquetes nativos, no Homebrew
 
-    Escenario: El Dockerfile trae Bun, pandoc, ImageMagick y librsvg
+    Escenario: El Dockerfile trae el toolchain completo
       Dado que la raíz del proyecto está vacía
       Entonces el Dockerfile de build usa paquetes nativos y no Homebrew
 

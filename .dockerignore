@@ -1,0 +1,5 @@
+.git
+.iteraciones
+dist
+node_modules
+tools/pdfx-validator/target
