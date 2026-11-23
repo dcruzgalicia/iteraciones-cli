@@ -8,7 +8,7 @@ CLI en Bun + TypeScript que construye sitios, libros (PDF/EPUB) y Markdown con p
 - `bun run typecheck` — `tsc --noEmit` sobre `src` y `tools`; es rápido.
 - `bunx biome check --write <archivos>` — formato y lint (línea de 150, comillas simples). Los hooks lo corren con `--error-on-warnings`.
 - `bun tools/gherkin.ts --name "texto del escenario"` — un escenario. `cucumber.json` carga siempre `features/**/*.feature`; pasar un `.feature` suelto no filtra la suite.
-- `bun run gherkin` (o `bun test`) — suite completa: ~1,700 escenarios, 6–10 min. Es la única verificación real: GitLab CI corre `typecheck` y publica la imagen de build en tags; la suite completa sigue local/pre-push.
+- `bun run gherkin` (o `bun test`) — suite completa: ~1,700 escenarios, 6–10 min. Es la única verificación real: GitHub mantiene release-please hasta migrar; GitLab CI corre `typecheck` y publica la imagen de build en tags; la suite completa sigue local/pre-push.
 - `bun src/bin.ts <comando>` — ejecuta el CLI de este checkout. `bun src/bin.ts doctor` revisa el entorno.
 
 ## Probar el CLI sin el binario global
@@ -56,8 +56,9 @@ PATH="/tmp/iteraciones-bin:$PATH" bun tools/gherkin.ts --name "..."
 - Commits atómicos: un cambio lógico por commit.
 - Commits conventional con scope obligatorio (`feat|fix|refactor|chore|docs|test|perf|style`).
 - Verbo conjugado en imperativo: `crea`, no `crear`.
-- `CHANGELOG.md` es generado; no lo edites. La release se hará desde GitLab cuando se migre el pipeline.
-- Features en una pila de merge requests: un issue y un MR por tema, apilados; no contra `main`.
+- `CHANGELOG.md` lo genera release-please en `main`; no lo edites.
+- Nunca mergees automáticamente el PR de release-please; requiere revisión humana.
+- Features en una pila de PRs: un issue y un PR por tema, apilados; no contra `main`.
 - El remoto se cambia a GitLab manualmente cuando el proyecto exista; la CLI no mueve repositorios.
 - En un worktree nuevo los hooks no existen: ejecuta `bun run hooks` una vez (`.husky/_` no se versiona).
 - `pre-commit` corre lint-staged + typecheck; `pre-push` corre typecheck + suite completa (6–10 min).
